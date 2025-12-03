@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { ArrowLeft, Lock, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
@@ -266,6 +266,32 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black">
+          <Navbar />
+          <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
+            <div className="w-full max-w-md">
+              <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl font-bold text-white">Loading...</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Please wait...
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 

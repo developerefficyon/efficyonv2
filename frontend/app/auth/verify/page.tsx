@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying")
@@ -251,6 +251,28 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center px-4">
+          <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl max-w-md w-full">
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <CardTitle className="text-2xl font-bold text-white">Loading...</CardTitle>
+              <CardDescription className="text-gray-400">
+                Please wait while we verify your email address.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
 
