@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Efficyon</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #fff; padding: 30px; border-radius: 8px;">
+    <h1 style="color: #06b6d4; text-align: center; margin-bottom: 30px;">Efficyon</h1>
+    
+    <h2 style="color: #1f2937;">Sign In to Your Account</h2>
+    
+    <p>Click the button below to sign in. No password needed!</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 12px 24px; background: #06b6d4; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Sign In</a>
+    </div>
+    
+    <p style="font-size: 14px; color: #6b7280;">Or copy and paste this link into your browser:</p>
+    <p style="font-size: 12px; word-break: break-all; color: #06b6d4;">{{ .ConfirmationURL }}</p>
+    
+    <p style="font-size: 14px; color: #ef4444; margin-top: 20px;"><strong>This link will expire in 1 hour.</strong></p>
+    
+    <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">If you didn't request this sign-in link, you can safely ignore this email.</p>
+    
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+    <p style="font-size: 12px; color: #9ca3af; text-align: center;">© 2025 Efficyon. All rights reserved.</p>
+  </div>
+</body>
+</html>
