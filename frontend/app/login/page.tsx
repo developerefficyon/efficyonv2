@@ -33,7 +33,12 @@ export default function LoginPage() {
         if (loggedInUser.role === "admin") {
           router.push("/dashboard/admin")
         } else {
-          router.push("/dashboard")
+          // For non-admin users, check if onboarding is completed
+          if (loggedInUser.onboardingCompleted) {
+            router.push("/dashboard")
+          } else {
+            router.push("/onboarding")
+          }
         }
       }
     } catch (err: any) {

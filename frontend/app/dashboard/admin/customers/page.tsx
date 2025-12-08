@@ -41,6 +41,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 
@@ -51,10 +59,13 @@ export default function AdminCustomersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<(typeof customers)[number] | null>(null)
+  const [customerDetails, setCustomerDetails] = useState<any | null>(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const [customers, setCustomers] = useState<
     {
       id: string
-      name: string
+      name: string // company name
       email: string
       plan: string
       employees: number
@@ -87,8 +98,9 @@ export default function AdminCustomersPage() {
       const list = Array.isArray(raw) ? raw : raw.customers ?? []
       const mapped =
         list?.map((p: any) => {
-          const name = p.full_name || p.email || "Unknown"
-          const initials = name
+          const companyName = p.companies?.name || p.full_name || p.email || "Unknown"
+          const employees = p.companies?.size ? parseInt(p.companies.size, 10) || 0 : 0
+          const initials = companyName
             .split(" ")
             .filter(Boolean)
             .slice(0, 2)
@@ -96,14 +108,14 @@ export default function AdminCustomersPage() {
             .join("") || "??"
           return {
             id: p.id,
-            name,
+            name: companyName,
             email: p.email,
             plan: "Customer",
-            employees: 0,
+            employees,
             status: p.status || (p.admin_approved ? "active" : "pending"),
             joined: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
             monthlyRevenue: 0,
-            totalSavings: 0,
+      totalSavings: 0,
             avatar: initials,
             emailVerified: p.email_verified ?? false,
             adminApproved: p.admin_approved ?? false,
@@ -218,6 +230,43 @@ export default function AdminCustomersPage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const openDetails = async (customer: (typeof customers)[number]) => {
+    setSelectedCustomer(customer)
+    setCustomerDetails(null)
+    setDetailsLoading(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        setDetailsLoading(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/admin/customers/${customer.id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!res.ok) {
+        console.error("Failed to load customer details", await res.text())
+        setDetailsLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setCustomerDetails(data)
+    } catch (err) {
+      console.error("Network error loading customer details", err)
+    } finally {
+      setDetailsLoading(false)
+    }
   }
 
   return (
@@ -374,9 +423,13 @@ export default function AdminCustomersPage() {
                         <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
                         <span className="truncate">{customer.email}</span>
                         {customer.emailVerified ? (
-                          <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" title="Email verified" />
+                          <span title="Email verified">
+                            <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                          </span>
                         ) : (
-                          <Clock className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" title="Email not verified" />
+                          <span title="Email not verified">
+                            <Clock className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -450,7 +503,10 @@ export default function AdminCustomersPage() {
                               {approvingId === customer.id ? "Approving..." : "Approve Customer"}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="hover:bg-white/10">
+                          <DropdownMenuItem
+                            className="hover:bg-white/10"
+                            onClick={() => void openDetails(customer)}
+                          >
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem className="hover:bg-white/10">
@@ -552,6 +608,208 @@ export default function AdminCustomersPage() {
           )}
         </CardContent>
       </Card>
+      {/* Customer details dialog */}
+      <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-2xl">
+          {selectedCustomer && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedCustomer.name}</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Customer details and subscription overview
+                </DialogDescription>
+              </DialogHeader>
+              {detailsLoading && (
+                <p className="text-sm text-gray-400 mt-4">Loading details...</p>
+              )}
+              {!detailsLoading && customerDetails && (
+                <Tabs defaultValue="summary" className="mt-4">
+                  <TabsList>
+                    <TabsTrigger value="summary">Summary</TabsTrigger>
+                    <TabsTrigger value="company">Company</TabsTrigger>
+                    <TabsTrigger value="tools">Tools</TabsTrigger>
+                    <TabsTrigger value="alerts">Alerts</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="summary" className="mt-4 space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</p>
+                      <p className="text-sm flex items-center gap-2">
+                        <Mail className="w-3 h-3 text-gray-400" />
+                        {selectedCustomer.email}
+                        {selectedCustomer.emailVerified ? (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]">
+                            Pending verification
+                          </Badge>
+                        )}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Plan</p>
+                        <p className="text-sm">{selectedCustomer.plan}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Employees
+                        </p>
+                        <p className="text-sm">{selectedCustomer.employees || "—"}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Monthly Revenue
+                        </p>
+                        <p className="text-sm">
+                          {formatCurrency(selectedCustomer.monthlyRevenue)}/mo
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Total Savings
+                        </p>
+                        <p className="text-sm text-green-400">
+                          {formatCurrency(selectedCustomer.totalSavings)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                        <Badge className="bg-white/10 text-white text-[10px]">
+                          {selectedCustomer.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Joined</p>
+                        <p className="text-sm text-gray-300">{selectedCustomer.joined}</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="company" className="mt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Company Name
+                        </p>
+                        <p className="text-sm">
+                          {customerDetails.company?.name || selectedCustomer.name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Industry
+                        </p>
+                        <p className="text-sm">
+                          {customerDetails.company?.industry || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Employees
+                        </p>
+                        <p className="text-sm">
+                          {selectedCustomer.employees || customerDetails.company?.size || "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Website
+                        </p>
+                        <p className="text-sm break-all">
+                          {customerDetails.company?.website || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                      <p className="text-sm">
+                        {customerDetails.company?.phone || "—"}
+                      </p>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="tools" className="mt-4 space-y-3">
+                    {customerDetails.integrations?.length ? (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {customerDetails.integrations.map((integration: any) => (
+                          <div
+                            key={integration.id}
+                            className="flex items-center justify-between px-3 py-2 rounded-md bg-white/5 border border-white/10"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">{integration.tool_name}</p>
+                              <p className="text-xs text-gray-400">
+                                {integration.connection_type.toUpperCase()} •{" "}
+                                {integration.environment}
+                              </p>
+                            </div>
+                            <Badge
+                              className={
+                                integration.status === "connected"
+                                  ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"
+                                  : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px]"
+                              }
+                            >
+                              {integration.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No tools connected yet.</p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="alerts" className="mt-4 space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Alert Email
+                      </p>
+                      <p className="text-sm">
+                        {customerDetails.alerts?.email_for_alerts || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Slack Channel
+                      </p>
+                      <p className="text-sm">
+                        {customerDetails.alerts?.slack_channel || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Frequency
+                      </p>
+                      <p className="text-sm">
+                        {customerDetails.alerts?.frequency || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Alert Types
+                      </p>
+                      <p className="text-sm">
+                        {customerDetails.alerts?.alert_types
+                          ? Object.entries(customerDetails.alerts.alert_types)
+                              .filter(([, enabled]: any) => enabled)
+                              .map(([key]: any) => key)
+                              .join(", ") || "—"
+                          : "—"}
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

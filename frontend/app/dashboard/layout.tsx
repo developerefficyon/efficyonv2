@@ -348,7 +348,10 @@ export default function DashboardLayout({
 
             {/* Logout Button */}
             <SidebarMenuButton
-              onClick={logout}
+              onClick={(e) => {
+                e.preventDefault()
+                void logout()
+              }}
               className="w-full h-9 px-3 text-gray-300 hover:text-white hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/30 transition-all"
             >
               <LogOut className="w-4 h-4" />

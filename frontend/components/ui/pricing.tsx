@@ -9,6 +9,7 @@ import { motion } from "framer-motion"
 import { Check, Star } from "lucide-react"
 import Link from "next/link"
 import { useState, useRef } from "react"
+// @ts-ignore - canvas-confetti doesn't have type definitions
 import confetti from "canvas-confetti"
 
 interface PricingPlan {

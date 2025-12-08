@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Navbar } from "@/components/ui/navbar"
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,12 +25,14 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabaseClient"
 
 // Tools from ROI calculator
 const tools = [
   { name: "Microsoft 365", category: "Productivity" },
   { name: "HubSpot", category: "CRM/Marketing" },
   { name: "QuickBooks", category: "Finance" },
+  { name: "Fortnox", category: "Finance" },
   { name: "Slack", category: "Communication" },
   { name: "Salesforce", category: "CRM" },
   { name: "Google Workspace", category: "Productivity" },
@@ -68,13 +69,13 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 6
 
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   // Form data
   const [formData, setFormData] = useState({
-    // Step 1: Account
+    // Step 1: Account (basic identity only)
     name: "",
     email: "",
-    password: "",
-    confirmPassword: "",
     // Step 2: Company
     companyName: "",
     industry: "",
@@ -83,17 +84,17 @@ export default function OnboardingPage() {
     website: "",
     // Step 3: Tools
     selectedTools: [] as string[],
-    // Step 4: Plan
+    // Step 4: Goals
+    primaryGoal: "",
+    secondaryGoals: [] as string[],
+    // Step 5: Plan
     plan: "",
-    // Step 5: Billing
+    // Step 6: Billing
     billingName: "",
     billingEmail: "",
     cardNumber: "",
     expiryDate: "",
     cvv: "",
-    // Step 6: Goals
-    primaryGoal: "",
-    secondaryGoals: [] as string[],
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -104,9 +105,6 @@ export default function OnboardingPage() {
     if (step === 1) {
       if (!formData.name) newErrors.name = "Name is required"
       if (!formData.email) newErrors.email = "Email is required"
-      if (!formData.password) newErrors.password = "Password is required"
-      if (formData.password !== formData.confirmPassword)
-        newErrors.confirmPassword = "Passwords do not match"
     }
 
     if (step === 2) {
@@ -117,30 +115,81 @@ export default function OnboardingPage() {
     }
 
     if (step === 3) {
-      if (formData.selectedTools.length === 0)
+      // For free trial, allow 1 tool; otherwise at least 1
+      if (formData.selectedTools.length === 0) {
         newErrors.selectedTools = "Please select at least one tool"
+      }
     }
 
     if (step === 4) {
-      if (!formData.plan) newErrors.plan = "Please select a plan"
+      // Goals step - no required validation for now
     }
 
     if (step === 5) {
+      if (!formData.plan || formData.plan.trim() === "") {
+        newErrors.plan = "Please select a plan"
+      }
+    }
+
+    if (step === 6) {
+      // Billing only required if not free trial
+      if (formData.plan !== "Free Trial") {
       if (!formData.billingName) newErrors.billingName = "Billing name is required"
       if (!formData.billingEmail) newErrors.billingEmail = "Billing email is required"
       if (!formData.cardNumber) newErrors.cardNumber = "Card number is required"
+      }
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
+  const handleNext = async () => {
+    try {
+      // For step 5, validate plan selection
+      if (currentStep === 5) {
+        if (!formData.plan || formData.plan.trim() === "") {
+          setErrors({ ...errors, plan: "Please select a plan" })
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          console.warn("Step 5: No plan selected")
+          return
+        }
+        
+        console.log("Step 5: Proceeding with plan:", formData.plan)
+        
+        // Skip billing step if free trial is selected
+        if (formData.plan === "Free Trial") {
+          console.log("Step 5: Free Trial selected, skipping to submit")
+          await handleSubmit()
+          return
+        }
+        
+        // For non-free-trial plans, go to step 6
+        console.log("Step 5: Paid plan selected, going to step 6")
+        setCurrentStep(6)
+        return
+      }
+      
+      // For other steps, use normal validation
+      const isValid = validateStep(currentStep)
+      
+      if (isValid) {
+        if (currentStep < totalSteps) {
+          setCurrentStep(currentStep + 1)
+        } else {
+          await handleSubmit()
+        }
       } else {
-        handleSubmit()
+        // Scroll to top to show errors
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        console.warn("Validation failed for step", currentStep, "Errors:", errors)
+      }
+    } catch (error) {
+      console.error("Error in handleNext:", error)
+      // Even if there's an error, try to proceed if we're on step 5 and have a plan
+      if (currentStep === 5 && formData.plan && formData.plan !== "Free Trial") {
+        console.log("Attempting to proceed despite error...")
+        setCurrentStep(6)
       }
     }
   }
@@ -151,20 +200,153 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleSubmit = () => {
-    // Handle final submission
+  const handleSubmit = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
+      // Get current session for auth
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      const commonOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      }
+
+      // 1) Company
+      try {
+        const companyRes = await fetch(`${apiBase}/api/company`, {
+          ...commonOptions,
+          body: JSON.stringify({
+            name: formData.companyName,
+            size: formData.employees ? String(formData.employees) : undefined,
+            industry: formData.industry || undefined,
+            website: formData.website || undefined,
+            phone: formData.phone || undefined,
+          }),
+        })
+        if (!companyRes.ok) {
+          console.error("Failed to save company", await companyRes.text())
+        }
+      } catch (err) {
+        console.error("Network error saving company", err)
+      }
+
+      // 2) Integrations (from selected tools)
+      if (formData.selectedTools.length > 0) {
+        try {
+          const integrationsRes = await fetch(`${apiBase}/api/integrations`, {
+            ...commonOptions,
+            body: JSON.stringify({
+              integrations: formData.selectedTools.map((toolName) => ({
+                tool_name: toolName,
+                connection_type: "api_key", // placeholder; real OAuth/API key screens later
+              })),
+            }),
+          })
+          if (!integrationsRes.ok) {
+            console.error("Failed to save integrations", await integrationsRes.text())
+          }
+        } catch (err) {
+          console.error("Network error saving integrations", err)
+        }
+      }
+
+      // 3) Plans (simple placeholder: one plan for Efficyon itself)
+      if (formData.plan) {
+        try {
+          const plansRes = await fetch(`${apiBase}/api/plans`, {
+            ...commonOptions,
+            body: JSON.stringify({
+              plans: [
+                {
+                  tool_name: "Efficyon",
+                  current_plan: formData.plan,
+                  seats: formData.employees || undefined,
+                  billing_cycle: "monthly",
+                },
+              ],
+            }),
+          })
+          if (!plansRes.ok) {
+            console.error("Failed to save plans", await plansRes.text())
+          }
+        } catch (err) {
+          console.error("Network error saving plans", err)
+        }
+      }
+
+      // 4) Alerts (basic: use billing email for alerts)
+      try {
+        const alertsRes = await fetch(`${apiBase}/api/alerts`, {
+          ...commonOptions,
+          body: JSON.stringify({
+            email_for_alerts: formData.billingEmail || formData.email || undefined,
+            slack_channel: undefined,
+            alert_types: {
+              renewal: true,
+              license_waste: true,
+            },
+            frequency: "weekly",
+          }),
+        })
+        if (!alertsRes.ok) {
+          console.error("Failed to save alerts", await alertsRes.text())
+        }
+      } catch (err) {
+        console.error("Network error saving alerts", err)
+      }
+
+      // 5) Mark onboarding as completed on the profile
+      try {
+        const completeRes = await fetch(`${apiBase}/api/profile/onboarding-complete`, {
+          ...commonOptions,
+        })
+        if (!completeRes.ok) {
+          console.error("Failed to mark onboarding complete", await completeRes.text())
+        }
+      } catch (err) {
+        console.error("Network error marking onboarding complete", err)
+      }
+
     console.log("Onboarding complete:", formData)
-    // Redirect to dashboard
     router.push("/dashboard")
+    } catch (error) {
+      console.error("Error completing onboarding", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const toggleTool = (toolName: string) => {
-    setFormData((prev) => ({
+    setFormData((prev) => {
+      // If free trial is already selected, limit to 1 tool
+      const isFreeTrial = prev.plan === "Free Trial"
+      
+      if (prev.selectedTools.includes(toolName)) {
+        return {
       ...prev,
-      selectedTools: prev.selectedTools.includes(toolName)
-        ? prev.selectedTools.filter((t) => t !== toolName)
-        : [...prev.selectedTools, toolName],
-    }))
+          selectedTools: prev.selectedTools.filter((t) => t !== toolName),
+        }
+      } else {
+        // For free trial, only allow 1 tool
+        if (isFreeTrial && prev.selectedTools.length >= 1) {
+          return prev // Don't add more tools
+        }
+        return {
+          ...prev,
+          selectedTools: [...prev.selectedTools, toolName],
+        }
+      }
+    })
   }
 
   const toggleGoal = (goal: string) => {
@@ -184,9 +366,25 @@ export default function OnboardingPage() {
 
   const plans = [
     {
+      id: "Free Trial",
+      name: "7-Day Free Trial",
+      price: "Free",
+      period: "7 days",
+      description: "Try Efficyon risk-free with one tool",
+      features: [
+        "7 days full access",
+        "Choose 1 tool to connect",
+        "Run analysis on selected tool",
+        "View sample insights",
+        "Upgrade to Startup at 50% off",
+      ],
+      isTrial: true,
+    },
+    {
       id: "Startup",
       name: "Startup",
-      price: "$39",
+      price: "$19.50",
+      originalPrice: "$39",
       period: "month",
       description: "For companies with 1-10 employees",
       features: [
@@ -196,6 +394,7 @@ export default function OnboardingPage() {
         "Basic integrations",
         "ROI tracking",
       ],
+      discount: "50% off for new customers",
     },
     {
       id: "Growth",
@@ -241,8 +440,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
+      <div className="flex items-center justify-center min-h-screen px-4 py-12">
         <div className="w-full max-w-4xl">
           {/* Progress Bar */}
           <div className="mb-8">
@@ -309,42 +507,7 @@ export default function OnboardingPage() {
                     {errors.email && <p className="text-sm text-red-400">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-gray-300">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        id="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="pl-10 bg-black/50 border-white/10 text-white"
-                        placeholder="Create a secure password"
-                      />
-                    </div>
-                    {errors.password && <p className="text-sm text-red-400">{errors.password}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-gray-300">
-                      Confirm Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={formData.confirmPassword}
-                        onChange={(e) =>
-                          setFormData({ ...formData, confirmPassword: e.target.value })
-                        }
-                        className="pl-10 bg-black/50 border-white/10 text-white"
-                        placeholder="Confirm your password"
-                      />
-                    </div>
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-red-400">{errors.confirmPassword}</p>
-                    )}
+                    {/* Password fields removed – login already handled separately */}
                   </div>
                 </CardContent>
               </>
@@ -472,16 +635,31 @@ export default function OnboardingPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {formData.plan === "Free Trial" && (
+                    <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <p className="text-sm text-green-400">
+                        <strong>Free Trial:</strong> You can select 1 tool to connect and run analysis on during your 7-day trial.
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                    {tools.map((tool) => (
+                    {tools.map((tool) => {
+                      const isFreeTrial = formData.plan === "Free Trial"
+                      const isDisabled = isFreeTrial && 
+                        formData.selectedTools.length >= 1 && 
+                        !formData.selectedTools.includes(tool.name)
+                      
+                      return (
                       <button
                         key={tool.name}
                         onClick={() => toggleTool(tool.name)}
+                          disabled={isDisabled}
                         className={cn(
                           "p-3 rounded-lg border text-left transition-all",
                           formData.selectedTools.includes(tool.name)
                             ? "border-cyan-500 bg-cyan-500/10 text-white"
-                            : "border-white/10 bg-black/50 text-gray-400 hover:border-white/30"
+                              : "border-white/10 bg-black/50 text-gray-400 hover:border-white/30",
+                            isDisabled && "opacity-50 cursor-not-allowed"
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -496,20 +674,81 @@ export default function OnboardingPage() {
                           </div>
                         </div>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                   {errors.selectedTools && (
                     <p className="text-sm text-red-400 mt-2">{errors.selectedTools}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-4">
-                    Selected: {formData.selectedTools.length} tools
+                    Selected: {formData.selectedTools.length} tool{formData.selectedTools.length !== 1 ? 's' : ''}
+                    {formData.plan === "Free Trial" && formData.selectedTools.length >= 1 && " (Free trial limit reached)"}
                   </p>
                 </CardContent>
               </>
             )}
 
-            {/* Step 4: Plan Selection */}
+            {/* Step 4: Goals & Preferences */}
             {currentStep === 4 && (
+              <>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl font-bold text-white">
+                    Your Goals & Preferences
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Help us personalize your experience
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Primary Goal</Label>
+                    <select
+                      value={formData.primaryGoal}
+                      onChange={(e) =>
+                        setFormData({ ...formData, primaryGoal: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-md text-white focus:border-cyan-500 focus:outline-none"
+                    >
+                      <option value="">Select your primary goal</option>
+                      {goals.map((goal) => (
+                        <option key={goal} value={goal}>
+                          {goal}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Secondary Goals (Select all that apply)</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {goals.map((goal) => (
+                        <button
+                          key={goal}
+                          onClick={() => toggleGoal(goal)}
+                          className={cn(
+                            "p-3 rounded-lg border text-left transition-all",
+                            formData.secondaryGoals.includes(goal)
+                              ? "border-cyan-500 bg-cyan-500/10 text-white"
+                              : "border-white/10 bg-black/50 text-gray-400 hover:border-white/30"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            {formData.secondaryGoals.includes(goal) ? (
+                              <CheckCircle className="w-4 h-4 text-cyan-400" />
+                            ) : (
+                              <div className="w-4 h-4 border border-gray-400 rounded" />
+                            )}
+                            <span className="text-sm">{goal}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </>
+            )}
+
+            {/* Step 5: Plan Selection */}
+            {currentStep === 5 && (
               <>
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl font-bold text-white">
@@ -523,17 +762,39 @@ export default function OnboardingPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {plans.map((plan) => (
                       <button
                         key={plan.id}
-                        onClick={() => setFormData({ ...formData, plan: plan.id })}
+                        type="button"
+                        onClick={() => {
+                          console.log("Plan selected:", plan.id)
+                          
+                          // Clear any previous plan errors
+                          const newErrors = { ...errors }
+                          delete newErrors.plan
+                          setErrors(newErrors)
+                          
+                          // If selecting free trial and multiple tools are selected, keep only the first one
+                          if (plan.id === "Free Trial" && formData.selectedTools.length > 1) {
+                            setFormData((prev) => ({ 
+                              ...prev, 
+                              plan: plan.id,
+                              selectedTools: [prev.selectedTools[0]]
+                            }))
+                          } else {
+                            setFormData((prev) => ({ ...prev, plan: plan.id }))
+                          }
+                          
+                          console.log("Plan state updated to:", plan.id)
+                        }}
                         className={cn(
-                          "p-4 rounded-lg border text-left transition-all",
+                          "p-4 rounded-lg border text-left transition-all relative",
                           formData.plan === plan.id
                             ? "border-cyan-500 bg-cyan-500/10"
                             : "border-white/10 bg-black/50 hover:border-white/30",
-                          plan.popular && "ring-2 ring-blue-500/50"
+                          plan.popular && "ring-2 ring-blue-500/50",
+                          plan.isTrial && "ring-2 ring-green-500/50"
                         )}
                       >
                         {plan.popular && (
@@ -541,9 +802,24 @@ export default function OnboardingPage() {
                             Popular
                           </span>
                         )}
+                        {plan.isTrial && (
+                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full mb-2 inline-block">
+                            Try Free
+                          </span>
+                        )}
+                        {plan.discount && (
+                          <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full mb-2 inline-block">
+                            {plan.discount}
+                          </span>
+                        )}
                         <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                           <span className="text-2xl font-bold text-white">{plan.price}</span>
+                          {plan.originalPrice && (
+                            <span className="text-sm text-gray-500 line-through ml-1">
+                              {plan.originalPrice}
+                            </span>
+                          )}
                           <span className="text-sm text-gray-400">/{plan.period}</span>
                         </div>
                         <p className="text-sm text-gray-400 mb-3">{plan.description}</p>
@@ -559,12 +835,53 @@ export default function OnboardingPage() {
                     ))}
                   </div>
                   {errors.plan && <p className="text-sm text-red-400 mt-2">{errors.plan}</p>}
+                  {formData.plan === "Free Trial" && (
+                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <p className="text-sm text-green-400">
+                        <strong>Great choice!</strong> You'll get 7 days to explore Efficyon with one tool ({formData.selectedTools[0] || 'selected tool'}). 
+                        After your trial, upgrade to Startup at 50% off to unlock full analysis and insights.
+                      </p>
+                    </div>
+                  )}
+                  {formData.plan === "Free Trial" && formData.selectedTools.length === 0 && (
+                    <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-sm text-yellow-400">
+                        <strong>Note:</strong> Please select at least one tool in step 3 to use with your free trial.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </>
             )}
 
-            {/* Step 5: Billing */}
-            {currentStep === 5 && (
+            {/* Step 6: Billing - Only shown if not Free Trial */}
+            {currentStep === 6 && (
+              <>
+                {formData.plan === "Free Trial" ? (
+                  <>
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="text-2xl font-bold text-white">
+                        Ready to Start Your Trial!
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        No payment required for your 7-day free trial
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-6 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
+                        <p className="text-lg text-green-400 mb-2">
+                          🎉 Your free trial is ready!
+                        </p>
+                        <p className="text-sm text-gray-300 mb-4">
+                          You'll have 7 days to explore Efficyon with <strong>{formData.selectedTools[0] || 'your selected tool'}</strong>.
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          After your trial ends, upgrade to Startup at 50% off ($19.50/month) to continue accessing full analysis and insights.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </>
+                ) : (
               <>
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl font-bold text-white">
@@ -671,63 +988,6 @@ export default function OnboardingPage() {
                 </CardContent>
               </>
             )}
-
-            {/* Step 6: Goals & Preferences */}
-            {currentStep === 6 && (
-              <>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-2xl font-bold text-white">
-                    Your Goals & Preferences
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Help us personalize your experience
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-gray-300">Primary Goal</Label>
-                    <select
-                      value={formData.primaryGoal}
-                      onChange={(e) =>
-                        setFormData({ ...formData, primaryGoal: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-md text-white focus:border-cyan-500 focus:outline-none"
-                    >
-                      <option value="">Select your primary goal</option>
-                      {goals.map((goal) => (
-                        <option key={goal} value={goal}>
-                          {goal}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-300">Secondary Goals (Select all that apply)</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {goals.map((goal) => (
-                        <button
-                          key={goal}
-                          onClick={() => toggleGoal(goal)}
-                          className={cn(
-                            "p-3 rounded-lg border text-left transition-all",
-                            formData.secondaryGoals.includes(goal)
-                              ? "border-cyan-500 bg-cyan-500/10 text-white"
-                              : "border-white/10 bg-black/50 text-gray-400 hover:border-white/30"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            {formData.secondaryGoals.includes(goal) ? (
-                              <CheckCircle className="w-4 h-4 text-cyan-400" />
-                            ) : (
-                              <div className="w-4 h-4 border border-gray-400 rounded" />
-                            )}
-                            <span className="text-sm">{goal}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
               </>
             )}
 
@@ -746,11 +1006,22 @@ export default function OnboardingPage() {
                 </Button>
                 <Button
                   type="button"
-                  onClick={handleNext}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    try {
+                      await handleNext()
+                    } catch (error) {
+                      console.error("Error in Next button click:", error)
+                      // Ensure button doesn't get stuck
+                      setIsSubmitting(false)
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {currentStep === totalSteps ? "Complete Setup" : "Next"}
-                  {currentStep < totalSteps && <ArrowRight className="w-4 h-4 ml-2" />}
+                  {currentStep === totalSteps ? (isSubmitting ? "Completing..." : "Complete Setup") : (isSubmitting ? "Processing..." : "Next")}
+                  {currentStep < totalSteps && !isSubmitting && <ArrowRight className="w-4 h-4 ml-2" />}
                 </Button>
               </div>
             </CardContent>

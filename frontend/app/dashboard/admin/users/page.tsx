@@ -277,9 +277,13 @@ export default function AdminUsersPage() {
                         <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
                         <span className="truncate">{employee.email}</span>
                         {employee.emailVerified ? (
-                          <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" title="Email verified" />
+                          <span title="Email verified">
+                            <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                          </span>
                         ) : (
-                          <Clock className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" title="Email not verified" />
+                          <span title="Email not verified">
+                            <Clock className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                          </span>
                         )}
                       </div>
                     </TableCell>

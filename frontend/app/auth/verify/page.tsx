@@ -115,8 +115,8 @@ function VerifyEmailContent() {
           } else {
             // No session, but hash indicates verification attempt
             // Try to get userId from hash params
-            const userIdFromHash = hashParams.get("user_id") || accessToken?.split(".")?.[1] 
-              ? JSON.parse(atob(accessToken.split(".")[1])).sub 
+            const userIdFromHash = hashParams.get("user_id") || (accessToken && accessToken.split(".")?.[1]) 
+              ? JSON.parse(atob(accessToken!.split(".")[1])).sub 
               : null
             
             if (userIdFromHash) {
