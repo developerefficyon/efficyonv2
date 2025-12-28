@@ -64,57 +64,168 @@ export default function AdminUsersPage() {
   >([])
   const itemsPerPage = 10
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  // Helper function to get a fresh access token
+  const getAccessToken = async (): Promise<string | null> => {
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        // Try to refresh the session
         const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        const accessToken = session?.access_token
+          data: { session: refreshedSession },
+          error: refreshError,
+        } = await supabase.auth.refreshSession()
 
-        const res = await fetch(`${apiBase}/api/admin/employees`, {
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-        })
-        if (!res.ok) {
-          throw new Error("Failed to load employees")
+        if (refreshError || !refreshedSession) {
+          console.error("Failed to refresh session:", refreshError)
+          return null
         }
-        const raw = await res.json()
-        console.log("Raw API response:", raw)
-        const list = Array.isArray(raw) ? raw : raw.employees ?? []
-        console.log("Parsed list:", list)
-        const mapped =
-          list?.map((p: any) => {
-            const name = p.full_name || p.email || "Unknown"
-            const initials = name
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((n: string) => n[0]?.toUpperCase())
-              .join("") || "??"
-            return {
-              id: p.id,
-              name,
-              email: p.email,
-              role: p.role || "Employee",
-              department: "—",
-              status: p.status || (p.admin_approved ? "active" : "inactive"),
-              joined: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
-              avatar: initials,
-              emailVerified: p.email_verified ?? false,
-            }
-          }) ?? []
-        console.log("Mapped employees:", mapped)
-        setEmployees(mapped)
-      } catch (error) {
-        console.error("Error loading employees:", error)
-        // keep existing employees list on error so data doesn't disappear
-      } finally {
-        setIsLoading(false)
-      }
-    }
 
-    void load()
+        return refreshedSession.access_token
+      }
+
+      // Check if token is close to expiring (within 5 minutes)
+      if (session.expires_at) {
+        const expiresAt = session.expires_at * 1000 // Convert to milliseconds
+        const now = Date.now()
+        const fiveMinutes = 5 * 60 * 1000
+
+        if (expiresAt - now < fiveMinutes) {
+          // Token is expiring soon, refresh it
+          const {
+            data: { session: refreshedSession },
+            error: refreshError,
+          } = await supabase.auth.refreshSession()
+
+          if (refreshError || !refreshedSession) {
+            console.error("Failed to refresh expiring session:", refreshError)
+            return session.access_token // Return current token as fallback
+          }
+
+          return refreshedSession.access_token
+        }
+      }
+
+      return session.access_token
+    } catch (error) {
+      console.error("Error getting access token:", error)
+      return null
+    }
+  }
+
+  const loadEmployees = async () => {
+    try {
+      setIsLoading(true)
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getAccessToken()
+
+      if (!accessToken) {
+        throw new Error("No valid session. Please log in again.")
+      }
+
+      const res = await fetch(`${apiBase}/api/admin/employees`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Token expired, try to refresh and retry once
+          const refreshedToken = await getAccessToken()
+          if (!refreshedToken) {
+            throw new Error("Session expired. Please log in again.")
+          }
+
+          const retryRes = await fetch(`${apiBase}/api/admin/employees`, {
+            headers: { Authorization: `Bearer ${refreshedToken}` },
+          })
+
+          if (!retryRes.ok) {
+            throw new Error("Failed to load employees after token refresh")
+          }
+
+          const raw = await retryRes.json()
+          const list = Array.isArray(raw) ? raw : raw.employees ?? []
+          const mapped =
+            list?.map((p: any) => {
+              const name = p.full_name || p.email || "Unknown"
+              const initials = name
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((n: string) => n[0]?.toUpperCase())
+                .join("") || "??"
+              return {
+                id: p.id,
+                name,
+                email: p.email,
+                role: p.role || "Employee",
+                department: "—",
+                status: p.status || (p.admin_approved ? "active" : "inactive"),
+                joined: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
+                avatar: initials,
+                emailVerified: p.email_verified ?? false,
+              }
+            }) ?? []
+          setEmployees(mapped)
+          return
+        }
+        throw new Error("Failed to load employees")
+      }
+
+      const raw = await res.json()
+      const list = Array.isArray(raw) ? raw : raw.employees ?? []
+      const mapped =
+        list?.map((p: any) => {
+          const name = p.full_name || p.email || "Unknown"
+          const initials = name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((n: string) => n[0]?.toUpperCase())
+            .join("") || "??"
+          return {
+            id: p.id,
+            name,
+            email: p.email,
+            role: p.role || "Employee",
+            department: "—",
+            status: p.status || (p.admin_approved ? "active" : "inactive"),
+            joined: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
+            avatar: initials,
+            emailVerified: p.email_verified ?? false,
+          }
+        }) ?? []
+      setEmployees(mapped)
+    } catch (error) {
+      console.error("Error loading employees:", error)
+      // keep existing employees list on error so data doesn't disappear
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadEmployees()
+
+    // Listen to auth state changes to reload data when session changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        // Reload employees when user signs in or token is refreshed
+        await loadEmployees()
+      } else if (event === "SIGNED_OUT") {
+        // Clear employees when user signs out
+        setEmployees([])
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Get unique roles for filters

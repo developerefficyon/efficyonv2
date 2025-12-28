@@ -24,8 +24,8 @@ async function getEmployees(req, res) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, status, email_verified, admin_approved, created_at")
-    .neq("role", "customer")
+    .select("id, email, full_name, role, created_at")
+    .eq("role", "admin")
     .range(0, 9)
     .order("created_at", { ascending: false })
 
@@ -40,42 +40,273 @@ async function getEmployees(req, res) {
 
 async function getCustomers(req, res) {
   console.log(`[${new Date().toISOString()}] GET /api/admin/customers - Request received`)
-  
+
   if (!supabase) {
     console.error(`[${new Date().toISOString()}] GET /api/admin/customers - Supabase not configured`)
     return res.status(500).json({ error: "Supabase not configured on backend" })
   }
 
-  const { data, error } = await supabase
+  // Fetch profiles first
+  const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select(
-      `
-      id,
-      email,
-      full_name,
-      role,
-      status,
-      email_verified,
-      admin_approved,
-      created_at,
-      companies (
-        name,
-        size,
-        industry
-      )
-    `
-    )
-    .eq("role", "customer")
+    .select("id, email, full_name, role, company_id, created_at, onboarding_completed")
+    .eq("role", "user")
     .range(0, 49)
     .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error(`[${new Date().toISOString()}] GET /api/admin/customers - Error:`, error.message)
-    return res.status(500).json({ error: error.message })
+  if (profilesError) {
+    console.error(`[${new Date().toISOString()}] GET /api/admin/customers - Error fetching profiles:`, profilesError.message)
+    return res.status(500).json({ error: profilesError.message })
   }
 
-  console.log(`[${new Date().toISOString()}] GET /api/admin/customers - Success: Found ${data?.length || 0} customers`)
-  res.json({ customers: data ?? [] })
+  if (!profiles || profiles.length === 0) {
+    console.log(`[${new Date().toISOString()}] GET /api/admin/customers - No customers found`)
+    return res.json({ customers: [] })
+  }
+
+  // Get unique company IDs
+  const companyIds = [...new Set(profiles.map(p => p.company_id).filter(Boolean))]
+  
+  // Fetch companies separately to avoid relationship ambiguity
+  let companiesMap = new Map()
+  if (companyIds.length > 0) {
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("id, name, size, industry")
+      .in("id", companyIds)
+
+    if (companiesError) {
+      console.warn(`[${new Date().toISOString()}] GET /api/admin/customers - Error fetching companies:`, companiesError.message)
+    } else if (companies) {
+      companies.forEach(company => {
+        companiesMap.set(company.id, company)
+      })
+    }
+  }
+
+  // Fetch subscriptions with plan catalog for all users
+  // Note: Since plan_tier is a text reference (not a UUID FK), we fetch separately
+  const userIds = profiles.map(p => p.id)
+  let subscriptionsMap = new Map()
+  if (userIds.length > 0) {
+    // First, fetch all subscriptions for these users
+    const { data: subscriptions, error: subscriptionsError } = await supabase
+      .from("subscriptions")
+      .select("id, user_id, company_id, plan_tier, status, amount_cents, current_period_start, current_period_end, created_at")
+      .in("user_id", userIds)
+      .order("created_at", { ascending: false })
+
+    if (subscriptionsError) {
+      console.warn(`[${new Date().toISOString()}] GET /api/admin/customers - Error fetching subscriptions:`, subscriptionsError.message)
+    } else if (subscriptions && subscriptions.length > 0) {
+      // Fetch plan catalog data for all unique plan tiers
+      const planTiers = [...new Set(subscriptions.map(s => s.plan_tier).filter(Boolean))]
+      let planCatalogMap = new Map()
+      if (planTiers.length > 0) {
+        const { data: plans, error: plansError } = await supabase
+          .from("plan_catalog")
+          .select("tier, name, price_monthly_cents, price_annual_cents, included_tokens, max_integrations, features")
+          .in("tier", planTiers)
+
+        if (plansError) {
+          console.warn(`[${new Date().toISOString()}] GET /api/admin/customers - Error fetching plan catalog:`, plansError.message)
+        } else if (plans) {
+          plans.forEach(plan => {
+            planCatalogMap.set(plan.tier, plan)
+          })
+        }
+      }
+
+      // Group by user_id, taking the most recent subscription per user
+      // and attach plan catalog data
+      subscriptions.forEach(sub => {
+        if (!subscriptionsMap.has(sub.user_id)) {
+          const planCatalog = planCatalogMap.get(sub.plan_tier) || null
+          subscriptionsMap.set(sub.user_id, {
+            ...sub,
+            plan_catalog: planCatalog
+          })
+        }
+      })
+    }
+  }
+
+  // Combine profiles with their companies and subscriptions
+  const customers = profiles.map(profile => {
+    const subscription = subscriptionsMap.get(profile.id) || null
+    const planCatalog = subscription?.plan_catalog || null
+    
+    return {
+      id: profile.id,
+      email: profile.email,
+      full_name: profile.full_name,
+      role: profile.role,
+      created_at: profile.created_at,
+      onboarding_completed: profile.onboarding_completed,
+      company: profile.company_id ? companiesMap.get(profile.company_id) || null : null,
+      subscription: subscription ? {
+        id: subscription.id,
+        plan_tier: subscription.plan_tier,
+        status: subscription.status,
+        amount_cents: subscription.amount_cents,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
+        plan_name: planCatalog?.name || subscription.plan_tier || "Free",
+        plan_price_monthly_cents: planCatalog?.price_monthly_cents || 0,
+        plan_price_annual_cents: planCatalog?.price_annual_cents || null,
+        plan_included_tokens: planCatalog?.included_tokens || 0,
+        plan_max_integrations: planCatalog?.max_integrations || null,
+        plan_features: planCatalog?.features || null,
+      } : null,
+    }
+  })
+
+  console.log(`[${new Date().toISOString()}] GET /api/admin/customers - Success: Found ${customers.length} customers`)
+  res.json({ customers })
+}
+
+async function getAllSubscriptions(req, res) {
+  console.log(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Request received`)
+
+  if (!supabase) {
+    console.error(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Supabase not configured`)
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    console.warn(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Unauthorized: No user in request`)
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Check if user is admin
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    console.error(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Error checking user role:`, profileError.message)
+    return res.status(500).json({ error: "Failed to verify user permissions" })
+  }
+
+  if (!profile || profile.role !== "admin") {
+    console.warn(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Forbidden: User ${user.id} is not an admin`)
+    return res.status(403).json({ error: "Forbidden: Admin access required" })
+  }
+
+  try {
+    // Fetch all subscriptions with related data
+    const { data: subscriptions, error: subscriptionsError } = await supabase
+      .from("subscriptions")
+      .select("id, user_id, company_id, plan_tier, status, amount_cents, currency, current_period_start, current_period_end, created_at, updated_at")
+      .order("created_at", { ascending: false })
+
+    if (subscriptionsError) {
+      console.error(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Error fetching subscriptions:`, subscriptionsError)
+      return res.status(500).json({ 
+        error: "Failed to fetch subscriptions",
+        details: subscriptionsError.message,
+        code: subscriptionsError.code
+      })
+    }
+
+  if (!subscriptions || subscriptions.length === 0) {
+    console.log(`[${new Date().toISOString()}] GET /api/admin/subscriptions - No subscriptions found`)
+    return res.json({ subscriptions: [] })
+  }
+
+  // Get unique user IDs and company IDs
+  const userIds = [...new Set(subscriptions.map(s => s.user_id).filter(Boolean))]
+  const companyIds = [...new Set(subscriptions.map(s => s.company_id).filter(Boolean))]
+  const planTiers = [...new Set(subscriptions.map(s => s.plan_tier).filter(Boolean))]
+
+  // Fetch users/profiles
+  let usersMap = new Map()
+  if (userIds && userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, company_id")
+      .in("id", userIds)
+
+    if (profilesError) {
+      console.warn(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Error fetching profiles:`, profilesError.message)
+    } else if (profiles) {
+      profiles.forEach(profile => {
+        usersMap.set(profile.id, profile)
+      })
+    }
+  }
+
+  // Fetch companies
+  let companiesMap = new Map()
+  if (companyIds && companyIds.length > 0) {
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("id, name")
+      .in("id", companyIds)
+
+    if (companiesError) {
+      console.warn(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Error fetching companies:`, companiesError.message)
+    } else if (companies) {
+      companies.forEach(company => {
+        companiesMap.set(company.id, company)
+      })
+    }
+  }
+
+  // Fetch plan catalog
+  let planCatalogMap = new Map()
+  if (planTiers && planTiers.length > 0) {
+    const { data: plans, error: plansError } = await supabase
+      .from("plan_catalog")
+      .select("tier, name, price_monthly_cents")
+      .in("tier", planTiers)
+
+    if (plansError) {
+      console.warn(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Error fetching plan catalog:`, plansError.message)
+    } else if (plans) {
+      plans.forEach(plan => {
+        planCatalogMap.set(plan.tier, plan)
+      })
+    }
+  }
+
+  // Combine subscriptions with related data
+  const subscriptionsWithDetails = subscriptions.map(sub => {
+    const profile = usersMap.get(sub.user_id)
+    const company = sub.company_id ? companiesMap.get(sub.company_id) : null
+    const planCatalog = planCatalogMap.get(sub.plan_tier)
+
+    return {
+      id: sub.id,
+      user_id: sub.user_id,
+      company_id: sub.company_id,
+      company_name: company?.name || profile?.email || "Unknown",
+      user_email: profile?.email || "Unknown",
+      user_name: profile?.full_name || null,
+      plan_tier: sub.plan_tier,
+      plan_name: planCatalog?.name || sub.plan_tier || "Free",
+      status: sub.status,
+      amount_cents: sub.amount_cents || planCatalog?.price_monthly_cents || 0,
+      currency: sub.currency || "usd",
+      current_period_start: sub.current_period_start,
+      current_period_end: sub.current_period_end,
+      created_at: sub.created_at,
+      updated_at: sub.updated_at,
+    }
+  })
+
+    console.log(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Success: Found ${subscriptionsWithDetails.length} subscriptions`)
+    return res.json({ subscriptions: subscriptionsWithDetails })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] GET /api/admin/subscriptions - Unexpected error:`, error)
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: error.message || "An unexpected error occurred"
+    })
+  }
 }
 
 async function createProfile(req, res) {
@@ -108,20 +339,21 @@ async function createProfile(req, res) {
   }
 
   // Get user metadata
-  const role = user.user_metadata?.role || "customer"
-  const fullName = user.user_metadata?.name || user.email || ""
-  const emailVerified = !!user.email_confirmed_at
+  // Validate role - schema only allows 'user' or 'admin'
+  let role = user.user_metadata?.role || "user"
+  if (role !== "user" && role !== "admin") {
+    role = "user"
+  }
+  const fullName = user.user_metadata?.name || null
 
   console.log(`[${new Date().toISOString()}] POST /api/profiles/create - Profile data:`, {
     id: user.id,
     email: user.email,
     full_name: fullName,
     role,
-    email_verified: emailVerified,
-    status: emailVerified ? "pending_admin" : "pending_email",
   })
 
-  // Create profile entry
+  // Create profile entry (matching new schema: id, email, full_name, role, company_id, onboarding_completed)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .insert({
@@ -129,9 +361,6 @@ async function createProfile(req, res) {
       email: user.email,
       full_name: fullName,
       role: role,
-      email_verified: emailVerified,
-      admin_approved: false,
-      status: emailVerified ? "pending_admin" : "pending_email",
     })
     .select()
     .maybeSingle()
@@ -199,21 +428,21 @@ async function createProfilePublic(req, res) {
   }
 
   // Get user metadata
-  const role = u.user_metadata?.role || "customer"
-  const fullName = u.user_metadata?.name || u.email || ""
-  const emailVerified = !!u.email_confirmed_at
+  // Validate role - schema only allows 'user' or 'admin'
+  let role = u.user_metadata?.role || "user"
+  if (role !== "user" && role !== "admin") {
+    role = "user"
+  }
+  const fullName = u.user_metadata?.name || null
 
   console.log(`[${new Date().toISOString()}] POST /api/profiles/create-public - Creating profile with data:`, {
     id: u.id,
     email: u.email,
     full_name: fullName,
     role,
-    email_verified: emailVerified,
-    admin_approved: false,
-    status: emailVerified ? "pending_admin" : "pending_email",
   })
 
-  // Create profile entry
+  // Create profile entry (matching new schema: id, email, full_name, role, company_id, onboarding_completed)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .insert({
@@ -221,9 +450,6 @@ async function createProfilePublic(req, res) {
       email: u.email,
       full_name: fullName,
       role: role,
-      email_verified: emailVerified,
-      admin_approved: false,
-      status: emailVerified ? "pending_admin" : "pending_email",
     })
     .select()
     .maybeSingle()
@@ -237,6 +463,56 @@ async function createProfilePublic(req, res) {
   console.log(`[${new Date().toISOString()}] POST /api/profiles/create-public - Profile created successfully for user: ${u.id}`)
   console.log(`[${new Date().toISOString()}] POST /api/profiles/create-public - Created profile:`, profile)
   return res.json({ profile, message: "Profile created successfully" })
+}
+
+async function updateProfilePublic(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-public - Request received`)
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-public - Request body:`, req.body)
+  
+  if (!supabase) {
+    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-public - Supabase not configured`)
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const { userId, full_name, role } = req.body || {}
+
+  if (!userId) {
+    console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-public - Bad request: userId is required`)
+    return res.status(400).json({ error: "userId is required" })
+  }
+
+  // Build update object with only provided fields
+  const updateData = {}
+  if (full_name !== undefined) updateData.full_name = full_name || null
+  if (role !== undefined) updateData.role = role
+
+  if (Object.keys(updateData).length === 0) {
+    console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-public - Bad request: no fields to update`)
+    return res.status(400).json({ error: "At least one field (full_name or role) must be provided" })
+  }
+
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-public - Updating profile for user: ${userId}`, updateData)
+
+  // Update profile (profile should exist via trigger, but handle case where it doesn't)
+  const { data: profile, error: updateError } = await supabase
+    .from("profiles")
+    .update(updateData)
+    .eq("id", userId)
+    .select()
+    .maybeSingle()
+
+  if (updateError) {
+    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-public - Error updating profile:`, updateError.message)
+    return res.status(500).json({ error: updateError.message })
+  }
+
+  if (!profile) {
+    console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-public - Profile not found for user: ${userId}`)
+    return res.status(404).json({ error: "Profile not found. It should be created automatically on signup." })
+  }
+
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-public - Profile updated successfully for user: ${userId}`)
+  return res.json({ profile, message: "Profile updated successfully" })
 }
 
 async function updateEmailVerified(req, res) {
@@ -267,31 +543,45 @@ async function updateEmailVerified(req, res) {
     return res.status(400).json({ error: "Email is not confirmed" })
   }
 
-  // Update profile
-  const { data: profile, error: updateError } = await supabase
+  // In the new schema, email verification is handled by Supabase auth
+  // Just ensure profile exists and email is synced
+  const { data: existingProfile } = await supabase
     .from("profiles")
-    .update({
-      email_verified: true,
-      status: "pending_admin", // Move to pending admin approval
-    })
+    .select("id, email")
     .eq("id", user.id)
-    .select()
     .maybeSingle()
 
-  if (updateError) {
-    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Error updating profile:`, updateError.message)
-    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Full error:`, updateError)
-    return res.status(500).json({ error: updateError.message })
-  }
-
-  if (!profile) {
+  if (!existingProfile) {
     console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Profile not found for user: ${user.id}`)
     return res.status(404).json({ error: "Profile not found" })
   }
 
-  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Profile updated successfully for user: ${user.id}`)
-  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Updated profile:`, profile)
-  return res.json({ profile, message: "Email verified status updated" })
+  // Update email if it changed
+  const updateData = {}
+  if (user.email && user.email !== existingProfile.email) {
+    updateData.email = user.email
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    const { data: profile, error: updateError } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("id", user.id)
+      .select()
+      .maybeSingle()
+
+    if (updateError) {
+      console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Error updating profile:`, updateError.message)
+      return res.status(500).json({ error: updateError.message })
+    }
+
+    console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Profile email synced for user: ${user.id}`)
+    return res.json({ profile, message: "Email verified - profile updated" })
+  }
+
+  // Profile exists and email is already synced
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified - Email verified for user: ${user.id}`)
+  return res.json({ profile: existingProfile, message: "Email verified successfully" })
 }
 
 async function updateEmailVerifiedPublic(req, res) {
@@ -328,7 +618,7 @@ async function updateEmailVerifiedPublic(req, res) {
   // Check if profile exists first
   const { data: existingProfile, error: checkError } = await supabase
     .from("profiles")
-    .select("id, email_verified, status")
+    .select("id, email, full_name, role")
     .eq("id", u.id)
     .maybeSingle()
 
@@ -340,9 +630,13 @@ async function updateEmailVerifiedPublic(req, res) {
   if (!existingProfile) {
     console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile not found for user: ${u.id}, creating it now`)
     
-    // Create profile if it doesn't exist
-    const role = u.user_metadata?.role || "customer"
-    const fullName = u.user_metadata?.name || u.email || ""
+    // Create profile if it doesn't exist (matching new schema)
+    // Validate role - schema only allows 'user' or 'admin'
+    let role = u.user_metadata?.role || "user"
+    if (role !== "user" && role !== "admin") {
+      role = "user"
+    }
+    const fullName = u.user_metadata?.name || null
     
     const { data: newProfile, error: createError } = await supabase
       .from("profiles")
@@ -351,9 +645,6 @@ async function updateEmailVerifiedPublic(req, res) {
         email: u.email,
         full_name: fullName,
         role: role,
-        email_verified: true,
-        admin_approved: false,
-        status: "pending_admin",
       })
       .select()
       .maybeSingle()
@@ -363,44 +654,38 @@ async function updateEmailVerifiedPublic(req, res) {
       return res.status(500).json({ error: createError.message })
     }
 
-    console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile created and verified for user: ${u.id}`)
-    return res.json({ profile: newProfile, message: "Profile created and email verified" })
+    console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile created for user: ${u.id}`)
+    return res.json({ profile: newProfile, message: "Profile created successfully" })
   }
 
-  // Check if email is actually confirmed
-  // If not confirmed yet, it might be a timing issue - still update the profile
-  // The email was verified if we reached this endpoint via the verification link
-  const emailConfirmed = !!u.email_confirmed_at
-  
-  if (!emailConfirmed) {
-    console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Email not confirmed yet for user: ${u.id}, but updating anyway (timing issue)`)
-    // Don't return error - update anyway since user clicked verification link
+  // Profile exists - email verification is handled by Supabase auth
+  // In the new schema, we don't track email_verified in profiles table
+  // Just ensure email is synced if it changed
+  const updateData = {}
+  if (u.email && u.email !== existingProfile.email) {
+    updateData.email = u.email
   }
 
-  // Update profile
-  const { data: profile, error: updateError } = await supabase
-    .from("profiles")
-    .update({
-      email_verified: true,
-      status: "pending_admin",
-    })
-    .eq("id", u.id)
-    .select()
-    .maybeSingle()
+  if (Object.keys(updateData).length > 0) {
+    const { data: profile, error: updateError } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("id", u.id)
+      .select()
+      .maybeSingle()
 
-  if (updateError) {
-    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Error updating profile:`, updateError.message)
-    console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Full error:`, updateError)
-    return res.status(500).json({ error: updateError.message })
+    if (updateError) {
+      console.error(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Error updating profile:`, updateError.message)
+      return res.status(500).json({ error: updateError.message })
+    }
+
+    console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile email synced for user: ${u.id}`)
+    return res.json({ profile, message: "Email verified - profile updated" })
   }
 
-  if (!profile) {
-    console.warn(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile not found after update for user: ${u.id}`)
-    return res.status(404).json({ error: "Profile not found after update" })
-  }
-
-  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Profile updated successfully for user: ${u.id}`)
-  return res.json({ profile, message: "Email verified status updated" })
+  // Profile exists and email is already synced
+  console.log(`[${new Date().toISOString()}] POST /api/profiles/update-email-verified-public - Email verified for user: ${u.id}`)
+  return res.json({ profile: existingProfile, message: "Email verified successfully" })
 }
 
 async function approveProfile(req, res) {
@@ -437,7 +722,11 @@ async function approveProfile(req, res) {
   }
 
   const u = userResult.user
-  const profileRole = role || u.user_metadata?.role || "customer"
+  // Validate role - schema only allows 'user' or 'admin'
+  let profileRole = role || u.user_metadata?.role || "user"
+  if (profileRole !== "user" && profileRole !== "admin") {
+    profileRole = "user"
+  }
 
   console.log(`[${new Date().toISOString()}] POST /api/admin/profiles/approve - Approving profile for user: ${u.email} with role: ${profileRole}`)
 
@@ -449,9 +738,6 @@ async function approveProfile(req, res) {
         email: u.email,
         full_name: u.user_metadata?.name || u.email || "",
         role: profileRole,
-        email_verified: !!u.email_confirmed_at,
-        admin_approved: true,
-        status: "active",
       },
       { onConflict: "id" }
     )
@@ -645,6 +931,7 @@ async function upsertCompany(req, res) {
     const { data: company, error: insertError } = await supabase
       .from("companies")
       .insert({
+        user_id: user.id,
         name,
         size,
         industry,
@@ -758,8 +1045,15 @@ async function upsertIntegrations(req, res) {
   const companyId = profile.company_id
 
   const rows = integrations.map((i) => {
+    // Map tool_name to provider (schema uses 'provider' not 'tool_name')
+    const provider = i.tool_name || i.provider
+    
+    if (!provider) {
+      throw new Error("Integration must have either 'tool_name' or 'provider' field")
+    }
+
     // Validate Fortnox Client ID if it's a Fortnox integration
-    if (i.tool_name === "Fortnox" && i.client_id) {
+    if (provider === "Fortnox" && i.client_id) {
       // Check if client_id looks like an email (common mistake)
       if (i.client_id.includes("@") || (i.client_id.includes(".") && i.client_id.length < 20)) {
         console.error(
@@ -773,31 +1067,102 @@ async function upsertIntegrations(req, res) {
       }
     }
     
+    // Store all additional fields in settings jsonb
+    // Schema: provider (text), settings (jsonb), status (text)
+    const settings = {
+      connection_type: i.connection_type || "api_key",
+      environment: i.environment || "production",
+      oauth_data: i.oauth_data || null,
+      api_key: i.api_key || null,
+      client_id: i.client_id || null,
+      client_secret: i.client_secret || null,
+      webhook_url: i.webhook_url || null,
+      // Preserve any other fields that might be passed
+      ...(i.settings || {}),
+    }
+    
     return {
-    company_id: companyId,
-    tool_name: i.tool_name,
-    connection_type: i.connection_type || "api_key",
-    status: i.status || "connected",
-    environment: i.environment || "production",
-    oauth_data: i.oauth_data || null,
-    api_key: i.api_key || null,
-    client_id: i.client_id || null,
-    client_secret: i.client_secret || null,
-    webhook_url: i.webhook_url || null,
+      company_id: companyId,
+      provider: provider,
+      settings: settings,
+      status: i.status || "connected",
     }
   })
 
-  const { data, error } = await supabase
-    .from("company_integrations")
-    .upsert(rows)
-    .select()
+  // Handle each integration separately to avoid schema cache issues
+  const results = []
+  for (const row of rows) {
+    // Check if integration already exists
+    const { data: existing, error: checkError } = await supabase
+      .from("company_integrations")
+      .select("id, settings")
+      .eq("company_id", row.company_id)
+      .eq("provider", row.provider)
+      .maybeSingle()
 
-  if (error) {
-    console.error(`[${new Date().toISOString()}] POST /api/integrations - Error upserting integrations:`, error.message)
-    return res.status(500).json({ error: error.message })
+    if (checkError) {
+      console.error(`[${new Date().toISOString()}] POST /api/integrations - Error checking existing integration:`, checkError.message)
+      return res.status(500).json({ error: checkError.message })
+    }
+
+    let result
+    if (existing) {
+      // Update existing - merge settings
+      const currentSettings = existing.settings || {}
+      const mergedSettings = {
+        ...currentSettings,
+        ...row.settings,
+      }
+      
+      const { data: updated, error: updateError } = await supabase
+        .from("company_integrations")
+        .update({
+          settings: mergedSettings,
+          status: row.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("id, company_id, provider, settings, status, created_at, updated_at")
+        .single()
+      
+      if (updateError) {
+        console.error(`[${new Date().toISOString()}] POST /api/integrations - Error updating integration:`, updateError.message)
+        return res.status(500).json({ error: updateError.message })
+      }
+      result = updated
+    } else {
+      // Insert new
+      const { data: inserted, error: insertError } = await supabase
+        .from("company_integrations")
+        .insert({
+          company_id: row.company_id,
+          provider: row.provider,
+          settings: row.settings,
+          status: row.status,
+        })
+        .select("id, company_id, provider, settings, status, created_at, updated_at")
+        .single()
+      
+      if (insertError) {
+        console.error(`[${new Date().toISOString()}] POST /api/integrations - Error inserting integration:`, insertError.message)
+        return res.status(500).json({ error: insertError.message })
+      }
+      result = inserted
+    }
+    results.push(result)
   }
 
-  return res.json({ integrations: data })
+  console.log(`[${new Date().toISOString()}] POST /api/integrations - Successfully saved ${results.length} integration(s)`)
+  if (results.length > 0) {
+    console.log(`[${new Date().toISOString()}] POST /api/integrations - Sample integration:`, {
+      id: results[0].id,
+      provider: results[0].provider,
+      has_settings: !!results[0].settings,
+      has_client_id: !!(results[0].settings?.client_id),
+    })
+  }
+
+  return res.json({ integrations: results })
 }
 
 async function getIntegrations(req, res) {
@@ -841,7 +1206,24 @@ async function getIntegrations(req, res) {
     return res.status(500).json({ error: error.message })
   }
 
-  return res.json({ integrations: data || [] })
+  // Map provider to tool_name for backward compatibility with frontend
+  // Also extract settings fields to top level for easier access
+  const mappedIntegrations = (data || []).map((integration) => {
+    const settings = integration.settings || {}
+    return {
+      ...integration,
+      tool_name: integration.provider, // Map provider to tool_name for backward compatibility
+      connection_type: settings.connection_type || "api_key",
+      environment: settings.environment || "production",
+      oauth_data: settings.oauth_data || null,
+      api_key: settings.api_key || null,
+      client_id: settings.client_id || null,
+      client_secret: settings.client_secret || null,
+      webhook_url: settings.webhook_url || null,
+    }
+  })
+
+  return res.json({ integrations: mappedIntegrations })
 }
 
 async function deleteIntegration(req, res) {
@@ -886,7 +1268,7 @@ async function deleteIntegration(req, res) {
   // First, verify the integration belongs to the user's company
   const { data: integration, error: fetchError } = await supabase
     .from("company_integrations")
-    .select("id, tool_name, company_id")
+    .select("id, provider, company_id")
     .eq("id", integrationId)
     .eq("company_id", companyId)
     .maybeSingle()
@@ -913,7 +1295,7 @@ async function deleteIntegration(req, res) {
     return res.status(500).json({ error: deleteError.message })
   }
 
-  console.log(`[${new Date().toISOString()}] DELETE /api/integrations/:id - Successfully deleted integration: ${integration.tool_name}`)
+  console.log(`[${new Date().toISOString()}] DELETE /api/integrations/:id - Successfully deleted integration: ${integration.provider}`)
   return res.json({ message: "Integration deleted successfully", id: integrationId })
 }
 
@@ -998,7 +1380,7 @@ async function startFortnoxOAuth(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -1011,14 +1393,44 @@ async function startFortnoxOAuth(req, res) {
     return res.status(500).json({ error: integrationError.message })
   }
 
-  if (!integration || !integration.client_id) {
-    console.warn(
-      `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - No Fortnox integration/client_id configured for company`
-    )
-    return res.status(400).json({ error: "Fortnox integration not configured for this company" })
-  }
+  console.log(
+    `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Integration found:`,
+    {
+      id: integration?.id,
+      provider: integration?.provider,
+      has_settings: !!integration?.settings,
+      settings_keys: integration?.settings ? Object.keys(integration.settings) : [],
+    }
+  )
 
-  const clientId = integration.client_id
+  // Get client_id from settings (new schema) or directly (backward compatibility)
+  const settings = integration?.settings || {}
+  const clientId = settings.client_id || integration?.client_id
+  
+  if (!integration) {
+    console.warn(
+      `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - No Fortnox integration found for company ${companyId}`
+    )
+    return res.status(400).json({ 
+      error: "Fortnox integration not found",
+      details: "Please save the Fortnox integration with Client ID and Client Secret first."
+    })
+  }
+  
+  if (!clientId) {
+    console.warn(
+      `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Fortnox integration found but client_id is missing`,
+      {
+        integration_id: integration.id,
+        has_settings: !!integration.settings,
+        settings_keys: integration.settings ? Object.keys(integration.settings) : [],
+      }
+    )
+    return res.status(400).json({ 
+      error: "Fortnox Client ID not configured",
+      details: "The Fortnox integration exists but Client ID is missing. Please update the integration with your Client ID and Client Secret."
+    })
+  }
   
   // Validate that client_id is not an email address (common mistake)
   if (clientId.includes("@") || clientId.includes(".") && clientId.length < 20) {
@@ -1035,7 +1447,8 @@ async function startFortnoxOAuth(req, res) {
     `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Using Client ID: ${clientId.substring(0, 8)}... (length: ${clientId.length})`
   )
   
-  const environment = integration.environment || "sandbox"
+  // Get environment from settings (new schema) or directly (backward compatibility)
+  const environment = settings.environment || integration.environment || "sandbox"
 
   const redirectUri =
     process.env.FORTNOX_REDIRECT_URI ||
@@ -1047,9 +1460,9 @@ async function startFortnoxOAuth(req, res) {
   // Scopes that work with "Any" license: "archive", "companyinformation", "inbox", "profile", "settings"
   // Scopes that require licenses: "customer" (Kundfaktura/Order), "invoice" (Order/Kundfaktura), "order" (Order), etc.
   // Multiple scopes can be space-separated: "companyinformation settings profile archive inbox"
-  // Set FORTNOX_OAUTH_SCOPE env var to override (default includes "Any" license scopes)
+  // Set FORTNOX_OAUTH_SCOPE env var to override (default includes "Any" license scopes + cost analysis scopes)
   const scopeEnv = process.env.FORTNOX_OAUTH_SCOPE
-  let scope = scopeEnv !== undefined ? scopeEnv.trim() : "companyinformation settings profile archive inbox"
+  let scope = scopeEnv !== undefined ? scopeEnv.trim() : "companyinformation settings profile archive inbox invoice supplierinvoice bookkeeping salary article customer supplier"
   
   // Normalize scope: Fortnox requires lowercase scopes
   // Convert to lowercase and normalize spaces (multiple spaces to single space)
@@ -1107,11 +1520,21 @@ async function startFortnoxOAuth(req, res) {
 
   // If called from frontend via fetch (Accept: application/json), return JSON with URL
   const acceptHeader = req.headers.accept || ""
+  console.log(
+    `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Accept header: "${acceptHeader}"`
+  )
+  
   if (acceptHeader.includes("application/json")) {
+    console.log(
+      `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Returning JSON response with URL`
+    )
     return res.json({ url: authUrlString })
   }
 
   // If called directly in browser, redirect
+  console.log(
+    `[${new Date().toISOString()}] GET /api/integrations/fortnox/oauth/start - Redirecting directly to Fortnox`
+  )
   return res.redirect(authUrlString)
 }
 
@@ -1191,7 +1614,7 @@ async function fortnoxOAuthCallback(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -1207,8 +1630,10 @@ async function fortnoxOAuthCallback(req, res) {
     return res.redirect(frontendErrorRedirect)
   }
 
-  const clientId = integration.client_id
-  const clientSecret = integration.client_secret
+  // Get client_id and client_secret from settings (new schema) or directly (backward compatibility)
+  const settings = integration?.settings || {}
+  const clientId = settings.client_id || integration?.client_id
+  const clientSecret = settings.client_secret || integration?.client_secret
 
   const redirectUri =
     process.env.FORTNOX_REDIRECT_URI ||
@@ -1296,7 +1721,8 @@ async function fortnoxOAuthCallback(req, res) {
     const expiresAt = Math.floor((now + expiresIn * 1000) / 1000)
 
     const newOauthData = {
-      ...(integration.oauth_data || {}),
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      ...(integration.settings?.oauth_data || integration.oauth_data || {}),
       tokens: {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
@@ -1353,22 +1779,50 @@ async function fortnoxOAuthCallback(req, res) {
       `[${new Date().toISOString()}] GET /api/integrations/fortnox/callback - 🔄 Executing database update...`
     )
 
-    const { error: updateError } = await supabase
-      .from("company_integrations")
-      .update({
-        oauth_data: newOauthData,
-        status: integrationStatus,
-      })
-      .eq("id", integration.id)
-      
+    // Retry saving tokens to handle transient network glitches (e.g., "gateway error: Network connection lost")
+    // Get current settings to merge with oauth_data
+    const currentSettings = integration.settings || {}
+    const updatedSettings = {
+      ...currentSettings,
+      oauth_data: newOauthData,
+    }
+    
+    const maxAttempts = 3
+    let updateError = null
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const { error } = await supabase
+        .from("company_integrations")
+        .update({
+          settings: updatedSettings,
+          status: integrationStatus,
+        })
+        .eq("id", integration.id)
+
+      if (!error) {
+        updateError = null
+        break
+      }
+
+      updateError = error
+      console.error(
+        `[${new Date().toISOString()}] GET /api/integrations/fortnox/callback - ❌ Token save failed (attempt ${attempt}/${maxAttempts}):`,
+        error.message || error
+      )
+
+      // Backoff before retrying
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 300))
+      }
+    }
+
     console.log(
       `[${new Date().toISOString()}] GET /api/integrations/fortnox/callback - 📊 Database update completed, checking for errors...`
     )
 
     if (updateError) {
       console.error(
-        `[${new Date().toISOString()}] GET /api/integrations/fortnox/callback - ❌ Error saving tokens to database:`,
-        updateError.message,
+        `[${new Date().toISOString()}] GET /api/integrations/fortnox/callback - ❌ Error saving tokens to database after retries:`,
+        updateError.message || updateError,
         updateError
       )
       const frontendErrorRedirect =
@@ -1465,7 +1919,7 @@ async function syncFortnoxCustomers(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -1478,7 +1932,9 @@ async function syncFortnoxCustomers(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured for this company" })
   }
 
-  const tokens = integration.oauth_data?.tokens
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
     console.warn(
@@ -1520,8 +1976,17 @@ async function syncFortnoxCustomers(req, res) {
     )
     
     try {
+      // Get client_id and client_secret from settings (new schema) or directly (backward compatibility)
+      const settings = integration.settings || {}
+      const clientId = settings.client_id || integration.client_id
+      const clientSecret = settings.client_secret || integration.client_secret || ""
+      
+      if (!clientId) {
+        throw new Error("Client ID not found in integration settings")
+      }
+      
       // Use Basic Auth as per Fortnox OAuth spec: Base64(ClientId:ClientSecret)
-      const credentials = Buffer.from(`${integration.client_id}:${integration.client_secret || ""}`).toString("base64")
+      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
       
       const refreshResponse = await fetch("https://apps.fortnox.se/oauth-v1/token", {
         method: "POST",
@@ -1610,12 +2075,14 @@ async function syncFortnoxCustomers(req, res) {
         })
       }
 
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
       const updatedOauthData = {
-        ...(integration.oauth_data || {}),
+        ...currentOauthData,
         tokens: {
-          ...tokens,
+          ...(currentOauthData.tokens || {}),
           access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || tokens.refresh_token,
+          refresh_token: refreshData.refresh_token || currentOauthData.tokens?.refresh_token,
           expires_in: expiresIn,
           expires_at: newExpiresAt,
           scope: refreshedScope, // Preserve/update scope
@@ -1623,9 +2090,15 @@ async function syncFortnoxCustomers(req, res) {
       }
 
       // Update integration with new tokens (IMPORTANT: Save refreshed tokens to DB)
+      // Store oauth_data in settings jsonb field
+      const currentSettings = integration.settings || {}
+      const updatedSettings = {
+        ...currentSettings,
+        oauth_data: updatedOauthData,
+      }
       const { error: updateTokenError } = await supabase
         .from("company_integrations")
-        .update({ oauth_data: updatedOauthData })
+        .update({ settings: updatedSettings })
         .eq("id", integration.id)
 
       if (updateTokenError) {
@@ -1680,13 +2153,15 @@ async function syncFortnoxCustomers(req, res) {
       `[${new Date().toISOString()}] POST /api/integrations/fortnox/sync-customers - Fetching from Fortnox API (rate limit: ${rateLimitCheck.remaining} remaining)`
     )
     
+    // Get client_id and client_secret from settings (new schema) or directly (backward compatibility)
+    const settings = integration.settings || {}
     const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         // Fortnox-specific headers – adjust if needed based on your app's configuration
         Authorization: `Bearer ${tokens.access_token}`,
-        "Client-Id": integration.client_id,
-        "Client-Secret": integration.client_secret || "",
+        "Client-Id": settings.client_id || integration.client_id,
+        "Client-Secret": settings.client_secret || integration.client_secret || "",
         Accept: "application/json",
       },
     })
@@ -1758,18 +2233,26 @@ async function syncFortnoxCustomers(req, res) {
     const lastSyncedAt = new Date().toISOString()
 
     const newOauthData = {
-      ...(integration.oauth_data || {}),
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      ...(integration.settings?.oauth_data || integration.oauth_data || {}),
       usage: {
-        ...(integration.oauth_data?.usage || {}),
+        // Get oauth_data from settings (new schema) or directly (backward compatibility)
+        ...((integration.settings?.oauth_data || integration.oauth_data)?.usage || {}),
         active_customers_count: activeCustomersCount,
         last_synced_at: lastSyncedAt,
       },
     }
 
+    // Store oauth_data in settings jsonb field
+    const currentSettings = integration.settings || {}
+    const updatedSettings = {
+      ...currentSettings,
+      oauth_data: newOauthData,
+    }
     const { error: updateError } = await supabase
       .from("company_integrations")
       .update({
-        oauth_data: newOauthData,
+        settings: updatedSettings,
       })
       .eq("id", integration.id)
 
@@ -1867,7 +2350,7 @@ async function getFortnoxCustomers(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -1885,11 +2368,14 @@ async function getFortnoxCustomers(req, res) {
     {
       integration_id: integration.id,
       status: integration.status,
-      has_oauth_data: !!integration.oauth_data,
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      has_oauth_data: !!(integration.settings?.oauth_data || integration.oauth_data),
     }
   )
 
-  const tokens = integration.oauth_data?.tokens
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
   
   console.log(
     `[${new Date().toISOString()}] GET /api/integrations/fortnox/customers - 🔑 Extracting tokens from integration data...`
@@ -1958,15 +2444,24 @@ async function getFortnoxCustomers(req, res) {
     )
     
     try {
+      // Get client_id and client_secret from settings (new schema) or directly (backward compatibility)
+      const settings = integration.settings || {}
+      const clientId = settings.client_id || integration.client_id
+      const clientSecret = settings.client_secret || integration.client_secret || ""
+      
+      if (!clientId) {
+        throw new Error("Client ID not found in integration settings")
+      }
+      
       // Use Basic Auth as per Fortnox OAuth spec: Base64(ClientId:ClientSecret)
-      const credentials = Buffer.from(`${integration.client_id}:${integration.client_secret || ""}`).toString("base64")
+      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
       
       console.log(
         `[${new Date().toISOString()}] GET /api/integrations/fortnox/customers - 🔑 Fetching refreshed tokens from Fortnox...`,
         {
           endpoint: "https://apps.fortnox.se/oauth-v1/token",
           grant_type: "refresh_token",
-          client_id: integration.client_id.substring(0, 8) + "...", // Log partial client ID for security
+          client_id: clientId.substring(0, 8) + "...", // Log partial client ID for security
           current_token_expires_at: tokens.expires_at ? new Date(tokens.expires_at * 1000).toISOString() : "unknown",
         }
       )
@@ -2050,21 +2545,30 @@ async function getFortnoxCustomers(req, res) {
       }
 
       // Save refreshed tokens to database
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
       const updatedOauthData = {
-        ...(integration.oauth_data || {}),
+        ...currentOauthData,
         tokens: {
-          ...tokens,
+          ...(currentOauthData.tokens || {}),
           access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || tokens.refresh_token,
+          refresh_token: refreshData.refresh_token || currentOauthData.tokens?.refresh_token,
           expires_in: expiresIn,
           expires_at: newExpiresAt,
           scope: refreshedScope,
         },
       }
+      
+      // Store in settings jsonb field
+      const currentSettings = integration.settings || {}
+      const updatedSettings = {
+        ...currentSettings,
+        oauth_data: updatedOauthData,
+      }
 
       const { error: updateTokenError } = await supabase
         .from("company_integrations")
-        .update({ oauth_data: updatedOauthData })
+        .update({ settings: updatedSettings })
         .eq("id", integration.id)
 
       if (updateTokenError) {
@@ -2317,7 +2821,7 @@ async function getFortnoxCompanyInfo(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -2330,7 +2834,9 @@ async function getFortnoxCompanyInfo(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured for this company" })
   }
 
-  const tokens = integration.oauth_data?.tokens
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
     console.warn(
@@ -2390,21 +2896,31 @@ async function getFortnoxCompanyInfo(req, res) {
       const newExpiresAt = now + expiresIn
 
       // Update tokens in database
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+      const currentTokens = currentOauthData.tokens || {}
       const updatedOauthData = {
-        ...(integration.oauth_data || {}),
+        ...currentOauthData,
         tokens: {
-          ...tokens,
+          ...currentTokens,
           access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || tokens.refresh_token,
+          refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
           expires_in: expiresIn,
           expires_at: newExpiresAt,
-          scope: refreshData.scope || tokens.scope,
+          scope: refreshData.scope || currentTokens.scope,
         },
+      }
+      
+      // Store in settings jsonb field
+      const currentSettings = integration.settings || {}
+      const updatedSettings = {
+        ...currentSettings,
+        oauth_data: updatedOauthData,
       }
 
       await supabase
         .from("company_integrations")
-        .update({ oauth_data: updatedOauthData })
+        .update({ settings: updatedSettings })
         .eq("id", integration.id)
 
       accessToken = refreshData.access_token
@@ -2521,7 +3037,7 @@ async function getFortnoxSettings(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", profile.company_id)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -2530,7 +3046,9 @@ async function getFortnoxSettings(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured or no access token" })
   }
 
-  const tokens = integration.oauth_data.tokens
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
   
   // Check if the token has the required settings scope
   const grantedScope = (tokens.scope || "").toLowerCase()
@@ -2581,21 +3099,31 @@ async function getFortnoxSettings(req, res) {
       const newExpiresAt = now + expiresIn
 
       // Update tokens in database
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+      const currentTokens = currentOauthData.tokens || {}
       const updatedOauthData = {
-        ...(integration.oauth_data || {}),
+        ...currentOauthData,
         tokens: {
-          ...tokens,
+          ...currentTokens,
           access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || tokens.refresh_token,
+          refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
           expires_in: expiresIn,
           expires_at: newExpiresAt,
-          scope: refreshData.scope || tokens.scope,
+          scope: refreshData.scope || currentTokens.scope,
         },
+      }
+      
+      // Store in settings jsonb field
+      const currentSettings = integration.settings || {}
+      const updatedSettings = {
+        ...currentSettings,
+        oauth_data: updatedOauthData,
       }
 
       await supabase
         .from("company_integrations")
-        .update({ oauth_data: updatedOauthData })
+        .update({ settings: updatedSettings })
         .eq("id", integration.id)
 
       accessToken = refreshData.access_token
@@ -2708,7 +3236,7 @@ async function getFortnoxProfile(req, res) {
     .from("company_integrations")
     .select("*")
     .eq("company_id", profile.company_id)
-    .eq("tool_name", "Fortnox")
+    .eq("provider", "Fortnox")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -2717,7 +3245,9 @@ async function getFortnoxProfile(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured or no access token" })
   }
 
-  const tokens = integration.oauth_data.tokens
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
   
   // Check if token is expired and refresh if needed
   let expiresAt = tokens.expires_at
@@ -2759,21 +3289,31 @@ async function getFortnoxProfile(req, res) {
       const newExpiresAt = now + expiresIn
 
       // Update tokens in database
+      // Get oauth_data from settings (new schema) or directly (backward compatibility)
+      const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+      const currentTokens = currentOauthData.tokens || {}
       const updatedOauthData = {
-        ...(integration.oauth_data || {}),
+        ...currentOauthData,
         tokens: {
-          ...tokens,
+          ...currentTokens,
           access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || tokens.refresh_token,
+          refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
           expires_in: expiresIn,
           expires_at: newExpiresAt,
-          scope: refreshData.scope || tokens.scope,
+          scope: refreshData.scope || currentTokens.scope,
         },
+      }
+      
+      // Store in settings jsonb field
+      const currentSettings = integration.settings || {}
+      const updatedSettings = {
+        ...currentSettings,
+        oauth_data: updatedOauthData,
       }
 
       await supabase
         .from("company_integrations")
-        .update({ oauth_data: updatedOauthData })
+        .update({ settings: updatedSettings })
         .eq("id", integration.id)
 
       accessToken = refreshData.access_token
@@ -2947,27 +3487,83 @@ async function upsertAlerts(req, res) {
 
   const companyId = profile.company_id
 
-  const { data, error } = await supabase
-    .from("company_alerts")
-    .upsert(
-      {
-        company_id: companyId,
-        email_for_alerts,
-        slack_channel,
-        alert_types: alert_types || null,
-        frequency: frequency || null,
-      },
-      { onConflict: "company_id" }
-    )
-    .select()
-    .maybeSingle()
-
-  if (error) {
-    console.error(`[${new Date().toISOString()}] POST /api/alerts - Error upserting alerts:`, error.message)
-    return res.status(500).json({ error: error.message })
+  // Build config object to store in jsonb field
+  // The schema has: alert_type (text), config (jsonb), active (boolean)
+  // We'll store the alert configuration in the config field
+  const config = {
+    email_for_alerts: email_for_alerts || null,
+    slack_channel: slack_channel || null,
+    alert_types: alert_types || null,
+    frequency: frequency || null,
   }
 
-  return res.json({ alerts: data })
+  // For each alert type, create a separate record
+  // If alert_types is an object with keys like { renewal: true, license_waste: true }
+  const alertTypeKeys = alert_types && typeof alert_types === 'object' 
+    ? Object.keys(alert_types).filter(key => alert_types[key] === true)
+    : []
+
+  // If no specific alert types provided, create a default "general" alert
+  if (alertTypeKeys.length === 0) {
+    alertTypeKeys.push("general")
+  }
+
+  const results = []
+  const errors = []
+
+  for (const alertType of alertTypeKeys) {
+    // First check if alert already exists
+    const { data: existing } = await supabase
+      .from("company_alerts")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("alert_type", alertType)
+      .maybeSingle()
+
+    let data, error
+    if (existing) {
+      // Update existing alert
+      const result = await supabase
+        .from("company_alerts")
+        .update({
+          config: config,
+          active: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .maybeSingle()
+      data = result.data
+      error = result.error
+    } else {
+      // Insert new alert
+      const result = await supabase
+        .from("company_alerts")
+        .insert({
+          company_id: companyId,
+          alert_type: alertType,
+          config: config,
+          active: true,
+        })
+        .select()
+        .maybeSingle()
+      data = result.data
+      error = result.error
+    }
+
+    if (error) {
+      console.error(`[${new Date().toISOString()}] POST /api/alerts - Error upserting alert ${alertType}:`, error.message)
+      errors.push({ alertType, error: error.message })
+    } else if (data) {
+      results.push(data)
+    }
+  }
+
+  if (errors.length > 0 && results.length === 0) {
+    return res.status(500).json({ error: errors[0].error, errors })
+  }
+
+  return res.json({ alerts: results, errors: errors.length > 0 ? errors : undefined })
 }
 
 async function getAlerts(req, res) {
@@ -3014,13 +3610,432 @@ async function getAlerts(req, res) {
   return res.json({ alerts: data || null })
 }
 
+// =====================================
+// Fortnox Cost Analysis Endpoints
+// =====================================
+
+// Helper function to refresh token and get access token
+async function refreshTokenIfNeeded(integration, tokens) {
+  let expiresAt = tokens.expires_at
+  if (typeof expiresAt === 'string') {
+    expiresAt = Math.floor(new Date(expiresAt).getTime() / 1000)
+  }
+  const now = Math.floor(Date.now() / 1000)
+  let accessToken = tokens.access_token
+
+  if (expiresAt && now >= (expiresAt - 300)) {
+    console.log(`[${new Date().toISOString()}] Token refresh needed`)
+    
+    // Get client_id and client_secret from settings (new schema) or directly (backward compatibility)
+    const settings = integration.settings || {}
+    const clientId = settings.client_id || integration.client_id
+    const clientSecret = settings.client_secret || integration.client_secret || ""
+    
+    if (!clientId) {
+      throw new Error("Client ID not found in integration settings")
+    }
+    
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+    
+    const refreshResponse = await fetch("https://apps.fortnox.se/oauth-v1/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${credentials}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: tokens.refresh_token,
+      }).toString(),
+    })
+
+    if (!refreshResponse.ok) {
+      throw new Error("Token refresh failed")
+    }
+
+    const refreshData = await refreshResponse.json()
+    const expiresIn = refreshData.expires_in || 3600
+    const newExpiresAt = now + expiresIn
+
+    // Get oauth_data from settings (new schema) or directly (backward compatibility)
+    const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+    const currentTokens = currentOauthData.tokens || {}
+    const updatedOauthData = {
+      ...currentOauthData,
+      tokens: {
+        ...currentTokens,
+        access_token: refreshData.access_token,
+        refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
+        expires_in: expiresIn,
+        expires_at: newExpiresAt,
+        scope: refreshData.scope || currentTokens.scope,
+      },
+    }
+
+    // Store in settings jsonb field
+    const currentSettings = integration.settings || {}
+    const updatedSettings = {
+      ...currentSettings,
+      oauth_data: updatedOauthData,
+    }
+    
+    await supabase
+      .from("company_integrations")
+      .update({ settings: updatedSettings })
+      .eq("id", integration.id)
+
+    accessToken = refreshData.access_token
+  }
+
+  return accessToken
+}
+
+// Helper function to fetch Fortnox data
+async function fetchFortnoxData(endpoint, accessToken, requiredScope, scopeName) {
+  const rateLimitCheck = checkRateLimit(accessToken)
+  if (!rateLimitCheck.allowed) {
+    throw new Error(`Rate limit exceeded: ${rateLimitCheck.message}`)
+  }
+
+  const response = await fetch(`https://api.fortnox.se/3${endpoint}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    let errorData = {}
+    try {
+      errorData = JSON.parse(errorText)
+    } catch (e) {
+      // Not JSON
+    }
+
+    if (response.status === 403) {
+      const errorMessage = errorData.ErrorInformation?.message || errorText || "Access denied"
+      if (errorMessage.includes("behörighet") || errorMessage.includes("permission") || errorMessage.includes("scope")) {
+        throw new Error(`Missing ${scopeName} scope: ${errorMessage}`)
+      }
+    }
+
+    // Handle 400 as endpoint not available (might not exist or require different parameters)
+    if (response.status === 400) {
+      const errorMessage = errorData.ErrorInformation?.message || errorText || "Bad Request"
+      // Check if it's a scope/permission issue (check for Swedish "behörighet" and English "permission")
+      const lowerMessage = errorMessage.toLowerCase()
+      if (lowerMessage.includes("behörighet") || 
+          lowerMessage.includes("permission") || 
+          lowerMessage.includes("scope") ||
+          lowerMessage.includes("saknas") || // Swedish for "missing"
+          lowerMessage.includes("missing")) {
+        throw new Error(`Missing ${scopeName} scope: ${errorMessage}`)
+      }
+      // Otherwise, treat as endpoint not available
+      throw new Error(`Endpoint not available: ${errorMessage}`)
+    }
+
+    throw new Error(`Fortnox API error: ${response.status} ${response.statusText}`)
+  }
+
+  return await response.json()
+}
+
+// Generic endpoint handler for Fortnox data
+function createFortnoxDataHandler(endpoint, requiredScope, scopeName, dataKey) {
+  return async (req, res) => {
+    const endpointName = endpoint.replace(/^\//, "").replace(/\//g, "-")
+    console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Request received`)
+
+    if (!supabase) {
+      return res.status(500).json({ error: "Supabase not configured on backend" })
+    }
+
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    if (profileError || !profile?.company_id) {
+      return res.status(400).json({ error: "No company associated with this user" })
+    }
+
+    const { data: integration, error: integrationError } = await supabase
+      .from("company_integrations")
+      .select("*")
+      .eq("company_id", profile.company_id)
+      .eq("provider", "Fortnox")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (integrationError || !integration) {
+      return res.status(400).json({ error: "Fortnox integration not configured for this company" })
+    }
+
+    // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
+    if (!tokens?.access_token) {
+      return res.status(400).json({ error: "Fortnox is connected but no access token is stored. Please reconnect." })
+    }
+
+    // Check scope
+    const grantedScope = (tokens.scope || "").toLowerCase()
+    if (requiredScope && !grantedScope.includes(requiredScope.toLowerCase())) {
+      return res.status(403).json({ 
+        error: `Missing permission to access ${scopeName} data`,
+        details: `The Fortnox integration doesn't have permission to access ${scopeName}. Please reconnect your integration and ensure you grant '${requiredScope}' permissions during the OAuth authorization.`,
+        currentScope: tokens.scope || 'none',
+        action: "reconnect"
+      })
+    }
+
+    try {
+      let accessToken
+      try {
+        accessToken = await refreshTokenIfNeeded(integration, tokens)
+      } catch (refreshError) {
+        console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Token refresh error:`, refreshError)
+        return res.status(401).json({ 
+          error: "Token refresh failed. Please reconnect your integration.",
+          details: refreshError.message
+        })
+      }
+      
+      try {
+        const data = await fetchFortnoxData(endpoint, accessToken, requiredScope, scopeName)
+        
+        // Extract the data array from Fortnox response (usually in a key like "Invoices", "SupplierInvoices", etc.)
+        const result = data[dataKey] || data[dataKey.charAt(0).toUpperCase() + dataKey.slice(1)] || data
+        
+        return res.json({ [dataKey]: Array.isArray(result) ? result : [result] })
+      } catch (fetchError) {
+        // Handle scope/permission errors gracefully
+        if (fetchError.message && (fetchError.message.includes("Missing") && fetchError.message.includes("scope"))) {
+          console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Missing scope (expected): ${fetchError.message}`)
+          return res.status(403).json({ 
+            error: fetchError.message,
+            action: "reconnect",
+            scope_required: requiredScope
+          })
+        }
+        // Re-throw other errors to be handled below
+        throw fetchError
+      }
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Error:`, error)
+      console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Error message:`, error.message)
+      console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Error stack:`, error.stack)
+      
+      if (error.message && (error.message.includes("Missing") && error.message.includes("scope"))) {
+        return res.status(403).json({ 
+          error: error.message,
+          action: "reconnect",
+          scope_required: requiredScope
+        })
+      }
+      
+      if (error.message.includes("Rate limit")) {
+        return res.status(429).json({ error: error.message })
+      }
+
+      // Handle "endpoint not available" as 404 (not an error, just not supported)
+      if (error.message.includes("Endpoint not available")) {
+        return res.status(404).json({ 
+          error: error.message,
+          read_only: true
+        })
+      }
+
+      return res.status(500).json({ 
+        error: error.message || "Failed to fetch data from Fortnox",
+        details: error.stack || "No additional details available"
+      })
+    }
+  }
+}
+
+// Create endpoints for cost analysis
+const getFortnoxInvoices = createFortnoxDataHandler("/invoices", "invoice", "invoice", "Invoices")
+const getFortnoxSupplierInvoices = createFortnoxDataHandler("/supplierinvoices", "supplierinvoice", "supplier invoice", "SupplierInvoices")
+// Note: Fortnox API may not have a direct /expenses endpoint
+// Expenses might be accessed through salary transactions or other endpoints
+// For now, we'll try /expenses but handle 404/400 gracefully
+const getFortnoxExpenses = createFortnoxDataHandler("/expenses", "salary", "expense", "Expenses")
+const getFortnoxVouchers = createFortnoxDataHandler("/vouchers", "bookkeeping", "voucher", "Vouchers")
+const getFortnoxAccounts = createFortnoxDataHandler("/accounts", "bookkeeping", "account", "Accounts")
+const getFortnoxArticles = createFortnoxDataHandler("/articles", "article", "article", "Articles")
+const getFortnoxSuppliers = createFortnoxDataHandler("/suppliers", "supplier", "supplier", "Suppliers")
+
+// Cost leak analysis endpoint
+const { analyzeCostLeaks } = require("../services/costLeakAnalysis")
+
+async function analyzeFortnoxCostLeaks(req, res) {
+  const endpointName = "cost-leaks"
+  console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Request received`)
+
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError || !profile?.company_id) {
+    return res.status(400).json({ error: "No company associated with this user" })
+  }
+
+  const { data: integration, error: integrationError } = await supabase
+    .from("company_integrations")
+    .select("*")
+    .eq("company_id", profile.company_id)
+    .eq("provider", "Fortnox")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationError || !integration) {
+    console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Integration not found`)
+    return res.status(400).json({ error: "Fortnox integration not configured for this company" })
+  }
+
+  console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ Integration found in database`)
+
+  // Fetch tokens from database
+  // Get oauth_data from settings (new schema) or directly (backward compatibility)
+  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const tokens = oauthData?.tokens
+  if (!tokens?.access_token) {
+    console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - No access token in database`)
+    return res.status(400).json({ error: "Fortnox is connected but no access token is stored. Please reconnect." })
+  }
+
+  console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ Tokens retrieved from database`)
+
+  try {
+    // Refresh token if needed (tokens are already fetched from DB above)
+    const accessToken = await refreshTokenIfNeeded(integration, tokens)
+    console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ Access token ready`)
+    
+    // Fetch only invoice data (no expenses, vouchers, accounts, articles)
+    const [invoicesRes, supplierInvoicesRes] = await Promise.allSettled([
+      fetchFortnoxData("/invoices", accessToken, "invoice", "invoice").catch(() => ({ Invoices: [] })),
+      fetchFortnoxData("/supplierinvoices", accessToken, "supplierinvoice", "supplier invoice").catch(() => ({ SupplierInvoices: [] })),
+    ])
+
+    // Extract data
+    const invoices = invoicesRes.status === "fulfilled" ? (invoicesRes.value.Invoices || []) : []
+    const supplierInvoices = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value.SupplierInvoices || []) : []
+
+    // Prepare data for analysis - only invoices
+    const data = {
+      invoices,
+      supplierInvoices,
+      // Explicitly exclude other data types to ensure only invoices are analyzed
+      expenses: [],
+      vouchers: [],
+      accounts: [],
+      articles: [],
+    }
+
+    // Run analysis
+    const analysis = analyzeCostLeaks(data)
+    
+    console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ Basic analysis completed`)
+    console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Found ${analysis.overallSummary?.totalFindings || 0} findings`)
+
+    // Enhance with AI if OpenAI is configured
+    const openaiService = require("../services/openaiService")
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+    
+    if (OPENAI_API_KEY) {
+      console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - 🤖 OpenAI API key found, enhancing analysis with AI...`)
+      
+      try {
+        // Generate AI summary
+        console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Generating AI summary...`)
+        const aiSummary = await openaiService.generateAnalysisSummary({
+          summary: {
+            totalInvoices: analysis.supplierInvoiceAnalysis?.summary?.totalInvoices || 0,
+            totalAmount: analysis.supplierInvoiceAnalysis?.summary?.totalAmount || 0,
+            duplicatePayments: analysis.supplierInvoiceAnalysis?.summary?.duplicatePayments || [],
+            unusualAmounts: analysis.supplierInvoiceAnalysis?.summary?.unusualAmounts || [],
+            recurringSubscriptions: analysis.supplierInvoiceAnalysis?.summary?.recurringSubscriptions || [],
+            overdueInvoices: analysis.supplierInvoiceAnalysis?.summary?.overdueInvoices || [],
+            priceIncreases: analysis.supplierInvoiceAnalysis?.summary?.priceIncreases || [],
+          },
+          findings: analysis.supplierInvoiceAnalysis?.findings || [],
+        })
+        
+        if (aiSummary) {
+          analysis.aiSummary = aiSummary
+          console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ AI summary generated`)
+        }
+
+        // Enhance findings with AI recommendations - only invoice findings
+        const invoiceFindings = analysis.supplierInvoiceAnalysis?.findings || []
+        
+        if (invoiceFindings.length > 0) {
+          console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Enhancing ${invoiceFindings.length} invoice findings with AI...`)
+          const enhancedFindings = await openaiService.enhanceFindingsWithAI(invoiceFindings)
+          
+          // Update supplier invoice findings with AI enhancements
+          if (analysis.supplierInvoiceAnalysis?.findings) {
+            analysis.supplierInvoiceAnalysis.findings = enhancedFindings
+            console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ✅ Enhanced ${enhancedFindings.length} invoice findings with AI`)
+          }
+        } else {
+          console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - No invoice findings to enhance`)
+        }
+        
+        analysis.aiEnhanced = true
+        analysis.enhancedAt = new Date().toISOString()
+      } catch (aiError) {
+        console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ⚠️ AI enhancement failed:`, aiError.message)
+        // Continue without AI enhancement - return basic analysis
+        analysis.aiError = aiError.message
+      }
+    } else {
+      console.log(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - ⚠️ OpenAI API key not configured, skipping AI enhancement`)
+    }
+
+    return res.json(analysis)
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] GET /api/integrations/fortnox/${endpointName} - Error:`, error.message)
+    return res.status(500).json({ 
+      error: error.message || "Failed to analyze cost leaks",
+      details: error.stack || "No additional details available"
+    })
+  }
+}
+
 module.exports = {
   getRoot,
   getProfile,
   getEmployees,
   getCustomers,
+  getAllSubscriptions,
   createProfile,
   createProfilePublic,
+  updateProfilePublic,
   updateEmailVerified,
   updateEmailVerifiedPublic,
   approveProfile,
@@ -3039,6 +4054,15 @@ module.exports = {
   getFortnoxCompanyInfo,
   getFortnoxSettings,
   getFortnoxProfile,
+  // Cost analysis endpoints
+  getFortnoxInvoices,
+  getFortnoxSupplierInvoices,
+  getFortnoxExpenses,
+  getFortnoxVouchers,
+  getFortnoxAccounts,
+  getFortnoxArticles,
+  getFortnoxSuppliers,
+  analyzeFortnoxCostLeaks,
   // Plans & alerts
   upsertPlans,
   getPlans,

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
+import { getValidSessionToken } from "@/lib/auth-helpers"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +53,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 
+// Format currency helper function (defined outside component to avoid recreation)
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
 export default function AdminCustomersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -82,48 +93,77 @@ export default function AdminCustomersPage() {
 
   const loadCustomers = async () => {
     try {
+      setIsLoading(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        console.error("No access token for loading customers")
+        toast.error("Authentication required", { description: "Please log in again" })
+        setCustomers([])
+        return
+      }
 
       const res = await fetch(`${apiBase}/api/admin/customers`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
+      
       if (!res.ok) {
-        throw new Error("Failed to load customers")
+        const errorText = await res.text().catch(() => "Unknown error")
+        console.error("Failed to load customers:", res.status, errorText)
+        throw new Error(`Failed to load customers: ${res.status}`)
       }
+      
       const raw = await res.json()
       const list = Array.isArray(raw) ? raw : raw.customers ?? []
+      
+      console.log(`[Customers] Loaded ${list.length} customers from API`)
+      
       const mapped =
         list?.map((p: any) => {
-          const companyName = p.companies?.name || p.full_name || p.email || "Unknown"
-          const employees = p.companies?.size ? parseInt(p.companies.size, 10) || 0 : 0
+          // Backend now returns 'company' (singular) instead of 'companies'
+          const companyName = p.company?.name || p.full_name || p.email || "Unknown"
+          const employees = p.company?.size ? parseInt(p.company.size, 10) || 0 : 0
           const initials = companyName
             .split(" ")
             .filter(Boolean)
             .slice(0, 2)
             .map((n: string) => n[0]?.toUpperCase())
             .join("") || "??"
+          
+          // Extract subscription/plan information
+          const subscription = p.subscription || null
+          const planName = subscription?.plan_name || subscription?.plan_tier || "Free"
+          const planTier = subscription?.plan_tier || "free"
+          const monthlyRevenue = subscription?.plan_price_monthly_cents 
+            ? subscription.plan_price_monthly_cents / 100 
+            : 0
+          const subscriptionStatus = subscription?.status || "incomplete"
+          
           return {
             id: p.id,
             name: companyName,
             email: p.email,
-            plan: "Customer",
+            plan: planName,
+            planTier: planTier,
             employees,
-            status: p.status || (p.admin_approved ? "active" : "pending"),
+            status: subscriptionStatus === "active" ? "active" : subscriptionStatus === "past_due" ? "past_due" : subscriptionStatus === "canceled" ? "canceled" : "inactive",
             joined: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : "",
-            monthlyRevenue: 0,
-      totalSavings: 0,
+            monthlyRevenue: monthlyRevenue,
+            totalSavings: 0, // TODO: Calculate from cost leak analysis
             avatar: initials,
-            emailVerified: p.email_verified ?? false,
-            adminApproved: p.admin_approved ?? false,
+            emailVerified: true, // Email verification is handled by Supabase auth
+            adminApproved: true, // In new schema, no admin approval needed
+            subscription: subscription, // Keep full subscription object for details
           }
         }) ?? []
       setCustomers(mapped)
-    } catch {
-      // keep existing customers list on error so data doesn't disappear
+    } catch (error: any) {
+      console.error("Error loading customers:", error)
+      toast.error("Failed to load customers", {
+        description: error.message || "An error occurred while loading customers.",
+      })
+      setCustomers([]) // Clear customers on error
     } finally {
       setIsLoading(false)
     }
@@ -139,10 +179,7 @@ export default function AdminCustomersPage() {
     setApprovingId(customerId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
         toast.error("Not authenticated", {
@@ -183,12 +220,22 @@ export default function AdminCustomersPage() {
     }
   }
 
-  const stats = [
-    { label: "Total Customers", value: "342", icon: Building2, color: "text-blue-400" },
-    { label: "Active Subscriptions", value: "328", icon: CheckCircle, color: "text-green-400" },
-    { label: "Monthly Revenue", value: "$45.2K", icon: DollarSign, color: "text-cyan-400" },
-    { label: "Avg Employees", value: "67", icon: Users, color: "text-orange-400" },
-  ]
+  // Calculate real stats from customers data
+  const stats = useMemo(() => {
+    const totalCustomers = customers.length
+    const activeCustomers = customers.filter(c => c.status === "active").length
+    const totalRevenue = customers.reduce((sum, c) => sum + c.monthlyRevenue, 0)
+    const avgEmployees = customers.length > 0 
+      ? Math.round(customers.reduce((sum, c) => sum + c.employees, 0) / customers.length)
+      : 0
+
+    return [
+      { label: "Total Customers", value: totalCustomers.toString(), icon: Building2, color: "text-blue-400" },
+      { label: "Active Subscriptions", value: activeCustomers.toString(), icon: CheckCircle, color: "text-green-400" },
+      { label: "Monthly Revenue", value: formatCurrency(totalRevenue), icon: DollarSign, color: "text-cyan-400" },
+      { label: "Avg Employees", value: avgEmployees.toString(), icon: Users, color: "text-orange-400" },
+    ]
+  }, [customers])
 
   // Get unique plans for filter
   const plans = useMemo(
@@ -223,27 +270,16 @@ export default function AdminCustomersPage() {
     setCurrentPage(1)
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   const openDetails = async (customer: (typeof customers)[number]) => {
     setSelectedCustomer(customer)
     setCustomerDetails(null)
     setDetailsLoading(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
+        toast.error("Authentication required", { description: "Please log in again" })
         setDetailsLoading(false)
         return
       }
@@ -370,7 +406,7 @@ export default function AdminCustomersPage() {
             All Customers ({filteredCustomers.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6">
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
             <TableHeader>
@@ -387,17 +423,31 @@ export default function AdminCustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-400">
-                    Loading customers...
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="h-8 w-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-gray-400">Loading customers...</p>
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
-              {!isLoading && paginatedCustomers.length === 0 ? (
+              ) : paginatedCustomers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-400">
-                    No customers found matching your filters
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Building2 className="w-12 h-12 text-gray-600" />
+                      <p className="text-gray-400 text-sm">
+                        {customers.length === 0 
+                          ? "No customers found. Customers will appear here once they register."
+                          : "No customers found matching your filters"}
+                      </p>
+                      {customers.length === 0 && (
+                        <p className="text-gray-500 text-xs mt-2">
+                          Try registering a new user account to see it appear here.
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -436,14 +486,18 @@ export default function AdminCustomersPage() {
                     <TableCell className="min-w-[100px]">
                       <Badge
                         className={
-                          customer.plan === "Enterprise"
+                          customer.plan === "Enterprise" || customer.planTier === "custom"
                             ? "bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] sm:text-xs"
-                            : customer.plan === "Growth"
+                            : customer.plan === "Growth" || customer.planTier === "growth"
                               ? "bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] sm:text-xs"
-                              : "bg-gray-500/20 text-gray-400 border-gray-500/30 text-[10px] sm:text-xs"
+                              : customer.plan === "Startup" || customer.planTier === "startup"
+                                ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] sm:text-xs"
+                                : customer.plan === "Free" || customer.planTier === "free"
+                                  ? "bg-gray-500/20 text-gray-400 border-gray-500/30 text-[10px] sm:text-xs"
+                                  : "bg-gray-500/20 text-gray-400 border-gray-500/30 text-[10px] sm:text-xs"
                         }
                       >
-                        {customer.plan}
+                        {customer.plan || "Free"}
                       </Badge>
                     </TableCell>
                     <TableCell className="min-w-[80px]">

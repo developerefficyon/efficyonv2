@@ -49,8 +49,7 @@ export default function RegisterPage() {
         emailRedirectTo: redirectTo,
         data: {
           name,
-          role: "customer",
-          approved: false,
+          role: "user",
         },
       },
     })
@@ -61,82 +60,38 @@ export default function RegisterPage() {
       return
     }
 
-    // Create profile in backend after successful signup
-    // Use public endpoint since we may not have a session if email confirmation is required
-    if (signUpData?.user?.id) {
+    // Profile is automatically created by database trigger on user signup
+    // Update profile with full_name if provided
+    if (signUpData?.user?.id && name) {
       try {
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        console.log("Creating profile for user:", signUpData.user.id)
-        console.log("API Base URL:", apiBase)
+        console.log("Updating profile with full_name for user:", signUpData.user.id)
         
-        // Pass user data directly instead of just userId to avoid timing issues
-        const createProfileRes = await fetch(`${apiBase}/api/profiles/create-public`, {
+        // Update profile with full_name (profile already exists via trigger)
+        const updateProfileRes = await fetch(`${apiBase}/api/profiles/update-public`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             userId: signUpData.user.id,
-            email: signUpData.user.email,
-            userMetadata: signUpData.user.user_metadata,
-            emailConfirmed: !!signUpData.user.email_confirmed_at,
+            full_name: name,
           }),
         }).catch((fetchError) => {
           // Network error (backend not running, CORS, etc.)
-          console.error("Network error calling backend:", fetchError)
-          throw new Error(`Cannot reach backend server at ${apiBase}. Make sure the backend is running.`)
+          console.error("Network error updating profile:", fetchError)
+          // Don't throw - profile exists, just missing full_name
         })
 
-        console.log("Profile creation response status:", createProfileRes.status, createProfileRes.statusText)
-        console.log("Response headers:", Object.fromEntries(createProfileRes.headers.entries()))
-
-        if (!createProfileRes.ok) {
-          // Try to get error message from response
-          let errorData = {}
-          const contentType = createProfileRes.headers.get("content-type")
-          
-          if (contentType && contentType.includes("application/json")) {
-            try {
-              errorData = await createProfileRes.json()
-            } catch (e) {
-              console.error("Failed to parse error JSON:", e)
-              errorData = { message: "Failed to parse error response" }
-            }
-          } else {
-            // Try to get text response
-            try {
-              const text = await createProfileRes.text()
-              errorData = { message: text || "Unknown error" }
-            } catch (e) {
-              errorData = { message: `HTTP ${createProfileRes.status}: ${createProfileRes.statusText}` }
-            }
-          }
-          
-          console.error("Failed to create profile:", {
-            status: createProfileRes.status,
-            statusText: createProfileRes.statusText,
-            contentType,
-            error: errorData,
-            url: `${apiBase}/api/profiles/create-public`,
-          })
-          // Don't fail registration if profile creation fails - it can be created later
-        } else {
-          const successData = await createProfileRes.json().catch((e) => {
-            console.error("Failed to parse success response:", e)
-            return {}
-          })
-          console.log("Profile created successfully:", successData)
+        if (updateProfileRes && updateProfileRes.ok) {
+          console.log("Profile updated successfully with full_name")
+        } else if (updateProfileRes) {
+          console.warn("Failed to update profile with full_name, but profile exists via trigger")
         }
       } catch (profileError: any) {
-        console.error("Error creating profile (network/fetch error):", {
-          message: profileError?.message,
-          error: profileError,
-          stack: profileError?.stack,
-        })
-        // Don't fail registration if profile creation fails
+        console.error("Error updating profile (non-critical):", profileError?.message)
+        // Don't fail registration - profile exists via trigger, just missing full_name
       }
-    } else {
-      console.warn("No user ID in signup data, skipping profile creation")
     }
 
     setIsLoading(false)

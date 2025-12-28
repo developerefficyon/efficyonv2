@@ -2,9 +2,10 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
   Users,
   Building2,
@@ -13,17 +14,118 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowUpRight,
+  CreditCard,
+  Calendar,
+  Loader2,
 } from "lucide-react"
+import { getValidSessionToken } from "@/lib/auth-helpers"
+import { toast } from "sonner"
+
+interface Subscription {
+  id: string
+  plan_tier: string
+  status: string
+  current_period_start: string
+  current_period_end: string
+  cancel_at_period_end: boolean
+  amount_cents: number
+  currency: string
+  plan_catalog?: {
+    name: string
+    price_monthly_cents: number
+    included_tokens: number
+    max_integrations: number
+    max_team_members: number
+    features: string[]
+  }
+  token_balance?: {
+    total_tokens: number
+    used_tokens: number
+  }
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth()
   const router = useRouter()
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true)
+  const isFetchingRef = useRef(false)
+  const lastUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.push("/dashboard")
     }
   }, [user, router])
+
+  const fetchSubscription = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isFetchingRef.current) {
+      console.log("[AdminDashboard] Already fetching subscription, skipping duplicate call")
+      return
+    }
+
+    if (!user || user.role !== "admin") {
+      setIsLoadingSubscription(false)
+      return
+    }
+
+    // Only fetch if user ID changed (not just user object reference)
+    const currentUserId = user.id
+    if (currentUserId === lastUserIdRef.current) {
+      console.log("[AdminDashboard] Subscription already loaded for this user, skipping")
+      return
+    }
+
+    isFetchingRef.current = true
+    lastUserIdRef.current = currentUserId
+
+    try {
+      setIsLoadingSubscription(true)
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        console.warn("No access token for fetching subscription")
+        setIsLoadingSubscription(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/stripe/subscription`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.subscription) {
+          // Include token balance if available
+          setSubscription({
+            ...data.subscription,
+            token_balance: data.tokenBalance || null,
+          })
+        } else {
+          setSubscription(null)
+        }
+      } else if (res.status === 404) {
+        // No subscription found - that's okay
+        setSubscription(null)
+      } else {
+        console.error("Failed to fetch subscription:", res.status)
+        setSubscription(null)
+      }
+    } catch (error) {
+      console.error("Error fetching subscription:", error)
+    } finally {
+      setIsLoadingSubscription(false)
+      isFetchingRef.current = false
+    }
+  }, [user?.id, user?.role])
+
+  useEffect(() => {
+    fetchSubscription()
+  }, [fetchSubscription])
 
   if (user?.role !== "admin") {
     return null
@@ -133,6 +235,108 @@ export default function AdminDashboard() {
           )
         })}
       </div>
+
+      {/* Current Subscription */}
+      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-cyan-400" />
+            Current Subscription
+          </CardTitle>
+          <p className="text-sm text-gray-400">Your active subscription plan</p>
+        </CardHeader>
+        <CardContent>
+          {isLoadingSubscription ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+              <span className="ml-3 text-gray-400">Loading subscription...</span>
+            </div>
+          ) : subscription ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    {subscription.plan_catalog?.name || subscription.plan_tier.charAt(0).toUpperCase() + subscription.plan_tier.slice(1)} Plan
+                  </h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {subscription.plan_tier}
+                  </p>
+                </div>
+                <Badge
+                  className={
+                    subscription.status === "active"
+                      ? "bg-green-500/20 text-green-400 border-green-500/30"
+                      : subscription.status === "past_due"
+                        ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                        : "bg-red-500/20 text-red-400 border-red-500/30"
+                  }
+                >
+                  {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Monthly Price</p>
+                  <p className="text-lg font-semibold text-white">
+                    ${((subscription.amount_cents || subscription.plan_catalog?.price_monthly_cents || 0) / 100).toFixed(2)}
+                  </p>
+                </div>
+                {subscription.token_balance && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Token Usage</p>
+                    <p className="text-lg font-semibold text-white">
+                      {subscription.token_balance.used_tokens} / {subscription.token_balance.total_tokens}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {subscription.plan_catalog && (
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-xs text-gray-400 mb-2">Plan Features</p>
+                  <ul className="space-y-1">
+                    {subscription.plan_catalog.features && Array.isArray(subscription.plan_catalog.features) && (
+                      subscription.plan_catalog.features.slice(0, 3).map((feature: string, index: number) => (
+                        <li key={index} className="text-sm text-gray-300 flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))
+                    )}
+                    {subscription.plan_catalog.max_integrations && (
+                      <li className="text-sm text-gray-300 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        Up to {subscription.plan_catalog.max_integrations} integrations
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {subscription.current_period_end && (
+                <div className="pt-4 border-t border-white/10 flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-400">
+                    {subscription.cancel_at_period_end ? "Cancels on" : "Renews on"}{" "}
+                    {new Date(subscription.current_period_end).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-400 mb-4">No active subscription found</p>
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-colors"
+              >
+                Subscribe to a Plan
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Employees */}

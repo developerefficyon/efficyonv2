@@ -44,6 +44,8 @@
     "@react-three/fiber": "^9.4.2",
     "@splinetool/react-spline": "latest",
     "@splinetool/runtime": "latest",
+    "@stripe/react-stripe-js": "^2.7.1",
+    "@stripe/stripe-js": "^3.5.0",
     "@supabase/supabase-js": "^2.86.0",
     "@tsparticles/engine": "latest",
     "@tsparticles/react": "latest",

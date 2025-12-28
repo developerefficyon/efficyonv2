@@ -8,6 +8,12 @@
     "start": "node src/server.js",
     "seed": "node scripts/seed.js",
     "seed:staging": "node scripts/seed-staging.js",
+    "check:admin": "node scripts/check-admin.js",
+    "seed:fortnox": "node scripts/seed-fortnox.js",
+    "seed:fortnox-accounts": "node scripts/seed-fortnox-accounts.js",
+    "seed:fortnox-invoices": "node scripts/seed-fortnox-invoices.js",
+    "seed:fortnox-supplier-invoices": "node scripts/seed-fortnox-supplier-invoices.js",
+    "cleanup:fortnox-supplier-invoices": "node scripts/cleanup-fortnox-supplier-invoices.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,8 +22,10 @@
   "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
+    "axios": "^1.7.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "stripe": "^15.0.0"
   }
 }

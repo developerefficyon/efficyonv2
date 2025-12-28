@@ -1,0 +1,324 @@
+const axios = require("axios")
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+/**
+ * Generate AI-powered analysis summary
+ * @param {Object} analysisData - Cost leak analysis data
+ * @returns {Promise<string>} AI-generated summary
+ */
+async function generateAnalysisSummary(analysisData) {
+  if (!OPENAI_API_KEY) {
+    console.warn("[OpenAI] API key not configured, skipping summary generation")
+    return null
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Generating analysis summary with OpenAI`)
+
+    const prompt = buildAnalysisPrompt(analysisData)
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a financial analysis expert specializing in cost optimization. Provide concise, actionable insights based on cost leak analysis data. Be direct and focus on the biggest savings opportunities.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const summary = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] Summary generated successfully`)
+
+    return summary
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error generating summary:`, error.message)
+    return null
+  }
+}
+
+/**
+ * Generate AI recommendations for specific findings
+ * @param {Object} finding - Individual cost leak finding
+ * @returns {Promise<string>} AI-generated recommendations
+ */
+async function generateRecommendations(finding) {
+  if (!OPENAI_API_KEY) {
+    console.warn("[OpenAI] API key not configured, skipping recommendations")
+    return null
+  }
+
+  try {
+    console.log(
+      `[${new Date().toISOString()}] Generating recommendations for: ${finding.type}`
+    )
+
+    const prompt = buildRecommendationPrompt(finding)
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a financial consultant. Provide 2-3 specific, actionable recommendations to address this cost issue. Keep it concise and practical.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const recommendations = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] Recommendations generated successfully`)
+
+    return recommendations
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error generating recommendations:`, error.message)
+    return null
+  }
+}
+
+/**
+ * Estimate potential savings with AI
+ * @param {Object} finding - Cost leak finding
+ * @returns {Promise<number>} Estimated savings amount
+ */
+async function estimatePotentialSavings(finding) {
+  if (!OPENAI_API_KEY) {
+    console.warn("[OpenAI] API key not configured, skipping savings estimation")
+    return finding.potentialSavings || 0
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Estimating savings for: ${finding.type}`)
+
+    const prompt = `
+Based on this cost leak finding, estimate the annual savings potential (in SEK or USD):
+
+Type: ${finding.type}
+Current Amount: ${finding.amount || finding.total}
+Supplier: ${finding.supplierName || "Unknown"}
+Description: ${JSON.stringify(finding)}
+
+Respond with ONLY a number (the estimated annual savings amount). Be conservative in your estimate.
+`
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a financial analyst estimating cost savings. Respond with ONLY a number, nothing else.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.5,
+        max_tokens: 50,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const savingsStr = response.data.choices[0].message.content.trim()
+    const savings = parseFloat(savingsStr.replace(/[^0-9.-]/g, "")) || 0
+
+    console.log(
+      `[${new Date().toISOString()}] Estimated savings: ${savings} for ${finding.type}`
+    )
+
+    return Math.max(savings, 0)
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error estimating savings:`, error.message)
+    return finding.potentialSavings || 0
+  }
+}
+
+/**
+ * Chat with AI about analysis results
+ * @param {string} question - User's question about the analysis
+ * @param {Object} analysisData - The cost leak analysis data for context
+ * @returns {Promise<string>} AI response
+ */
+async function chatAboutAnalysis(question, analysisData) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured")
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Chat query: ${question}`)
+
+    const context = JSON.stringify(analysisData, null, 2)
+    const systemPrompt = `You are a helpful financial analysis assistant. You have access to the following cost leak analysis data:
+
+${context}
+
+Help the user understand their cost leaks and provide actionable insights. Be friendly, clear, and specific.`
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const answer = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] Chat response generated`)
+
+    return answer
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in chat:`, error.message)
+    throw new Error(`Failed to process chat request: ${error.message}`)
+  }
+}
+
+/**
+ * Build prompt for analysis summary
+ */
+function buildAnalysisPrompt(data) {
+  return `
+Analyze this cost leak data and provide a brief executive summary with the top 3 priorities:
+
+Total Invoices: ${data.summary?.totalInvoices || 0}
+Total Amount: ${data.summary?.totalAmount || 0}
+
+Duplicate Payments Found: ${data.summary?.duplicatePayments?.length || 0}
+${data.summary?.duplicatePayments?.slice(0, 3).map((d) => `- ${d.supplierName}: ${d.duplicates?.length || 0} duplicates`).join("\n") || "None"}
+
+Unusual Amounts (Anomalies): ${data.summary?.unusualAmounts?.length || 0}
+${data.summary?.unusualAmounts?.slice(0, 3).map((u) => `- ${u.supplierName}: ${u.amount}`).join("\n") || "None"}
+
+Recurring Subscriptions: ${data.summary?.recurringSubscriptions?.length || 0}
+${data.summary?.recurringSubscriptions?.slice(0, 3).map((r) => `- ${r.supplierName}: ${r.frequency}`).join("\n") || "None"}
+
+Overdue Invoices: ${data.summary?.overdueInvoices?.length || 0}
+
+Price Increases: ${data.summary?.priceIncreases?.length || 0}
+${data.summary?.priceIncreases?.slice(0, 3).map((p) => `- ${p.supplierName}: ${p.percentageIncrease}% increase`).join("\n") || "None"}
+
+Provide actionable insights and priority recommendations.
+`
+}
+
+/**
+ * Build prompt for recommendations
+ */
+function buildRecommendationPrompt(finding) {
+  return `
+Generate specific recommendations for this cost leak finding:
+
+Type: ${finding.type}
+Supplier: ${finding.supplierName || "Unknown"}
+Amount: ${finding.amount || finding.total || "Unknown"}
+Details: ${JSON.stringify(finding)}
+
+Provide 2-3 specific actions the company can take.
+`
+}
+
+/**
+ * Batch process findings with AI
+ * @param {Array} findings - Array of cost leak findings
+ * @returns {Promise<Array>} Findings with AI enhancements
+ */
+async function enhanceFindingsWithAI(findings) {
+  if (!OPENAI_API_KEY || !findings || findings.length === 0) {
+    return findings
+  }
+
+  try {
+    console.log(
+      `[${new Date().toISOString()}] Enhancing ${findings.length} findings with AI`
+    )
+
+    const enhancedFindings = await Promise.all(
+      findings.map(async (finding) => {
+        const recommendations = await generateRecommendations(finding)
+        const estimatedSavings = await estimatePotentialSavings(finding)
+
+        return {
+          ...finding,
+          aiRecommendations: recommendations,
+          aiEstimatedSavings: estimatedSavings,
+          aiEnhanced: true,
+        }
+      })
+    )
+
+    console.log(
+      `[${new Date().toISOString()}] Successfully enhanced ${enhancedFindings.length} findings`
+    )
+
+    return enhancedFindings
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error enhancing findings:`, error.message)
+    return findings
+  }
+}
+
+module.exports = {
+  generateAnalysisSummary,
+  generateRecommendations,
+  estimatePotentialSavings,
+  chatAboutAnalysis,
+  enhanceFindingsWithAI,
+}

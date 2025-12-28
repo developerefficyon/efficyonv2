@@ -40,6 +40,21 @@ async function seedAdmin() {
     if (existingAdmin) {
       console.log("✅ Admin user already exists in auth.users")
       console.log(`   User ID: ${existingAdmin.id}`)
+      console.log(`   Email confirmed: ${existingAdmin.email_confirmed_at ? 'Yes' : 'No'}`)
+
+      // Ensure email is confirmed (required for login)
+      if (!existingAdmin.email_confirmed_at) {
+        console.log("📧 Admin email not confirmed, confirming now...")
+        const { data: updatedUser, error: confirmError } = await supabase.auth.admin.updateUserById(
+          existingAdmin.id,
+          { email_confirm: true }
+        )
+        if (confirmError) {
+          console.error("⚠️ Warning: Could not confirm admin email:", confirmError.message)
+        } else {
+          console.log("✅ Admin email confirmed")
+        }
+      }
 
       // Check if profile exists
       const { data: existingProfile, error: profileError } = await supabase
@@ -57,16 +72,12 @@ async function seedAdmin() {
         console.log("✅ Admin profile already exists")
         console.log(`   Profile ID: ${existingProfile.id}`)
         console.log(`   Role: ${existingProfile.role}`)
-        console.log(`   Status: ${existingProfile.status}`)
 
-        // Update profile to ensure it's set as admin
+        // Update profile to ensure it's set as admin (new schema only has: id, email, full_name, role, company_id, onboarding_completed)
         const { data: updatedProfile, error: updateError } = await supabase
           .from("profiles")
           .update({
             role: "admin",
-            admin_approved: true,
-            email_verified: true,
-            status: "active",
             email: ADMIN_EMAIL,
             full_name: ADMIN_NAME,
           })
@@ -86,7 +97,7 @@ async function seedAdmin() {
         console.log(`   Password: ${ADMIN_PASSWORD}`)
         return
       } else {
-        // Create profile for existing admin user
+        // Create profile for existing admin user (new schema only has: id, email, full_name, role, company_id, onboarding_completed)
         console.log("📝 Creating profile for existing admin user...")
         const { data: newProfile, error: createError } = await supabase
           .from("profiles")
@@ -95,9 +106,6 @@ async function seedAdmin() {
             email: ADMIN_EMAIL,
             full_name: ADMIN_NAME,
             role: "admin",
-            email_verified: true,
-            admin_approved: true,
-            status: "active",
           })
           .select()
           .single()
@@ -121,11 +129,10 @@ async function seedAdmin() {
     const { data: newUser, error: createUserError } = await supabase.auth.admin.createUser({
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true, // Auto-confirm email (sets email_confirmed_at)
       user_metadata: {
         name: ADMIN_NAME,
         role: "admin",
-        approved: true,
       },
     })
 
@@ -137,7 +144,7 @@ async function seedAdmin() {
     console.log("✅ Admin user created in auth.users")
     console.log(`   User ID: ${newUser.user.id}`)
 
-    // Create profile for admin user
+    // Create profile for admin user (new schema only has: id, email, full_name, role, company_id, onboarding_completed)
     console.log("\n3️⃣ Creating admin profile...")
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -146,9 +153,6 @@ async function seedAdmin() {
         email: ADMIN_EMAIL,
         full_name: ADMIN_NAME,
         role: "admin",
-        email_verified: true,
-        admin_approved: true,
-        status: "active",
       })
       .select()
       .single()
@@ -162,7 +166,6 @@ async function seedAdmin() {
     console.log("✅ Admin profile created successfully")
     console.log(`   Profile ID: ${profile.id}`)
     console.log(`   Role: ${profile.role}`)
-    console.log(`   Status: ${profile.status}`)
 
     console.log("\n✨ Seed completed successfully!")
     console.log(`\n📝 Admin login credentials:`)

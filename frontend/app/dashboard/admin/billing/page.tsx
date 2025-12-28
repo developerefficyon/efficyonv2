@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,70 +13,144 @@ import {
   CheckCircle,
   Clock,
   Users,
+  Loader2,
 } from "lucide-react"
+import { getValidSessionToken } from "@/lib/auth-helpers"
+import { toast } from "sonner"
+
+interface Subscription {
+  id: string
+  company_name: string
+  user_email: string
+  user_name: string | null
+  plan_tier: string
+  plan_name: string
+  status: string
+  amount_cents: number
+  currency: string
+  current_period_start: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  created_at: string
+}
 
 export default function AdminBillingPage() {
-  const billingStats = [
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [billingStats, setBillingStats] = useState({
+    mrr: 0,
+    activeCount: 0,
+    churnRate: 0,
+    avgRevenue: 0,
+  })
+  useEffect(() => {
+    const fetchSubscriptions = async () => {
+      try {
+        setIsLoading(true)
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const accessToken = await getValidSessionToken()
+
+        if (!accessToken) {
+          toast.error("Session expired", { description: "Please log in again" })
+          return
+        }
+
+        const res = await fetch(`${apiBase}/api/admin/subscriptions`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        if (!res.ok) {
+          let errorMessage = `Failed to fetch subscriptions: ${res.status}`
+          try {
+            const errorData = await res.json()
+            errorMessage = errorData.error || errorMessage
+            if (errorData.details) {
+              errorMessage += ` - ${errorData.details}`
+            }
+          } catch {
+            // If response is not JSON, use status text
+            errorMessage = `Failed to fetch subscriptions: ${res.status} ${res.statusText}`
+          }
+          throw new Error(errorMessage)
+        }
+
+        const data = await res.json()
+        setSubscriptions(data.subscriptions || [])
+
+        // Calculate stats
+        const activeSubs = data.subscriptions?.filter((s: Subscription) => s.status === "active") || []
+        const totalCents = activeSubs.reduce((sum: number, s: Subscription) => sum + (s.amount_cents || 0), 0)
+        const mrr = totalCents / 100 // Convert cents to dollars
+        const avgRevenue = activeSubs.length > 0 ? mrr / activeSubs.length : 0
+
+        setBillingStats({
+          mrr,
+          activeCount: activeSubs.length,
+          churnRate: 0, // TODO: Calculate from historical data
+          avgRevenue,
+        })
+      } catch (error) {
+        console.error("Error fetching subscriptions:", error)
+        toast.error("Failed to load subscriptions", {
+          description: error instanceof Error ? error.message : "An error occurred",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSubscriptions()
+  }, [])
+
+  const displayStats = [
     {
       title: "Monthly Recurring Revenue",
-      value: "$45.2K",
+      value: `$${(billingStats.mrr / 1000).toFixed(1)}K`,
       change: "+12.5%",
-      trend: "up",
+      trend: "up" as const,
       icon: DollarSign,
       color: "text-cyan-400",
     },
     {
       title: "Churn Rate",
-      value: "2.3%",
+      value: `${billingStats.churnRate.toFixed(1)}%`,
       change: "-0.8%",
-      trend: "down",
+      trend: "down" as const,
       icon: TrendingDown,
       color: "text-green-400",
     },
     {
       title: "Active Subscriptions",
-      value: "328",
+      value: billingStats.activeCount.toString(),
       change: "+8.2%",
-      trend: "up",
+      trend: "up" as const,
       icon: Users,
       color: "text-cyan-400",
     },
     {
       title: "Avg Revenue per Customer",
-      value: "$138",
+      value: `$${billingStats.avgRevenue.toFixed(0)}`,
       change: "+5.1%",
-      trend: "up",
+      trend: "up" as const,
       icon: TrendingUp,
       color: "text-cyan-400",
     },
   ]
 
-  const activeSubscriptions = [
-    {
-      company: "Acme Corporation",
-      plan: "Growth",
-      amount: 119,
-      status: "active",
-      nextBilling: "2024-07-15",
-      customerSince: "2024-01-15",
-    },
-    {
-      company: "TechStart Inc",
-      plan: "Enterprise",
-      amount: 2000,
-      status: "active",
-      nextBilling: "2024-07-20",
-      customerSince: "2023-11-20",
-    },
-    {
-      company: "Global Solutions",
-      plan: "Startup",
-      amount: 39,
-      status: "pending",
-      nextBilling: "2024-07-10",
-      customerSince: "2024-03-10",
-    },
-  ]
+  const activeSubscriptions = subscriptions
+    .filter((s) => s.status === "active" || s.status === "trialing")
+    .map((s) => ({
+      company: s.company_name,
+      plan: s.plan_name,
+      amount: s.amount_cents / 100,
+      status: s.status,
+      nextBilling: s.current_period_end
+        ? new Date(s.current_period_end).toISOString().slice(0, 10)
+        : "N/A",
+      customerSince: s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : "N/A",
+    }))
 
   const trials = [
     {
@@ -111,7 +186,7 @@ export default function AdminBillingPage() {
 
       {/* Billing Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {billingStats.map((stat) => {
+        {displayStats.map((stat) => {
           const Icon = stat.icon
           return (
             <Card
@@ -227,8 +302,18 @@ export default function AdminBillingPage() {
           <CardTitle className="text-white">Active Subscriptions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {activeSubscriptions.map((sub, index) => (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+              <span className="ml-3 text-gray-400">Loading subscriptions...</span>
+            </div>
+          ) : activeSubscriptions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400">No active subscriptions found</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeSubscriptions.map((sub, index) => (
               <div
                 key={index}
                 className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
@@ -265,8 +350,9 @@ export default function AdminBillingPage() {
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

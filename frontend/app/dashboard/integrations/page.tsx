@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -33,10 +33,18 @@ import {
   Trash2,
   Users,
   Eye,
+  EyeOff,
   Search,
+  FileText,
+  Receipt,
+  CreditCard,
+  BookOpen,
+  Wallet,
+  Package,
 } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/lib/auth-context"
+import { getValidSessionToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 
 interface Integration {
@@ -65,34 +73,57 @@ export default function IntegrationsPage() {
   const [fortnoxInfo, setFortnoxInfo] = useState<{
     company?: any
     settings?: any
+    invoices?: any[]
+    supplierInvoices?: any[]
+    expenses?: any[]
+    vouchers?: any[]
+    accounts?: any[]
+    articles?: any[]
+    customers?: any[]
+    suppliers?: any[]
   }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
+  const [costLeakAnalysis, setCostLeakAnalysis] = useState<any>(null)
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
+  const [isCostAnalysisVisible, setIsCostAnalysisVisible] = useState(true)
   const [fortnoxForm, setFortnoxForm] = useState({
     clientId: "",
     clientSecret: "",
     environment: "sandbox",
   })
 
-  const loadIntegrations = useCallback(async () => {
+  // Ref to prevent multiple simultaneous calls
+  const isLoadingRef = useRef(false)
+  const hasLoadedRef = useRef(false)
+  const lastUserIdRef = useRef<string | null>(null)
+
+  const loadIntegrations = useCallback(async (force = false) => {
+    // Prevent multiple simultaneous calls unless forced
+    if (isLoadingRef.current && !force) {
+      console.log("[loadIntegrations] Already loading, skipping duplicate call")
+      return
+    }
+
+    isLoadingRef.current = true
     try {
       setIsLoading(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
         console.warn("No access token available for loading integrations")
-        setIsLoading(false)
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
         setIntegrations([])
+        setIsLoading(false)
+        isLoadingRef.current = false
         return
       }
 
       // Add timeout to prevent hanging
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
       try {
         const res = await fetch(`${apiBase}/api/integrations`, {
@@ -127,8 +158,12 @@ export default function IntegrationsPage() {
       // Set empty array on error so UI doesn't stay in loading state
       setIntegrations([])
     } finally {
+      // Always reset loading state, even on error
       setIsLoading(false)
+      isLoadingRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // router.push is stable and doesn't need to be a dependency
   }, [])
 
   useEffect(() => {
@@ -141,27 +176,55 @@ export default function IntegrationsPage() {
     // (the layout will handle redirecting to login)
     if (!user) {
       setIsLoading(false)
+      hasLoadedRef.current = false
+      lastUserIdRef.current = null
       return
     }
 
-    // Reset connecting state when component loads (in case user returns from OAuth)
-    setIsConnecting(false)
+    // Check if user actually changed (not just token refresh)
+    const currentUserId = user.id
+    const userChanged = lastUserIdRef.current !== currentUserId
     
+    // Update the last user ID
+    if (userChanged) {
+      lastUserIdRef.current = currentUserId
+      hasLoadedRef.current = false // Reset loaded flag when user changes
+    }
+
     // Check for OAuth callback result in URL params first
     const params = new URLSearchParams(window.location.search)
     const fortnoxStatus = params.get("fortnox")
     const fortnoxError = params.get("error")
     const fortnoxErrorDesc = params.get("error_desc")
     const scopeWarning = params.get("scope_warning") === "true"
+    const scopeInfo = params.get("scope_info") // Read scope_info before URL cleanup
     
-    // If no OAuth callback params, just load integrations normally
-    if (!fortnoxStatus && !fortnoxError) {
+    // If OAuth callback, always process it (even if we've loaded before)
+    if (fortnoxStatus || fortnoxError) {
+      // Reset connecting state when handling OAuth callback
+      setIsConnecting(false)
+      // Process OAuth callback (will load integrations at the end)
+    } else {
+      // No OAuth callback - only load if we haven't loaded yet for this user
+      if (hasLoadedRef.current && !userChanged) {
+        console.log("[Integrations] Already loaded for this user, skipping duplicate load")
+        return
+      }
+      
+      // Reset connecting state when component loads (in case user returns from OAuth)
+      setIsConnecting(false)
+      
+      // Load integrations only once per user
+      console.log("[Integrations] Loading integrations", userChanged ? "for new user" : "for the first time")
+      hasLoadedRef.current = true
       void loadIntegrations()
       return
     }
     
     // Handle OAuth callback - clean up URL immediately to prevent re-triggering
     if (fortnoxStatus === "connected") {
+      console.log(`[OAuth Callback] Processing successful connection. scopeInfo: ${scopeInfo}, scopeWarning: ${scopeWarning}`)
+      
       // Clean up URL FIRST to prevent re-triggering this block on next render
       const currentPath = window.location.pathname
       window.history.replaceState({}, "", currentPath)
@@ -181,6 +244,11 @@ export default function IntegrationsPage() {
       }
       void refreshSession()
 
+      // We're going to reload integrations after OAuth; mark page as loading and
+      // let loadIntegrations() handle turning the spinner off in its finally block
+      setIsLoading(true)
+      
+      // Show appropriate success message based on scope
       if (scopeWarning) {
         toast.warning("Fortnox Connected - Missing Customer Permission", {
           description: "Fortnox is connected, but the 'customer' permission was not granted. You need to reconnect and grant customer access to sync customers. Click 'Reconnect' to fix this.",
@@ -190,20 +258,25 @@ export default function IntegrationsPage() {
           },
           duration: 15000,
         })
-      } else {
+      } else if (scopeInfo === "companyinfo") {
+        // Handle company info scope (works with any license, but no customer sync)
+        console.log("[OAuth Callback] Showing success toast for company info scope")
       toast.success("Fortnox connected successfully!", {
+          description: "Your Fortnox integration is connected with company information access. Customer sync requires a Fortnox subscription with customer register access.",
+          duration: 8000,
+        })
+      } else {
+        console.log("[OAuth Callback] Showing success toast for full access")
+        toast.success("Fortnox connected successfully!", {
           description: "Your Fortnox integration is now active. Loading customers...",
-        duration: 5000,
-      })
+          duration: 5000,
+        })
         
         // Automatically fetch and show customers after successful connection
         setTimeout(async () => {
           try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-            const {
-              data: { session },
-            } = await supabase.auth.getSession()
-            const accessToken = session?.access_token
+            const accessToken = await getValidSessionToken()
 
             if (accessToken) {
               const res = await fetch(`${apiBase}/api/integrations/fortnox/customers`, {
@@ -232,14 +305,18 @@ export default function IntegrationsPage() {
           }
         }, 1500) // Wait a bit longer to ensure backend has saved tokens
       }
+
+      // Load integrations to reflect the new Fortnox connection
+      console.log("[OAuth Callback] Loading integrations after successful connection...")
+      hasLoadedRef.current = true // Mark as loaded so we don't reload again
+      // Force reload to ensure we get the latest integration status
+      loadIntegrations(true).catch((error) => {
+        console.error("[OAuth Callback] Error loading integrations:", error)
+        // Ensure we don't stay stuck in loading state on failure
+        setIsLoading(false)
+        isLoadingRef.current = false
+      })
       
-      // Load integrations immediately, then reload after delay to ensure backend has saved
-      void loadIntegrations()
-      // Also reload after a short delay to ensure backend has saved the connection
-      setTimeout(() => {
-        console.log("Reloading integrations after successful connection...")
-        void loadIntegrations()
-      }, 1000)
       // Return early to prevent normal flow from running (URL already cleaned up)
       return
     } else if (fortnoxStatus) {
@@ -287,25 +364,24 @@ export default function IntegrationsPage() {
       // Clean up URL
       window.history.replaceState({}, "", window.location.pathname)
       // Load integrations even on error to show current state
-      void loadIntegrations()
+      hasLoadedRef.current = true // Mark as loaded
+      void loadIntegrations(true)
       return
     }
     
-    // Always load integrations (only if not handling OAuth callback)
-    void loadIntegrations()
+    // This should never be reached if the above conditions are correct
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // loadIntegrations is stable (empty deps), authLoading and user are the only triggers we need
   }, [authLoading, user])
 
   const startFortnoxOAuth = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
-        toast.error("You must be logged in to connect Fortnox")
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
         return
       }
 
@@ -355,23 +431,8 @@ export default function IntegrationsPage() {
         error: refreshError,
       } = await supabase.auth.refreshSession()
       
-      if (refreshError || !refreshedSession) {
-        // If refresh fails, try to get current session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-        
-        if (!session?.access_token) {
-          toast.error("Session expired", {
-            description: "Please log in again to continue.",
-          })
-          return
-        }
-      }
-      
-      // Use refreshed session or fallback to current session
-      const session = refreshedSession || (await supabase.auth.getSession()).data.session
-      const accessToken = session?.access_token
+      // Get valid session token (will auto-refresh if needed)
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
         toast.error("Authentication required", {
@@ -430,7 +491,7 @@ export default function IntegrationsPage() {
                 duration: 6000,
               })
               
-              await loadIntegrations()
+              await loadIntegrations(true)
               return
             }
           } catch (retryError) {
@@ -521,7 +582,8 @@ export default function IntegrationsPage() {
         duration: 6000,
       })
 
-      await loadIntegrations()
+      // Force reload integrations after sync
+      await loadIntegrations(true)
     } catch (error: any) {
       console.error("Error syncing Fortnox:", error)
       toast.error("Failed to sync Fortnox", {
@@ -541,13 +603,12 @@ export default function IntegrationsPage() {
     setIsConnecting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
-        throw new Error("You must be logged in to connect integrations")
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
       }
 
       console.log("[Fortnox Connect] Step 1: Saving integration...")
@@ -560,7 +621,7 @@ export default function IntegrationsPage() {
         body: JSON.stringify({
           integrations: [
             {
-              tool_name: "Fortnox",
+              tool_name: "Fortnox", // Backend maps this to 'provider'
               connection_type: "oauth",
               status: "connected",
               environment: fortnoxForm.environment,
@@ -577,6 +638,12 @@ export default function IntegrationsPage() {
         throw new Error(errorData.error || "Failed to connect Fortnox")
       }
 
+      const savedData = await res.json()
+      console.log("[Fortnox Connect] Integration saved successfully:", savedData)
+      
+      // Small delay to ensure database write is committed
+      await new Promise(resolve => setTimeout(resolve, 200))
+
       console.log("[Fortnox Connect] Step 2: Getting OAuth URL...")
       // Now start the Fortnox OAuth flow to complete the connection.
       // We call the backend via fetch so the Authorization header is included,
@@ -590,12 +657,24 @@ export default function IntegrationsPage() {
       })
 
       if (!oauthRes.ok) {
-        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
-        console.error("[Fortnox Connect] Error getting OAuth URL:", errorData)
-        throw new Error(errorData.error || "Failed to start Fortnox OAuth")
+        const errorText = await oauthRes.text().catch(() => "Unknown error")
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText, details: "Failed to parse error response" }
+        }
+        console.error("[Fortnox Connect] Error getting OAuth URL:", {
+          status: oauthRes.status,
+          statusText: oauthRes.statusText,
+          error: errorData,
+        })
+        throw new Error(errorData.error || errorData.details || "Failed to start Fortnox OAuth")
       }
 
       const oauthData = await oauthRes.json()
+      console.log("[Fortnox Connect] OAuth response received:", oauthData)
+      
       const redirectUrl = oauthData.url
 
       if (!redirectUrl) {
@@ -605,19 +684,28 @@ export default function IntegrationsPage() {
 
       console.log("[Fortnox Connect] Step 3: Redirecting to Fortnox...", redirectUrl)
 
-      toast.success("Fortnox integration created. Redirecting to Fortnox to authorize...", {
-        description: "You'll be taken to Fortnox to grant access.",
-      })
-
       // Reset all states before redirecting
       setIsConnecting(false)
       setIsConnectModalOpen(false)
       setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
       setSelectedTool("")
 
+      toast.success("Fortnox integration created. Redirecting to Fortnox to authorize...", {
+        description: "You'll be taken to Fortnox to grant access.",
+        duration: 2000,
+      })
+
       // Small delay to let the toast show, then redirect
       setTimeout(() => {
-        window.location.href = redirectUrl
+        console.log("[Fortnox Connect] Executing redirect to:", redirectUrl)
+        try {
+          window.location.href = redirectUrl
+        } catch (redirectError) {
+          console.error("[Fortnox Connect] Error during redirect:", redirectError)
+          toast.error("Failed to redirect to Fortnox", {
+            description: "Please try clicking the OAuth link manually or check the console for the URL.",
+          })
+        }
       }, 500)
     } catch (error: any) {
       console.error("[Fortnox Connect] Error:", error)
@@ -662,34 +750,104 @@ export default function IntegrationsPage() {
   }
 
   const handleViewInformation = async (integration: Integration) => {
-    if (integration.tool_name !== "Fortnox") return
+    console.log("[View Information] Clicked for integration:", integration)
     
+    // Check if it's Fortnox (handle both tool_name and provider for backward compatibility)
+    const isFortnox = integration.tool_name === "Fortnox" || (integration as any).provider === "Fortnox"
+    if (!isFortnox) {
+      console.log("[View Information] Not Fortnox integration, skipping")
+      return
+    }
+    
+    console.log("[View Information] Opening modal and loading data...")
     setIsViewInfoModalOpen(true)
     setIsLoadingInfo(true)
     setFortnoxInfo({})
     
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      
+      // Try to get valid session token with retry
+      let accessToken = await getValidSessionToken()
+      
+      // If no token, try one more time after a short delay
+      if (!accessToken) {
+        console.warn("[View Information] No access token on first attempt, retrying...")
+        await new Promise(resolve => setTimeout(resolve, 500))
+        accessToken = await getValidSessionToken()
+      }
 
       if (!accessToken) {
-        toast.error("You must be logged in to view information")
-        setIsViewInfoModalOpen(false)
+        console.error("[View Information] No access token after retry")
+        toast.error("Authentication required", { 
+          description: "Your session has expired. Please refresh the page or log in again.",
+          duration: 5000,
+        })
+        setIsLoadingInfo(false)
+        // Don't close modal or redirect immediately - let user see the error
+        // They can close it manually or we'll redirect after a delay
+        setTimeout(() => {
+          setIsViewInfoModalOpen(false)
+          router.push("/login")
+        }, 2000)
         return
       }
+      
+      console.log("[View Information] Access token obtained successfully")
+
+      console.log("[View Information] Fetching Fortnox data...")
 
       // Fetch all available information in parallel
       // NOTE: Profile endpoint doesn't exist in Fortnox API - the "profile" scope is for OAuth only
-      // NOTE: Customers removed - requires license
-      const [companyRes, settingsRes] = await Promise.allSettled([
+      const [
+        companyRes,
+        settingsRes,
+        invoicesRes,
+        supplierInvoicesRes,
+        expensesRes,
+        vouchersRes,
+        accountsRes,
+        articlesRes,
+        customersRes,
+        suppliersRes,
+      ] = await Promise.allSettled([
         fetch(`${apiBase}/api/integrations/fortnox/company`, {
           method: "GET",
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
         fetch(`${apiBase}/api/integrations/fortnox/settings`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/invoices`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/supplier-invoices`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/expenses`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/vouchers`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/accounts`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/articles`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/customers`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/fortnox/suppliers`, {
           method: "GET",
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
@@ -756,7 +914,160 @@ export default function IntegrationsPage() {
         console.error("❌ Settings request rejected:", settingsRes.reason)
       }
 
+      // Process invoices
+      if (invoicesRes.status === "fulfilled" && invoicesRes.value.ok) {
+        try {
+          const data = await invoicesRes.value.json()
+          info.invoices = data.Invoices || data.invoices || []
+          console.log(`✅ Invoices loaded: ${info.invoices.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing invoices:", e)
+        }
+      } else if (invoicesRes.status === "fulfilled") {
+        if (invoicesRes.value.status === 403 || invoicesRes.value.status === 400) {
+          console.log("ℹ️ Invoices not available - may require 'invoice' scope")
+        } else {
+          console.error("❌ Invoices request failed:", invoicesRes.value.status)
+        }
+      }
 
+      // Process supplier invoices
+      if (supplierInvoicesRes.status === "fulfilled" && supplierInvoicesRes.value.ok) {
+        try {
+          const data = await supplierInvoicesRes.value.json()
+          info.supplierInvoices = data.SupplierInvoices || data.supplierInvoices || []
+          console.log(`✅ Supplier invoices loaded: ${info.supplierInvoices.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing supplier invoices:", e)
+        }
+      } else if (supplierInvoicesRes.status === "fulfilled") {
+        if (supplierInvoicesRes.value.status === 403 || supplierInvoicesRes.value.status === 400) {
+          console.log("ℹ️ Supplier invoices not available - may require 'supplierinvoice' scope")
+        } else {
+          console.error("❌ Supplier invoices request failed:", supplierInvoicesRes.value.status)
+        }
+      }
+
+      // Process expenses
+      if (expensesRes.status === "fulfilled" && expensesRes.value.ok) {
+        try {
+          const data = await expensesRes.value.json()
+          info.expenses = data.SalaryExpenses || data.Expenses || data.expenses || []
+          console.log(`✅ Expenses loaded: ${info.expenses.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing expenses:", e)
+        }
+      } else if (expensesRes.status === "fulfilled") {
+        // Handle scope/permission errors gracefully
+        if (expensesRes.value.status === 403 || expensesRes.value.status === 400) {
+          try {
+            const errorText = await expensesRes.value.text()
+            let errorData: any = {}
+            try {
+              errorData = JSON.parse(errorText)
+            } catch (e) {
+              errorData = { error: errorText }
+            }
+            const errorMsg = errorData.error || errorData.details || "Expenses endpoint not available"
+            console.log(`ℹ️ Expenses not available: ${errorMsg} (Status: ${expensesRes.value.status})`)
+          } catch (e) {
+            console.log(`ℹ️ Expenses endpoint returned ${expensesRes.value.status} - may require "expense" or "salary" scope`)
+          }
+        } else if (expensesRes.value.status === 404) {
+          console.log("ℹ️ Expenses endpoint not available - Fortnox API may not support listing expenses directly")
+        } else {
+          console.error("❌ Expenses request failed:", expensesRes.value.status, expensesRes.value.statusText)
+        }
+      } else {
+        // Promise was rejected (network error, etc.)
+        console.log("ℹ️ Expenses request failed (network error or missing scope):", expensesRes.reason?.message || expensesRes.reason)
+      }
+
+      // Process vouchers
+      if (vouchersRes.status === "fulfilled" && vouchersRes.value.ok) {
+        try {
+          const data = await vouchersRes.value.json()
+          info.vouchers = data.Vouchers || data.vouchers || []
+          console.log(`✅ Vouchers loaded: ${info.vouchers.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing vouchers:", e)
+        }
+      } else if (vouchersRes.status === "fulfilled") {
+        if (vouchersRes.value.status === 403 || vouchersRes.value.status === 400) {
+          console.log("ℹ️ Vouchers not available - may require 'bookkeeping' scope")
+        } else {
+          console.error("❌ Vouchers request failed:", vouchersRes.value.status)
+        }
+      }
+
+      // Process accounts
+      if (accountsRes.status === "fulfilled" && accountsRes.value.ok) {
+        try {
+          const data = await accountsRes.value.json()
+          info.accounts = data.Accounts || data.accounts || []
+          console.log(`✅ Accounts loaded: ${info.accounts.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing accounts:", e)
+        }
+      } else if (accountsRes.status === "fulfilled") {
+        if (accountsRes.value.status === 403 || accountsRes.value.status === 400) {
+          console.log("ℹ️ Accounts not available - may require 'bookkeeping' scope")
+        } else {
+          console.error("❌ Accounts request failed:", accountsRes.value.status)
+        }
+      }
+
+      // Process articles
+      if (articlesRes.status === "fulfilled" && articlesRes.value.ok) {
+        try {
+          const data = await articlesRes.value.json()
+          info.articles = data.Articles || data.articles || []
+          console.log(`✅ Articles loaded: ${info.articles.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing articles:", e)
+        }
+      } else if (articlesRes.status === "fulfilled") {
+        if (articlesRes.value.status === 403 || articlesRes.value.status === 400) {
+          console.log("ℹ️ Articles not available - may require 'article' scope")
+        } else {
+          console.error("❌ Articles request failed:", articlesRes.value.status)
+        }
+      }
+
+      // Process customers
+      if (customersRes.status === "fulfilled" && customersRes.value.ok) {
+        try {
+          const data = await customersRes.value.json()
+          // Existing endpoint returns { customers: [...] } format
+          info.customers = data.customers || data.Customers || []
+          console.log(`✅ Customers loaded: ${info.customers.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing customers:", e)
+        }
+      } else if (customersRes.status === "fulfilled") {
+        if (customersRes.value.status === 403 || customersRes.value.status === 400) {
+          console.log("ℹ️ Customers not available - may require 'customer' scope")
+        } else {
+          console.error("❌ Customers request failed:", customersRes.value.status)
+        }
+      }
+
+      // Process suppliers
+      if (suppliersRes.status === "fulfilled" && suppliersRes.value.ok) {
+        try {
+          const data = await suppliersRes.value.json()
+          info.suppliers = data.Suppliers || data.suppliers || []
+          console.log(`✅ Suppliers loaded: ${info.suppliers.length} items`)
+        } catch (e) {
+          console.error("❌ Error parsing suppliers:", e)
+        }
+      } else if (suppliersRes.status === "fulfilled") {
+        if (suppliersRes.value.status === 403 || suppliersRes.value.status === 400) {
+          console.log("ℹ️ Suppliers not available - may require 'supplier' scope")
+        } else {
+          console.error("❌ Suppliers request failed:", suppliersRes.value.status)
+        }
+      }
 
       setFortnoxInfo(info)
       
@@ -772,16 +1083,87 @@ export default function IntegrationsPage() {
           duration: 5000,
         })
       }
+      
+      setIsLoadingInfo(false)
+      console.log("[View Information] Successfully completed")
     } catch (error: any) {
-      console.error("Error fetching information:", error)
+      console.error("[View Information] Error fetching information:", error)
       toast.error("Failed to fetch information", {
         description: error.message || "An error occurred.",
       })
-    } finally {
       setIsLoadingInfo(false)
+      // Keep modal open so user can see the error
     }
   }
 
+  // Fetch cost leak analysis
+  const fetchCostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        setIsLoadingAnalysis(false)
+        return
+      }
+
+      const response = await fetch(`${apiBase}/api/integrations/fortnox/cost-leaks`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch analysis: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setCostLeakAnalysis(data)
+      
+      if (data.overallSummary?.totalFindings > 0) {
+        toast.success("Cost leak analysis completed", {
+          description: `Found ${data.overallSummary.totalFindings} potential issues with ${data.overallSummary.totalPotentialSavings?.toLocaleString() || 0} SEK potential savings`,
+          duration: 5000,
+        })
+      } else {
+        toast.info("No cost leaks detected", {
+          description: "Your supplier invoices look good!",
+          duration: 3000,
+        })
+      }
+    } catch (error: any) {
+      console.error("Error fetching cost leak analysis:", error)
+      toast.error("Failed to analyze cost leaks", {
+        description: error.message || "An error occurred.",
+      });
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
+  }
+
+  // Temporary helper to get token for testing
+  const getTokenForTesting = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      console.log('✅ Your Supabase Access Token:')
+      console.log(session.access_token)
+      console.log('\n📋 Use this curl command:')
+      console.log(`curl -H "Authorization: Bearer ${session.access_token}" http://localhost:4000/api/integrations/fortnox/cost-leaks`)
+      // Copy to clipboard if possible
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(session.access_token)
+        toast.success('Token copied to clipboard!')
+      }
+    } else {
+      toast.error('No session found. Please log in.')
+    }
+  }
 
   const handleDeleteConfirm = async () => {
     if (!integrationToDelete) return
@@ -789,13 +1171,11 @@ export default function IntegrationsPage() {
     setIsDeleting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getValidSessionToken()
 
       if (!accessToken) {
-        toast.error("You must be logged in to delete integrations")
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
         setIsDeleting(false)
         return
       }
@@ -854,7 +1234,7 @@ export default function IntegrationsPage() {
       // Close modal and reload integrations
       setIsDeleteModalOpen(false)
       setIntegrationToDelete(null)
-      await loadIntegrations()
+      await loadIntegrations(true)
     } catch (error: any) {
       console.error("[Delete Integration] Error:", error)
       console.error("[Delete Integration] Error stack:", error.stack)
@@ -877,6 +1257,25 @@ export default function IntegrationsPage() {
           <h2 className="text-3xl font-bold text-white mb-2">Integrations</h2>
           <p className="text-gray-400">Manage your connected tools and monitor sync status</p>
         </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={getTokenForTesting}
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            title="Get token for API testing"
+          >
+            🔑 Get Token
+          </Button>
+          <Button
+            onClick={() => loadIntegrations(true)}
+            variant="outline"
+            className="border-white/10 bg-black/50 text-white hover:bg-cyan-500/20"
+            disabled={isLoading}
+            title="Refresh integrations list"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         <Button
           onClick={() => setIsConnectModalOpen(true)}
           className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
@@ -884,7 +1283,296 @@ export default function IntegrationsPage() {
           <ExternalLink className="w-4 h-4 mr-2" />
           Connect New Tool
         </Button>
+        </div>
       </div>
+
+      {/* Cost Leak Analysis Section */}
+      {integrations.some((i) => i.tool_name === "Fortnox" && i.status === "connected") && (
+        <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border-slate-700/50">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <CardTitle className="text-white flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  Cost Leak Analysis
+                </CardTitle>
+                <p className="text-gray-400 text-sm">
+                  AI-powered analysis to identify potential cost leaks and savings opportunities
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {costLeakAnalysis && (
+                  <Button
+                    onClick={() => setIsCostAnalysisVisible(!isCostAnalysisVisible)}
+                    variant="outline"
+                    className="border-white/10 bg-black/50 text-white hover:bg-white/10"
+                    title={isCostAnalysisVisible ? "Hide analysis" : "Show analysis"}
+                  >
+                    {isCostAnalysisVisible ? (
+                      <>
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Hide
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Show
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  onClick={fetchCostLeakAnalysis}
+                  disabled={isLoadingAnalysis}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white"
+                >
+                  {isLoadingAnalysis ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Analyze Cost Leaks
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          {costLeakAnalysis && isCostAnalysisVisible && (
+            <CardContent className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-black/40 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors">
+                  <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Total Findings</p>
+                  <p className="text-2xl font-bold text-white">
+                    {costLeakAnalysis.overallSummary?.totalFindings || 0}
+                  </p>
+                </div>
+                <div className="bg-black/40 rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
+                  <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {costLeakAnalysis.overallSummary?.totalPotentialSavings 
+                      ? `${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('sv-SE')} SEK`
+                      : "0 SEK"}
+                  </p>
+                </div>
+                <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
+                  <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">High Priority</p>
+                  <p className="text-2xl font-bold text-red-400">
+                    {costLeakAnalysis.overallSummary?.highSeverity || 0}
+                  </p>
+                </div>
+                <div className="bg-black/40 rounded-lg p-4 border border-amber-500/30 hover:border-amber-500/50 transition-colors">
+                  <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Medium Priority</p>
+                  <p className="text-2xl font-bold text-amber-400">
+                    {costLeakAnalysis.overallSummary?.mediumSeverity || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Subscription Optimization Section */}
+              {costLeakAnalysis.subscriptionAnalysis && (
+                <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 rounded-lg p-5 border border-indigo-500/40">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Package className="w-5 h-5 text-indigo-400" />
+                      Subscription Optimization
+                    </h3>
+                    {costLeakAnalysis.subscriptionAnalysis.summary && (
+                      <Badge variant="outline" className="border-indigo-500/50 text-indigo-300 bg-indigo-500/10">
+                        {costLeakAnalysis.subscriptionAnalysis.summary.utilizationScore}% Utilization
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {costLeakAnalysis.subscriptionAnalysis.summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="bg-black/40 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Features Used</p>
+                        <p className="text-xl font-bold text-white">
+                          {costLeakAnalysis.subscriptionAnalysis.summary.activeFeaturesCount}/{costLeakAnalysis.subscriptionAnalysis.summary.totalFeaturesCount}
+                        </p>
+                      </div>
+                      <div className="bg-black/40 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Transactions</p>
+                        <p className="text-xl font-bold text-white">
+                          {costLeakAnalysis.subscriptionAnalysis.summary.transactionVolume}
+                        </p>
+                      </div>
+                      <div className="bg-black/40 rounded-lg p-3 border border-indigo-500/30">
+                        <p className="text-xs text-gray-400 mb-1">Utilization</p>
+                        <p className="text-xl font-bold text-indigo-400">
+                          {costLeakAnalysis.subscriptionAnalysis.summary.utilizationScore}%
+                        </p>
+                      </div>
+                      <div className="bg-black/40 rounded-lg p-3 border border-amber-500/30">
+                        <p className="text-xs text-gray-400 mb-1">Recommendations</p>
+                        <p className="text-xl font-bold text-amber-400">
+                          {costLeakAnalysis.subscriptionAnalysis.summary.recommendations}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {costLeakAnalysis.subscriptionAnalysis.findings && 
+                   costLeakAnalysis.subscriptionAnalysis.findings.length > 0 && (
+                    <div className="space-y-2">
+                      {costLeakAnalysis.subscriptionAnalysis.findings.map((finding: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`bg-black/40 rounded-lg p-3 border ${
+                            finding.severity === "high"
+                              ? "border-red-500/40"
+                              : finding.severity === "medium"
+                              ? "border-amber-500/40"
+                              : "border-indigo-500/40"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <Badge
+                              className={
+                                finding.severity === "high"
+                                  ? "bg-red-500/20 text-red-300 border-red-500/50"
+                                  : finding.severity === "medium"
+                                  ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                                  : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                              }
+                              variant="outline"
+                            >
+                              {finding.severity === "high" ? "High" : finding.severity === "medium" ? "Medium" : "Low"}
+                            </Badge>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-white text-sm mb-1">{finding.title}</h4>
+                              <p className="text-xs text-gray-300 mb-2">{finding.description}</p>
+                              {finding.recommendation && (
+                                <p className="text-xs text-indigo-300 italic">💡 {finding.recommendation}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Findings List */}
+              {costLeakAnalysis.supplierInvoiceAnalysis?.findings && 
+               costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-amber-400" />
+                      Cost Leak Findings
+                    </h3>
+                    <Badge variant="outline" className="border-white/20 text-gray-300">
+                      {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} issue{costLeakAnalysis.supplierInvoiceAnalysis.findings.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                    {costLeakAnalysis.supplierInvoiceAnalysis.findings.slice(0, 20).map((finding: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className={`bg-black/40 rounded-lg p-4 border transition-all hover:shadow-lg ${
+                          finding.severity === "high"
+                            ? "border-red-500/50 hover:border-red-500/70"
+                            : finding.severity === "medium"
+                            ? "border-amber-500/50 hover:border-amber-500/70"
+                            : "border-slate-500/50 hover:border-slate-500/70"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <Badge
+                                className={
+                                  finding.severity === "high"
+                                    ? "bg-red-500/20 text-red-300 border-red-500/50"
+                                    : finding.severity === "medium"
+                                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                                    : "bg-slate-500/20 text-slate-300 border-slate-500/50"
+                                }
+                                variant="outline"
+                              >
+                                {finding.severity === "high" ? "High" : finding.severity === "medium" ? "Medium" : "Low"}
+                              </Badge>
+                              <h4 className="font-semibold text-white text-sm">{finding.title}</h4>
+                            </div>
+                            <p className="text-sm text-gray-300 mb-3 leading-relaxed">{finding.description}</p>
+                            {finding.potentialSavings > 0 && (
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-xs text-gray-400">Potential Savings:</span>
+                                <span className="text-sm font-semibold text-green-400">
+                                  {finding.potentialSavings.toLocaleString('sv-SE')} SEK
+                                </span>
+                              </div>
+                            )}
+                            {finding.invoices && finding.invoices.length > 0 && (
+                              <details className="mt-3 group">
+                                <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2">
+                                  <span className="transition-transform group-open:rotate-90">▶</span>
+                                  View {finding.invoices.length} invoice{finding.invoices.length !== 1 ? 's' : ''}
+                                </summary>
+                                <div className="mt-3 space-y-2 pl-4 border-l-2 border-white/10">
+                                  {finding.invoices.map((inv: any, invIdx: number) => (
+                                    <div key={invIdx} className="text-xs bg-black/30 p-3 rounded border border-white/5 hover:border-white/10 transition-colors">
+                                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <div className="flex items-center gap-2">
+                                          <Receipt className="w-3 h-3 text-gray-500" />
+                                          <span className="text-white font-medium">
+                                            Invoice #{inv.GivenNumber || inv.DocumentNumber}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-gray-400">
+                                          <span>{inv.InvoiceDate || 'N/A'}</span>
+                                          <span className="text-green-400 font-medium">
+                                            {inv.calculatedTotal ? `${inv.calculatedTotal.toLocaleString('sv-SE')} SEK` : '0 SEK'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {inv.SupplierName && (
+                                        <div className="mt-1 text-gray-500">
+                                          Supplier: {inv.SupplierName}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 20 && (
+                    <div className="text-center pt-2">
+                      <p className="text-xs text-gray-500">
+                        Showing 20 of {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} findings
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* No Findings */}
+              {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings || 
+                costLeakAnalysis.supplierInvoiceAnalysis.findings.length === 0) && (
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-400" />
+                  </div>
+                  <p className="text-white font-semibold text-lg mb-1">No cost leaks detected!</p>
+                  <p className="text-gray-400 text-sm">Your supplier invoices look good.</p>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Status Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1000,9 +1688,12 @@ export default function IntegrationsPage() {
                     <>
                         <Button
                           variant="outline"
-                          className="border-white/10 bg-black/50 text-white"
-                          onClick={() => handleViewInformation(integration)}
-                          disabled={isLoadingInfo}
+                          className="border-white/10 bg-black/50 text-white hover:bg-cyan-500/20"
+                          onClick={() => {
+                            console.log("[View Information] Button clicked for:", integration.tool_name || (integration as any).provider)
+                            handleViewInformation(integration)
+                          }}
+                          disabled={isLoadingInfo || integration.status !== "connected"}
                         >
                           {isLoadingInfo ? (
                             <>
@@ -1081,17 +1772,30 @@ export default function IntegrationsPage() {
               <Label htmlFor="tool-select" className="text-gray-300">
                 Select Tool
               </Label>
-              {/* Use a simple native select here to avoid any Radix / portal issues inside the dialog */}
-              <select
+              <Select
+                value={selectedTool || undefined}
+                onValueChange={(value) => setSelectedTool(value)}
+              >
+                <SelectTrigger
                   id="tool-select"
-                value={selectedTool}
-                onChange={(e) => setSelectedTool(e.target.value)}
-                className="bg-black/50 border-white/10 text-white rounded-md px-3 py-2 w-full"
+                  className="w-full h-10 !bg-black/95 !border !border-white/10 !text-white hover:!bg-cyan-500/30 focus:!bg-cyan-500/30 focus:!ring-2 focus:!ring-cyan-500/50 data-[placeholder]:!text-gray-400 !rounded-md !px-3 !py-2 [&>span]:!text-white"
                 >
-                <option value="">Choose a tool...</option>
-                <option value="fortnox">Fortnox</option>
+                  <SelectValue placeholder="Choose a tool..." />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-black/95 border border-white/10 backdrop-blur-xl z-[100] shadow-lg"
+                  position="popper"
+                  sideOffset={4}
+                >
+                  <SelectItem
+                    value="fortnox"
+                    className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer"
+                  >
+                    Fortnox
+                  </SelectItem>
                   {/* Add more tools here later */}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
 
             {selectedTool === "fortnox" && (
@@ -1374,8 +2078,394 @@ export default function IntegrationsPage() {
                   </div>
                 )}
 
+                {/* Invoices Section */}
+                {fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Invoices ({fortnoxInfo.invoices.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.invoices.slice(0, 10).map((invoice: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {invoice.DocumentNumber || invoice.InvoiceNumber || `Invoice #${idx + 1}`}
+                              </p>
+                              {invoice.CustomerName && (
+                                <p className="text-gray-400 text-xs mt-1">Customer: {invoice.CustomerName}</p>
+                              )}
+                              {invoice.Total && (
+                                <p className="text-cyan-400 text-xs mt-1">
+                                  {invoice.Total} {invoice.Currency || "SEK"}
+                                </p>
+                              )}
+                            </div>
+                            {invoice.InvoiceDate && (
+                              <span className="text-gray-500 text-xs">
+                                {new Date(invoice.InvoiceDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.invoices.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.invoices.length} invoices
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Invoices JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.invoices, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Supplier Invoices Section */}
+                {fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <Receipt className="w-5 h-5" />
+                      Supplier Invoices ({fortnoxInfo.supplierInvoices.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.supplierInvoices.slice(0, 10).map((invoice: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {invoice.DocumentNumber || invoice.InvoiceNumber || `Supplier Invoice #${idx + 1}`}
+                              </p>
+                              {invoice.SupplierName && (
+                                <p className="text-gray-400 text-xs mt-1">Supplier: {invoice.SupplierName}</p>
+                              )}
+                              {invoice.Total && (
+                                <p className="text-orange-400 text-xs mt-1">
+                                  {invoice.Total} {invoice.Currency || "SEK"}
+                                </p>
+                              )}
+                            </div>
+                            {invoice.InvoiceDate && (
+                              <span className="text-gray-500 text-xs">
+                                {new Date(invoice.InvoiceDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.supplierInvoices.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.supplierInvoices.length} supplier invoices
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Supplier Invoices JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.supplierInvoices, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Expenses Section */}
+                {fortnoxInfo.expenses && fortnoxInfo.expenses.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <CreditCard className="w-5 h-5" />
+                      Expenses ({fortnoxInfo.expenses.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.expenses.slice(0, 10).map((expense: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {expense.Description || expense.Text || `Expense #${idx + 1}`}
+                              </p>
+                              {expense.EmployeeName && (
+                                <p className="text-gray-400 text-xs mt-1">Employee: {expense.EmployeeName}</p>
+                              )}
+                              {expense.Total && (
+                                <p className="text-red-400 text-xs mt-1">
+                                  {expense.Total} {expense.Currency || "SEK"}
+                                </p>
+                              )}
+                            </div>
+                            {expense.ExpenseDate && (
+                              <span className="text-gray-500 text-xs">
+                                {new Date(expense.ExpenseDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.expenses.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.expenses.length} expenses
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Expenses JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.expenses, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Vouchers Section */}
+                {fortnoxInfo.vouchers && fortnoxInfo.vouchers.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5" />
+                      Vouchers ({fortnoxInfo.vouchers.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.vouchers.slice(0, 10).map((voucher: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {voucher.VoucherNumber || voucher.Series || `Voucher #${idx + 1}`}
+                              </p>
+                              {voucher.Description && (
+                                <p className="text-gray-400 text-xs mt-1">{voucher.Description}</p>
+                              )}
+                            </div>
+                            {voucher.VoucherDate && (
+                              <span className="text-gray-500 text-xs">
+                                {new Date(voucher.VoucherDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.vouchers.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.vouchers.length} vouchers
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Vouchers JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.vouchers, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Accounts Section */}
+                {fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <Wallet className="w-5 h-5" />
+                      Accounts ({fortnoxInfo.accounts.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.accounts.slice(0, 10).map((account: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {account.AccountNumber || account.Number || `Account #${idx + 1}`}
+                              </p>
+                              {account.Description && (
+                                <p className="text-gray-400 text-xs mt-1">{account.Description}</p>
+                              )}
+                              {account.Balance && (
+                                <p className="text-green-400 text-xs mt-1">
+                                  Balance: {account.Balance} {account.Currency || "SEK"}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.accounts.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.accounts.length} accounts
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Accounts JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.accounts, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Customers Section */}
+                {fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Customers ({fortnoxInfo.customers.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.customers.slice(0, 10).map((customer: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {customer.CustomerNumber || customer.Number || `Customer #${idx + 1}`}
+                              </p>
+                              <p className="text-gray-300 text-xs mt-1">{customer.Name}</p>
+                              {customer.Email && (
+                                <p className="text-gray-400 text-xs mt-1">Email: {customer.Email}</p>
+                              )}
+                              {customer.Phone1 && (
+                                <p className="text-gray-400 text-xs mt-1">Phone: {customer.Phone1}</p>
+                              )}
+                              {customer.City && (
+                                <p className="text-gray-400 text-xs mt-1">
+                                  {customer.City}
+                                  {customer.ZipCode && `, ${customer.ZipCode}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.customers.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.customers.length} customers
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Customers JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.customers, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Suppliers Section */}
+                {fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Suppliers ({fortnoxInfo.suppliers.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.suppliers.slice(0, 10).map((supplier: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {supplier.SupplierNumber || supplier.Number || `Supplier #${idx + 1}`}
+                              </p>
+                              <p className="text-gray-300 text-xs mt-1">{supplier.Name}</p>
+                              {supplier.Email && (
+                                <p className="text-gray-400 text-xs mt-1">Email: {supplier.Email}</p>
+                              )}
+                              {supplier.Phone1 && (
+                                <p className="text-gray-400 text-xs mt-1">Phone: {supplier.Phone1}</p>
+                              )}
+                              {supplier.City && (
+                                <p className="text-gray-400 text-xs mt-1">
+                                  {supplier.City}
+                                  {supplier.ZipCode && `, ${supplier.ZipCode}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.suppliers.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.suppliers.length} suppliers
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Suppliers JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.suppliers, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
+                {/* Articles Section */}
+                {fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      Articles ({fortnoxInfo.articles.length})
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {fortnoxInfo.articles.slice(0, 10).map((article: any, idx: number) => (
+                        <div key={idx} className="bg-black/30 p-3 rounded border border-white/5 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">
+                                {article.ArticleNumber || article.Number || `Article #${idx + 1}`}
+                              </p>
+                              {article.Description && (
+                                <p className="text-gray-400 text-xs mt-1">{article.Description}</p>
+                              )}
+                              {article.Price && (
+                                <p className="text-purple-400 text-xs mt-1">
+                                  Price: {article.Price} {article.Currency || "SEK"}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {fortnoxInfo.articles.length > 10 && (
+                        <p className="text-xs text-gray-500 text-center pt-2">
+                          Showing 10 of {fortnoxInfo.articles.length} articles
+                        </p>
+                      )}
+                    </div>
+                    <details className="mt-4">
+                      <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">
+                        View All Articles JSON
+                      </summary>
+                      <pre className="text-xs text-gray-300 overflow-auto max-h-64 bg-black/50 p-4 rounded border border-white/10 mt-2">
+                        {JSON.stringify(fortnoxInfo.articles, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+
                 {/* No Information Available */}
-                {!fortnoxInfo.company && !fortnoxInfo.settings && (
+                {!fortnoxInfo.company && 
+                 !fortnoxInfo.settings && 
+                 !fortnoxInfo.invoices?.length && 
+                 !fortnoxInfo.supplierInvoices?.length && 
+                 !fortnoxInfo.expenses?.length && 
+                 !fortnoxInfo.vouchers?.length && 
+                 !fortnoxInfo.accounts?.length && 
+                 !fortnoxInfo.articles?.length &&
+                 !fortnoxInfo.customers?.length &&
+                 !fortnoxInfo.suppliers?.length && (
                   <div className="text-center py-12">
                     <Settings className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                     <p className="text-gray-400">No information available</p>

@@ -348,11 +348,18 @@ export default function DashboardLayout({
 
             {/* Logout Button */}
             <SidebarMenuButton
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault()
-                void logout()
+                e.stopPropagation()
+                try {
+                  await logout()
+                } catch (error) {
+                  console.error("Logout error:", error)
+                  // Force redirect even if logout fails
+                  router.push("/login")
+                }
               }}
-              className="w-full h-9 px-3 text-gray-300 hover:text-white hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/30 transition-all"
+              className="w-full h-9 px-3 text-gray-300 hover:text-white hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/30 transition-all cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-sm">Logout</span>

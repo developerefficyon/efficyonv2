@@ -33,7 +33,6 @@ export default function LoginPage() {
         if (loggedInUser.role === "admin") {
           router.push("/dashboard/admin")
         } else {
-          // For non-admin users, check if onboarding is completed
           if (loggedInUser.onboardingCompleted) {
             router.push("/dashboard")
           } else {
@@ -42,12 +41,22 @@ export default function LoginPage() {
         }
       }
     } catch (err: any) {
+      console.error('[Login] Error details:', err)
       if (err?.message === "EMAIL_NOT_CONFIRMED") {
         setError("Please verify your email from the link we sent before logging in.")
       } else if (err?.message === "NOT_APPROVED") {
         setError("Your account is awaiting admin approval.")
+      } else if (err?.message === "INVALID_CREDENTIALS") {
+        // Provide helpful message for admin email
+        if (email.toLowerCase() === "admin@efficyon.com") {
+          setError("Invalid password. Default password is 'Admin@123456' (check .env ADMIN_PASSWORD). Run 'npm run seed' to reset.")
+        } else {
+          setError("Invalid email or password. Please check your credentials and try again.")
+        }
+      } else if (err?.message === "PROFILE_NOT_FOUND") {
+        setError("Your account profile could not be found. Please contact support.")
       } else {
-        setError("Invalid email or password")
+        setError(err?.message || "Invalid email or password")
       }
     } finally {
       setIsLoading(false)
