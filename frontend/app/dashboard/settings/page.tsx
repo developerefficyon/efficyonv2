@@ -136,6 +136,34 @@ export default function SettingsPage() {
     }
   }, [searchParams, router])
 
+  // Set current plan when modal opens
+  useEffect(() => {
+    if (isChangePlanModalOpen && billing.plan) {
+      // Map billing.plan name to plan.id (e.g., "Growth" -> "growth", "Startup" -> "startup", "Enterprise" -> "custom")
+      let currentPlanId = billing.plan.toLowerCase()
+      
+      // Handle special case: "Enterprise" maps to "custom" in the plans array
+      if (currentPlanId === "enterprise") {
+        currentPlanId = "custom"
+      }
+      
+      // Check if the plan exists in the plans array
+      const planExists = plans.some(plan => plan.id === currentPlanId)
+      if (planExists) {
+        setSelectedPlan(currentPlanId)
+      } else {
+        // If no match found, try to find by name (case-insensitive)
+        const planByName = plans.find(plan => plan.name.toLowerCase() === billing.plan.toLowerCase())
+        if (planByName) {
+          setSelectedPlan(planByName.id)
+        }
+      }
+    } else if (!isChangePlanModalOpen) {
+      // Reset selected plan when modal closes
+      setSelectedPlan("")
+    }
+  }, [isChangePlanModalOpen, billing.plan])
+
   const handleChangePlan = async () => {
     if (!selectedPlan) {
       toast.error("Please select a plan")
@@ -486,32 +514,32 @@ export default function SettingsPage() {
 
       {/* Change Plan Modal */}
       <Dialog open={isChangePlanModalOpen} onOpenChange={setIsChangePlanModalOpen}>
-        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[95vw] max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0">
+        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[98vw] max-w-[95vw] lg:max-w-[90vw] xl:max-w-[85vw] max-h-[98vh] overflow-hidden p-0 gap-0">
           {/* Header Section */}
-          <div className="relative p-8 border-b border-white/10 bg-gradient-to-br from-black via-black to-black/95">
+          <div className="relative p-4 sm:p-6 lg:p-8 border-b border-white/10 bg-gradient-to-br from-black via-black to-black/95">
             <button
               onClick={() => setIsChangePlanModalOpen(false)}
-              className="absolute top-6 right-6 p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-all z-10"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 lg:top-6 lg:right-6 p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-all z-10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             
-            <div className="max-w-3xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/20 to-purple-500/20 border border-cyan-500/30 mb-4">
-                <Sparkles className="w-8 h-8 text-cyan-400" />
+            <div className="max-w-3xl mx-auto text-center space-y-2 sm:space-y-3 lg:space-y-4 px-2">
+              <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/20 to-purple-500/20 border border-cyan-500/30 mb-2 sm:mb-3 lg:mb-4">
+                <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-cyan-400" />
               </div>
-              <DialogTitle className="text-4xl font-bold text-white tracking-tight">
+              <DialogTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
                 Choose Your Plan
               </DialogTitle>
-              <DialogDescription className="text-lg text-gray-300 max-w-2xl mx-auto">
+              <DialogDescription className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl mx-auto px-2">
                 Select the perfect plan for your business. Upgrade or downgrade anytime.
               </DialogDescription>
             </div>
           </div>
 
           {/* Plans Section */}
-          <div className="p-8 overflow-y-auto max-h-[calc(95vh-200px)]">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(95vh-200px)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 max-w-full mx-auto px-2 sm:px-4">
               {plans.map((plan, index) => {
                 const isSelected = selectedPlan === plan.id
                 const isPopular = plan.popular
@@ -527,13 +555,13 @@ export default function SettingsPage() {
                     key={plan.id}
                     className={cn(
                       "relative group",
-                      isPopular && "lg:-mt-4 lg:mb-4"
+                      isPopular && "md:-mt-2 lg:-mt-4 md:mb-2 lg:mb-4"
                     )}
                   >
                     {/* Popular Badge - Outside Card */}
                     {isPopular && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
-                        <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-xl shadow-blue-500/50 animate-pulse">
+                      <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2 z-20">
+                        <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-[10px] sm:text-xs font-bold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-xl shadow-blue-500/50 animate-pulse whitespace-nowrap">
                           ⭐ MOST POPULAR
                         </div>
                       </div>
@@ -543,18 +571,18 @@ export default function SettingsPage() {
                       type="button"
                       onClick={() => setSelectedPlan(plan.id)}
                       className={cn(
-                        "relative w-full h-full p-8 rounded-2xl border-2 text-left transition-all duration-500",
-                        "hover:scale-[1.02] hover:shadow-2xl",
+                        "relative w-full h-full p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border-2 text-left transition-all duration-500",
+                        "hover:scale-[1.01] sm:hover:scale-[1.02] hover:shadow-2xl",
                         isSelected
-                          ? "border-cyan-400 bg-gradient-to-br from-cyan-500/20 via-cyan-500/10 to-transparent shadow-[0_0_50px_rgba(34,211,238,0.4)] ring-4 ring-cyan-500/20"
+                          ? "border-cyan-400 bg-gradient-to-br from-cyan-500/20 via-cyan-500/10 to-transparent shadow-[0_0_50px_rgba(34,211,238,0.4)] ring-2 sm:ring-4 ring-cyan-500/20"
                           : "border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent hover:border-white/20 hover:bg-white/10",
                         isPopular && !isSelected && "border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent"
                       )}
                     >
                       {/* Selected Checkmark - Top Right */}
                       {isSelected && (
-                        <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-2xl shadow-cyan-500/50 z-10 animate-in zoom-in-50 duration-300">
-                          <Check className="w-6 h-6 text-white font-bold" />
+                        <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-2xl shadow-cyan-500/50 z-10 animate-in zoom-in-50 duration-300">
+                          <Check className="w-4 h-4 sm:w-6 sm:h-6 text-white font-bold" />
                         </div>
                       )}
 
@@ -567,13 +595,13 @@ export default function SettingsPage() {
                       <div className="relative z-10">
                         {/* Icon */}
                         <div className={cn(
-                          "w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-all duration-300",
+                          "w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center mb-4 sm:mb-5 lg:mb-6 transition-all duration-300",
                           isSelected
                             ? "bg-gradient-to-br from-cyan-500/40 to-blue-500/40 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/30"
                             : "bg-white/10 border border-white/20 group-hover:bg-white/15 group-hover:border-white/30"
                         )}>
                           <Icon className={cn(
-                            "w-7 h-7 transition-all duration-300",
+                            "w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 transition-all duration-300",
                             isSelected 
                               ? "text-cyan-300 drop-shadow-lg" 
                               : "text-gray-400 group-hover:text-cyan-400"
@@ -581,45 +609,45 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Plan Name */}
-                        <h3 className="text-3xl font-bold text-white mb-3 tracking-tight">
+                        <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 sm:mb-3 tracking-tight">
                           {plan.name}
                         </h3>
 
                         {/* Price */}
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-5xl font-extrabold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                        <div className="flex items-baseline gap-1 sm:gap-2 mb-1">
+                          <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
                             {plan.price.split('.')[0]}
                           </span>
-                          <span className="text-2xl font-bold text-gray-400">
+                          <span className="text-xl sm:text-2xl font-bold text-gray-400">
                             .{plan.price.split('.')[1]}
                           </span>
-                          <span className="text-gray-500 text-lg ml-1">/{plan.period}</span>
+                          <span className="text-gray-500 text-sm sm:text-base lg:text-lg ml-1">/{plan.period}</span>
                         </div>
 
                         {/* Description */}
-                        <p className="text-gray-400 mb-8 min-h-[2.5rem] text-sm leading-relaxed">
+                        <p className="text-gray-400 mb-4 sm:mb-6 lg:mb-8 min-h-[2.5rem] text-xs sm:text-sm leading-relaxed">
                           {plan.description}
                         </p>
 
                         {/* Features List */}
-                        <ul className="space-y-4 mb-8">
+                        <ul className="space-y-2 sm:space-y-3 lg:space-y-4 mb-4 sm:mb-6 lg:mb-8">
                           {plan.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-3 group/item">
+                            <li key={idx} className="flex items-start gap-2 sm:gap-3 group/item">
                               <div className={cn(
-                                "mt-1 w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                                "mt-0.5 sm:mt-1 w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300",
                                 isSelected
                                   ? "bg-cyan-500/20 border-2 border-cyan-400/50 shadow-md shadow-cyan-500/20"
                                   : "bg-white/5 border border-white/10 group-hover/item:border-cyan-400/30"
                               )}>
                                 <Check className={cn(
-                                  "w-4 h-4 transition-all duration-300",
+                                  "w-3 h-3 sm:w-4 sm:h-4 transition-all duration-300",
                                   isSelected 
                                     ? "text-cyan-300 font-bold" 
                                     : "text-gray-500 group-hover/item:text-cyan-400"
                                 )} strokeWidth={3} />
                               </div>
                               <span className={cn(
-                                "text-base leading-relaxed transition-colors duration-300",
+                                "text-sm sm:text-base leading-relaxed transition-colors duration-300",
                                 isSelected ? "text-gray-100" : "text-gray-400 group-hover/item:text-gray-200"
                               )}>
                                 {feature}
@@ -630,26 +658,26 @@ export default function SettingsPage() {
 
                         {/* CTA Section */}
                         <div className={cn(
-                          "pt-6 border-t transition-all duration-300",
+                          "pt-4 sm:pt-5 lg:pt-6 border-t transition-all duration-300",
                           isSelected
                             ? "border-cyan-400/40"
                             : "border-white/10 group-hover:border-white/20"
                         )}>
                           <div className={cn(
-                            "flex items-center justify-center gap-2 text-base font-semibold transition-all duration-300",
+                            "flex items-center justify-center gap-2 text-sm sm:text-base font-semibold transition-all duration-300",
                             isSelected
                               ? "text-cyan-300"
                               : "text-gray-400 group-hover:text-white"
                           )}>
                             {isSelected ? (
                               <>
-                                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-cyan-400 animate-pulse" />
                                 <span>Currently Selected</span>
                               </>
                             ) : (
                               <>
                                 <span>Select This Plan</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
                               </>
                             )}
                           </div>
@@ -667,40 +695,42 @@ export default function SettingsPage() {
             </div>
 
             {/* Action Footer */}
-            <div className="max-w-6xl mx-auto mt-12 pt-8 border-t border-white/10">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-3 text-sm text-gray-400">
-                  <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <Shield className="w-4 h-4 text-green-400" />
+            <div className="max-w-full mx-auto mt-6 sm:mt-8 lg:mt-12 pt-6 sm:pt-7 lg:pt-8 border-t border-white/10 px-2 sm:px-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 order-2 sm:order-1">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                   </div>
-                  <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center">
                     <span className="font-medium text-gray-300">Secure checkout</span>
-                    <span className="text-gray-500 ml-1">powered by Stripe</span>
+                    <span className="text-gray-500 sm:ml-1 text-xs sm:text-sm">powered by Stripe</span>
                   </div>
                 </div>
                 
-                <div className="flex gap-4 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto order-1 sm:order-2">
                   <Button
                     variant="outline"
                     onClick={() => setIsChangePlanModalOpen(false)}
-                    className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:border-white/20 px-6 h-11 flex-1 sm:flex-none"
+                    className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:border-white/20 px-4 sm:px-6 h-10 sm:h-11 w-full sm:w-auto text-sm sm:text-base"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleChangePlan}
                     disabled={!selectedPlan || isProcessing}
-                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-400 text-white font-bold text-base px-6 sm:px-8 h-11 shadow-2xl shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none min-w-0 sm:min-w-[200px] transition-all duration-300 hover:scale-105"
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-400 text-white font-bold text-sm sm:text-base px-4 sm:px-6 lg:px-8 h-10 sm:h-11 shadow-2xl shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-w-0 sm:min-w-[200px] transition-all duration-300 hover:scale-105"
                   >
                     {isProcessing ? (
                       <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                        <span className="hidden sm:inline">Processing...</span>
+                        <span className="sm:hidden">Processing</span>
                       </>
                     ) : (
                       <>
-                        Continue to Checkout
-                        <ArrowRight className="w-5 h-5 ml-2" />
+                        <span className="hidden sm:inline">Continue to Checkout</span>
+                        <span className="sm:hidden">Checkout</span>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                       </>
                     )}
                   </Button>
