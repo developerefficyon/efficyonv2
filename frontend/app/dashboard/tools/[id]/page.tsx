@@ -505,6 +505,47 @@ export default function ToolDetailPage() {
               </CardHeader>
               {costLeakAnalysis && isAnalysisVisible && (
                 <CardContent className="space-y-6">
+                  {/* Summary Paragraph */}
+                  {costLeakAnalysis.overallSummary && (
+                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-lg p-5 border border-slate-700/50">
+                      <div className="space-y-3">
+                        {costLeakAnalysis.overallSummary.totalFindings > 0 ? (
+                          <>
+                            <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                              After analyzing your supplier invoices, we've discovered several opportunities to optimize your spending. 
+                              Our review identified <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.totalFindings}</span> cost leak{costLeakAnalysis.overallSummary.totalFindings !== 1 ? 's' : ''} that, if addressed, could save your company approximately <span className="font-semibold text-green-400">${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.
+                            </p>
+                            <div className="space-y-2">
+                              {costLeakAnalysis.overallSummary.highSeverity > 0 && (
+                                <p className="text-sm text-gray-300 leading-relaxed">
+                                  <span className="font-semibold text-red-400">Immediate Action Required:</span> We found <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.highSeverity}</span> high-priority issue{costLeakAnalysis.overallSummary.highSeverity !== 1 ? 's' : ''} that need{costLeakAnalysis.overallSummary.highSeverity === 1 ? 's' : ''} your urgent attention. These typically include duplicate payments or significant anomalies that could be costing you money right now. We recommend reviewing these findings first to prevent further financial impact.
+                                </p>
+                              )}
+                              {costLeakAnalysis.overallSummary.mediumSeverity > 0 && (
+                                <p className="text-sm text-gray-300 leading-relaxed">
+                                  <span className="font-semibold text-amber-400">Review Recommended:</span> Additionally, <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.mediumSeverity}</span> medium-priority finding{costLeakAnalysis.overallSummary.mediumSeverity !== 1 ? 's' : ''} suggest{costLeakAnalysis.overallSummary.mediumSeverity === 1 ? 's' : ''} potential areas for optimization, such as unusual invoice amounts, price increases, or overdue payments. Addressing these can help improve your cash flow and prevent future cost escalations.
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-300 leading-relaxed">
+                                <span className="font-semibold text-cyan-400">Key Recommendations:</span> Start by investigating the high-priority findings, particularly any duplicate payments or suspicious transactions. Next, review recurring subscriptions to ensure you're only paying for services you actively use. Finally, establish regular monitoring of supplier invoices to catch these issues early and maintain better control over your expenses.
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                              Excellent news! Our comprehensive analysis of your supplier invoices found no significant cost leaks or anomalies. 
+                              Your financial data appears well-managed with no duplicate payments, unusual amounts, or other concerning patterns detected.
+                            </p>
+                            <p className="text-sm text-gray-300 leading-relaxed">
+                              <span className="font-semibold text-green-400">Recommendations to Maintain This Status:</span> Continue monitoring your expenses regularly, especially when onboarding new suppliers or processing large invoices. Set up automated alerts for duplicate payments and unusual amounts. Consider reviewing your recurring subscriptions quarterly to ensure you're only paying for services you actively use. Regular audits like this one will help you maintain healthy financial controls and catch potential issues before they become costly problems.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Summary Cards */}
                   {costLeakAnalysis.overallSummary && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -518,8 +559,8 @@ export default function ToolDetailPage() {
                         <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
                         <p className="text-2xl font-bold text-green-400">
                           {costLeakAnalysis.overallSummary.totalPotentialSavings 
-                            ? `${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('sv-SE')} SEK`
-                            : "0 SEK"}
+                            ? `$${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
+                            : "$0.00 USD"}
                         </p>
                       </div>
                       <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
@@ -534,92 +575,6 @@ export default function ToolDetailPage() {
                           {costLeakAnalysis.overallSummary.mediumSeverity || 0}
                         </p>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Subscription Analysis */}
-                  {costLeakAnalysis.subscriptionAnalysis && (
-                    <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 rounded-lg p-5 border border-indigo-500/40">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                          <Package className="w-5 h-5 text-indigo-400" />
-                          Subscription Optimization
-                        </h3>
-                        {costLeakAnalysis.subscriptionAnalysis.summary && (
-                          <Badge variant="outline" className="border-indigo-500/50 text-indigo-300 bg-indigo-500/10">
-                            {costLeakAnalysis.subscriptionAnalysis.summary.utilizationScore}% Utilization
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {costLeakAnalysis.subscriptionAnalysis.summary && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                          <div className="bg-black/40 rounded-lg p-3 border border-white/10">
-                            <p className="text-xs text-gray-400 mb-1">Features Used</p>
-                            <p className="text-xl font-bold text-white">
-                              {costLeakAnalysis.subscriptionAnalysis.summary.activeFeaturesCount}/{costLeakAnalysis.subscriptionAnalysis.summary.totalFeaturesCount}
-                            </p>
-                          </div>
-                          <div className="bg-black/40 rounded-lg p-3 border border-white/10">
-                            <p className="text-xs text-gray-400 mb-1">Transactions</p>
-                            <p className="text-xl font-bold text-white">
-                              {costLeakAnalysis.subscriptionAnalysis.summary.transactionVolume}
-                            </p>
-                          </div>
-                          <div className="bg-black/40 rounded-lg p-3 border border-indigo-500/30">
-                            <p className="text-xs text-gray-400 mb-1">Utilization</p>
-                            <p className="text-xl font-bold text-indigo-400">
-                              {costLeakAnalysis.subscriptionAnalysis.summary.utilizationScore}%
-                            </p>
-                          </div>
-                          <div className="bg-black/40 rounded-lg p-3 border border-amber-500/30">
-                            <p className="text-xs text-gray-400 mb-1">Recommendations</p>
-                            <p className="text-xl font-bold text-amber-400">
-                              {costLeakAnalysis.subscriptionAnalysis.summary.recommendations}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {costLeakAnalysis.subscriptionAnalysis.findings && 
-                       costLeakAnalysis.subscriptionAnalysis.findings.length > 0 && (
-                        <div className="space-y-2">
-                          {costLeakAnalysis.subscriptionAnalysis.findings.map((finding: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className={`bg-black/40 rounded-lg p-3 border ${
-                                finding.severity === "high"
-                                  ? "border-red-500/40"
-                                  : finding.severity === "medium"
-                                  ? "border-amber-500/40"
-                                  : "border-indigo-500/40"
-                              }`}
-                            >
-                              <div className="flex items-start gap-2">
-                                <Badge
-                                  className={
-                                    finding.severity === "high"
-                                      ? "bg-red-500/20 text-red-300 border-red-500/50"
-                                      : finding.severity === "medium"
-                                      ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                                      : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                                  }
-                                  variant="outline"
-                                >
-                                  {finding.severity === "high" ? "High" : finding.severity === "medium" ? "Medium" : "Low"}
-                                </Badge>
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-white text-sm mb-1">{finding.title}</h4>
-                                  <p className="text-xs text-gray-300 mb-2">{finding.description}</p>
-                                  {finding.recommendation && (
-                                    <p className="text-xs text-indigo-300 italic">💡 {finding.recommendation}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -670,7 +625,7 @@ export default function ToolDetailPage() {
                                   <div className="flex items-center gap-2 mb-3">
                                     <span className="text-xs text-gray-400">Potential Savings:</span>
                                     <span className="text-sm font-semibold text-green-400">
-                                      {finding.potentialSavings.toLocaleString('sv-SE')} SEK
+                                      ${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
                                     </span>
                                   </div>
                                 )}
@@ -693,7 +648,7 @@ export default function ToolDetailPage() {
                                             <div className="flex items-center gap-3 text-gray-400">
                                               <span>{inv.InvoiceDate || 'N/A'}</span>
                                               <span className="text-green-400 font-medium">
-                                                {inv.calculatedTotal ? `${inv.calculatedTotal.toLocaleString('sv-SE')} SEK` : '0 SEK'}
+                                                {inv.calculatedTotal ? `$${inv.calculatedTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '$0.00 USD'}
                                               </span>
                                             </div>
                                           </div>
