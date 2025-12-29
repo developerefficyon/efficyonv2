@@ -49,7 +49,7 @@ export default function RegisterPage() {
         emailRedirectTo: redirectTo,
         data: {
           name,
-          role: "user",
+          role: "customer",
         },
       },
     })

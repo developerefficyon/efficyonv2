@@ -177,8 +177,8 @@ export default function OnboardingPage() {
 
   const handleNext = async () => {
     try {
-      // For step 5, validate plan selection
-      if (currentStep === 5) {
+      // For step 4 (plan selection), handle Stripe checkout for paid plans
+      if (currentStep === 4) {
         if (!formData.plan || formData.plan.trim() === "") {
           setErrors({ ...errors, plan: "Please select a plan" })
           window.scrollTo({ top: 0, behavior: 'smooth' })

@@ -7,25 +7,47 @@ const {
   estimateSavings,
   getAnalysisSummary,
 } = require("../controllers/aiController")
+
+// Profile Controller - user profile operations
 const {
-  getRoot,
   getProfile,
-  getEmployees,
-  getCustomers,
-  getAllSubscriptions,
   createProfile,
   createProfilePublic,
   updateProfilePublic,
   updateEmailVerified,
   updateEmailVerifiedPublic,
-  approveProfile,
   completeOnboarding,
-  getCustomerDetailsAdmin,
+} = require("../controllers/profileController")
+
+// Company Controller - company, plans, and alerts
+const {
+  getRoot,
   upsertCompany,
   getCompany,
+  upsertPlans,
+  getPlans,
+  upsertAlerts,
+  getAlerts,
+} = require("../controllers/companyController")
+
+// Admin Controller - admin-only operations
+const {
+  getEmployees,
+  getCustomers,
+  getAllSubscriptions,
+  approveProfile,
+  getCustomerDetailsAdmin,
+} = require("../controllers/adminController")
+
+// Integration Controller - generic integration CRUD
+const {
   upsertIntegrations,
   getIntegrations,
   deleteIntegration,
+} = require("../controllers/integrationController")
+
+// Fortnox Controller - Fortnox OAuth and data operations
+const {
   startFortnoxOAuth,
   fortnoxOAuthCallback,
   syncFortnoxCustomers,
@@ -41,11 +63,7 @@ const {
   getFortnoxArticles,
   getFortnoxSuppliers,
   analyzeFortnoxCostLeaks,
-  upsertPlans,
-  getPlans,
-  upsertAlerts,
-  getAlerts,
-} = require("../controllers/apiController")
+} = require("../controllers/fortnoxController")
 const { requireAuth } = require("../middleware/auth")
 const {
   createPaymentIntent,

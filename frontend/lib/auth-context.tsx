@@ -31,13 +31,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionExpiryWarning, setSessionExpiryWarning] = useState(false)
   const router = useRouter()
 
+  // Helper function to build user object from session and profile
+  const buildUserFromSession = async (u: any): Promise<User> => {
+    // Fetch profile to get role and onboarding status
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, full_name, onboarding_completed")
+      .eq("id", u.id)
+      .maybeSingle()
+
+    // Priority: profile.role > user_metadata.role > default "customer"
+    const role = (profile?.role as UserRole) ||
+                 (u.user_metadata?.role as UserRole) ||
+                 "customer"
+    const name = (profile?.full_name as string) ||
+                 (u.user_metadata?.name as string) ||
+                 ""
+
+    return {
+      id: u.id,
+      email: u.email || "",
+      name,
+      role,
+      onboardingCompleted: profile?.onboarding_completed ?? false,
+    }
+  }
+
+  // Effect 1: Initialize session on mount (runs once)
   useEffect(() => {
     let isMounted = true
 
     const initSession = async () => {
-      // Reduce retries and backoff for faster initialization
       let retries = 0
-      const maxRetries = 2 // Reduced from 3
+      const maxRetries = 2
 
       while (retries < maxRetries) {
         try {
@@ -49,66 +75,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!isMounted) return
 
           if (session?.user) {
-            // Session found - proceed with user setup
-            const u = session.user
-            const role = (u.user_metadata?.role as UserRole) || "user"
-            const name = (u.user_metadata?.name as string) || ""
-            
-            // Fetch profile in parallel to reduce wait time
-            const profilePromise = supabase
-              .from("profiles")
-              .select("onboarding_completed")
-              .eq("id", u.id)
-              .maybeSingle()
-            
-            const { data: profile } = await profilePromise
-            
+            const userData = await buildUserFromSession(session.user)
             if (isMounted) {
-              setUser({
-                id: u.id,
-                email: u.email || "",
-                name,
-                role,
-                onboardingCompleted: profile?.onboarding_completed ?? false,
-              })
+              setUser(userData)
+              setIsLoading(false)
             }
-            setIsLoading(false)
-            return // Success - exit retry loop
+            return
           }
 
           if (sessionError) {
             console.warn(`[Auth] Session error (attempt ${retries + 1}/${maxRetries}):`, sessionError)
-            
-            // Try to refresh session only once
+
             if (retries === 0) {
               try {
-                const { data: { session: refreshedSession }, error: refreshError } = 
+                const { data: { session: refreshedSession }, error: refreshError } =
                   await supabase.auth.refreshSession()
-                
+
                 if (refreshedSession?.user && isMounted) {
-                  const u = refreshedSession.user
-                  const role = (u.user_metadata?.role as UserRole) || "user"
-                  const name = (u.user_metadata?.name as string) || ""
-                  
-                  const { data: profile } = await supabase
-                    .from("profiles")
-                    .select("onboarding_completed")
-                    .eq("id", u.id)
-                    .maybeSingle()
-                  
+                  const userData = await buildUserFromSession(refreshedSession.user)
                   if (isMounted) {
-                    setUser({
-                      id: u.id,
-                      email: u.email || "",
-                      name,
-                      role,
-                      onboardingCompleted: profile?.onboarding_completed ?? false,
-                    })
+                    setUser(userData)
+                    setIsLoading(false)
                   }
-                  setIsLoading(false)
-                  return // Success after refresh
+                  return
                 }
-                
+
                 if (refreshError) {
                   console.error('[Auth] Refresh failed:', refreshError)
                 }
@@ -118,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
 
-          // If we get here, session is null and no error - user is logged out
+          // No session - user is logged out
           if (isMounted) {
             setUser(null)
             setIsLoading(false)
@@ -128,13 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           retries++
           console.error(`[Auth] Session init error (attempt ${retries}/${maxRetries}):`, error)
-          
+
           if (retries < maxRetries) {
-            // Reduced backoff: 300ms, 600ms (instead of 1s, 2s, 4s)
             await new Promise(resolve => setTimeout(resolve, 300 * retries))
-            continue // Retry
+            continue
           } else {
-            // Max retries reached
             console.error('[Auth] Failed to initialize session after retries')
             if (isMounted) {
               setUser(null)
@@ -148,155 +137,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void initSession()
 
+    // Auth state change listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
       if (!isMounted) return
-      
+
       console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session')
-      
-      // Handle sign out event
+
       if (event === "SIGNED_OUT" || !session?.user) {
         console.log('[Auth] User signed out, clearing state')
         setUser(null)
         return
       }
-      
-      // Handle token refresh
+
       if (event === "TOKEN_REFRESHED") {
         console.log('[Auth] Token refreshed successfully')
       }
-      
-      // Handle sign in or session restore
-      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
-        const u = session.user
-        const role = (u.user_metadata?.role as UserRole) || "user"
-        const name = (u.user_metadata?.name as string) || ""
-        
-        // Fetch profile to get onboarding_completed status
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", u.id)
-          .maybeSingle()
-        
-        if (!isMounted) return
-        
-        setUser({
-          id: u.id,
-          email: u.email || "",
-          name,
-          role,
-          onboardingCompleted: profile?.onboarding_completed ?? false,
-        })
+
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        const userData = await buildUserFromSession(session.user)
+        if (isMounted) {
+          setUser(userData)
+        }
       }
     })
 
-    // Add proactive token refresh
-    let refreshTimeout: NodeJS.Timeout | null = null
-
-    const setupTokenRefresh = async () => {
-      if (!isMounted) return
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session || !session.expires_at) return
-
-      const expiresAt = session.expires_at
-      const now = Math.floor(Date.now() / 1000)
-      const timeUntilExpiry = expiresAt - now
-      
-      // Refresh 5 minutes before expiration (300 seconds)
-      const refreshTime = Math.max(0, (timeUntilExpiry - 300) * 1000)
-      
-      if (refreshTime > 0) {
-        refreshTimeout = setTimeout(async () => {
-          if (!isMounted) return
-          console.log('[Auth] Refreshing token proactively before expiration')
-          try {
-            await supabase.auth.refreshSession()
-            // Schedule next refresh
-            setupTokenRefresh()
-          } catch (error) {
-            console.error('[Auth] Proactive token refresh failed:', error)
-          }
-        }, refreshTime)
-      } else if (timeUntilExpiry > 0) {
-        // Less than 5 minutes but still valid - refresh immediately
-        console.log('[Auth] Token expiring soon, refreshing immediately')
-        try {
-          await supabase.auth.refreshSession()
-          setupTokenRefresh()
-        } catch (error) {
-          console.error('[Auth] Immediate token refresh failed:', error)
-        }
-      }
-    }
-
-    // Setup token refresh and expiry monitoring when user is loaded
-    if (user) {
-      setupTokenRefresh()
-      
-      // Monitor session expiry and show warning
-      const checkExpiry = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.expires_at) return
-        
-        const expiresAt = session.expires_at
-        const now = Math.floor(Date.now() / 1000)
-        const timeUntilExpiry = expiresAt - now
-        
-        // Show warning 2 minutes before expiry
-        if (timeUntilExpiry > 0 && timeUntilExpiry < 120 && !sessionExpiryWarning) {
-          setSessionExpiryWarning(true)
-          console.warn('[Auth] Session expiring in less than 2 minutes')
-        }
-        
-        // Clear warning if we have more than 5 minutes left
-        if (timeUntilExpiry > 300) {
-          setSessionExpiryWarning(false)
-        }
-      }
-      
-      const expiryCheckInterval = setInterval(checkExpiry, 30000) // Check every 30 seconds
-      
-      return () => {
-        if (expiryCheckInterval) clearInterval(expiryCheckInterval)
-      }
-    }
-
-    // Listen for storage changes (cross-tab sync)
+    // Cross-tab sync via storage events
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.startsWith('sb-') && e.key.includes('-auth-token')) {
         console.log('[Auth] Storage changed in another tab, refreshing session')
-        supabase.auth.getSession().then((result: { data?: { session?: any } }) => {
+        supabase.auth.getSession().then(async (result) => {
           if (!isMounted) return
-          
+
           const session = result.data?.session
           if (session?.user) {
-            // Session exists - update user state
-            const u = session.user
-            const role = (u.user_metadata?.role as UserRole) || "user"
-            const name = (u.user_metadata?.name as string) || ""
-            
-            supabase
-              .from("profiles")
-              .select("onboarding_completed")
-              .eq("id", u.id)
-              .maybeSingle()
-              .then((profileResult: { data?: { onboarding_completed?: boolean } | null }) => {
-                const profile = profileResult.data
-                if (isMounted) {
-                  setUser({
-                    id: u.id,
-                    email: u.email || "",
-                    name,
-                    role,
-                    onboardingCompleted: profile?.onboarding_completed ?? false,
-                  })
-                }
-              })
+            const userData = await buildUserFromSession(session.user)
+            if (isMounted) {
+              setUser(userData)
+            }
           } else if (!session && isMounted) {
-            // Session removed - clear user
             setUser(null)
           }
         })
@@ -308,14 +188,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
       subscription.unsubscribe()
-      if (refreshTimeout) clearTimeout(refreshTimeout)
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [user])
+  }, []) // Empty dependency - only run on mount
+
+  // Effect 2: Token refresh when user is authenticated
+  useEffect(() => {
+    if (!user) return
+
+    let isMounted = true
+    let refreshTimeout: NodeJS.Timeout | null = null
+
+    const setupTokenRefresh = async () => {
+      if (!isMounted) return
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session || !session.expires_at) return
+
+      const expiresAt = session.expires_at
+      const now = Math.floor(Date.now() / 1000)
+      const timeUntilExpiry = expiresAt - now
+
+      // Refresh 5 minutes before expiration
+      const refreshTime = Math.max(0, (timeUntilExpiry - 300) * 1000)
+
+      if (refreshTime > 0) {
+        refreshTimeout = setTimeout(async () => {
+          if (!isMounted) return
+          console.log('[Auth] Refreshing token proactively before expiration')
+          try {
+            await supabase.auth.refreshSession()
+            setupTokenRefresh()
+          } catch (error) {
+            console.error('[Auth] Proactive token refresh failed:', error)
+          }
+        }, refreshTime)
+      } else if (timeUntilExpiry > 0) {
+        console.log('[Auth] Token expiring soon, refreshing immediately')
+        try {
+          await supabase.auth.refreshSession()
+          setupTokenRefresh()
+        } catch (error) {
+          console.error('[Auth] Immediate token refresh failed:', error)
+        }
+      }
+    }
+
+    setupTokenRefresh()
+
+    // Monitor session expiry
+    const checkExpiry = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.expires_at) return
+
+      const expiresAt = session.expires_at
+      const now = Math.floor(Date.now() / 1000)
+      const timeUntilExpiry = expiresAt - now
+
+      if (timeUntilExpiry > 0 && timeUntilExpiry < 120 && !sessionExpiryWarning) {
+        setSessionExpiryWarning(true)
+        console.warn('[Auth] Session expiring in less than 2 minutes')
+      }
+
+      if (timeUntilExpiry > 300) {
+        setSessionExpiryWarning(false)
+      }
+    }
+
+    const expiryCheckInterval = setInterval(checkExpiry, 30000)
+
+    return () => {
+      isMounted = false
+      if (refreshTimeout) clearTimeout(refreshTimeout)
+      clearInterval(expiryCheckInterval)
+    }
+  }, [user, sessionExpiryWarning])
 
   const login = async (email: string, password: string): Promise<User | null> => {
     console.log('[Auth] Login attempt for:', email)
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -328,9 +279,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: error.name,
         fullError: error
       })
-      
-      // Provide more specific error messages
-      if (error.message?.includes('Invalid login credentials') || error.message?.includes('Email not confirmed')) {
+
+      if (error.message?.includes('Invalid login credentials')) {
         throw new Error("INVALID_CREDENTIALS")
       } else if (error.message?.includes('Email not confirmed')) {
         throw new Error("EMAIL_NOT_CONFIRMED")
@@ -347,57 +297,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.session.user
     console.log('[Auth] User signed in:', u.id, 'Email confirmed:', !!u.email_confirmed_at)
 
-    // Require email confirmation from auth.users
+    // Require email confirmation
     if (!u.email_confirmed_at) {
       console.warn('[Auth] Email not confirmed, signing out')
       await supabase.auth.signOut()
       throw new Error("EMAIL_NOT_CONFIRMED")
     }
 
-    // Fetch profile to check role / onboarding_completed
-    // In the new schema, email verification is handled by Supabase auth (email_confirmed_at)
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("full_name, role, onboarding_completed")
-      .eq("id", u.id)
-      .maybeSingle()
+    // Build user from session (fetches profile with correct role priority)
+    const userData = await buildUserFromSession(u)
 
-    if (profileError) {
-      console.error('[Auth] Profile fetch error:', profileError.message)
-      // If we can't read profile for some reason, treat as invalid login
-      await supabase.auth.signOut()
-      throw new Error("PROFILE_NOT_FOUND")
-    }
-
-    console.log('[Auth] Profile found:', {
-      id: profile?.id,
-      role: profile?.role,
-      full_name: profile?.full_name,
-      onboarding_completed: profile?.onboarding_completed
+    console.log('[Auth] Final user data:', {
+      id: userData.id,
+      email: userData.email,
+      role: userData.role,
+      name: userData.name,
+      onboardingCompleted: userData.onboardingCompleted
     })
 
-    // Email verification is handled by Supabase auth - we already checked email_confirmed_at above
-    // In the new schema, we don't track email_verified, admin_approved, or status in profiles
-    // All users with confirmed emails can log in (no admin approval required)
-
-    const role =
-      (profile?.role as UserRole | undefined) ||
-      (u.user_metadata?.role as UserRole | undefined) ||
-      "user"
-    const name =
-      (profile?.full_name as string | undefined) ||
-      (u.user_metadata?.name as string | undefined) ||
-      ""
-
-    console.log('[Auth] Final user data:', { id: u.id, email: u.email, role, name })
-
-    const userData: User = {
-      id: u.id,
-      email: u.email || "",
-      name,
-      role,
-      onboardingCompleted: profile?.onboarding_completed ?? false,
-    }
     setUser(userData)
     return userData
   }
