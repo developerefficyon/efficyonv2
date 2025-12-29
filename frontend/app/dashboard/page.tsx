@@ -133,7 +133,7 @@ export default function UserDashboard() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">

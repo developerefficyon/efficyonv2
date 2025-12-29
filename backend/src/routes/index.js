@@ -44,6 +44,7 @@ const {
   upsertIntegrations,
   getIntegrations,
   deleteIntegration,
+  getTools,
 } = require("../controllers/integrationController")
 
 // Fortnox Controller - Fortnox OAuth and data operations
@@ -100,6 +101,7 @@ router.post("/api/admin/profiles/approve", requireAuth, approveProfile)
 router.get("/api/company", requireAuth, getCompany)
 router.post("/api/company", requireAuth, upsertCompany)
 
+router.get("/api/tools", requireAuth, getTools)
 router.get("/api/integrations", requireAuth, getIntegrations)
 router.post("/api/integrations", requireAuth, upsertIntegrations)
 router.delete("/api/integrations/:id", requireAuth, deleteIntegration)

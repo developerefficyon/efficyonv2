@@ -380,18 +380,18 @@ async function fortnoxOAuthCallback(req, res) {
     } else if (error === "invalid_scope") {
       errorType = "error_invalid_scope"
     }
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=${errorType}&error=${encodeURIComponent(error)}`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=${errorType}&error=${encodeURIComponent(error)}`)
   }
 
   if (!code || !state) {
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_missing_code`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_missing_code`)
   }
 
   let decodedState
   try {
     decodedState = JSON.parse(Buffer.from(state, "base64url").toString("utf8"))
   } catch (e) {
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_invalid_state`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_invalid_state`)
   }
 
   const companyId = decodedState.company_id
@@ -405,7 +405,7 @@ async function fortnoxOAuthCallback(req, res) {
     .maybeSingle()
 
   if (integrationError || !integration) {
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_integration_not_found`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_integration_not_found`)
   }
 
   const settings = integration?.settings || {}
@@ -430,7 +430,7 @@ async function fortnoxOAuthCallback(req, res) {
     })
 
     if (!tokenResponse.ok) {
-      return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_token`)
+      return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_token`)
     }
 
     const tokenData = await tokenResponse.json()
@@ -481,14 +481,14 @@ async function fortnoxOAuthCallback(req, res) {
     }
 
     if (updateError) {
-      return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_saving_tokens`)
+      return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_saving_tokens`)
     }
 
     log("log", endpoint, "Tokens saved successfully")
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=connected`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=connected`)
   } catch (e) {
     log("error", endpoint, "Unexpected error:", e.message)
-    return res.redirect(`${frontendUrl}/dashboard/integrations?fortnox=error_unexpected`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_unexpected`)
   }
 }
 

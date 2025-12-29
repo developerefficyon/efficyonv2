@@ -306,7 +306,7 @@ export default function AdminCustomersPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Customers</h2>
@@ -664,7 +664,7 @@ export default function AdminCustomersPage() {
       </Card>
       {/* Customer details dialog */}
       <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <DialogContent className="bg-black border-white/10 text-white max-w-2xl">
+        <DialogContent className="bg-black border-white/10 text-white w-[95vw] max-w-2xl sm:w-full">
           {selectedCustomer && (
             <>
               <DialogHeader>

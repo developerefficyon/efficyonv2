@@ -37,7 +37,7 @@ export default function UsagePage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">Usage Insights</h2>

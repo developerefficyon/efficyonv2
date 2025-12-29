@@ -1,10 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -25,120 +35,569 @@ import {
   Activity,
   BarChart3,
   Zap,
+  Loader2,
+  RefreshCw,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
+import { getValidSessionToken } from "@/lib/auth-helpers"
+import { supabase } from "@/lib/supabaseClient"
+import { toast } from "sonner"
+
+interface Integration {
+  id: string
+  tool_name: string
+  connection_type: string
+  status: string
+  environment: string
+  created_at: string
+  updated_at: string
+}
+
+interface Tool {
+  id: string
+  name: string
+  category: string
+  cost: number
+  seats: number
+  activeSeats: number
+  unusedSeats: number
+  wasteLevel: "high" | "medium" | "low"
+  status: "connected" | "error" | "disconnected"
+  lastSync: string
+  issues: string[]
+}
+
+interface AvailableTool {
+  id: string
+  name: string
+  category: string | null
+  created_at: string
+}
 
 export default function ToolsPage() {
+  const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [integrations, setIntegrations] = useState<Integration[]>([])
+  const [availableTools, setAvailableTools] = useState<AvailableTool[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingTools, setIsLoadingTools] = useState(false)
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [selectedTool, setSelectedTool] = useState<string>("")
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [integrationToDelete, setIntegrationToDelete] = useState<Integration | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const hasLoadedRef = useRef(false)
+  const lastUserIdRef = useRef<string | null>(null)
+  const isLoadingIntegrationsRef = useRef(false)
+  const [fortnoxForm, setFortnoxForm] = useState({
+    clientId: "",
+    clientSecret: "",
+    environment: "sandbox",
+  })
 
-  const tools = [
-    {
-      id: 1,
-      name: "Slack",
-      category: "Communication",
-      cost: 250,
-      seats: 50,
-      activeSeats: 42,
-      unusedSeats: 8,
-      wasteLevel: "high",
-      status: "connected",
-      lastSync: "2 hours ago",
-      issues: ["8 unused seats", "Overage charges"],
-    },
-    {
-      id: 2,
-      name: "Jira",
-      category: "Project Management",
-      cost: 320,
-      seats: 30,
-      activeSeats: 28,
-      unusedSeats: 2,
-      wasteLevel: "low",
-      status: "connected",
-      lastSync: "1 hour ago",
-      issues: [],
-    },
-    {
-      id: 3,
-      name: "HubSpot",
-      category: "CRM/Marketing",
-      cost: 600,
-      seats: 10,
-      activeSeats: 6,
-      unusedSeats: 4,
-      wasteLevel: "medium",
-      status: "connected",
-      lastSync: "3 hours ago",
-      issues: ["Underused features", "Plan downgrade available"],
-    },
-    {
-      id: 4,
-      name: "Notion",
-      category: "Productivity",
-      cost: 120,
-      seats: 20,
-      activeSeats: 18,
-      unusedSeats: 2,
-      wasteLevel: "low",
-      status: "connected",
-      lastSync: "30 minutes ago",
-      issues: [],
-    },
-    {
-      id: 5,
-      name: "Google Workspace",
-      category: "Productivity",
-      cost: 480,
-      seats: 25,
-      activeSeats: 13,
-      unusedSeats: 12,
-      wasteLevel: "high",
-      status: "connected",
-      lastSync: "1 hour ago",
-      issues: ["12 inactive accounts", "Unused licenses"],
-    },
-    {
-      id: 6,
-      name: "Salesforce",
-      category: "CRM",
-      cost: 50,
-      seats: 5,
-      activeSeats: 5,
-      unusedSeats: 0,
-      wasteLevel: "low",
-      status: "connected",
-      lastSync: "15 minutes ago",
-      issues: [],
-    },
-    {
-      id: 7,
-      name: "Zoom",
-      category: "Communication",
-      cost: 180,
-      seats: 15,
-      activeSeats: 12,
-      unusedSeats: 3,
-      wasteLevel: "medium",
-      status: "connected",
-      lastSync: "45 minutes ago",
-      issues: ["3 unused licenses"],
-    },
-    {
-      id: 8,
-      name: "Asana",
-      category: "Project Management",
-      cost: 200,
-      seats: 20,
-      activeSeats: 15,
-      unusedSeats: 5,
-      wasteLevel: "medium",
-      status: "error",
-      lastSync: "Failed",
-      issues: ["API connection error", "Needs reconnection"],
-    },
-  ]
+  const loadTools = useCallback(async () => {
+    try {
+      setIsLoadingTools(true)
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        setAvailableTools([])
+        setIsLoadingTools(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/tools`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        // Handle 404 gracefully - endpoint might not exist yet or tools table might be empty
+        if (res.status === 404) {
+          console.log("Tools endpoint not found, using empty list")
+          setAvailableTools([])
+          setIsLoadingTools(false)
+          return
+        }
+        console.error("Failed to load tools:", res.status)
+        setAvailableTools([])
+        setIsLoadingTools(false)
+        return
+      }
+
+      const data = await res.json()
+      setAvailableTools(data.tools || [])
+    } catch (error) {
+      console.error("Error loading tools:", error)
+      // Silently fail - tools list is optional
+      setAvailableTools([])
+    } finally {
+      setIsLoadingTools(false)
+    }
+  }, [])
+
+  const loadIntegrations = useCallback(async (force = false) => {
+    // Prevent multiple simultaneous calls unless forced
+    if (isLoadingIntegrationsRef.current && !force) {
+      console.log("[loadIntegrations] Already loading, skipping duplicate call")
+      return
+    }
+
+    isLoadingIntegrationsRef.current = true
+    try {
+      setIsLoading(true)
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        console.warn("No access token available for loading integrations")
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        setIntegrations([])
+        setIsLoading(false)
+        isLoadingIntegrationsRef.current = false
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error("Failed to load integrations:", res.status, errorText)
+        throw new Error(`Failed to load integrations: ${res.status}`)
+      }
+
+      const data = await res.json()
+      console.log("Integrations loaded:", data.integrations?.length || 0)
+      setIntegrations(data.integrations || [])
+    } catch (error) {
+      console.error("Error loading integrations:", error)
+      toast.error("Failed to load integrations", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+      setIntegrations([])
+    } finally {
+      setIsLoading(false)
+      isLoadingIntegrationsRef.current = false
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (authLoading) {
+      return
+    }
+
+    if (!user) {
+      setIsLoading(false)
+      hasLoadedRef.current = false
+      lastUserIdRef.current = null
+      return
+    }
+
+    const currentUserId = user.id
+    const userChanged = lastUserIdRef.current !== currentUserId
+    
+    if (userChanged) {
+      lastUserIdRef.current = currentUserId
+      hasLoadedRef.current = false
+    }
+
+    // Check for OAuth callback result in URL params
+    const params = new URLSearchParams(window.location.search)
+    const fortnoxStatus = params.get("fortnox")
+    const fortnoxError = params.get("error")
+    const fortnoxErrorDesc = params.get("error_desc")
+    
+    if (fortnoxStatus || fortnoxError) {
+      setIsConnecting(false)
+      
+      if (fortnoxStatus === "connected") {
+        // Clean up URL immediately
+        window.history.replaceState({}, "", window.location.pathname)
+        toast.success("Fortnox connected successfully!", {
+          description: "Your Fortnox integration is now active.",
+          duration: 5000,
+        })
+        hasLoadedRef.current = true
+        // Load integrations and tools, then ensure loading state is cleared
+        loadIntegrations().then(() => {
+          setIsLoading(false)
+        }).catch(() => {
+          setIsLoading(false)
+        })
+        loadTools().catch(() => {
+          // Ignore errors
+        })
+        return
+      } else if (fortnoxError || fortnoxStatus) {
+        let errorMessage = "Failed to connect Fortnox"
+        let errorDescription = fortnoxErrorDesc || "An unknown error occurred."
+        
+        if (fortnoxStatus) {
+          switch (fortnoxStatus) {
+            case "error_missing_code":
+              errorDescription = "Missing authorization code from Fortnox. Please try again."
+              break
+            case "error_invalid_state":
+              errorDescription = "Invalid authorization state. Please try reconnecting."
+              break
+            case "error_integration_not_found":
+              errorDescription = "Fortnox integration not found. Please set up the integration again."
+              break
+            case "error_token":
+              errorDescription = "Failed to exchange authorization code for tokens. Check your Client ID and Secret."
+              break
+            case "error_saving_tokens":
+              errorDescription = "Failed to save tokens. Please try again."
+              break
+            default:
+              errorDescription = fortnoxErrorDesc || "An error occurred during authorization."
+          }
+        }
+        
+        toast.error(errorMessage, {
+          description: errorDescription,
+          duration: 10000,
+        })
+        window.history.replaceState({}, "", window.location.pathname)
+        hasLoadedRef.current = true
+        // Load integrations and tools, then ensure loading state is cleared
+        loadIntegrations().then(() => {
+          setIsLoading(false)
+        }).catch(() => {
+          setIsLoading(false)
+        })
+        loadTools().catch(() => {
+          // Ignore errors
+        })
+        return
+      }
+    }
+    
+    if (hasLoadedRef.current && !userChanged) {
+      return
+    }
+    
+    setIsConnecting(false)
+    hasLoadedRef.current = true
+    void loadIntegrations()
+    void loadTools()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user])
+
+  const startFortnoxOAuth = async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/fortnox/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start Fortnox OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Fortnox to authorize...", {
+        description: "You'll be taken to Fortnox to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting Fortnox OAuth:", error)
+      toast.error("Failed to start Fortnox OAuth", {
+        description: error.message || "An error occurred.",
+      })
+    }
+  }
+
+  const handleConnectFortnox = async () => {
+    if (!fortnoxForm.clientId || !fortnoxForm.clientSecret) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "Fortnox",
+              connection_type: "oauth",
+              status: "connected",
+              environment: fortnoxForm.environment,
+              client_id: fortnoxForm.clientId,
+              client_secret: fortnoxForm.clientSecret,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to connect Fortnox")
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/fortnox/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Fortnox to authorize...", {
+        description: "You'll be taken to Fortnox to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting Fortnox:", error)
+      toast.error("Failed to connect Fortnox", {
+        description: error.message || "An error occurred.",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleSyncNow = async (integration: Integration) => {
+    setSyncingId(integration.id)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required", {
+          description: "Please log in again to sync.",
+        })
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/fortnox/sync-customers`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to sync")
+      }
+
+      const data = await res.json()
+      const customerCount = data.active_customers_count ?? 0
+
+      toast.success("Synced successfully", {
+        description: `${customerCount} active customer${customerCount !== 1 ? "s" : ""} synced.`,
+        duration: 6000,
+      })
+
+      await loadIntegrations(true)
+    } catch (error: any) {
+      console.error("Error syncing:", error)
+      toast.error("Failed to sync", {
+        description: error.message || "An error occurred while syncing.",
+      })
+    } finally {
+      setSyncingId(null)
+    }
+  }
+
+  const handleDeleteClick = (integration: Integration) => {
+    setIntegrationToDelete(integration)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!integrationToDelete) return
+
+    setIsDeleting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        setIsDeleting(false)
+        return
+      }
+
+      const deleteUrl = `${apiBase}/api/integrations/${integrationToDelete.id}`
+
+      const res = await fetch(deleteUrl, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to delete integration")
+      }
+
+      toast.success("Integration deleted successfully", {
+        description: `${integrationToDelete.tool_name} has been removed from your account.`,
+      })
+
+      setIsDeleteModalOpen(false)
+      setIntegrationToDelete(null)
+      await loadIntegrations(true)
+    } catch (error: any) {
+      console.error("Error deleting integration:", error)
+      toast.error("Failed to delete integration", {
+        description: error.message || "An error occurred while deleting.",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Map integrations to tools format
+  const tools: Tool[] = integrations.map((integration) => {
+    // Determine category based on tool name (can be enhanced with actual category from tools table)
+    const getCategory = (toolName: string): string => {
+      const name = toolName.toLowerCase()
+      if (name.includes("slack") || name.includes("zoom") || name.includes("teams")) {
+        return "Communication"
+      }
+      if (name.includes("jira") || name.includes("asana") || name.includes("trello")) {
+        return "Project Management"
+      }
+      if (name.includes("hubspot") || name.includes("salesforce") || name.includes("crm")) {
+        return "CRM/Marketing"
+      }
+      if (name.includes("notion") || name.includes("workspace") || name.includes("office")) {
+        return "Productivity"
+      }
+      if (name.includes("fortnox") || name.includes("quickbooks") || name.includes("xero")) {
+        return "Finance"
+      }
+      return "Other"
+    }
+
+    // Calculate waste level based on status
+    const getWasteLevel = (status: string): "high" | "medium" | "low" => {
+      if (status === "error") return "high"
+      if (status === "disconnected") return "medium"
+      return "low"
+    }
+
+    // Format last sync time
+    const getLastSync = (updatedAt: string): string => {
+      const updated = new Date(updatedAt)
+      const now = new Date()
+      const diffMs = now.getTime() - updated.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffMins < 60) {
+        return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`
+      } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
+      } else {
+        return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`
+      }
+    }
+
+    // Generate issues based on status
+    const getIssues = (status: string): string[] => {
+      const issues: string[] = []
+      if (status === "error") {
+        issues.push("Connection error - needs reconnection")
+      } else if (status === "disconnected") {
+        issues.push("Integration disconnected")
+      }
+      return issues
+    }
+
+    // Default values (can be enhanced by fetching from company_plans table)
+    const defaultCost = 0
+    const defaultSeats = 0
+    const defaultActiveSeats = 0
+
+    return {
+      id: integration.id,
+      name: integration.tool_name,
+      category: getCategory(integration.tool_name),
+      cost: defaultCost,
+      seats: defaultSeats,
+      activeSeats: defaultActiveSeats,
+      unusedSeats: Math.max(0, defaultSeats - defaultActiveSeats),
+      wasteLevel: getWasteLevel(integration.status),
+      status: integration.status as "connected" | "error" | "disconnected",
+      lastSync: getLastSync(integration.updated_at),
+      issues: getIssues(integration.status),
+    }
+  })
+
+  // Tools are now mapped from integrations - no hardcoded data
 
   const getWasteBadge = (level: string) => {
     const styles = {
@@ -171,13 +630,16 @@ export default function ToolsPage() {
   const toolsNeedingAttention = tools.filter((t) => t.wasteLevel !== "low" || t.status === "error").length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Tools & Integrations</h2>
           <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
         </div>
-        <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white w-full sm:w-auto">
+        <Button 
+          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white w-full sm:w-auto"
+          onClick={() => setIsConnectModalOpen(true)}
+        >
           <ExternalLink className="w-4 h-4 mr-2" />
           Connect New Tool
         </Button>
@@ -271,20 +733,42 @@ export default function ToolsPage() {
       </Card>
 
       {/* Tools Grid */}
-      {filteredTools.length === 0 ? (
+      {isLoading ? (
+        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+          <CardContent className="p-12">
+            <div className="text-center">
+              <Loader2 className="w-16 h-16 mx-auto mb-4 text-cyan-400 animate-spin" />
+              <p className="text-gray-400">Loading tools...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : filteredTools.length === 0 ? (
         <Card className="bg-black/80 backdrop-blur-xl border-white/10">
           <CardContent className="p-12">
             <div className="text-center">
               <Search className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
-              <p className="text-gray-400">No tools found matching your filters</p>
+              <p className="text-gray-400 mb-4">
+                {integrations.length === 0 
+                  ? "No tools connected yet. Connect your first tool to get started."
+                  : "No tools found matching your filters"}
+              </p>
+              {integrations.length === 0 && (
+                <Button
+                  onClick={() => setIsConnectModalOpen(true)}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white mt-4"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Connect Your First Tool
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTools.map((tool) => {
-            const usagePercent = Math.round((tool.activeSeats / tool.seats) * 100)
-            const potentialSavings = tool.unusedSeats * (tool.cost / tool.seats)
+            const usagePercent = tool.seats > 0 ? Math.round((tool.activeSeats / tool.seats) * 100) : 0
+            const potentialSavings = tool.seats > 0 ? tool.unusedSeats * (tool.cost / tool.seats) : 0
 
             return (
               <Card
@@ -302,32 +786,41 @@ export default function ToolsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <div className="flex items-baseline gap-1 mb-2">
-                      <span className="text-2xl font-bold text-white">${tool.cost}</span>
-                      <span className="text-sm text-gray-400">/mo</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        <span>{tool.activeSeats}/{tool.seats} seats</span>
+                    {tool.cost > 0 || tool.seats > 0 ? (
+                      <>
+                        <div className="flex items-baseline gap-1 mb-2">
+                          <span className="text-2xl font-bold text-white">${tool.cost}</span>
+                          <span className="text-sm text-gray-400">/mo</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span>{tool.activeSeats}/{tool.seats} seats</span>
+                          </div>
+                          {tool.unusedSeats > 0 && (
+                            <span className="text-red-400">{tool.unusedSeats} unused</span>
+                          )}
+                        </div>
+                        <div className="w-full bg-white/5 rounded-full h-2 mb-1">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              usagePercent >= 80
+                                ? "bg-green-500"
+                                : usagePercent >= 60
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                            }`}
+                            style={{ width: `${usagePercent}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500">{usagePercent}% utilization</p>
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-400">
+                        <p>Cost and seat information not available</p>
+                        <p className="text-xs text-gray-500 mt-1">Add plan details to see cost optimization</p>
                       </div>
-                      {tool.unusedSeats > 0 && (
-                        <span className="text-red-400">{tool.unusedSeats} unused</span>
-                      )}
-                    </div>
-                    <div className="w-full bg-white/5 rounded-full h-2 mb-1">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          usagePercent >= 80
-                            ? "bg-green-500"
-                            : usagePercent >= 60
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                        }`}
-                        style={{ width: `${usagePercent}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">{usagePercent}% utilization</p>
+                    )}
                   </div>
 
                   {tool.unusedSeats > 0 && (
@@ -359,22 +852,51 @@ export default function ToolsPage() {
                     <Badge className={getWasteBadge(tool.wasteLevel)}>
                       {tool.wasteLevel} waste
                     </Badge>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                        <Settings className="w-3 h-3 mr-1" />
-                        Settings
-                      </Button>
-                      {tool.wasteLevel !== "low" && (
-                        <Link href={`/dashboard/tools/${tool.id}`}>
-                          <Button
-                            size="sm"
-                            className="h-7 px-2 text-xs bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            Optimize
-                          </Button>
-                        </Link>
-                      )}
+                    <div className="flex gap-2 flex-wrap">
+                      {(() => {
+                        const integration = integrations.find(i => i.id === tool.id)
+                        if (!integration) return null
+                        
+                        return (
+                          <>
+                            {integration.tool_name === "Fortnox" && integration.status === "connected" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs border-white/10 bg-black/50 text-white"
+                                onClick={() => handleSyncNow(integration)}
+                                disabled={syncingId === integration.id}
+                              >
+                                {syncingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                Sync
+                              </Button>
+                            )}
+                            {integration.status === "error" && integration.tool_name === "Fortnox" && (
+                              <Button
+                                size="sm"
+                                className="h-7 px-2 text-xs bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                onClick={startFortnoxOAuth}
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Reconnect
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              onClick={() => handleDeleteClick(integration)}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Delete
+                            </Button>
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
 
@@ -396,6 +918,203 @@ export default function ToolsPage() {
           })}
         </div>
       )}
+
+      {/* Connect Tool Modal */}
+      <Dialog 
+        open={isConnectModalOpen} 
+        onOpenChange={(open) => {
+          setIsConnectModalOpen(open)
+          if (open) {
+            // Load tools when modal opens
+            void loadTools()
+          } else {
+            setIsConnecting(false)
+            setSelectedTool("")
+            setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+          }
+        }}
+      >
+        <DialogContent className="!bg-black/95 !border-white/10 text-white w-[95vw] max-w-md sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Connect New Tool</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Select a tool to connect to your account
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tool-select" className="text-gray-300">
+                Select Tool
+              </Label>
+              <Select
+                value={selectedTool || undefined}
+                onValueChange={(value) => setSelectedTool(value)}
+              >
+                <SelectTrigger
+                  id="tool-select"
+                  className="w-full h-10 !bg-black/95 !border !border-white/10 !text-white"
+                >
+                  <SelectValue placeholder="Choose a tool..." />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-black/95 border border-white/10 backdrop-blur-xl z-[100] shadow-lg"
+                  position="popper"
+                  sideOffset={4}
+                >
+                  {isLoadingTools ? (
+                    <SelectItem value="loading" disabled className="text-gray-400">
+                      Loading tools...
+                    </SelectItem>
+                  ) : availableTools.length === 0 ? (
+                    <>
+                      <SelectItem value="fortnox" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                        Fortnox
+                      </SelectItem>
+                      <SelectItem value="no-tools" disabled className="text-gray-400 text-xs italic">
+                        (No other tools found - add more by connecting them)
+                      </SelectItem>
+                    </>
+                  ) : (
+                    availableTools.map((tool) => (
+                      <SelectItem
+                        key={tool.id}
+                        value={tool.name.toLowerCase()}
+                        className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer"
+                      >
+                        {tool.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedTool === "fortnox" && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <Label htmlFor="client-id" className="text-gray-300">
+                    Client ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="client-id"
+                    type="text"
+                    placeholder="Enter your Fortnox Client ID"
+                    value={fortnoxForm.clientId}
+                    onChange={(e) =>
+                      setFortnoxForm({ ...fortnoxForm, clientId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-secret" className="text-gray-300">
+                    Client Secret <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="client-secret"
+                    type="password"
+                    placeholder="Enter your Fortnox Client Secret"
+                    value={fortnoxForm.clientSecret}
+                    onChange={(e) =>
+                      setFortnoxForm({ ...fortnoxForm, clientSecret: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="environment" className="text-gray-300">
+                    Environment
+                  </Label>
+                  <select
+                    id="environment"
+                    value={fortnoxForm.environment}
+                    onChange={(e) =>
+                      setFortnoxForm({ ...fortnoxForm, environment: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white rounded-md px-3 py-2 w-full"
+                  >
+                    <option value="sandbox">Sandbox (Testing)</option>
+                    <option value="production">Production</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsConnectModalOpen(false)
+                setSelectedTool("")
+                setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+              }}
+              className="border-white/10 bg-black/50 text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConnectFortnox}
+              disabled={!selectedTool || (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) || isConnecting}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                "Connect"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="!bg-black/95 !border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Delete Integration</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete {integrationToDelete?.tool_name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteModalOpen(false)
+                setIntegrationToDelete(null)
+              }}
+              className="border-white/10 bg-black/50 text-white"
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

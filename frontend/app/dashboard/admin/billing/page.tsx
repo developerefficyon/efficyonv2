@@ -178,7 +178,7 @@ export default function AdminBillingPage() {
   ]
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Billing & Subscriptions</h2>
         <p className="text-sm sm:text-base text-gray-400">Monitor revenue, subscriptions, and payment issues</p>

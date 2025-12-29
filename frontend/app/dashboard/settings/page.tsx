@@ -227,7 +227,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h2>
         <p className="text-sm sm:text-base text-gray-400">Manage your account, billing, and preferences</p>
@@ -486,7 +486,7 @@ export default function SettingsPage() {
 
       {/* Change Plan Modal */}
       <Dialog open={isChangePlanModalOpen} onOpenChange={setIsChangePlanModalOpen}>
-        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0">
+        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[95vw] max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0">
           {/* Header Section */}
           <div className="relative p-8 border-b border-white/10 bg-gradient-to-br from-black via-black to-black/95">
             <button
@@ -690,7 +690,7 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleChangePlan}
                     disabled={!selectedPlan || isProcessing}
-                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-400 text-white font-bold text-base px-8 h-11 shadow-2xl shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none min-w-[200px] transition-all duration-300 hover:scale-105"
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-400 text-white font-bold text-base px-6 sm:px-8 h-11 shadow-2xl shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none min-w-0 sm:min-w-[200px] transition-all duration-300 hover:scale-105"
                   >
                     {isProcessing ? (
                       <>

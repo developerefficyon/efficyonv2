@@ -196,7 +196,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
           Admin Dashboard

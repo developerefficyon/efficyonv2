@@ -77,13 +77,6 @@ const userMenuItems = [
     description: "Team management",
   },
   {
-    title: "Integrations",
-    icon: Settings,
-    href: "/dashboard/integrations",
-    badge: null,
-    description: "Integration status",
-  },
-  {
     title: "Reports",
     icon: FileText,
     href: "/dashboard/reports",
@@ -190,8 +183,8 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-black">
-        <Sidebar className="border-r border-white/10 !bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl [&>div]:!bg-transparent [&_[data-sidebar=sidebar]]:!bg-transparent [&_[data-sidebar=sidebar]]:!text-white">
+      <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
+        <Sidebar className="border-r border-white/10 !bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl [&>div]:!bg-transparent [&_[data-sidebar=sidebar]]:!bg-transparent [&_[data-sidebar=sidebar]]:!text-white shrink-0">
           {/* Sidebar Header with Logo */}
           <SidebarHeader className="p-6 border-b border-white/10">
             <Link href="/" className="flex items-center gap-3 group">
@@ -287,32 +280,6 @@ export default function DashboardLayout({
               </SidebarGroupContent>
             </SidebarGroup>
 
-            {/* Quick Links Section */}
-            {!isAdmin && (
-              <SidebarGroup className="mt-6">
-                <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
-                  Quick Links
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu className="space-y-1">
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        className="h-9 px-3 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-600/30 hover:to-blue-700/30 hover:border-l-2 hover:border-cyan-500/50 hover:shadow-md hover:shadow-cyan-500/10 rounded-lg transition-all duration-200"
-                      >
-                        <Link href="/dashboard/savings">
-                          <Zap className="w-4 h-4" />
-                          <span className="text-sm">Optimizations</span>
-                          <Badge className="ml-auto h-4 px-1.5 text-[10px] bg-orange-500/20 text-orange-400 border-orange-500/30">
-                            3
-                          </Badge>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            )}
           </SidebarContent>
 
           {/* Footer with User Profile */}
@@ -366,24 +333,24 @@ export default function DashboardLayout({
             </SidebarMenuButton>
           </div>
         </Sidebar>
-        <main className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-10 border-b border-white/10 bg-black/80 backdrop-blur-xl">
-            <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
-              <SidebarTrigger className="text-white" />
+        <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+          <header className="sticky top-0 z-10 border-b border-white/10 bg-black/80 backdrop-blur-xl shrink-0">
+            <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6 max-w-full">
+              <SidebarTrigger className="text-white shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-base sm:text-xl font-semibold text-white truncate">
                   {isAdmin ? "Admin Dashboard" : "Dashboard"}
                 </h1>
               </div>
-              <div className="relative hidden sm:block w-48 lg:w-64">
+              <div className="relative hidden sm:block w-48 lg:w-64 shrink-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   placeholder="Quick search..."
-                  className="pl-9 h-9 bg-black/50 border-white/10 text-white placeholder:text-gray-500 text-sm focus:border-cyan-500/50"
+                  className="pl-9 h-9 bg-black/50 border-white/10 text-white placeholder:text-gray-500 text-sm focus:border-cyan-500/50 w-full"
                 />
               </div>
               {/* Notifications */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -397,7 +364,7 @@ export default function DashboardLayout({
               </div>
             </div>
           </header>
-          <div className="flex-1 p-3 sm:p-4 lg:p-6">{children}</div>
+          <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0 overflow-x-hidden">{children}</div>
         </main>
       </div>
     </SidebarProvider>

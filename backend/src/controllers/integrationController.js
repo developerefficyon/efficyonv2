@@ -283,8 +283,89 @@ async function deleteIntegration(req, res) {
   return res.json({ message: "Integration deleted successfully", id: integrationId })
 }
 
+async function getTools(req, res) {
+  const endpoint = "GET /api/tools"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    log("warn", endpoint, "Unauthorized: No user in request")
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Get user's company_id
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    log("error", endpoint, "Error fetching profile:", profileError.message)
+    return res.status(500).json({ error: profileError.message })
+  }
+
+  // Get distinct provider names from company_integrations
+  // First get tools from user's company, then get common tools from all companies
+  let query = supabase
+    .from("company_integrations")
+    .select("provider")
+    .order("provider", { ascending: true })
+
+  // If user has a company, prioritize their company's tools
+  if (profile?.company_id) {
+    const { data: companyTools, error: companyError } = await supabase
+      .from("company_integrations")
+      .select("provider")
+      .eq("company_id", profile.company_id)
+      .order("provider", { ascending: true })
+
+    if (!companyError && companyTools && companyTools.length > 0) {
+      // Get unique provider names from user's company
+      const uniqueTools = Array.from(
+        new Set(companyTools.map((t) => t.provider))
+      ).map((name) => ({
+        id: name.toLowerCase().replace(/\s+/g, "-"),
+        name: name,
+        category: null,
+        created_at: new Date().toISOString(),
+      }))
+
+      log("log", endpoint, `Successfully fetched ${uniqueTools.length} tool(s) from company integrations`)
+      return res.json({ tools: uniqueTools })
+    }
+  }
+
+  // Fallback: Get distinct provider names from all company_integrations
+  const { data, error } = await query
+
+  if (error) {
+    log("error", endpoint, "Error fetching tools:", error.message)
+    return res.status(500).json({ error: error.message })
+  }
+
+  // Get unique provider names
+  const uniqueTools = Array.from(
+    new Set((data || []).map((t) => t.provider))
+  ).map((name) => ({
+    id: name.toLowerCase().replace(/\s+/g, "-"),
+    name: name,
+    category: null,
+    created_at: new Date().toISOString(),
+  }))
+
+  log("log", endpoint, `Successfully fetched ${uniqueTools.length} tool(s) from company integrations`)
+  return res.json({ tools: uniqueTools })
+}
+
 module.exports = {
   upsertIntegrations,
   getIntegrations,
   deleteIntegration,
+  getTools,
 }
