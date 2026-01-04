@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
-import { supabase } from "@/lib/supabaseClient"
 import { ArrowLeft, Mail, CheckCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -23,23 +22,23 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      // Use current origin to support any port (3000, 3001, etc.)
-      const appUrl = typeof window !== "undefined" 
-        ? window.location.origin 
-        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      const redirectTo = `${appUrl}/reset-password`
-
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo,
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const emailRes = await fetch(`${apiBase}/api/email/send-password-reset`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
       })
 
-      if (resetError) {
-        throw new Error(resetError.message || "Failed to send reset email")
+      if (!emailRes.ok) {
+        const errorData = await emailRes.json().catch(() => ({ error: "Failed to send reset email" }))
+        throw new Error(errorData.error || "Failed to send reset email")
       }
 
       setIsSubmitted(true)
       toast.success("Reset link sent", {
-        description: `We've sent a password reset link to ${email}. Please check your email.`,
+        description: `If an account exists with this email, we've sent a password reset link. Please check your email.`,
       })
     } catch (err: any) {
       setError(err.message || "Failed to send reset email. Please try again.")

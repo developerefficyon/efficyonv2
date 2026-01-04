@@ -75,6 +75,12 @@ const {
   useTokens,
 } = require("../controllers/stripeController")
 
+// Email Controller - Resend email sending
+const {
+  sendVerificationEmailHandler,
+  sendPasswordResetEmailHandler,
+} = require("../controllers/emailController")
+
 const router = express.Router()
 
 // Health
@@ -143,6 +149,10 @@ router.post("/api/ai/chat", requireAuth, chatAboutAnalysis)
 router.post("/api/ai/recommendations", requireAuth, getRecommendations)
 router.post("/api/ai/estimate-savings", requireAuth, estimateSavings)
 router.post("/api/ai/summary", requireAuth, getAnalysisSummary)
+
+// Email Routes (public - no auth required for sending emails)
+router.post("/api/email/send-verification", sendVerificationEmailHandler)
+router.post("/api/email/send-password-reset", sendPasswordResetEmailHandler)
 
 module.exports = router
 

@@ -94,13 +94,34 @@ export default function RegisterPage() {
       }
     }
 
+    // Send verification email via Resend
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const emailRes = await fetch(`${apiBase}/api/email/send-verification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!emailRes.ok) {
+        const errorData = await emailRes.json().catch(() => ({ error: "Failed to send verification email" }))
+        console.warn("Failed to send verification email via Resend:", errorData.error)
+        // Don't fail registration - Supabase may have sent an email already
+      }
+    } catch (emailError: any) {
+      console.error("Error sending verification email via Resend (non-critical):", emailError?.message)
+      // Don't fail registration - Supabase may have sent an email already
+    }
+
     setIsLoading(false)
 
     toast.success("Verification email sent", {
       description: `We sent a verification link to ${email}. Please verify your email before logging in.`,
     })
 
-    // Redirect to login after successful registration; Supabase will send a verification email
+    // Redirect to login after successful registration
     router.push("/login")
   }
 
