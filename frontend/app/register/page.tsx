@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
-import { supabase } from "@/lib/supabaseClient"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -34,95 +33,46 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    // Use current origin to support any port (3000, 3001, etc.)
-    const appUrl = typeof window !== "undefined" 
-      ? window.location.origin 
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const redirectTo = `${appUrl}/auth/verify`
-    
-    console.log("Email redirect URL:", redirectTo)
-
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: {
-          name,
-          role: "customer",
-        },
-      },
-    })
-
-    if (signUpError) {
-      setIsLoading(false)
-      setError(signUpError.message)
-      return
-    }
-
-    // Profile is automatically created by database trigger on user signup
-    // Update profile with full_name if provided
-    if (signUpData?.user?.id && name) {
-      try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        console.log("Updating profile with full_name for user:", signUpData.user.id)
-        
-        // Update profile with full_name (profile already exists via trigger)
-        const updateProfileRes = await fetch(`${apiBase}/api/profiles/update-public`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: signUpData.user.id,
-            full_name: name,
-          }),
-        }).catch((fetchError) => {
-          // Network error (backend not running, CORS, etc.)
-          console.error("Network error updating profile:", fetchError)
-          // Don't throw - profile exists, just missing full_name
-        })
-
-        if (updateProfileRes && updateProfileRes.ok) {
-          console.log("Profile updated successfully with full_name")
-        } else if (updateProfileRes) {
-          console.warn("Failed to update profile with full_name, but profile exists via trigger")
-        }
-      } catch (profileError: any) {
-        console.error("Error updating profile (non-critical):", profileError?.message)
-        // Don't fail registration - profile exists via trigger, just missing full_name
-      }
-    }
-
-    // Send verification email via Resend
     try {
+      // Register user via backend - uses Admin API to create user without Supabase sending emails
+      // Backend will create user, update profile, and send verification email via Resend
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const emailRes = await fetch(`${apiBase}/api/email/send-verification`, {
+      const registerRes = await fetch(`${apiBase}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+        }),
       })
 
-      if (!emailRes.ok) {
-        const errorData = await emailRes.json().catch(() => ({ error: "Failed to send verification email" }))
-        console.warn("Failed to send verification email via Resend:", errorData.error)
-        // Don't fail registration - Supabase may have sent an email already
+      if (!registerRes.ok) {
+        const errorData = await registerRes.json().catch(() => ({ error: "Failed to create account" }))
+        setError(errorData.error || "Failed to create account. Please try again.")
+        setIsLoading(false)
+        return
       }
-    } catch (emailError: any) {
-      console.error("Error sending verification email via Resend (non-critical):", emailError?.message)
-      // Don't fail registration - Supabase may have sent an email already
+
+      const result = await registerRes.json()
+
+      setIsLoading(false)
+
+      toast.success("Account created successfully", {
+        description: `We sent a verification link to ${email}. Please verify your email before logging in.`,
+      })
+
+      // Redirect to login after successful registration
+      router.push("/login")
+    } catch (err: any) {
+      setIsLoading(false)
+      setError(err.message || "An error occurred. Please try again.")
+      toast.error("Registration failed", {
+        description: err.message || "An error occurred while creating your account.",
+      })
     }
-
-    setIsLoading(false)
-
-    toast.success("Verification email sent", {
-      description: `We sent a verification link to ${email}. Please verify your email before logging in.`,
-    })
-
-    // Redirect to login after successful registration
-    router.push("/login")
   }
 
   return (

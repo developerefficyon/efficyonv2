@@ -77,6 +77,7 @@ const {
 
 // Email Controller - Resend email sending
 const {
+  registerUserHandler,
   sendVerificationEmailHandler,
   sendPasswordResetEmailHandler,
 } = require("../controllers/emailController")
@@ -149,6 +150,9 @@ router.post("/api/ai/chat", requireAuth, chatAboutAnalysis)
 router.post("/api/ai/recommendations", requireAuth, getRecommendations)
 router.post("/api/ai/estimate-savings", requireAuth, estimateSavings)
 router.post("/api/ai/summary", requireAuth, getAnalysisSummary)
+
+// Auth Routes (public - registration)
+router.post("/api/auth/register", registerUserHandler)
 
 // Email Routes (public - no auth required for sending emails)
 router.post("/api/email/send-verification", sendVerificationEmailHandler)

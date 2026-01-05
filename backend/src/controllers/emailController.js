@@ -68,6 +68,116 @@ async function sendVerificationEmailHandler(req, res) {
   }
 }
 
+async function registerUserHandler(req, res) {
+  const endpoint = "POST /api/auth/register"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const { email, password, name } = req.body
+
+  if (!email || !password) {
+    log("warn", endpoint, "Missing required fields")
+    return res.status(400).json({ error: "Email and password are required" })
+  }
+
+  try {
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabase.auth.admin.getUserByEmail(email)
+    
+    if (existingUser?.user) {
+      log("warn", endpoint, `User already exists: ${email}`)
+      return res.status(400).json({ error: "User with this email already exists" })
+    }
+
+    // Create user using Admin API - this does NOT send any emails
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: false, // User must verify via Resend email
+      user_metadata: {
+        name: name || "",
+        role: "customer",
+      },
+    })
+
+    if (createError) {
+      log("error", endpoint, "Error creating user:", createError.message)
+      return res.status(400).json({ error: createError.message || "Failed to create user" })
+    }
+
+    if (!newUser?.user) {
+      log("error", endpoint, "No user data returned")
+      return res.status(500).json({ error: "Failed to create user" })
+    }
+
+    // Update profile with full_name if provided (profile is created by trigger, but may not have name)
+    if (name && newUser.user.id) {
+      try {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ full_name: name })
+          .eq("id", newUser.user.id)
+
+        if (updateError) {
+          log("warn", endpoint, "Failed to update profile name:", updateError.message)
+          // Non-critical, continue
+        }
+      } catch (profileError) {
+        log("warn", endpoint, "Error updating profile:", profileError.message)
+        // Non-critical, continue
+      }
+    }
+
+    // Generate verification link and send via Resend
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: "signup",
+      email: email,
+      options: {
+        redirectTo: `${APP_URL}/auth/verify`,
+      },
+    })
+
+    if (linkError || !linkData?.properties?.action_link) {
+      log("error", endpoint, "Error generating verification link:", linkError?.message)
+      // User is created, but verification link failed - return success but log error
+      return res.status(500).json({ 
+        error: "User created but failed to generate verification link. Please request a new verification email.",
+        userId: newUser.user.id,
+      })
+    }
+
+    const verificationUrl = linkData.properties.action_link
+
+    // Send verification email via Resend
+    const emailResult = await sendVerificationEmail(email, verificationUrl)
+
+    if (emailResult.error) {
+      log("error", endpoint, "Error sending verification email:", emailResult.error)
+      // User is created, but email failed - return partial success
+      return res.status(500).json({ 
+        error: "User created but failed to send verification email. Please request a new verification email.",
+        userId: newUser.user.id,
+      })
+    }
+
+    log("log", endpoint, `User registered successfully: ${email}`)
+    return res.json({ 
+      message: "User registered successfully. Verification email sent.",
+      user: {
+        id: newUser.user.id,
+        email: newUser.user.email,
+      },
+    })
+  } catch (error) {
+    log("error", endpoint, "Unexpected error:", error.message)
+    return res.status(500).json({ error: error.message || "Internal server error" })
+  }
+}
+
 async function sendPasswordResetEmailHandler(req, res) {
   const endpoint = "POST /api/email/send-password-reset"
   log("log", endpoint, "Request received")
@@ -148,6 +258,7 @@ async function sendPasswordResetEmailHandler(req, res) {
 }
 
 module.exports = {
+  registerUserHandler,
   sendVerificationEmailHandler,
   sendPasswordResetEmailHandler,
 }
