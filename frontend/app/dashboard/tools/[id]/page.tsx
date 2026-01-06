@@ -944,23 +944,25 @@ export default function ToolDetailPage() {
                       AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
                     {costLeakAnalysis && (
                       <>
                         <Button
                           onClick={openPdfPreview}
                           variant="outline"
                           size="sm"
-                          className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20"
+                          className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
+                          title="Export PDF"
                         >
-                          <Download className="w-4 h-4 mr-2 group-hover:animate-bounce" />
-                          Export PDF
+                          <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
+                          <span className="hidden sm:inline">Export PDF</span>
                         </Button>
                         <Button
                           onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
                           variant="outline"
                           size="sm"
-                          className="border-white/10 bg-black/50 text-white hover:bg-white/10"
+                          className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
+                          title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
                         >
                           {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </Button>
@@ -969,17 +971,18 @@ export default function ToolDetailPage() {
                     <Button
                       onClick={fetchCostLeakAnalysis}
                       disabled={isLoadingAnalysis}
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40"
+                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
                     >
                       {isLoadingAnalysis ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analyzing...
+                          <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                          <span className="hidden sm:inline">Analyzing...</span>
                         </>
                       ) : (
                         <>
-                          <Search className="w-4 h-4 mr-2" />
-                          {costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}
+                          <Search className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">{costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}</span>
+                          <span className="sm:hidden">{costLeakAnalysis ? "Re-run" : "Analyze"}</span>
                         </>
                       )}
                     </Button>
@@ -1338,15 +1341,18 @@ export default function ToolDetailPage() {
                               ))}
                               {/* Pagination */}
                               {group.findings.length > ITEMS_PER_PAGE && (
-                                <div className="p-4 bg-gradient-to-r from-slate-900/50 via-slate-800/30 to-slate-900/50 border-t border-slate-700/30 flex items-center justify-between">
-                                  <p className="text-xs text-gray-500">
-                                    Showing <span className="text-gray-400 font-medium">{getGroupPage(groupKey) * ITEMS_PER_PAGE + 1}-{Math.min((getGroupPage(groupKey) + 1) * ITEMS_PER_PAGE, group.findings.length)}</span> of <span className="text-gray-400 font-medium">{group.findings.length}</span>
+                                <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900/50 via-slate-800/30 to-slate-900/50 border-t border-slate-700/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                  <p className="text-xs text-gray-500 order-2 sm:order-1">
+                                    <span className="hidden sm:inline">Showing </span>
+                                    <span className="text-gray-400 font-medium">{getGroupPage(groupKey) * ITEMS_PER_PAGE + 1}-{Math.min((getGroupPage(groupKey) + 1) * ITEMS_PER_PAGE, group.findings.length)}</span>
+                                    <span className="text-gray-500"> of </span>
+                                    <span className="text-gray-400 font-medium">{group.findings.length}</span>
                                   </p>
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2 sm:gap-3 order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-end">
                                     <button
                                       onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) - 1)}
                                       disabled={getGroupPage(groupKey) === 0}
-                                      className="group relative flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
+                                      className="group relative flex items-center justify-center gap-1 sm:gap-1.5 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
                                         bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600
                                         border border-slate-600/50 hover:border-slate-500/70
                                         text-gray-300 hover:text-white
@@ -1354,25 +1360,24 @@ export default function ToolDetailPage() {
                                         disabled:hover:from-slate-800 disabled:hover:to-slate-700 disabled:hover:border-slate-600/50 disabled:hover:shadow-md"
                                     >
                                       <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-                                      Previous
+                                      <span className="hidden sm:inline">Previous</span>
                                     </button>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/30">
-                                      <span className="text-xs text-gray-500">Page</span>
+                                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/30 min-w-[70px] sm:min-w-[90px] justify-center">
                                       <span className="text-sm font-semibold text-cyan-400">{getGroupPage(groupKey) + 1}</span>
-                                      <span className="text-xs text-gray-500">of</span>
+                                      <span className="text-xs text-gray-500">/</span>
                                       <span className="text-sm font-semibold text-gray-300">{getTotalPages(group.findings.length)}</span>
                                     </div>
                                     <button
                                       onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) + 1)}
                                       disabled={getGroupPage(groupKey) >= getTotalPages(group.findings.length) - 1}
-                                      className="group relative flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
+                                      className="group relative flex items-center justify-center gap-1 sm:gap-1.5 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
                                         bg-gradient-to-r from-cyan-600/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-500
                                         border border-cyan-500/30 hover:border-cyan-400/50
                                         text-white
                                         shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30
                                         disabled:hover:from-cyan-600/80 disabled:hover:to-blue-600/80 disabled:hover:border-cyan-500/30 disabled:hover:shadow-md disabled:hover:shadow-cyan-500/20"
                                     >
-                                      Next
+                                      <span className="hidden sm:inline">Next</span>
                                       <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                                     </button>
                                   </div>
