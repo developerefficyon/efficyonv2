@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
 import { useAuth } from "@/lib/auth-context"
+import { SparklesCore } from "@/components/ui/sparkles"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
@@ -63,39 +64,81 @@ export default function LoginPage() {
     }
   }
 
+  if (isRedirecting) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
+        {/* Sparkles Background */}
+        <div className="absolute inset-0">
+          <SparklesCore
+            id="login-sparkles"
+            background="transparent"
+            minSize={0.4}
+            maxSize={1.2}
+            particleDensity={50}
+            className="w-full h-full"
+            particleColor="#22d3ee"
+            speed={0.5}
+          />
+        </div>
+
+        {/* Gradient Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse delay-700" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-4">
+          {/* Animated Logo */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-xl opacity-50 animate-pulse" />
+            <div className="relative w-20 h-20 flex items-center justify-center bg-black/80 backdrop-blur-sm border border-white/20 rounded-2xl">
+              <div className="absolute w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full top-3 left-3 shadow-lg shadow-cyan-500/50 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.5s' }} />
+              <div className="absolute w-3 h-3 bg-white/60 rounded-full top-3 right-3 animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.5s' }} />
+              <div className="absolute w-3 h-3 bg-white/60 rounded-full bottom-3 left-3 animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.5s' }} />
+              <div className="absolute w-5 h-1 bg-white/60 bottom-4 right-3 rounded animate-bounce" style={{ animationDelay: '600ms', animationDuration: '1.5s' }} />
+            </div>
+          </div>
+
+          {/* Text */}
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 animate-fade-in">
+            Welcome back
+          </h1>
+          <p className="text-gray-400 text-lg mb-8 animate-fade-in-delay">
+            Preparing your dashboard...
+          </p>
+
+          {/* Loading Indicator */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 border-2 border-cyan-500/30 rounded-full" />
+              <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="inline-block w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+              <span>Optimizing your experience</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Gradient Line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
         <div className="w-full max-w-md">
-          {isRedirecting ? (
-            <Card className="bg-black/80 backdrop-blur-xl border-cyan-500/40 shadow-[0_0_40px_rgba(34,211,238,0.25)] animate-pulse">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl font-bold text-white">Signing you in</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Redirecting to your dashboard. This usually takes just a moment.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                  <div className="h-8 w-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-xs text-gray-500">
-                    Optimizing your cloud stack behind the scenes...
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 group"
-              >
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>Back to home</span>
-              </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span>Back to home</span>
+          </Link>
 
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl">
+          <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-white">Welcome back</CardTitle>
               <CardDescription className="text-gray-400">
@@ -192,11 +235,8 @@ export default function LoginPage() {
               </div>
             </CardContent>
           </Card>
-            </>
-          )}
         </div>
       </div>
     </div>
   )
 }
-
