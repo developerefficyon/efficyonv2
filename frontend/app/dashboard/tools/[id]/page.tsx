@@ -50,6 +50,11 @@ import {
   Zap,
   DollarSign,
   Download,
+  Key,
+  Timer,
+  Shield,
+  Copy,
+  Settings,
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -1485,41 +1490,169 @@ export default function ToolDetailPage() {
           </TabsContent>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-0">
+          <TabsContent value="overview" className="mt-0 space-y-6">
+            {/* Connection Details Card */}
             <Card className="bg-black/80 backdrop-blur-xl border-white/10">
               <CardHeader>
-                <CardTitle className="text-white">Integration Information</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-cyan-400" />
+                  Connection Details
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Connection Type</p>
-                    <p className="text-white">{integration.connection_type || "N/A"}</p>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
+                    <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Environment</p>
-                    <p className="text-white">{integration.environment || "N/A"}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
+                    <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                      {integration.environment || "N/A"}
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Created</p>
-                    <p className="text-white">{formatDate(integration.created_at)}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
+                    <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Last Updated</p>
-                    <p className="text-white">{formatDate(integration.updated_at)}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
+                    <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
                   </div>
                 </div>
-
-                {integration.settings && (
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Settings</p>
-                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300">
-                      {JSON.stringify(integration.settings, null, 2)}
-                    </pre>
-                  </div>
-                )}
               </CardContent>
             </Card>
+
+            {/* Token Information Card */}
+            {integration.settings?.oauth_data?.tokens && (
+              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Key className="w-5 h-5 text-cyan-400" />
+                    Authentication Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Token Status Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Token Expiry */}
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
+                      </div>
+                      <p className="text-white font-medium">
+                        {integration.settings.oauth_data.tokens.expires_at
+                          ? new Date(integration.settings.oauth_data.tokens.expires_at * 1000).toLocaleString()
+                          : "N/A"}
+                      </p>
+                      {integration.settings.oauth_data.tokens.expires_at && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
+                            ? <span className="text-green-400">Active</span>
+                            : <span className="text-red-400">Expired</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Token Duration */}
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Timer className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
+                      </div>
+                      <p className="text-white font-medium">
+                        {integration.settings.oauth_data.tokens.expires_in
+                          ? `${Math.floor(integration.settings.oauth_data.tokens.expires_in / 60)} minutes`
+                          : "N/A"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {integration.settings.oauth_data.tokens.expires_in} seconds
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Access Token */}
+                  {integration.settings.oauth_data.tokens.access_token && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-cyan-400" />
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
+                        </div>
+                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                          {integration.settings.oauth_data.tokens.token_type || "bearer"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                          {integration.settings.oauth_data.tokens.access_token.substring(0, 50)}...
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
+                            toast.success("Access token copied to clipboard")
+                          }}
+                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Refresh Token */}
+                  {integration.settings.oauth_data.tokens.refresh_token && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4 text-green-400" />
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
+                        </div>
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                          Available
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                          {integration.settings.oauth_data.tokens.refresh_token.substring(0, 50)}...
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
+                            toast.success("Refresh token copied to clipboard")
+                          }}
+                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scopes */}
+                  {integration.settings.oauth_data.tokens.scope && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {integration.settings.oauth_data.tokens.scope.split(" ").map((scope: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs text-gray-300 border-white/20 bg-white/5">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Data Tab */}
@@ -1694,40 +1827,170 @@ export default function ToolDetailPage() {
         </Tabs>
       ) : (
         /* Non-Fortnox or not connected - show only Overview */
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white">Integration Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Connection Type</p>
-                <p className="text-white">{integration.connection_type || "N/A"}</p>
+        <div className="space-y-6">
+          {/* Connection Details Card */}
+          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-cyan-400" />
+                Connection Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
+                  <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
+                  <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                    {integration.environment || "N/A"}
+                  </Badge>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
+                  <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
+                  <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Environment</p>
-                <p className="text-white">{integration.environment || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Created</p>
-                <p className="text-white">{formatDate(integration.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Last Updated</p>
-                <p className="text-white">{formatDate(integration.updated_at)}</p>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {integration.settings && (
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Settings</p>
-                <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300">
-                  {JSON.stringify(integration.settings, null, 2)}
-                </pre>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Token Information Card */}
+          {integration.settings?.oauth_data?.tokens && (
+            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Key className="w-5 h-5 text-cyan-400" />
+                  Authentication Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Token Status Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Token Expiry */}
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
+                    </div>
+                    <p className="text-white font-medium">
+                      {integration.settings.oauth_data.tokens.expires_at
+                        ? new Date(integration.settings.oauth_data.tokens.expires_at * 1000).toLocaleString()
+                        : "N/A"}
+                    </p>
+                    {integration.settings.oauth_data.tokens.expires_at && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
+                          ? <span className="text-green-400">Active</span>
+                          : <span className="text-red-400">Expired</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Token Duration */}
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Timer className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
+                    </div>
+                    <p className="text-white font-medium">
+                      {integration.settings.oauth_data.tokens.expires_in
+                        ? `${Math.floor(integration.settings.oauth_data.tokens.expires_in / 60)} minutes`
+                        : "N/A"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {integration.settings.oauth_data.tokens.expires_in} seconds
+                    </p>
+                  </div>
+                </div>
+
+                {/* Access Token */}
+                {integration.settings.oauth_data.tokens.access_token && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-cyan-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
+                      </div>
+                      <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                        {integration.settings.oauth_data.tokens.token_type || "bearer"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                        {integration.settings.oauth_data.tokens.access_token.substring(0, 50)}...
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
+                          toast.success("Access token copied to clipboard")
+                        }}
+                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Refresh Token */}
+                {integration.settings.oauth_data.tokens.refresh_token && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-green-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
+                      </div>
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        Available
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                        {integration.settings.oauth_data.tokens.refresh_token.substring(0, 50)}...
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
+                          toast.success("Refresh token copied to clipboard")
+                        }}
+                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scopes */}
+                {integration.settings.oauth_data.tokens.scope && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {integration.settings.oauth_data.tokens.scope.split(" ").map((scope: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs text-gray-300 border-white/20 bg-white/5">
+                          {scope}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Legacy Cost Leak Analysis Section - Remove this after confirming tabs work */}
