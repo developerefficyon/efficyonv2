@@ -34,6 +34,7 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   CheckCheck,
   X,
   Sparkles,
@@ -89,6 +90,8 @@ export default function ToolDetailPage() {
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue"]))
+  const [groupPages, setGroupPages] = useState<{ [key: string]: number }>({})
+  const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
     if (authLoading) {
@@ -480,6 +483,21 @@ export default function ToolDetailPage() {
     })
   }
 
+  const getGroupPage = (groupKey: string) => groupPages[groupKey] || 0
+
+  const setGroupPage = (groupKey: string, page: number) => {
+    setGroupPages(prev => ({ ...prev, [groupKey]: page }))
+  }
+
+  const getPagedFindings = (findings: any[], groupKey: string) => {
+    const page = getGroupPage(groupKey)
+    const start = page * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return findings.slice(start, end)
+  }
+
+  const getTotalPages = (totalItems: number) => Math.ceil(totalItems / ITEMS_PER_PAGE)
+
   const activeFindings = getFilteredFindings()
   const groupedFindings = groupFindings(activeFindings)
   const totalDismissed = dismissedFindings.size
@@ -854,7 +872,7 @@ export default function ToolDetailPage() {
                           {/* Group Content */}
                           {expandedGroups.has(groupKey) && (
                             <div className="divide-y divide-slate-800/50">
-                              {group.findings.slice(0, 10).map((finding: any, idx: number) => (
+                              {getPagedFindings(group.findings, groupKey).map((finding: any, idx: number) => (
                                 <div
                                   key={idx}
                                   className={`p-4 bg-slate-900/50 hover:bg-slate-800/50 transition-all ${
@@ -962,11 +980,46 @@ export default function ToolDetailPage() {
                                   </div>
                                 </div>
                               ))}
-                              {group.findings.length > 10 && (
-                                <div className="p-3 text-center bg-slate-900/30">
+                              {/* Pagination */}
+                              {group.findings.length > ITEMS_PER_PAGE && (
+                                <div className="p-4 bg-gradient-to-r from-slate-900/50 via-slate-800/30 to-slate-900/50 border-t border-slate-700/30 flex items-center justify-between">
                                   <p className="text-xs text-gray-500">
-                                    Showing 10 of {group.findings.length} items in this category
+                                    Showing <span className="text-gray-400 font-medium">{getGroupPage(groupKey) * ITEMS_PER_PAGE + 1}-{Math.min((getGroupPage(groupKey) + 1) * ITEMS_PER_PAGE, group.findings.length)}</span> of <span className="text-gray-400 font-medium">{group.findings.length}</span>
                                   </p>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) - 1)}
+                                      disabled={getGroupPage(groupKey) === 0}
+                                      className="group relative flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
+                                        bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600
+                                        border border-slate-600/50 hover:border-slate-500/70
+                                        text-gray-300 hover:text-white
+                                        shadow-md hover:shadow-lg hover:shadow-slate-500/10
+                                        disabled:hover:from-slate-800 disabled:hover:to-slate-700 disabled:hover:border-slate-600/50 disabled:hover:shadow-md"
+                                    >
+                                      <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                                      Previous
+                                    </button>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/30">
+                                      <span className="text-xs text-gray-500">Page</span>
+                                      <span className="text-sm font-semibold text-cyan-400">{getGroupPage(groupKey) + 1}</span>
+                                      <span className="text-xs text-gray-500">of</span>
+                                      <span className="text-sm font-semibold text-gray-300">{getTotalPages(group.findings.length)}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) + 1)}
+                                      disabled={getGroupPage(groupKey) >= getTotalPages(group.findings.length) - 1}
+                                      className="group relative flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
+                                        bg-gradient-to-r from-cyan-600/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-500
+                                        border border-cyan-500/30 hover:border-cyan-400/50
+                                        text-white
+                                        shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30
+                                        disabled:hover:from-cyan-600/80 disabled:hover:to-blue-600/80 disabled:hover:border-cyan-500/30 disabled:hover:shadow-md disabled:hover:shadow-cyan-500/20"
+                                    >
+                                      Next
+                                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                                    </button>
+                                  </div>
                                 </div>
                               )}
                             </div>
