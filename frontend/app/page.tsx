@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Spotlight } from "@/components/ui/spotlight"
@@ -262,111 +263,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section id="testimonials" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Trusted by 150+ Companies</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "Efficyon identified over $14,000 in annual savings we didn't even know we were losing. The ROI was
-                    clear within the first month."
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">Sarah Mitchell</p>
-                    <p className="text-sm text-gray-400">CFO, TechStart Inc.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "We consolidated 8 overlapping tools into 3 and saved 25% on software costs. The team is also more
-                    productive with fewer apps to manage."
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">Michael Chen</p>
-                    <p className="text-sm text-gray-400">Operations Director, Growth Dynamics</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "The AI recommendations were spot-on. We've increased efficiency by 25% and the payback period was
-                    just 6 months."
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">Jennifer Rodriguez</p>
-                    <p className="text-sm text-gray-400">CEO, Digital Solutions Co.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Measurable Results That Matter</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Our clients see immediate impact on their bottom line
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-green-900/40 rounded-full flex items-center justify-center mx-auto">
-                <DollarSign className="h-8 w-8 text-green-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">25%</h3>
-              <p className="text-gray-300">Average License Cost Reduction</p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-blue-900/40 rounded-full flex items-center justify-center mx-auto">
-                <Clock className="h-8 w-8 text-blue-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">156+</h3>
-              <p className="text-gray-300">Hours Saved Monthly</p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-orange-900/40 rounded-full flex items-center justify-center mx-auto">
-                <BarChart3 className="h-8 w-8 text-orange-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">6 mo</h3>
-              <p className="text-gray-300">Average Payback Period</p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-emerald-900/40 rounded-full flex items-center justify-center mx-auto">
-                <TrendingUp className="h-8 w-8 text-emerald-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">150+</h3>
-              <p className="text-gray-300">Companies Trust Efficyon</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Pricing Section */}
       <section id="pricing" className="py-24 bg-black">
         <Pricing
@@ -542,13 +438,17 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="bg-white text-black hover:bg-gray-100">
-                Start Free Analysis
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="lg" variant="secondary" className="bg-white text-black hover:bg-gray-100" asChild>
+                <Link href="/register">
+                  Start Free Analysis
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent">
-                <Calculator className="mr-2 h-4 w-4" />
-                Calculate Savings
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
+                <Link href="#contact">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Book a Demo
+                </Link>
               </Button>
             </div>
 
@@ -658,7 +558,6 @@ export default function HomePage() {
               <ul className="space-y-3">
                 {[
                   { name: "About Us", href: "#" },
-                  { name: "Case Studies", href: "#testimonials" },
                   { name: "Pricing", href: "#pricing" },
                   { name: "FAQ", href: "#faq" },
                   { name: "Contact", href: "#contact" },
@@ -684,8 +583,8 @@ export default function HomePage() {
                   <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <a href="mailto:hello@efficyon.com" className="hover:text-white transition-colors duration-300">
-                    hello@efficyon.com
+                  <a href="mailto:info@efficyon.com" className="hover:text-white transition-colors duration-300">
+                    info@efficyon.com
                   </a>
                 </div>
               </div>

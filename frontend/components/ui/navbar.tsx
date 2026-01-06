@@ -1,28 +1,66 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 
-const AnimatedNavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+const AnimatedNavLink = ({ href, children, isActive }: { href: string; children: React.ReactNode; isActive: boolean }) => {
   return (
-    <a 
-      href={href} 
-      className="group relative inline-block px-3 py-2 text-sm font-medium text-gray-300 hover:text-white transition-all duration-300"
+    <a
+      href={href}
+      className={`group relative inline-block px-3 py-2 text-sm font-medium transition-all duration-300 ${isActive ? 'text-white' : 'text-gray-300 hover:text-white'}`}
     >
       <span className="relative z-10">{children}</span>
-      <span className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+      <span className={`absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-lg transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></span>
+      <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 transition-transform duration-300 origin-left ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}></span>
     </a>
   )
 }
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState("")
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
   }
+
+  useEffect(() => {
+    const sectionIds = ["calculator", "services", "pricing", "faq"]
+    const sectionRefs = new Map<string, boolean>()
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          sectionRefs.set(entry.target.id, entry.isIntersecting)
+        })
+
+        // Find the first section that is currently intersecting
+        const activeId = sectionIds.find((id) => sectionRefs.get(id))
+        setActiveSection(activeId ? `#${activeId}` : "")
+      },
+      {
+        rootMargin: "-40% 0px -50% 0px",
+        threshold: 0
+      }
+    )
+
+    sectionIds.forEach((id) => {
+      const element = document.getElementById(id)
+      if (element) {
+        observer.observe(element)
+      }
+    })
+
+    return () => {
+      sectionIds.forEach((id) => {
+        const element = document.getElementById(id)
+        if (element) {
+          observer.unobserve(element)
+        }
+      })
+    }
+  }, [])
 
   const logoElement = (
     <div className="flex items-center gap-3">
@@ -91,7 +129,7 @@ export function Navbar() {
 
         <nav className="hidden sm:flex items-center space-x-4 sm:space-x-6 text-sm">
           {navLinksData.map((link) => (
-            <AnimatedNavLink key={link.href} href={link.href}>
+            <AnimatedNavLink key={link.href} href={link.href} isActive={activeSection === link.href}>
               {link.label}
             </AnimatedNavLink>
           ))}
@@ -145,7 +183,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-gray-300 hover:text-white hover:bg-white/5 px-4 py-2 rounded-lg transition-all duration-200 w-full text-center font-medium"
+              className={`px-4 py-2 rounded-lg transition-all duration-200 w-full text-center font-medium ${activeSection === link.href ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
             >
               {link.label}
             </a>

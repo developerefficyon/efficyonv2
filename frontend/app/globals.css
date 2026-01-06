@@ -123,3 +123,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom animations for login transition */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-fade-in-delay {
+  opacity: 0;
+  animation: fade-in 0.6s ease-out 0.2s forwards;
+}
+
+.delay-700 {
+  animation-delay: 700ms;
+}
