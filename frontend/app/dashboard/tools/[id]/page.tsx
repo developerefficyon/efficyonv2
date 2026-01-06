@@ -27,6 +27,19 @@ import {
   BarChart3,
   Info,
   Database,
+  Filter,
+  TrendingDown,
+  ShieldAlert,
+  ShieldCheck,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  CheckCheck,
+  X,
+  Sparkles,
+  Target,
+  Zap,
+  DollarSign,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getValidSessionToken } from "@/lib/auth-helpers"
@@ -71,6 +84,11 @@ export default function ToolDetailPage() {
   const [costLeakAnalysis, setCostLeakAnalysis] = useState<any>(null)
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(true)
+  const [findingsFilter, setFindingsFilter] = useState<"all" | "high" | "medium" | "low">("all")
+  const [findingsSearch, setFindingsSearch] = useState("")
+  const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
+  const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue"]))
 
   useEffect(() => {
     if (authLoading) {
@@ -376,6 +394,97 @@ export default function ToolDetailPage() {
     }
   }
 
+  // Helper functions for findings management
+  const getFilteredFindings = () => {
+    if (!costLeakAnalysis?.supplierInvoiceAnalysis?.findings) return []
+
+    let findings = costLeakAnalysis.supplierInvoiceAnalysis.findings
+
+    // Filter by severity
+    if (findingsFilter !== "all") {
+      findings = findings.filter((f: any) => f.severity === findingsFilter)
+    }
+
+    // Filter by search
+    if (findingsSearch) {
+      const search = findingsSearch.toLowerCase()
+      findings = findings.filter((f: any) =>
+        f.title?.toLowerCase().includes(search) ||
+        f.description?.toLowerCase().includes(search) ||
+        f.invoices?.some((inv: any) =>
+          inv.SupplierName?.toLowerCase().includes(search) ||
+          inv.GivenNumber?.toString().includes(search)
+        )
+      )
+    }
+
+    // Filter out dismissed
+    findings = findings.filter((_: any, idx: number) => !dismissedFindings.has(idx))
+
+    return findings
+  }
+
+  const groupFindings = (findings: any[]) => {
+    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = {
+      duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
+      anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
+      overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+      other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+    }
+
+    findings.forEach((finding: any, idx: number) => {
+      const originalIdx = costLeakAnalysis?.supplierInvoiceAnalysis?.findings?.indexOf(finding) ?? idx
+      const findingWithIdx = { ...finding, originalIdx }
+
+      if (finding.title?.toLowerCase().includes("duplicate")) {
+        groups.duplicates.findings.push(findingWithIdx)
+      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+        groups.anomalies.findings.push(findingWithIdx)
+      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+        groups.overdue.findings.push(findingWithIdx)
+      } else {
+        groups.other.findings.push(findingWithIdx)
+      }
+    })
+
+    return Object.entries(groups).filter(([_, group]) => group.findings.length > 0)
+  }
+
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupKey)) {
+        next.delete(groupKey)
+      } else {
+        next.add(groupKey)
+      }
+      return next
+    })
+  }
+
+  const handleDismiss = (idx: number) => {
+    setDismissedFindings(prev => new Set(prev).add(idx))
+    toast.success("Finding dismissed")
+  }
+
+  const handleResolve = (idx: number) => {
+    setResolvedFindings(prev => new Set(prev).add(idx))
+    toast.success("Marked as resolved", { description: "Great job addressing this issue!" })
+  }
+
+  const handleUndoDismiss = (idx: number) => {
+    setDismissedFindings(prev => {
+      const next = new Set(prev)
+      next.delete(idx)
+      return next
+    })
+  }
+
+  const activeFindings = getFilteredFindings()
+  const groupedFindings = groupFindings(activeFindings)
+  const totalDismissed = dismissedFindings.size
+  const totalResolved = resolvedFindings.size
+
   if (isLoading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -448,18 +557,28 @@ export default function ToolDetailPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Cost Analysis Tab - Prominent First Tab */}
-          <TabsContent value="analysis" className="mt-0">
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border-slate-700/50">
-              <CardHeader>
+          {/* Cost Analysis Tab - Redesigned */}
+          <TabsContent value="analysis" className="mt-0 space-y-6">
+            {/* Header Card */}
+            <Card className="bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+              <CardHeader className="relative">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-white flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-                      <span className="text-lg sm:text-xl">Cost Leak Analysis</span>
-                    </CardTitle>
-                    <p className="text-gray-400 text-xs sm:text-sm">
-                      AI-powered analysis to identify potential cost leaks and savings opportunities
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg shadow-amber-500/25">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <CardTitle className="text-white text-xl sm:text-2xl font-bold">
+                        Cost Leak Analysis
+                      </CardTitle>
+                    </div>
+                    <p className="text-gray-400 text-sm flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -467,26 +586,16 @@ export default function ToolDetailPage() {
                       <Button
                         onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
                         variant="outline"
+                        size="sm"
                         className="border-white/10 bg-black/50 text-white hover:bg-white/10"
-                        title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
                       >
-                        {isAnalysisVisible ? (
-                          <>
-                            <EyeOff className="w-4 h-4 mr-2" />
-                            Hide
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Show
-                          </>
-                        )}
+                        {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
                     )}
                     <Button
                       onClick={fetchCostLeakAnalysis}
                       disabled={isLoadingAnalysis}
-                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white"
+                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40"
                     >
                       {isLoadingAnalysis ? (
                         <>
@@ -496,220 +605,469 @@ export default function ToolDetailPage() {
                       ) : (
                         <>
                           <Search className="w-4 h-4 mr-2" />
-                          Analyze Cost Leaks
+                          {costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}
                         </>
                       )}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              {costLeakAnalysis && isAnalysisVisible && (
-                <CardContent className="space-y-6">
-                  {/* Summary Paragraph */}
-                  {costLeakAnalysis.overallSummary && (
-                    <div className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-lg p-5 border border-slate-700/50">
-                      <div className="space-y-3">
-                        {costLeakAnalysis.overallSummary.totalFindings > 0 ? (
-                          <>
-                            <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                              After analyzing your supplier invoices, we've discovered several opportunities to optimize your spending. 
-                              Our review identified <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.totalFindings}</span> cost leak{costLeakAnalysis.overallSummary.totalFindings !== 1 ? 's' : ''} that, if addressed, could save your company approximately <span className="font-semibold text-green-400">${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.
-                            </p>
-                            <div className="space-y-2">
-                              {costLeakAnalysis.overallSummary.highSeverity > 0 && (
-                                <p className="text-sm text-gray-300 leading-relaxed">
-                                  <span className="font-semibold text-red-400">Immediate Action Required:</span> We found <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.highSeverity}</span> high-priority issue{costLeakAnalysis.overallSummary.highSeverity !== 1 ? 's' : ''} that need{costLeakAnalysis.overallSummary.highSeverity === 1 ? 's' : ''} your urgent attention. These typically include duplicate payments or significant anomalies that could be costing you money right now. We recommend reviewing these findings first to prevent further financial impact.
-                                </p>
-                              )}
-                              {costLeakAnalysis.overallSummary.mediumSeverity > 0 && (
-                                <p className="text-sm text-gray-300 leading-relaxed">
-                                  <span className="font-semibold text-amber-400">Review Recommended:</span> Additionally, <span className="font-semibold text-white">{costLeakAnalysis.overallSummary.mediumSeverity}</span> medium-priority finding{costLeakAnalysis.overallSummary.mediumSeverity !== 1 ? 's' : ''} suggest{costLeakAnalysis.overallSummary.mediumSeverity === 1 ? 's' : ''} potential areas for optimization, such as unusual invoice amounts, price increases, or overdue payments. Addressing these can help improve your cash flow and prevent future cost escalations.
-                                </p>
-                              )}
-                              <p className="text-sm text-gray-300 leading-relaxed">
-                                <span className="font-semibold text-cyan-400">Key Recommendations:</span> Start by investigating the high-priority findings, particularly any duplicate payments or suspicious transactions. Next, review recurring subscriptions to ensure you're only paying for services you actively use. Finally, establish regular monitoring of supplier invoices to catch these issues early and maintain better control over your expenses.
-                              </p>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                              Excellent news! Our comprehensive analysis of your supplier invoices found no significant cost leaks or anomalies. 
-                              Your financial data appears well-managed with no duplicate payments, unusual amounts, or other concerning patterns detected.
-                            </p>
-                            <p className="text-sm text-gray-300 leading-relaxed">
-                              <span className="font-semibold text-green-400">Recommendations to Maintain This Status:</span> Continue monitoring your expenses regularly, especially when onboarding new suppliers or processing large invoices. Set up automated alerts for duplicate payments and unusual amounts. Consider reviewing your recurring subscriptions quarterly to ensure you're only paying for services you actively use. Regular audits like this one will help you maintain healthy financial controls and catch potential issues before they become costly problems.
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
+            </Card>
 
-                  {/* Summary Cards */}
-                  {costLeakAnalysis.overallSummary && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-black/40 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors">
-                        <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Total Findings</p>
-                        <p className="text-2xl font-bold text-white">
-                          {costLeakAnalysis.overallSummary.totalFindings || 0}
-                        </p>
-                      </div>
-                      <div className="bg-black/40 rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
-                        <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
-                        <p className="text-2xl font-bold text-green-400">
-                          {costLeakAnalysis.overallSummary.totalPotentialSavings 
-                            ? `$${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-                            : "$0.00 USD"}
-                        </p>
-                      </div>
-                      <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
-                        <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">High Priority</p>
-                        <p className="text-2xl font-bold text-red-400">
-                          {costLeakAnalysis.overallSummary.highSeverity || 0}
-                        </p>
-                      </div>
-                      <div className="bg-black/40 rounded-lg p-4 border border-amber-500/30 hover:border-amber-500/50 transition-colors">
-                        <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Medium Priority</p>
-                        <p className="text-2xl font-bold text-amber-400">
-                          {costLeakAnalysis.overallSummary.mediumSeverity || 0}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+            {/* Analysis Results */}
+            {costLeakAnalysis && isAnalysisVisible && (
+              <>
+                {/* Summary Cards - Enhanced */}
+                {costLeakAnalysis.overallSummary && (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Total Findings */}
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 overflow-hidden group hover:border-slate-600/50 transition-all">
+                      <CardContent className="p-4 relative">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Issues</p>
+                            <p className="text-3xl font-bold text-white">
+                              {costLeakAnalysis.overallSummary.totalFindings || 0}
+                            </p>
+                            {totalDismissed > 0 && (
+                              <p className="text-xs text-gray-500 mt-1">{totalDismissed} dismissed</p>
+                            )}
+                          </div>
+                          <div className="p-2 bg-white/5 rounded-lg">
+                            <Target className="w-5 h-5 text-gray-400" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  {/* Findings List */}
-                  {costLeakAnalysis.supplierInvoiceAnalysis?.findings && 
-                   costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-amber-400" />
-                          Cost Leak Findings
-                        </h3>
-                        <Badge variant="outline" className="border-white/20 text-gray-300">
-                          {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} issue{costLeakAnalysis.supplierInvoiceAnalysis.findings.length !== 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        {costLeakAnalysis.supplierInvoiceAnalysis.findings.slice(0, 20).map((finding: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className={`bg-black/40 rounded-lg p-4 border transition-all hover:shadow-lg ${
-                              finding.severity === "high"
-                                ? "border-red-500/50 hover:border-red-500/70"
-                                : finding.severity === "medium"
-                                ? "border-amber-500/50 hover:border-amber-500/70"
-                                : "border-slate-500/50 hover:border-slate-500/70"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                  <Badge
-                                    className={
-                                      finding.severity === "high"
-                                        ? "bg-red-500/20 text-red-300 border-red-500/50"
-                                        : finding.severity === "medium"
-                                        ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                                        : "bg-slate-500/20 text-slate-300 border-slate-500/50"
-                                    }
-                                    variant="outline"
-                                  >
-                                    {finding.severity === "high" ? "High" : finding.severity === "medium" ? "Medium" : "Low"}
-                                  </Badge>
-                                  <h4 className="font-semibold text-white text-sm">{finding.title}</h4>
+                    {/* Potential Savings */}
+                    <Card className="bg-gradient-to-br from-emerald-950 to-slate-900 border-emerald-800/30 overflow-hidden group hover:border-emerald-700/50 transition-all">
+                      <CardContent className="p-4 relative">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs text-emerald-400/70 uppercase tracking-wider mb-1">Potential Savings</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-emerald-400">
+                              ${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"}
+                            </p>
+                            <p className="text-xs text-emerald-400/50 mt-1">USD annually</p>
+                          </div>
+                          <div className="p-2 bg-emerald-500/10 rounded-lg">
+                            <DollarSign className="w-5 h-5 text-emerald-400" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* High Priority */}
+                    <Card className="bg-gradient-to-br from-red-950 to-slate-900 border-red-800/30 overflow-hidden group hover:border-red-700/50 transition-all">
+                      <CardContent className="p-4 relative">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all" />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs text-red-400/70 uppercase tracking-wider mb-1">High Priority</p>
+                            <p className="text-3xl font-bold text-red-400">
+                              {costLeakAnalysis.overallSummary.highSeverity || 0}
+                            </p>
+                            <p className="text-xs text-red-400/50 mt-1">Needs attention</p>
+                          </div>
+                          <div className="p-2 bg-red-500/10 rounded-lg">
+                            <ShieldAlert className="w-5 h-5 text-red-400" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Medium Priority */}
+                    <Card className="bg-gradient-to-br from-amber-950 to-slate-900 border-amber-800/30 overflow-hidden group hover:border-amber-700/50 transition-all">
+                      <CardContent className="p-4 relative">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all" />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs text-amber-400/70 uppercase tracking-wider mb-1">Medium Priority</p>
+                            <p className="text-3xl font-bold text-amber-400">
+                              {costLeakAnalysis.overallSummary.mediumSeverity || 0}
+                            </p>
+                            <p className="text-xs text-amber-400/50 mt-1">Review recommended</p>
+                          </div>
+                          <div className="p-2 bg-amber-500/10 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Summary Insights */}
+                {costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0 && (
+                  <Card className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-slate-700/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-cyan-500/10 rounded-xl shrink-0">
+                          <Sparkles className="w-6 h-6 text-cyan-400" />
+                        </div>
+                        <div className="space-y-4 flex-1">
+                          <div>
+                            <h3 className="text-white font-semibold text-lg mb-2">AI Analysis Summary</h3>
+                            <p className="text-gray-300 text-sm leading-relaxed">
+                              We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential cost leaks
+                              that could save your company approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.
+                            </p>
+                          </div>
+
+                          <div className="grid sm:grid-cols-3 gap-3">
+                            {costLeakAnalysis.overallSummary.highSeverity > 0 && (
+                              <div className="flex items-start gap-3 bg-red-500/5 border border-red-500/20 rounded-lg p-3">
+                                <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-red-400 font-medium text-sm">Urgent Action</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">{costLeakAnalysis.overallSummary.highSeverity} high-priority issues need immediate review</p>
                                 </div>
-                                <p className="text-sm text-gray-300 mb-3 leading-relaxed">{finding.description}</p>
-                                {finding.potentialSavings > 0 && (
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-xs text-gray-400">Potential Savings:</span>
-                                    <span className="text-sm font-semibold text-green-400">
-                                      ${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-                                    </span>
-                                  </div>
-                                )}
-                                {finding.invoices && finding.invoices.length > 0 && (
-                                  <details className="mt-3 group">
-                                    <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2">
-                                      <span className="transition-transform group-open:rotate-90">▶</span>
-                                      View {finding.invoices.length} invoice{finding.invoices.length !== 1 ? 's' : ''}
-                                    </summary>
-                                    <div className="mt-3 space-y-2 pl-4 border-l-2 border-white/10">
-                                      {finding.invoices.map((inv: any, invIdx: number) => (
-                                        <div key={invIdx} className="text-xs bg-black/30 p-3 rounded border border-white/5 hover:border-white/10 transition-colors">
-                                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <div className="flex items-center gap-2">
-                                              <Receipt className="w-3 h-3 text-gray-500" />
-                                              <span className="text-white font-medium">
-                                                Invoice #{inv.GivenNumber || inv.DocumentNumber}
-                                              </span>
-                                            </div>
-                                            <div className="flex items-center gap-3 text-gray-400">
-                                              <span>{inv.InvoiceDate || 'N/A'}</span>
-                                              <span className="text-green-400 font-medium">
-                                                {inv.calculatedTotal ? `$${inv.calculatedTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '$0.00 USD'}
-                                              </span>
-                                            </div>
-                                          </div>
-                                          {inv.SupplierName && (
-                                            <div className="mt-1 text-gray-500">
-                                              Supplier: {inv.SupplierName}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </details>
-                                )}
+                              </div>
+                            )}
+                            {costLeakAnalysis.overallSummary.mediumSeverity > 0 && (
+                              <div className="flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
+                                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-amber-400 font-medium text-sm">Review Needed</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">{costLeakAnalysis.overallSummary.mediumSeverity} items could improve cash flow</p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
+                              <Zap className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-cyan-400 font-medium text-sm">Quick Win</p>
+                                <p className="text-gray-400 text-xs mt-0.5">Start with duplicate payments for immediate savings</p>
                               </div>
                             </div>
                           </div>
-                        ))}
+                        </div>
                       </div>
-                      {costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 20 && (
-                        <div className="text-center pt-2">
-                          <p className="text-xs text-gray-500">
-                            Showing 20 of {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} findings
-                          </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Findings Section */}
+                {costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 && (
+                  <Card className="bg-slate-900/80 border-slate-700/50">
+                    <CardHeader className="pb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <CardTitle className="text-white text-lg">Cost Leak Findings</CardTitle>
+                          <Badge variant="outline" className="border-slate-600 text-gray-400">
+                            {activeFindings.length} of {costLeakAnalysis.supplierInvoiceAnalysis.findings.length}
+                          </Badge>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="relative flex-1 sm:flex-none">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <Input
+                              placeholder="Search findings..."
+                              value={findingsSearch}
+                              onChange={(e) => setFindingsSearch(e.target.value)}
+                              className="pl-9 h-9 w-full sm:w-48 bg-black/50 border-slate-700 text-white text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center bg-black/50 rounded-lg p-1 border border-slate-700">
+                            {(["all", "high", "medium", "low"] as const).map((filter) => (
+                              <button
+                                key={filter}
+                                onClick={() => setFindingsFilter(filter)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                  findingsFilter === filter
+                                    ? filter === "high"
+                                      ? "bg-red-500/20 text-red-400"
+                                      : filter === "medium"
+                                      ? "bg-amber-500/20 text-amber-400"
+                                      : filter === "low"
+                                      ? "bg-slate-500/20 text-slate-400"
+                                      : "bg-white/10 text-white"
+                                    : "text-gray-500 hover:text-gray-300"
+                                }`}
+                              >
+                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      {/* Grouped Findings */}
+                      {groupedFindings.map(([groupKey, group]) => (
+                        <div key={groupKey} className="border border-slate-700/50 rounded-xl overflow-hidden">
+                          {/* Group Header */}
+                          <button
+                            onClick={() => toggleGroup(groupKey)}
+                            className={`w-full flex items-center justify-between p-4 transition-all ${
+                              group.color === "red"
+                                ? "bg-gradient-to-r from-red-950/50 to-slate-900/50 hover:from-red-950/70"
+                                : group.color === "amber"
+                                ? "bg-gradient-to-r from-amber-950/50 to-slate-900/50 hover:from-amber-950/70"
+                                : group.color === "orange"
+                                ? "bg-gradient-to-r from-orange-950/50 to-slate-900/50 hover:from-orange-950/70"
+                                : "bg-gradient-to-r from-slate-800/50 to-slate-900/50 hover:from-slate-800/70"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${
+                                group.color === "red" ? "bg-red-500/20" :
+                                group.color === "amber" ? "bg-amber-500/20" :
+                                group.color === "orange" ? "bg-orange-500/20" :
+                                "bg-slate-500/20"
+                              }`}>
+                                <group.icon className={`w-4 h-4 ${
+                                  group.color === "red" ? "text-red-400" :
+                                  group.color === "amber" ? "text-amber-400" :
+                                  group.color === "orange" ? "text-orange-400" :
+                                  "text-slate-400"
+                                }`} />
+                              </div>
+                              <div className="text-left">
+                                <p className="text-white font-medium">{group.title}</p>
+                                <p className="text-gray-500 text-xs">{group.findings.length} issue{group.findings.length !== 1 ? 's' : ''} found</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className={`${
+                                group.color === "red" ? "border-red-500/30 text-red-400" :
+                                group.color === "amber" ? "border-amber-500/30 text-amber-400" :
+                                group.color === "orange" ? "border-orange-500/30 text-orange-400" :
+                                "border-slate-500/30 text-slate-400"
+                              }`}>
+                                {group.findings.length}
+                              </Badge>
+                              {expandedGroups.has(groupKey) ? (
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Group Content */}
+                          {expandedGroups.has(groupKey) && (
+                            <div className="divide-y divide-slate-800/50">
+                              {group.findings.slice(0, 10).map((finding: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className={`p-4 bg-slate-900/50 hover:bg-slate-800/50 transition-all ${
+                                    resolvedFindings.has(finding.originalIdx) ? 'opacity-50' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-4">
+                                    {/* Severity Indicator */}
+                                    <div className={`w-1 h-full min-h-[60px] rounded-full shrink-0 ${
+                                      finding.severity === "high" ? "bg-red-500" :
+                                      finding.severity === "medium" ? "bg-amber-500" :
+                                      "bg-slate-500"
+                                    }`} />
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <Badge
+                                              className={`text-[10px] px-1.5 py-0 ${
+                                                finding.severity === "high"
+                                                  ? "bg-red-500/10 text-red-400 border-red-500/30"
+                                                  : finding.severity === "medium"
+                                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                                                  : "bg-slate-500/10 text-slate-400 border-slate-500/30"
+                                              }`}
+                                              variant="outline"
+                                            >
+                                              {finding.severity?.toUpperCase()}
+                                            </Badge>
+                                            {resolvedFindings.has(finding.originalIdx) && (
+                                              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                                RESOLVED
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <h4 className="font-medium text-white text-sm mb-1">{finding.title}</h4>
+                                          <p className="text-gray-400 text-xs leading-relaxed">{finding.description}</p>
+
+                                          {finding.potentialSavings > 0 && (
+                                            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
+                                              <DollarSign className="w-3 h-3" />
+                                              <span className="text-xs font-medium">
+                                                Save ${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {/* Invoice Details */}
+                                          {finding.invoices?.length > 0 && (
+                                            <details className="mt-3 group/details">
+                                              <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                                <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
+                                                {finding.invoices.length} related invoice{finding.invoices.length !== 1 ? 's' : ''}
+                                              </summary>
+                                              <div className="mt-2 space-y-1.5 ml-4">
+                                                {finding.invoices.slice(0, 3).map((inv: any, invIdx: number) => (
+                                                  <div key={invIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
+                                                    <div className="flex items-center gap-2">
+                                                      <Receipt className="w-3 h-3 text-gray-500" />
+                                                      <span className="text-gray-300">#{inv.GivenNumber || inv.DocumentNumber}</span>
+                                                      {inv.SupplierName && (
+                                                        <span className="text-gray-500">• {inv.SupplierName}</span>
+                                                      )}
+                                                    </div>
+                                                    <span className="text-emerald-400 font-medium">
+                                                      ${inv.calculatedTotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                                {finding.invoices.length > 3 && (
+                                                  <p className="text-gray-500 text-xs ml-5">+{finding.invoices.length - 3} more</p>
+                                                )}
+                                              </div>
+                                            </details>
+                                          )}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {!resolvedFindings.has(finding.originalIdx) && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => handleResolve(finding.originalIdx)}
+                                              className="h-8 w-8 p-0 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                              title="Mark as resolved"
+                                            >
+                                              <CheckCheck className="w-4 h-4" />
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleDismiss(finding.originalIdx)}
+                                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                                            title="Dismiss"
+                                          >
+                                            <X className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {group.findings.length > 10 && (
+                                <div className="p-3 text-center bg-slate-900/30">
+                                  <p className="text-xs text-gray-500">
+                                    Showing 10 of {group.findings.length} items in this category
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* No Results */}
+                      {activeFindings.length === 0 && (
+                        <div className="text-center py-12">
+                          {findingsSearch || findingsFilter !== "all" ? (
+                            <>
+                              <Search className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                              <p className="text-gray-400 mb-2">No findings match your filters</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setFindingsSearch(""); setFindingsFilter("all"); }}
+                                className="border-slate-600 text-gray-400 hover:text-white"
+                              >
+                                Clear filters
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-emerald-500" />
+                              <p className="text-white font-medium mb-1">All findings addressed!</p>
+                              <p className="text-gray-500 text-sm">Great job reviewing all cost leaks.</p>
+                            </>
+                          )}
                         </div>
                       )}
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {/* No Findings */}
-                  {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings || 
-                    costLeakAnalysis.supplierInvoiceAnalysis.findings.length === 0) && (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
-                        <CheckCircle className="w-8 h-8 text-green-400" />
+                {/* No Findings State */}
+                {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings ||
+                  costLeakAnalysis.supplierInvoiceAnalysis.findings.length === 0) && (
+                  <Card className="bg-gradient-to-br from-emerald-950/50 to-slate-900 border-emerald-800/30">
+                    <CardContent className="py-16 text-center">
+                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-6">
+                        <ShieldCheck className="w-10 h-10 text-emerald-400" />
                       </div>
-                      <p className="text-white font-semibold text-lg mb-1">No cost leaks detected!</p>
-                      <p className="text-gray-400 text-sm">Your supplier invoices look good.</p>
-                    </div>
-                  )}
+                      <h3 className="text-white font-bold text-xl mb-2">Excellent! No Cost Leaks Detected</h3>
+                      <p className="text-gray-400 max-w-md mx-auto">
+                        Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {/* Full Analysis JSON */}
-                  <details className="mt-6">
-                    <summary className="text-sm text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2 mb-3">
-                      <span className="transition-transform group-open:rotate-90">▶</span>
-                      View Full Analysis JSON
-                    </summary>
-                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                      {JSON.stringify(costLeakAnalysis, null, 2)}
-                    </pre>
-                  </details>
-                </CardContent>
-              )}
-              {!costLeakAnalysis && !isLoadingAnalysis && (
-                <CardContent className="py-12">
-                  <div className="text-center">
-                    <BarChart3 className="w-16 h-16 mx-auto mb-4 text-amber-400 opacity-50" />
-                    <p className="text-gray-400 mb-4">No analysis data yet. Click "Analyze Cost Leaks" to get started.</p>
+                {/* Debug JSON */}
+                <details className="group">
+                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 flex items-center gap-2">
+                    <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+                    View raw analysis data
+                  </summary>
+                  <pre className="mt-3 bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-400 max-h-64 border border-slate-800">
+                    {JSON.stringify(costLeakAnalysis, null, 2)}
+                  </pre>
+                </details>
+              </>
+            )}
+
+            {/* Empty State */}
+            {!costLeakAnalysis && !isLoadingAnalysis && (
+              <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50">
+                <CardContent className="py-16 text-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/10 mb-6">
+                    <BarChart3 className="w-10 h-10 text-amber-400" />
                   </div>
+                  <h3 className="text-white font-bold text-xl mb-2">Ready to Analyze</h3>
+                  <p className="text-gray-400 max-w-md mx-auto mb-6">
+                    Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities.
+                  </p>
+                  <Button
+                    onClick={fetchCostLeakAnalysis}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Start Analysis
+                  </Button>
                 </CardContent>
-              )}
-            </Card>
+              </Card>
+            )}
+
+            {/* Loading State */}
+            {isLoadingAnalysis && (
+              <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50">
+                <CardContent className="py-16 text-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-cyan-500/10 mb-6">
+                    <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+                  </div>
+                  <h3 className="text-white font-bold text-xl mb-2">Analyzing Your Data</h3>
+                  <p className="text-gray-400 max-w-md mx-auto">
+                    Our AI is scanning your invoices for cost optimization opportunities. This usually takes a few seconds...
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Overview Tab */}
