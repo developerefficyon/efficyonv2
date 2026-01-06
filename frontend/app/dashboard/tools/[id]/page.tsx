@@ -868,7 +868,7 @@ export default function ToolDetailPage() {
         <Button
           variant="ghost"
           onClick={() => router.push("/dashboard/tools")}
-          className="text-gray-400 hover:text-white self-start"
+          className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors self-start"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Tools
