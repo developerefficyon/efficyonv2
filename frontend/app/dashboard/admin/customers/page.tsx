@@ -415,9 +415,6 @@ export default function AdminCustomersPage() {
                 <TableHead className="text-white font-semibold">Email</TableHead>
                 <TableHead className="text-white font-semibold">Plan</TableHead>
                 <TableHead className="text-white font-semibold">Employees</TableHead>
-                <TableHead className="text-white font-semibold">Monthly Revenue</TableHead>
-                <TableHead className="text-white font-semibold">Total Savings</TableHead>
-                <TableHead className="text-white font-semibold">Status</TableHead>
                 <TableHead className="text-white font-semibold">Joined</TableHead>
                 <TableHead className="text-white font-semibold text-right">Actions</TableHead>
               </TableRow>
@@ -425,7 +422,7 @@ export default function AdminCustomersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="h-8 w-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                       <p className="text-gray-400">Loading customers...</p>
@@ -434,7 +431,7 @@ export default function AdminCustomersPage() {
                 </TableRow>
               ) : paginatedCustomers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Building2 className="w-12 h-12 text-gray-600" />
                       <p className="text-gray-400 text-sm">
@@ -505,30 +502,6 @@ export default function AdminCustomersPage() {
                         <Users className="w-3 h-3 text-gray-400 flex-shrink-0" />
                         {customer.employees}
                       </div>
-                    </TableCell>
-                    <TableCell className="min-w-[120px]">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-white font-medium">
-                        <DollarSign className="w-3 h-3 text-green-400 flex-shrink-0" />
-                        <span className="truncate">{formatCurrency(customer.monthlyRevenue)}/mo</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="min-w-[100px]">
-                      <span className="text-xs sm:text-sm text-green-400 font-medium truncate block">
-                        {formatCurrency(customer.totalSavings)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="min-w-[80px]">
-                      <Badge
-                        className={
-                          customer.status === "active"
-                            ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px] sm:text-xs"
-                            : customer.status === "pending"
-                              ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] sm:text-xs"
-                              : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px] sm:text-xs"
-                        }
-                      >
-                        {customer.status}
-                      </Badge>
                     </TableCell>
                     <TableCell className="min-w-[100px]">
                       <span className="text-xs sm:text-sm text-gray-400">{customer.joined}</span>

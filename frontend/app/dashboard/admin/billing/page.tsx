@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   DollarSign,
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Clock,
   Users,
   Loader2,
+  Search,
 } from "lucide-react"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
@@ -34,6 +36,8 @@ interface Subscription {
   created_at: string
 }
 
+type TabType = "trials" | "failed" | "active"
+
 export default function AdminBillingPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -43,6 +47,8 @@ export default function AdminBillingPage() {
     churnRate: 0,
     avgRevenue: 0,
   })
+  const [activeTab, setActiveTab] = useState<TabType>("trials")
+  const [searchQuery, setSearchQuery] = useState("")
   useEffect(() => {
     const fetchSubscriptions = async () => {
       try {
@@ -218,139 +224,235 @@ export default function AdminBillingPage() {
         })}
       </div>
 
-      {/* Trials Ending Soon */}
-      {trials.length > 0 && (
-        <Card className="bg-black/95 backdrop-blur-xl border-yellow-500/30">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-400" />
-              <CardTitle className="text-white">Trials Ending Soon</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {trials.map((trial, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-yellow-500/20"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{trial.company}</p>
-                    <p className="text-xs text-gray-400 truncate">{trial.email}</p>
-                    <p className="text-xs text-gray-500 mt-1">{trial.plan} Plan</p>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <p className="text-sm font-semibold text-yellow-400">
-                      {trial.daysLeft} days left
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white w-full sm:w-auto"
-                    >
-                      Contact
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Failed Payments */}
-      {failedPayments.length > 0 && (
-        <Card className="bg-black/95 backdrop-blur-xl border-red-500/30">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
-              <CardTitle className="text-white">Failed Payments</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {failedPayments.map((payment, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-red-500/20"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{payment.company}</p>
-                    <p className="text-xs text-gray-400">
-                      {payment.reason} • {payment.attempts} attempts
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">${payment.amount}/mo</p>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <p className="text-xs text-gray-400">{payment.failedDate}</p>
-                    <Button
-                      size="sm"
-                      className="mt-2 bg-gradient-to-r from-red-500 to-orange-600 text-white w-full sm:w-auto"
-                    >
-                      Resolve
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Active Subscriptions */}
+      {/* Tabbed Content Section */}
       <Card className="bg-black/95 backdrop-blur-xl border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white">Active Subscriptions</CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4">
+            {/* Search Filter */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by company, email, or plan..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
+              />
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+              <button
+                onClick={() => setActiveTab("trials")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "trials"
+                    ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span className="hidden sm:inline">Trials Ending Soon</span>
+                <span className="sm:hidden">Trials</span>
+                <Badge className="h-5 px-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                  {trials.filter(t =>
+                    t.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    t.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length}
+                </Badge>
+              </button>
+              <button
+                onClick={() => setActiveTab("failed")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "failed"
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">Failed Payments</span>
+                <span className="sm:hidden">Failed</span>
+                <Badge className="h-5 px-1.5 text-[10px] bg-red-500/20 text-red-400 border-red-500/30">
+                  {failedPayments.filter(p =>
+                    p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.reason.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length}
+                </Badge>
+              </button>
+              <button
+                onClick={() => setActiveTab("active")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "active"
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Active Subscriptions</span>
+                <span className="sm:hidden">Active</span>
+                <Badge className="h-5 px-1.5 text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                  {activeSubscriptions.filter(s =>
+                    s.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length}
+                </Badge>
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-              <span className="ml-3 text-gray-400">Loading subscriptions...</span>
-            </div>
-          ) : activeSubscriptions.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400">No active subscriptions found</p>
-            </div>
-          ) : (
+          {/* Trials Ending Soon Tab */}
+          {activeTab === "trials" && (
             <div className="space-y-3">
-              {activeSubscriptions.map((sub, index) => (
-              <div
-                key={index}
-                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-sm font-medium text-white truncate">{sub.company}</p>
-                    <Badge
-                      className={
-                        sub.status === "active"
-                          ? "bg-green-500/20 text-green-400 border-green-500/30"
-                          : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                      }
-                    >
-                      {sub.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>{sub.plan} Plan</span>
-                    <span>•</span>
-                    <span>Next billing: {sub.nextBilling}</span>
-                    <span>•</span>
-                    <span>Since: {sub.customerSince}</span>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right flex-shrink-0">
-                  <p className="text-lg font-bold text-white">${sub.amount}/mo</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 text-gray-400 hover:text-white hover:bg-white/5 w-full sm:w-auto"
+              {(() => {
+                const filteredTrials = trials.filter(t =>
+                  t.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  t.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                if (filteredTrials.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="w-8 h-8 text-yellow-400/50 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        {searchQuery ? "No trials match your search" : "No trials ending soon"}
+                      </p>
+                    </div>
+                  )
+                }
+                return filteredTrials.map((trial, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-yellow-500/20 hover:bg-yellow-500/5 transition-colors"
                   >
-                    View Details
-                  </Button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{trial.company}</p>
+                      <p className="text-xs text-gray-400 truncate">{trial.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">{trial.plan} Plan</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="text-sm font-semibold text-yellow-400">
+                        {trial.daysLeft} days left
+                      </p>
+                      <Button
+                        size="sm"
+                        className="mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white w-full sm:w-auto"
+                      >
+                        Contact
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
+          {/* Failed Payments Tab */}
+          {activeTab === "failed" && (
+            <div className="space-y-3">
+              {(() => {
+                const filteredPayments = failedPayments.filter(p =>
+                  p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.reason.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                if (filteredPayments.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <AlertTriangle className="w-8 h-8 text-red-400/50 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        {searchQuery ? "No failed payments match your search" : "No failed payments"}
+                      </p>
+                    </div>
+                  )
+                }
+                return filteredPayments.map((payment, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-red-500/20 hover:bg-red-500/5 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{payment.company}</p>
+                      <p className="text-xs text-gray-400">
+                        {payment.reason} • {payment.attempts} attempts
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">${payment.amount}/mo</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="text-xs text-gray-400">{payment.failedDate}</p>
+                      <Button
+                        size="sm"
+                        className="mt-2 bg-gradient-to-r from-red-500 to-orange-600 text-white w-full sm:w-auto"
+                      >
+                        Resolve
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
+          {/* Active Subscriptions Tab */}
+          {activeTab === "active" && (
+            <div className="space-y-3">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                  <span className="ml-3 text-gray-400">Loading subscriptions...</span>
                 </div>
-              </div>
-              ))}
+              ) : (() => {
+                const filteredSubscriptions = activeSubscriptions.filter(s =>
+                  s.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  s.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                if (filteredSubscriptions.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <CheckCircle className="w-8 h-8 text-cyan-400/50 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        {searchQuery ? "No subscriptions match your search" : "No active subscriptions found"}
+                      </p>
+                    </div>
+                  )
+                }
+                return filteredSubscriptions.map((sub, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-sm font-medium text-white truncate">{sub.company}</p>
+                        <Badge
+                          className={
+                            sub.status === "active"
+                              ? "bg-green-500/20 text-green-400 border-green-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                          }
+                        >
+                          {sub.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                        <span>{sub.plan} Plan</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>Next billing: {sub.nextBilling}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>Since: {sub.customerSince}</span>
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-white">${sub.amount}/mo</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 text-gray-400 hover:text-white hover:bg-white/5 w-full sm:w-auto"
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              })()}
             </div>
           )}
         </CardContent>
