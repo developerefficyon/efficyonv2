@@ -53,6 +53,15 @@ interface Integration {
   environment: string
   created_at: string
   updated_at: string
+  oauth_data?: {
+    tokens?: {
+      access_token?: string
+      refresh_token?: string
+      expires_at?: number
+      expires_in?: number
+      scope?: string
+    }
+  } | null
 }
 
 interface Tool {
@@ -64,7 +73,7 @@ interface Tool {
   activeSeats: number
   unusedSeats: number
   wasteLevel: "high" | "medium" | "low"
-  status: "connected" | "error" | "disconnected"
+  status: "connected" | "error" | "disconnected" | "expired"
   lastSync: string
   issues: string[]
 }
@@ -518,6 +527,16 @@ export default function ToolsPage() {
     }
   }
 
+  // Helper to check if token is expired
+  const isTokenExpired = (integration: Integration): boolean => {
+    const expiresAt = integration.oauth_data?.tokens?.expires_at
+    if (!expiresAt) return false // No expiry info, assume valid
+
+    const now = Math.floor(Date.now() / 1000)
+    // Consider expired if less than 5 minutes remaining (same as backend buffer)
+    return now >= (expiresAt - 300)
+  }
+
   // Map integrations to tools format
   const tools: Tool[] = integrations.map((integration) => {
     // Determine category based on tool name (can be enhanced with actual category from tools table)
@@ -543,7 +562,7 @@ export default function ToolsPage() {
 
     // Calculate waste level based on status
     const getWasteLevel = (status: string): "high" | "medium" | "low" => {
-      if (status === "error") return "high"
+      if (status === "error" || status === "expired") return "high"
       if (status === "disconnected") return "medium"
       return "low"
     }
@@ -571,6 +590,8 @@ export default function ToolsPage() {
       const issues: string[] = []
       if (status === "error") {
         issues.push("Connection error - needs reconnection")
+      } else if (status === "expired") {
+        issues.push("Token expired - please reconnect")
       } else if (status === "disconnected") {
         issues.push("Integration disconnected")
       }
@@ -590,10 +611,12 @@ export default function ToolsPage() {
       seats: defaultSeats,
       activeSeats: defaultActiveSeats,
       unusedSeats: Math.max(0, defaultSeats - defaultActiveSeats),
-      wasteLevel: getWasteLevel(integration.status),
-      status: integration.status as "connected" | "error" | "disconnected",
+      wasteLevel: getWasteLevel(isTokenExpired(integration) ? "expired" : integration.status),
+      status: (integration.status === "expired" || isTokenExpired(integration))
+        ? "expired"
+        : integration.status as "connected" | "error" | "disconnected" | "expired",
       lastSync: getLastSync(integration.updated_at),
-      issues: getIssues(integration.status),
+      issues: getIssues(isTokenExpired(integration) ? "expired" : integration.status),
     }
   })
 
@@ -611,8 +634,15 @@ export default function ToolsPage() {
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
       return <CheckCircle className="w-4 h-4 text-green-400" />
-    } else if (status === "error") {
-      return <XCircle className="w-4 h-4 text-red-400" />
+    } else if (status === "error" || status === "expired") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+            {status === "expired" ? "Reconnect needed" : "Error"}
+          </span>
+          <XCircle className="w-4 h-4 text-red-400" />
+        </div>
+      )
     }
     return <AlertTriangle className="w-4 h-4 text-yellow-400" />
   }
@@ -856,29 +886,17 @@ export default function ToolsPage() {
                       {(() => {
                         const integration = integrations.find(i => i.id === tool.id)
                         if (!integration) return null
-                        
+
                         return (
                           <>
-                            {integration.tool_name === "Fortnox" && integration.status === "connected" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 text-xs border-white/10 bg-black/50 text-white"
-                                onClick={() => handleSyncNow(integration)}
-                                disabled={syncingId === integration.id}
-                              >
-                                {syncingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                Sync
-                              </Button>
-                            )}
-                            {integration.status === "error" && integration.tool_name === "Fortnox" && (
+                            {integration.tool_name === "Fortnox" && (
                               <Button
                                 size="sm"
-                                className="h-7 px-2 text-xs bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
                                 onClick={startFortnoxOAuth}
                               >
                                 <RefreshCw className="w-3 h-3 mr-1" />

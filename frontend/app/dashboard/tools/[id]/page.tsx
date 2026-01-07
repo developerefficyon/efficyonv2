@@ -240,6 +240,31 @@ export default function ToolDetailPage() {
 
       const info: any = {}
 
+      // Check if any response indicates token expiration
+      const allResponses = [
+        companyRes, settingsRes, invoicesRes, supplierInvoicesRes,
+        expensesRes, vouchersRes, accountsRes, articlesRes, customersRes, suppliersRes
+      ]
+
+      for (const response of allResponses) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Fortnox integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
       if (companyRes.status === "fulfilled" && companyRes.value.ok) {
         try {
           const data = await companyRes.value.json()
@@ -381,10 +406,10 @@ export default function ToolDetailPage() {
       })
 
       if (!res.ok) {
-        // Handle authentication errors
+        // Handle authentication errors (actual session expiry)
         if (res.status === 401 || res.status === 403) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
           })
           router.push("/login")
           setIsLoadingAnalysis(false)
@@ -393,17 +418,17 @@ export default function ToolDetailPage() {
 
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
         const errorMessage = errorData.error || "Failed to analyze cost leaks"
-        
-        // Check if it's a token refresh error
-        if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("refresh")) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+
+        // Check if it's a token expired error that requires reconnection (not login)
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Fortnox integration to continue.",
+            duration: 10000,
           })
-          router.push("/login")
           setIsLoadingAnalysis(false)
           return
         }
-        
+
         throw new Error(errorMessage)
       }
 
@@ -411,14 +436,9 @@ export default function ToolDetailPage() {
       setCostLeakAnalysis(data)
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
-      
-      // Don't show error toast if we're redirecting to login
-      if (!error.message?.toLowerCase().includes("session expired") && 
-          !error.message?.toLowerCase().includes("token")) {
-        toast.error("Failed to analyze cost leaks", {
-          description: error.message || "An error occurred.",
-        })
-      }
+      toast.error("Failed to analyze cost leaks", {
+        description: error.message || "An error occurred.",
+      })
     } finally {
       setIsLoadingAnalysis(false)
     }
