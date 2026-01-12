@@ -53,6 +53,15 @@ interface Integration {
   environment: string
   created_at: string
   updated_at: string
+  oauth_data?: {
+    tokens?: {
+      access_token?: string
+      refresh_token?: string
+      expires_at?: number
+      expires_in?: number
+      scope?: string
+    }
+  } | null
 }
 
 interface Tool {
@@ -64,7 +73,7 @@ interface Tool {
   activeSeats: number
   unusedSeats: number
   wasteLevel: "high" | "medium" | "low"
-  status: "connected" | "error" | "disconnected"
+  status: "connected" | "error" | "disconnected" | "expired"
   lastSync: string
   issues: string[]
 }
@@ -100,6 +109,11 @@ export default function ToolsPage() {
     clientId: "",
     clientSecret: "",
     environment: "sandbox",
+  })
+  const [microsoft365Form, setMicrosoft365Form] = useState({
+    tenantId: "",
+    clientId: "",
+    clientSecret: "",
   })
 
   const loadTools = useCallback(async () => {
@@ -214,9 +228,33 @@ export default function ToolsPage() {
     // Check for OAuth callback result in URL params
     const params = new URLSearchParams(window.location.search)
     const fortnoxStatus = params.get("fortnox")
+    const microsoft365Status = params.get("microsoft365")
     const fortnoxError = params.get("error")
     const fortnoxErrorDesc = params.get("error_desc")
-    
+
+    // Handle Microsoft 365 OAuth callback
+    if (microsoft365Status) {
+      setIsConnecting(false)
+      window.history.replaceState({}, "", window.location.pathname)
+
+      if (microsoft365Status === "connected") {
+        toast.success("Microsoft 365 connected successfully!", {
+          description: "Your Microsoft 365 integration is now active.",
+          duration: 5000,
+        })
+      } else {
+        toast.error("Failed to connect Microsoft 365", {
+          description: microsoft365Status.replace("error_", "").replace(/_/g, " "),
+          duration: 10000,
+        })
+      }
+
+      hasLoadedRef.current = true
+      loadIntegrations().then(() => setIsLoading(false)).catch(() => setIsLoading(false))
+      loadTools().catch(() => {})
+      return
+    }
+
     if (fortnoxStatus || fortnoxError) {
       setIsConnecting(false)
       
@@ -421,6 +459,89 @@ export default function ToolsPage() {
     }
   }
 
+  const handleConnectMicrosoft365 = async () => {
+    if (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      // Save integration first
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "Microsoft365",
+              connection_type: "oauth",
+              status: "pending",
+              tenant_id: microsoft365Form.tenantId,
+              client_id: microsoft365Form.clientId,
+              client_secret: microsoft365Form.clientSecret,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to save Microsoft 365 configuration")
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Start OAuth flow
+      const oauthRes = await fetch(`${apiBase}/api/integrations/microsoft365/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Microsoft to authorize...", {
+        description: "You'll be taken to Microsoft to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting Microsoft 365:", error)
+      toast.error("Failed to connect Microsoft 365", {
+        description: error.message || "An error occurred.",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
   const handleSyncNow = async (integration: Integration) => {
     setSyncingId(integration.id)
     try {
@@ -518,6 +639,16 @@ export default function ToolsPage() {
     }
   }
 
+  // Helper to check if token is expired
+  const isTokenExpired = (integration: Integration): boolean => {
+    const expiresAt = integration.oauth_data?.tokens?.expires_at
+    if (!expiresAt) return false // No expiry info, assume valid
+
+    const now = Math.floor(Date.now() / 1000)
+    // Consider expired if less than 5 minutes remaining (same as backend buffer)
+    return now >= (expiresAt - 300)
+  }
+
   // Map integrations to tools format
   const tools: Tool[] = integrations.map((integration) => {
     // Determine category based on tool name (can be enhanced with actual category from tools table)
@@ -535,6 +666,9 @@ export default function ToolsPage() {
       if (name.includes("notion") || name.includes("workspace") || name.includes("office")) {
         return "Productivity"
       }
+      if (name.includes("microsoft") || name.includes("365") || name.includes("m365")) {
+        return "Productivity"
+      }
       if (name.includes("fortnox") || name.includes("quickbooks") || name.includes("xero")) {
         return "Finance"
       }
@@ -543,7 +677,7 @@ export default function ToolsPage() {
 
     // Calculate waste level based on status
     const getWasteLevel = (status: string): "high" | "medium" | "low" => {
-      if (status === "error") return "high"
+      if (status === "error" || status === "expired") return "high"
       if (status === "disconnected") return "medium"
       return "low"
     }
@@ -571,6 +705,8 @@ export default function ToolsPage() {
       const issues: string[] = []
       if (status === "error") {
         issues.push("Connection error - needs reconnection")
+      } else if (status === "expired") {
+        issues.push("Token expired - please reconnect")
       } else if (status === "disconnected") {
         issues.push("Integration disconnected")
       }
@@ -590,10 +726,12 @@ export default function ToolsPage() {
       seats: defaultSeats,
       activeSeats: defaultActiveSeats,
       unusedSeats: Math.max(0, defaultSeats - defaultActiveSeats),
-      wasteLevel: getWasteLevel(integration.status),
-      status: integration.status as "connected" | "error" | "disconnected",
+      wasteLevel: getWasteLevel(isTokenExpired(integration) ? "expired" : integration.status),
+      status: (integration.status === "expired" || isTokenExpired(integration))
+        ? "expired"
+        : integration.status as "connected" | "error" | "disconnected" | "expired",
       lastSync: getLastSync(integration.updated_at),
-      issues: getIssues(integration.status),
+      issues: getIssues(isTokenExpired(integration) ? "expired" : integration.status),
     }
   })
 
@@ -611,8 +749,15 @@ export default function ToolsPage() {
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
       return <CheckCircle className="w-4 h-4 text-green-400" />
-    } else if (status === "error") {
-      return <XCircle className="w-4 h-4 text-red-400" />
+    } else if (status === "error" || status === "expired") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+            {status === "expired" ? "Reconnect needed" : "Error"}
+          </span>
+          <XCircle className="w-4 h-4 text-red-400" />
+        </div>
+      )
     }
     return <AlertTriangle className="w-4 h-4 text-yellow-400" />
   }
@@ -856,29 +1001,17 @@ export default function ToolsPage() {
                       {(() => {
                         const integration = integrations.find(i => i.id === tool.id)
                         if (!integration) return null
-                        
+
                         return (
                           <>
-                            {integration.tool_name === "Fortnox" && integration.status === "connected" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 text-xs border-white/10 bg-black/50 text-white"
-                                onClick={() => handleSyncNow(integration)}
-                                disabled={syncingId === integration.id}
-                              >
-                                {syncingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                Sync
-                              </Button>
-                            )}
-                            {integration.status === "error" && integration.tool_name === "Fortnox" && (
+                            {integration.tool_name === "Fortnox" && (
                               <Button
                                 size="sm"
-                                className="h-7 px-2 text-xs bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
                                 onClick={startFortnoxOAuth}
                               >
                                 <RefreshCw className="w-3 h-3 mr-1" />
@@ -920,8 +1053,8 @@ export default function ToolsPage() {
       )}
 
       {/* Connect Tool Modal */}
-      <Dialog 
-        open={isConnectModalOpen} 
+      <Dialog
+        open={isConnectModalOpen}
         onOpenChange={(open) => {
           setIsConnectModalOpen(open)
           if (open) {
@@ -931,6 +1064,7 @@ export default function ToolsPage() {
             setIsConnecting(false)
             setSelectedTool("")
             setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+            setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
           }
         }}
       >
@@ -966,25 +1100,27 @@ export default function ToolsPage() {
                     <SelectItem value="loading" disabled className="text-gray-400">
                       Loading tools...
                     </SelectItem>
-                  ) : availableTools.length === 0 ? (
+                  ) : (
                     <>
                       <SelectItem value="fortnox" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
                         Fortnox
                       </SelectItem>
-                      <SelectItem value="no-tools" disabled className="text-gray-400 text-xs italic">
-                        (No other tools found - add more by connecting them)
+                      <SelectItem value="microsoft365" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                        Microsoft 365
                       </SelectItem>
+                      {availableTools.length > 0 && availableTools
+                        .filter(tool => !["fortnox", "microsoft365"].includes(tool.name.toLowerCase()))
+                        .map((tool) => (
+                          <SelectItem
+                            key={tool.id}
+                            value={tool.name.toLowerCase()}
+                            className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer"
+                          >
+                            {tool.name}
+                          </SelectItem>
+                        ))
+                      }
                     </>
-                  ) : (
-                    availableTools.map((tool) => (
-                      <SelectItem
-                        key={tool.id}
-                        value={tool.name.toLowerCase()}
-                        className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer"
-                      >
-                        {tool.name}
-                      </SelectItem>
-                    ))
                   )}
                 </SelectContent>
               </Select>
@@ -1042,6 +1178,62 @@ export default function ToolsPage() {
                 </div>
               </div>
             )}
+
+            {selectedTool === "microsoft365" && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <Label htmlFor="m365-tenant-id" className="text-gray-300">
+                    Tenant ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="m365-tenant-id"
+                    type="text"
+                    placeholder="Your Azure AD Tenant ID or domain"
+                    value={microsoft365Form.tenantId}
+                    onChange={(e) =>
+                      setMicrosoft365Form({ ...microsoft365Form, tenantId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="m365-client-id" className="text-gray-300">
+                    Client ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="m365-client-id"
+                    type="text"
+                    placeholder="Azure AD Application (client) ID"
+                    value={microsoft365Form.clientId}
+                    onChange={(e) =>
+                      setMicrosoft365Form({ ...microsoft365Form, clientId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="m365-client-secret" className="text-gray-300">
+                    Client Secret <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="m365-client-secret"
+                    type="password"
+                    placeholder="Azure AD Client Secret"
+                    value={microsoft365Form.clientSecret}
+                    onChange={(e) =>
+                      setMicrosoft365Form({ ...microsoft365Form, clientSecret: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500">
+                  Requires Azure AD app with admin consent for User.Read.All, Directory.Read.All, Reports.Read.All permissions.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1051,14 +1243,26 @@ export default function ToolsPage() {
                 setIsConnectModalOpen(false)
                 setSelectedTool("")
                 setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+                setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
               }}
               className="border-white/10 bg-black/50 text-white"
             >
               Cancel
             </Button>
             <Button
-              onClick={handleConnectFortnox}
-              disabled={!selectedTool || (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) || isConnecting}
+              onClick={() => {
+                if (selectedTool === "fortnox") {
+                  handleConnectFortnox()
+                } else if (selectedTool === "microsoft365") {
+                  handleConnectMicrosoft365()
+                }
+              }}
+              disabled={
+                !selectedTool ||
+                (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
+                (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
+                isConnecting
+              }
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
             >
               {isConnecting ? (
