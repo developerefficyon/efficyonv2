@@ -95,6 +95,11 @@ export default function ToolDetailPage() {
     customers?: any[]
     suppliers?: any[]
   }>({})
+  const [microsoft365Info, setMicrosoft365Info] = useState<{
+    licenses?: any[]
+    users?: any[]
+    usageReports?: any
+  }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
@@ -169,6 +174,11 @@ export default function ToolDetailPage() {
         void loadFortnoxInfo(found)
         // Analysis is only loaded when user clicks "Analyze Cost Leaks" button
       }
+
+      // If it's Microsoft 365 and connected, load the information
+      if (found.tool_name === "Microsoft365" && found.status === "connected") {
+        void loadMicrosoft365Info(found)
+      }
     } catch (error) {
       console.error("Error loading integration:", error)
       toast.error("Failed to load integration", {
@@ -239,6 +249,31 @@ export default function ToolDetailPage() {
       ])
 
       const info: any = {}
+
+      // Check if any response indicates token expiration
+      const allResponses = [
+        companyRes, settingsRes, invoicesRes, supplierInvoicesRes,
+        expensesRes, vouchersRes, accountsRes, articlesRes, customersRes, suppliersRes
+      ]
+
+      for (const response of allResponses) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Fortnox integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
 
       if (companyRes.status === "fulfilled" && companyRes.value.ok) {
         try {
@@ -339,6 +374,137 @@ export default function ToolDetailPage() {
     }
   }
 
+  const loadMicrosoft365Info = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setMicrosoft365Info({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [licensesRes, usersRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/microsoft365/licenses`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/microsoft365/users`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      // Check if any response indicates token expiration
+      for (const response of [licensesRes, usersRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Microsoft 365 integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (licensesRes.status === "fulfilled" && licensesRes.value.ok) {
+        try {
+          const data = await licensesRes.value.json()
+          info.licenses = data.licenses || []
+        } catch (e) {
+          console.error("Error parsing licenses:", e)
+        }
+      }
+
+      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+        try {
+          const data = await usersRes.value.json()
+          info.users = data.users || []
+        } catch (e) {
+          console.error("Error parsing users:", e)
+        }
+      }
+
+      setMicrosoft365Info(info)
+    } catch (error) {
+      console.error("Error loading Microsoft 365 info:", error)
+      toast.error("Failed to load Microsoft 365 information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const fetchMicrosoft365CostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        router.push("/login")
+        setIsLoadingAnalysis(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
+          })
+          router.push("/login")
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        // Check if it's a token expired error that requires reconnection
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Microsoft 365 integration to continue.",
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        throw new Error(errorData.error || "Failed to analyze cost leaks")
+      }
+
+      const data = await res.json()
+      setCostLeakAnalysis(data)
+      toast.success("Analysis complete", {
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+      })
+    } catch (error) {
+      console.error("Error analyzing Microsoft 365 cost leaks:", error)
+      toast.error("Failed to analyze cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
       return <CheckCircle className="w-5 h-5 text-green-400" />
@@ -381,10 +547,10 @@ export default function ToolDetailPage() {
       })
 
       if (!res.ok) {
-        // Handle authentication errors
+        // Handle authentication errors (actual session expiry)
         if (res.status === 401 || res.status === 403) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
           })
           router.push("/login")
           setIsLoadingAnalysis(false)
@@ -393,17 +559,17 @@ export default function ToolDetailPage() {
 
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
         const errorMessage = errorData.error || "Failed to analyze cost leaks"
-        
-        // Check if it's a token refresh error
-        if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("refresh")) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+
+        // Check if it's a token expired error that requires reconnection (not login)
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Fortnox integration to continue.",
+            duration: 10000,
           })
-          router.push("/login")
           setIsLoadingAnalysis(false)
           return
         }
-        
+
         throw new Error(errorMessage)
       }
 
@@ -411,14 +577,9 @@ export default function ToolDetailPage() {
       setCostLeakAnalysis(data)
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
-      
-      // Don't show error toast if we're redirecting to login
-      if (!error.message?.toLowerCase().includes("session expired") && 
-          !error.message?.toLowerCase().includes("token")) {
-        toast.error("Failed to analyze cost leaks", {
-          description: error.message || "An error occurred.",
-        })
-      }
+      toast.error("Failed to analyze cost leaks", {
+        description: error.message || "An error occurred.",
+      })
     } finally {
       setIsLoadingAnalysis(false)
     }

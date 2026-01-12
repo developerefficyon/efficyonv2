@@ -20,6 +20,9 @@ const log = (level, endpoint, message, data = null) => {
 // Rate limiting for Fortnox API calls (25 requests per 5 seconds per access token)
 const fortnoxRateLimit = new Map()
 
+// Token refresh lock to prevent race conditions when multiple requests try to refresh simultaneously
+const tokenRefreshLocks = new Map()
+
 function checkRateLimit(accessToken) {
   const now = Date.now()
   const limit = fortnoxRateLimit.get(accessToken)
@@ -43,74 +46,145 @@ function checkRateLimit(accessToken) {
   return { allowed: true, remaining: 25 - limit.count }
 }
 
-// Helper function to refresh token if needed
+// Helper function to perform the actual token refresh
+async function doTokenRefresh(integration, tokens) {
+  const now = Math.floor(Date.now() / 1000)
+
+  log("log", "Token refresh", "Performing token refresh")
+
+  const settings = integration.settings || {}
+  const clientId = settings.client_id || integration.client_id
+  const clientSecret = settings.client_secret || integration.client_secret || ""
+
+  if (!clientId) {
+    throw new Error("Client ID not found in integration settings")
+  }
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+
+  const refreshResponse = await fetch("https://apps.fortnox.se/oauth-v1/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Basic ${credentials}`,
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: tokens.refresh_token,
+    }).toString(),
+  })
+
+  if (!refreshResponse.ok) {
+    const errorText = await refreshResponse.text()
+    log("error", "Token refresh", `Refresh failed: ${refreshResponse.status} ${errorText}`)
+
+    // Check if it's an invalid_grant error (expired/revoked refresh token)
+    let errorData = {}
+    try {
+      errorData = JSON.parse(errorText)
+    } catch (e) { /* Not JSON */ }
+
+    if (errorData.error === "invalid_grant") {
+      // Mark the integration as needing reconnection
+      await supabase
+        .from("company_integrations")
+        .update({ status: "expired" })
+        .eq("id", integration.id)
+
+      const error = new Error("Token expired. Please reconnect your Fortnox integration.")
+      error.code = "TOKEN_EXPIRED"
+      error.requiresReconnect = true
+      throw error
+    }
+
+    throw new Error("Token refresh failed")
+  }
+
+  const refreshData = await refreshResponse.json()
+  const expiresIn = refreshData.expires_in || 3600
+  const newExpiresAt = now + expiresIn
+
+  const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+  const currentTokens = currentOauthData.tokens || {}
+  const updatedOauthData = {
+    ...currentOauthData,
+    tokens: {
+      ...currentTokens,
+      access_token: refreshData.access_token,
+      refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
+      expires_in: expiresIn,
+      expires_at: newExpiresAt,
+      scope: refreshData.scope || currentTokens.scope,
+    },
+  }
+
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings, oauth_data: updatedOauthData }
+
+  await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings })
+    .eq("id", integration.id)
+
+  log("log", "Token refresh", "Token refreshed successfully")
+  return refreshData.access_token
+}
+
+// Helper function to refresh token if needed (with lock to prevent race conditions)
 async function refreshTokenIfNeeded(integration, tokens) {
+  const integrationId = integration.id
+
+  // If a refresh is already in progress for this integration, wait for it
+  if (tokenRefreshLocks.has(integrationId)) {
+    log("log", "Token refresh", "Waiting for existing refresh to complete")
+    try {
+      const newToken = await tokenRefreshLocks.get(integrationId)
+      return newToken
+    } catch (error) {
+      // If the existing refresh failed, we need to re-fetch the integration
+      // to get potentially updated tokens and try again
+      log("log", "Token refresh", "Existing refresh failed, re-fetching integration")
+      const { data: freshIntegration } = await supabase
+        .from("company_integrations")
+        .select("*")
+        .eq("id", integrationId)
+        .maybeSingle()
+
+      if (freshIntegration) {
+        const freshTokens = freshIntegration.settings?.oauth_data?.tokens
+        if (freshTokens?.access_token) {
+          return freshTokens.access_token
+        }
+      }
+      throw error
+    }
+  }
+
+  // Check if token actually needs refresh (5 minute buffer)
   let expiresAt = tokens.expires_at
   if (typeof expiresAt === 'string') {
     expiresAt = Math.floor(new Date(expiresAt).getTime() / 1000)
   }
   const now = Math.floor(Date.now() / 1000)
-  let accessToken = tokens.access_token
 
-  if (expiresAt && now >= (expiresAt - 300)) {
-    log("log", "Token refresh", "Token refresh needed")
-
-    const settings = integration.settings || {}
-    const clientId = settings.client_id || integration.client_id
-    const clientSecret = settings.client_secret || integration.client_secret || ""
-
-    if (!clientId) {
-      throw new Error("Client ID not found in integration settings")
-    }
-
-    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-
-    const refreshResponse = await fetch("https://apps.fortnox.se/oauth-v1/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${credentials}`,
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: tokens.refresh_token,
-      }).toString(),
-    })
-
-    if (!refreshResponse.ok) {
-      throw new Error("Token refresh failed")
-    }
-
-    const refreshData = await refreshResponse.json()
-    const expiresIn = refreshData.expires_in || 3600
-    const newExpiresAt = now + expiresIn
-
-    const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
-    const currentTokens = currentOauthData.tokens || {}
-    const updatedOauthData = {
-      ...currentOauthData,
-      tokens: {
-        ...currentTokens,
-        access_token: refreshData.access_token,
-        refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
-        expires_in: expiresIn,
-        expires_at: newExpiresAt,
-        scope: refreshData.scope || currentTokens.scope,
-      },
-    }
-
-    const currentSettings = integration.settings || {}
-    const updatedSettings = { ...currentSettings, oauth_data: updatedOauthData }
-
-    await supabase
-      .from("company_integrations")
-      .update({ settings: updatedSettings })
-      .eq("id", integration.id)
-
-    accessToken = refreshData.access_token
+  // Token is still valid, return current access token
+  if (!expiresAt || now < (expiresAt - 300)) {
+    return tokens.access_token
   }
 
-  return accessToken
+  // Token needs refresh - acquire lock and refresh
+  log("log", "Token refresh", "Token refresh needed, acquiring lock")
+
+  const refreshPromise = doTokenRefresh(integration, tokens)
+  tokenRefreshLocks.set(integrationId, refreshPromise)
+
+  try {
+    const newToken = await refreshPromise
+    return newToken
+  } finally {
+    // Always release the lock when done
+    tokenRefreshLocks.delete(integrationId)
+  }
 }
 
 // Helper function to fetch Fortnox data
@@ -218,9 +292,12 @@ function createFortnoxDataHandler(endpoint, requiredScope, scopeName, dataKey) {
       try {
         accessToken = await refreshTokenIfNeeded(integration, tokens)
       } catch (refreshError) {
-        return res.status(401).json({
-          error: "Token refresh failed. Please reconnect your integration.",
-          details: refreshError.message
+        // Use 400 instead of 401 to prevent frontend from treating this as auth failure
+        return res.status(400).json({
+          error: refreshError.message || "Token refresh failed. Please reconnect your integration.",
+          code: refreshError.code || "TOKEN_REFRESH_FAILED",
+          action: "reconnect",
+          requiresReconnect: true
         })
       }
 
@@ -566,6 +643,14 @@ async function syncFortnoxCustomers(req, res) {
     return res.json({ active_customers_count: activeCustomersCount, last_synced_at: lastSyncedAt })
   } catch (e) {
     log("error", endpoint, "Error:", e.message)
+    if (e.code === "TOKEN_EXPIRED" || e.requiresReconnect) {
+      return res.status(400).json({
+        error: e.message,
+        code: "TOKEN_EXPIRED",
+        action: "reconnect",
+        requiresReconnect: true
+      })
+    }
     return res.status(500).json({ error: "Unexpected error while syncing customers" })
   }
 }
@@ -620,6 +705,14 @@ async function getFortnoxCustomers(req, res) {
     return res.json({ customers: data.Customers || [] })
   } catch (error) {
     log("error", endpoint, "Error:", error.message)
+    if (error.code === "TOKEN_EXPIRED" || error.requiresReconnect) {
+      return res.status(400).json({
+        error: error.message,
+        code: "TOKEN_EXPIRED",
+        action: "reconnect",
+        requiresReconnect: true
+      })
+    }
     return res.status(500).json({ error: error.message })
   }
 }
@@ -674,6 +767,14 @@ async function getFortnoxCompanyInfo(req, res) {
     return res.json({ companyInformation: data.CompanyInformation || data })
   } catch (error) {
     log("error", endpoint, "Error:", error.message)
+    if (error.code === "TOKEN_EXPIRED" || error.requiresReconnect) {
+      return res.status(400).json({
+        error: error.message,
+        code: "TOKEN_EXPIRED",
+        action: "reconnect",
+        requiresReconnect: true
+      })
+    }
     return res.status(500).json({ error: error.message })
   }
 }
@@ -742,14 +843,23 @@ async function analyzeFortnoxCostLeaks(req, res) {
 
   try {
     const accessToken = await refreshTokenIfNeeded(integration, tokens)
+    log("log", endpoint, `Using access token: ${accessToken ? accessToken.substring(0, 20) + '...' : 'NONE'}`)
 
     const [invoicesRes, supplierInvoicesRes] = await Promise.allSettled([
-      fetchFortnoxData("/invoices", accessToken, "invoice", "invoice").catch(() => ({ Invoices: [] })),
-      fetchFortnoxData("/supplierinvoices", accessToken, "supplierinvoice", "supplier invoice").catch(() => ({ SupplierInvoices: [] })),
+      fetchFortnoxData("/invoices", accessToken, "invoice", "invoice").catch((err) => {
+        log("error", endpoint, `Failed to fetch invoices: ${err.message}`)
+        return { Invoices: [] }
+      }),
+      fetchFortnoxData("/supplierinvoices", accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
+        log("error", endpoint, `Failed to fetch supplier invoices: ${err.message}`)
+        return { SupplierInvoices: [] }
+      }),
     ])
 
     const invoices = invoicesRes.status === "fulfilled" ? (invoicesRes.value.Invoices || []) : []
     const supplierInvoices = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value.SupplierInvoices || []) : []
+
+    log("log", endpoint, `Fetched ${invoices.length} invoices, ${supplierInvoices.length} supplier invoices`)
 
     const data = {
       invoices,
@@ -806,6 +916,14 @@ async function analyzeFortnoxCostLeaks(req, res) {
     return res.json(analysis)
   } catch (error) {
     log("error", endpoint, "Error:", error.message)
+    if (error.code === "TOKEN_EXPIRED" || error.requiresReconnect) {
+      return res.status(400).json({
+        error: error.message,
+        code: "TOKEN_EXPIRED",
+        action: "reconnect",
+        requiresReconnect: true
+      })
+    }
     return res.status(500).json({
       error: error.message || "Failed to analyze cost leaks",
       details: error.stack || "No additional details"

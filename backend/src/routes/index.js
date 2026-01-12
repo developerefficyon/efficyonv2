@@ -65,6 +65,16 @@ const {
   getFortnoxSuppliers,
   analyzeFortnoxCostLeaks,
 } = require("../controllers/fortnoxController")
+
+// Microsoft 365 Controller - Microsoft 365 OAuth and data operations
+const {
+  startMicrosoft365OAuth,
+  microsoft365OAuthCallback,
+  getMicrosoft365Licenses,
+  getMicrosoft365Users,
+  getMicrosoft365UsageReports,
+  analyzeMicrosoft365CostLeaks,
+} = require("../controllers/microsoft365Controller")
 const { requireAuth } = require("../middleware/auth")
 const {
   createPaymentIntent,
@@ -127,6 +137,14 @@ router.get("/api/integrations/fortnox/articles", requireAuth, getFortnoxArticles
 router.get("/api/integrations/fortnox/suppliers", requireAuth, getFortnoxSuppliers)
 router.get("/api/integrations/fortnox/cost-leaks", requireAuth, analyzeFortnoxCostLeaks)
 router.post("/api/integrations/fortnox/sync-customers", requireAuth, syncFortnoxCustomers)
+
+// Microsoft 365 routes
+router.get("/api/integrations/microsoft365/oauth/start", requireAuth, startMicrosoft365OAuth)
+router.get("/api/integrations/microsoft365/callback", microsoft365OAuthCallback)
+router.get("/api/integrations/microsoft365/licenses", requireAuth, getMicrosoft365Licenses)
+router.get("/api/integrations/microsoft365/users", requireAuth, getMicrosoft365Users)
+router.get("/api/integrations/microsoft365/usage", requireAuth, getMicrosoft365UsageReports)
+router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, analyzeMicrosoft365CostLeaks)
 
 router.get("/api/plans", requireAuth, getPlans)
 router.post("/api/plans", requireAuth, upsertPlans)
