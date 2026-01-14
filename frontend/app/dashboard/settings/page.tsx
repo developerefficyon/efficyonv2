@@ -38,6 +38,8 @@ import { supabase } from "@/lib/supabaseClient"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { TokenBalanceDisplay } from "@/components/token-balance-display"
+import { TokenUsageHistory } from "@/components/token-usage-history"
 
 type Plan = {
   id: string
@@ -397,6 +399,13 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Token Balance Section */}
+              <div className="mt-6 space-y-6">
+                <h3 className="text-lg font-semibold text-white">Token Balance</h3>
+                <TokenBalanceDisplay variant="card" showUpgrade={true} />
+                <TokenUsageHistory />
+              </div>
             </TabsContent>
 
             <TabsContent value="notifications" className="mt-0">

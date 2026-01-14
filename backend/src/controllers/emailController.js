@@ -85,15 +85,8 @@ async function registerUserHandler(req, res) {
   }
 
   try {
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase.auth.admin.getUserByEmail(email)
-    
-    if (existingUser?.user) {
-      log("warn", endpoint, `User already exists: ${email}`)
-      return res.status(400).json({ error: "User with this email already exists" })
-    }
-
     // Create user using Admin API - this does NOT send any emails
+    // If user already exists, Supabase will return an error
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email: email,
       password: password,
@@ -105,6 +98,12 @@ async function registerUserHandler(req, res) {
     })
 
     if (createError) {
+      // Check if error is due to user already existing
+      if (createError.message?.includes("already been registered") ||
+          createError.message?.includes("already exists")) {
+        log("warn", endpoint, `User already exists: ${email}`)
+        return res.status(400).json({ error: "User with this email already exists" })
+      }
       log("error", endpoint, "Error creating user:", createError.message)
       return res.status(400).json({ error: createError.message || "Failed to create user" })
     }

@@ -59,6 +59,7 @@ import {
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { useAuth } from "@/lib/auth-context"
+import { useTokens } from "@/lib/token-context"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
@@ -77,6 +78,7 @@ interface Integration {
 
 export default function ToolDetailPage() {
   const { user, isLoading: authLoading } = useAuth()
+  const { refreshTokenBalance } = useTokens()
   const router = useRouter()
   const params = useParams()
   const integrationId = params.id as string
@@ -487,11 +489,25 @@ export default function ToolDetailPage() {
           return
         }
 
+        // Check if insufficient tokens
+        if (res.status === 402 || errorData.error === "INSUFFICIENT_TOKENS") {
+          toast.error("Insufficient tokens", {
+            description: `You need ${errorData.required || 1} token(s) but only have ${errorData.available || 0}. Please upgrade your plan.`,
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
         throw new Error(errorData.error || "Failed to analyze cost leaks")
       }
 
       const data = await res.json()
       setCostLeakAnalysis(data)
+
+      // Refresh token balance after successful analysis (tokens were consumed)
+      await refreshTokenBalance()
+
       toast.success("Analysis complete", {
         description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
       })
@@ -570,11 +586,28 @@ export default function ToolDetailPage() {
           return
         }
 
+        // Check if insufficient tokens
+        if (res.status === 402 || errorData.error === "INSUFFICIENT_TOKENS") {
+          toast.error("Insufficient tokens", {
+            description: `You need ${errorData.required || 1} token(s) but only have ${errorData.available || 0}. Please upgrade your plan.`,
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
         throw new Error(errorMessage)
       }
 
       const data = await res.json()
       setCostLeakAnalysis(data)
+
+      // Refresh token balance after successful analysis (tokens were consumed)
+      await refreshTokenBalance()
+
+      toast.success("Analysis complete", {
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+      })
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
       toast.error("Failed to analyze cost leaks", {
