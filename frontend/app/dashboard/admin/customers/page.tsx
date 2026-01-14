@@ -34,6 +34,9 @@ import {
   MoreVertical,
   CheckCircle,
   Clock,
+  Loader2,
+  Coins,
+  ArrowUpDown,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -48,7 +51,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
@@ -73,12 +78,17 @@ export default function AdminCustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<(typeof customers)[number] | null>(null)
   const [customerDetails, setCustomerDetails] = useState<any | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
+  const [changePlanCustomer, setChangePlanCustomer] = useState<(typeof customers)[number] | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<string>("")
+  const [resetTokens, setResetTokens] = useState(true)
+  const [isChangingPlan, setIsChangingPlan] = useState(false)
   const [customers, setCustomers] = useState<
     {
       id: string
       name: string // company name
       email: string
       plan: string
+      planTier: string
       employees: number
       status: string
       joined: string
@@ -87,6 +97,7 @@ export default function AdminCustomersPage() {
       avatar: string
       emailVerified: boolean
       adminApproved: boolean
+      subscription?: any
     }[]
   >([])
   const itemsPerPage = 10
@@ -302,6 +313,68 @@ export default function AdminCustomersPage() {
       console.error("Network error loading customer details", err)
     } finally {
       setDetailsLoading(false)
+    }
+  }
+
+  const handleChangePlan = async () => {
+    if (!changePlanCustomer || !selectedPlan) {
+      toast.error("Please select a plan")
+      return
+    }
+
+    setIsChangingPlan(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required", { description: "Please log in again" })
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/admin/subscription/change-plan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          userId: changePlanCustomer.id,
+          planTier: selectedPlan,
+          resetTokens: resetTokens,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to change plan")
+      }
+
+      await res.json()
+
+      const tokensByPlan: Record<string, number> = {
+        free: 0,
+        startup: 10,
+        growth: 50,
+        custom: 200,
+      }
+
+      toast.success("Plan changed successfully", {
+        description: `${changePlanCustomer.name} is now on ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan with ${tokensByPlan[selectedPlan] || 0} tokens`,
+      })
+
+      setChangePlanCustomer(null)
+      setSelectedPlan("")
+      setResetTokens(true)
+
+      // Reload customers list
+      await loadCustomers()
+    } catch (error: any) {
+      toast.error("Failed to change plan", {
+        description: error.message || "An error occurred",
+      })
+    } finally {
+      setIsChangingPlan(false)
     }
   }
 
@@ -535,6 +608,15 @@ export default function AdminCustomersPage() {
                             onClick={() => void openDetails(customer)}
                           >
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="hover:bg-white/10"
+                            onClick={() => {
+                              setChangePlanCustomer(customer)
+                              setSelectedPlan(customer.planTier || "free")
+                            }}
+                          >
+                            Change Plan
                           </DropdownMenuItem>
                           <DropdownMenuItem className="hover:bg-white/10">
                             Edit
@@ -835,6 +917,121 @@ export default function AdminCustomersPage() {
               )}
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Plan Modal */}
+      <Dialog open={!!changePlanCustomer} onOpenChange={(open) => !open && setChangePlanCustomer(null)}>
+        <DialogContent className="bg-black border-white/10 text-white w-[95vw] max-w-md sm:w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpDown className="w-5 h-5 text-cyan-400" />
+              Change Plan
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Change subscription plan for {changePlanCustomer?.name || changePlanCustomer?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          {changePlanCustomer && (
+            <div className="space-y-6 py-4">
+              {/* Current Plan */}
+              <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current Plan</p>
+                <p className="text-white font-medium">
+                  {changePlanCustomer.plan || "Free"}
+                </p>
+              </div>
+
+              {/* Plan Selection */}
+              <div className="space-y-2">
+                <Label className="text-gray-300">Select New Plan</Label>
+                <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                  <SelectTrigger className="bg-black/50 border-white/10 text-white">
+                    <SelectValue placeholder="Select a plan" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black border-white/10 z-[200]">
+                    <SelectItem value="free" className="text-white focus:bg-white/10 focus:text-white">
+                      Free - $0/mo (0 tokens)
+                    </SelectItem>
+                    <SelectItem value="startup" className="text-white focus:bg-white/10 focus:text-white">
+                      Startup - $29/mo (10 tokens)
+                    </SelectItem>
+                    <SelectItem value="growth" className="text-white focus:bg-white/10 focus:text-white">
+                      Growth - $99/mo (50 tokens)
+                    </SelectItem>
+                    <SelectItem value="custom" className="text-white focus:bg-white/10 focus:text-white">
+                      Enterprise - $299/mo (200 tokens)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Token Info */}
+              {selectedPlan && (
+                <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Coins className="w-4 h-4 text-cyan-400" />
+                    <span className="text-cyan-400 font-medium">Token Allocation</span>
+                  </div>
+                  <p className="text-sm text-gray-300">
+                    {selectedPlan === "free"
+                      ? "Free plan includes 0 tokens (limited access)"
+                      : selectedPlan === "startup"
+                        ? "Startup plan includes 10 tokens per month"
+                        : selectedPlan === "growth"
+                          ? "Growth plan includes 50 tokens per month"
+                          : "Enterprise plan includes 200 tokens per month"}
+                  </p>
+                </div>
+              )}
+
+              {/* Reset Tokens Checkbox */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="resetTokens"
+                  checked={resetTokens}
+                  onChange={(e) => setResetTokens(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/10 bg-black/50 text-cyan-500 focus:ring-cyan-500"
+                />
+                <Label htmlFor="resetTokens" className="text-gray-300 text-sm cursor-pointer">
+                  Reset tokens to new plan allocation
+                </Label>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setChangePlanCustomer(null)
+                setSelectedPlan("")
+                setResetTokens(true)
+              }}
+              className="border-white/10 bg-transparent text-white hover:bg-white/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleChangePlan}
+              disabled={!selectedPlan || isChangingPlan}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600"
+            >
+              {isChangingPlan ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Changing...
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  Change Plan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

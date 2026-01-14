@@ -83,6 +83,11 @@ const {
   getPlansDetails,
   handleStripeWebhook,
   useTokens,
+  getTokenHistory,
+  getTokenBalance,
+  adminGetTokenUsage,
+  adminAdjustTokens,
+  adminChangePlan,
 } = require("../controllers/stripeController")
 
 // Email Controller - Resend email sending
@@ -158,9 +163,16 @@ router.post("/api/stripe/confirm-payment", requireAuth, confirmPaymentIntent)
 router.get("/api/stripe/subscription", requireAuth, getUserSubscription)
 router.get("/api/stripe/plans", getPlansDetails)
 router.post("/api/stripe/use-tokens", requireAuth, useTokens)
+router.get("/api/stripe/token-history", requireAuth, getTokenHistory)
+router.get("/api/stripe/token-balance", requireAuth, getTokenBalance)
 
 // Stripe Webhook (requires raw body, no JSON parsing)
 router.post("/api/stripe/webhook", express.raw({type: 'application/json'}), handleStripeWebhook)
+
+// Admin Token Management Routes
+router.get("/api/admin/tokens/usage", requireAuth, adminGetTokenUsage)
+router.post("/api/admin/tokens/adjust", requireAuth, adminAdjustTokens)
+router.post("/api/admin/subscription/change-plan", requireAuth, adminChangePlan)
 
 // AI/OpenAI Routes
 router.post("/api/ai/analyze", requireAuth, analyzeWithAI)

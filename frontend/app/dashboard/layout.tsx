@@ -1,6 +1,7 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
+import { TokenProvider } from "@/lib/token-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import {
@@ -33,7 +34,10 @@ import {
   Bell,
   Search,
   ChevronRight,
+  Coins,
 } from "lucide-react"
+import { TokenBalanceDisplay } from "@/components/token-balance-display"
+import { LowTokenWarning } from "@/components/low-token-warning"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
@@ -121,6 +125,13 @@ const adminMenuItems = [
     href: "/dashboard/admin/billing",
     badge: null,
     description: "Revenue & subscriptions",
+  },
+  {
+    title: "Token Management",
+    icon: Coins,
+    href: "/dashboard/admin/tokens",
+    badge: null,
+    description: "Customer token usage",
   },
   {
     title: "Integrations Health",
@@ -283,6 +294,7 @@ export default function DashboardLayout({
   const menuItems = isAdmin ? adminMenuItems : userMenuItems
 
   return (
+    <TokenProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
         <Sidebar className="border-r border-white/10 !bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl [&>div]:!bg-transparent [&_[data-sidebar=sidebar]]:!bg-transparent [&_[data-sidebar=sidebar]]:!text-white shrink-0">
@@ -369,6 +381,12 @@ export default function DashboardLayout({
                   {isAdmin ? "Admin Dashboard" : "Dashboard"}
                 </h1>
               </div>
+              {/* Token Balance Display - Only for non-admin users */}
+              {!isAdmin && (
+                <div className="hidden sm:block shrink-0">
+                  <TokenBalanceDisplay variant="header" />
+                </div>
+              )}
               <div className="relative hidden sm:block w-48 lg:w-64 shrink-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -394,7 +412,10 @@ export default function DashboardLayout({
           <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0 overflow-x-hidden">{children}</div>
         </main>
       </div>
+      {/* Low Token Warning Modal - Only for non-admin users */}
+      {!isAdmin && <LowTokenWarning />}
     </SidebarProvider>
+    </TokenProvider>
   )
 }
 

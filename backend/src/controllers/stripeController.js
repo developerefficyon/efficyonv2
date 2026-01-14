@@ -1,5 +1,6 @@
 const stripe = require("../config/stripe")
 const { supabase } = require("../config/supabase")
+const tokenService = require("../services/tokenService")
 
 /**
  * Get plan details from database
@@ -410,6 +411,10 @@ async function handleStripeWebhook(req, res) {
         await handleSubscriptionDeleted(event.data.object)
         break
 
+      case "invoice.payment_succeeded":
+        await handleInvoicePaymentSucceeded(event.data.object)
+        break
+
       default:
         console.log(`[${new Date().toISOString()}] Unhandled event type: ${event.type}`)
     }
@@ -644,6 +649,63 @@ async function handleSubscriptionDeleted(subscription) {
 }
 
 /**
+ * Handle invoice payment succeeded - used for subscription renewals
+ * Resets tokens to full allocation on renewal
+ */
+async function handleInvoicePaymentSucceeded(invoice) {
+  console.log(`[${new Date().toISOString()}] Invoice payment succeeded: ${invoice.id}`)
+
+  // Only process for subscription renewals (not initial payment)
+  // billing_reason: 'subscription_create' for new, 'subscription_cycle' for renewal
+  if (invoice.billing_reason !== "subscription_cycle") {
+    console.log(`[${new Date().toISOString()}] Skipping non-renewal invoice: ${invoice.billing_reason}`)
+    return
+  }
+
+  const customerId = invoice.customer
+
+  try {
+    // Get subscription from database
+    const { data: subscription, error: subError } = await supabase
+      .from("subscriptions")
+      .select("*, plan_catalog(*)")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle()
+
+    if (subError || !subscription) {
+      console.warn(`[${new Date().toISOString()}] No subscription found for customer: ${customerId}`)
+      return
+    }
+
+    const newTokens = subscription.plan_catalog?.included_tokens || 0
+
+    // Reset tokens for the new billing period
+    const result = await tokenService.resetTokensForRenewal(subscription.user_id, newTokens)
+
+    if (result.success) {
+      console.log(`[${new Date().toISOString()}] Tokens reset for user ${subscription.user_id}: ${newTokens} tokens (was ${result.previousBalance})`)
+    } else {
+      console.error(`[${new Date().toISOString()}] Failed to reset tokens:`, result.error)
+    }
+
+    // Update subscription period dates
+    if (invoice.lines?.data?.[0]) {
+      const lineItem = invoice.lines.data[0]
+      await supabase
+        .from("subscriptions")
+        .update({
+          current_period_start: new Date(lineItem.period.start * 1000).toISOString(),
+          current_period_end: new Date(lineItem.period.end * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("stripe_customer_id", customerId)
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error handling invoice payment:`, error.message)
+  }
+}
+
+/**
  * Use tokens for analysis
  */
 async function useTokens(req, res) {
@@ -716,6 +778,328 @@ async function useTokens(req, res) {
   }
 }
 
+/**
+ * Get user's token usage history
+ */
+async function getTokenHistory(req, res) {
+  console.log(`[${new Date().toISOString()}] GET /api/stripe/token-history`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { limit = 20, offset = 0 } = req.query
+
+    const result = await tokenService.getTokenHistory(user.id, parseInt(limit), parseInt(offset))
+
+    if (result.error) {
+      return res.status(500).json({ error: result.error })
+    }
+
+    return res.json({
+      success: true,
+      history: result.history,
+      total: result.total,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching token history:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Get user's token balance
+ */
+async function getTokenBalance(req, res) {
+  console.log(`[${new Date().toISOString()}] GET /api/stripe/token-balance`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const result = await tokenService.checkTokenBalance(user.id, 0)
+
+    return res.json({
+      success: true,
+      tokenBalance: {
+        total: result.tokenBalance?.total_tokens || 0,
+        used: result.tokenBalance?.used_tokens || 0,
+        available: result.available || 0,
+        planTier: result.tokenBalance?.plan_tier || "free",
+      },
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching token balance:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Admin: Get all customers token usage
+ */
+async function adminGetTokenUsage(req, res) {
+  console.log(`[${new Date().toISOString()}] GET /api/admin/tokens/usage`)
+
+  try {
+    const admin = req.user
+    if (!admin) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", admin.id)
+      .maybeSingle()
+
+    if (profile?.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" })
+    }
+
+    const result = await tokenService.getAllTokenUsage()
+
+    if (result.error) {
+      return res.status(500).json({ error: result.error })
+    }
+
+    return res.json({
+      success: true,
+      customers: result.customers,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching token usage:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Admin: Adjust customer tokens
+ */
+async function adminAdjustTokens(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/admin/tokens/adjust`)
+
+  try {
+    const admin = req.user
+    if (!admin) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", admin.id)
+      .maybeSingle()
+
+    if (profile?.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" })
+    }
+
+    const { userId, adjustment, reason } = req.body
+
+    if (!userId || adjustment === undefined) {
+      return res.status(400).json({ error: "userId and adjustment are required" })
+    }
+
+    const result = await tokenService.adminAdjustTokens(userId, adjustment, reason, admin.id)
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    return res.json({
+      success: true,
+      adjustment: result.adjustment,
+      balanceBefore: result.balanceBefore,
+      balanceAfter: result.balanceAfter,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error adjusting tokens:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Admin: Change customer plan and initialize tokens
+ * This allows admins to set a customer's plan without going through Stripe
+ * Useful for testing and giving free upgrades/trials
+ */
+async function adminChangePlan(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/admin/subscription/change-plan`)
+
+  try {
+    const admin = req.user
+    if (!admin) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    // Check if user is admin
+    const { data: adminProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", admin.id)
+      .maybeSingle()
+
+    if (adminProfile?.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" })
+    }
+
+    const { userId, planTier, resetTokens = true } = req.body
+
+    if (!userId || !planTier) {
+      return res.status(400).json({ error: "userId and planTier are required" })
+    }
+
+    // Validate plan tier
+    const validTiers = ["free", "startup", "growth", "custom"]
+    if (!validTiers.includes(planTier)) {
+      return res.status(400).json({ error: `Invalid plan tier. Must be one of: ${validTiers.join(", ")}` })
+    }
+
+    // Get plan details
+    const { data: plan, error: planError } = await supabase
+      .from("plan_catalog")
+      .select("*")
+      .eq("tier", planTier)
+      .maybeSingle()
+
+    if (planError || !plan) {
+      return res.status(400).json({ error: `Plan '${planTier}' not found` })
+    }
+
+    // Get user's profile and company
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id, email, full_name")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (!profile) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    const companyId = profile.company_id || null
+
+    // Check if subscription exists
+    const { data: existingSubscription } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    // Create or update subscription
+    const subscriptionData = {
+      user_id: userId,
+      company_id: companyId,
+      plan_tier: planTier,
+      stripe_customer_id: `admin_assigned_${userId}`, // Placeholder for admin-assigned plans
+      status: planTier === "free" ? "incomplete" : "active",
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      amount_cents: plan.price_monthly_cents,
+      currency: "usd",
+      updated_at: new Date().toISOString(),
+    }
+
+    let subscriptionResult
+    if (existingSubscription) {
+      // Update existing subscription
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .update(subscriptionData)
+        .eq("id", existingSubscription.id)
+        .select()
+        .maybeSingle()
+      subscriptionResult = { data, error }
+    } else {
+      // Insert new subscription
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .insert(subscriptionData)
+        .select()
+        .maybeSingle()
+      subscriptionResult = { data, error }
+    }
+
+    if (subscriptionResult.error) {
+      console.error(`[${new Date().toISOString()}] Error updating subscription:`, subscriptionResult.error.message)
+      return res.status(500).json({ error: "Failed to update subscription" })
+    }
+
+    // Check if token balance exists
+    const { data: existingTokenBalance } = await supabase
+      .from("token_balances")
+      .select("id, used_tokens")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    // Create or update token balance
+    const tokenBalanceData = {
+      user_id: userId,
+      company_id: companyId,
+      plan_tier: planTier,
+      total_tokens: plan.included_tokens,
+      used_tokens: resetTokens ? 0 : (existingTokenBalance?.used_tokens || 0),
+      updated_at: new Date().toISOString(),
+    }
+
+    let tokenResult
+    if (existingTokenBalance) {
+      const { error } = await supabase
+        .from("token_balances")
+        .update(tokenBalanceData)
+        .eq("id", existingTokenBalance.id)
+      tokenResult = { error }
+    } else {
+      const { error } = await supabase
+        .from("token_balances")
+        .insert(tokenBalanceData)
+      tokenResult = { error }
+    }
+
+    if (tokenResult.error) {
+      console.error(`[${new Date().toISOString()}] Error updating token balance:`, tokenResult.error.message)
+      // Don't fail the request, subscription was updated successfully
+    }
+
+    // Log the action
+    await supabase.from("token_usage_history").insert({
+      user_id: userId,
+      company_id: companyId,
+      tokens_consumed: 0,
+      action_type: "admin_adjustment",
+      description: `Admin changed plan to ${planTier}. Tokens: ${plan.included_tokens}${resetTokens ? " (reset)" : ""}`,
+      balance_before: existingTokenBalance ? (plan.included_tokens - existingTokenBalance.used_tokens) : 0,
+      balance_after: plan.included_tokens,
+    })
+
+    console.log(`[${new Date().toISOString()}] Admin changed plan for user ${userId} to ${planTier}`)
+
+    return res.json({
+      success: true,
+      message: `Plan changed to ${plan.name}`,
+      subscription: {
+        planTier,
+        planName: plan.name,
+        status: subscriptionData.status,
+      },
+      tokenBalance: {
+        total: plan.included_tokens,
+        used: resetTokens ? 0 : (existingTokenBalance?.used_tokens || 0),
+        available: resetTokens ? plan.included_tokens : (plan.included_tokens - (existingTokenBalance?.used_tokens || 0)),
+      },
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error changing plan:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   createPaymentIntent,
   confirmPaymentIntent,
@@ -723,5 +1107,10 @@ module.exports = {
   getPlansDetails,
   handleStripeWebhook,
   useTokens,
+  getTokenHistory,
+  getTokenBalance,
+  adminGetTokenUsage,
+  adminAdjustTokens,
+  adminChangePlan,
 }
 
