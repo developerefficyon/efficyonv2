@@ -15,6 +15,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   LayoutDashboard,
@@ -151,6 +152,106 @@ const adminMenuItems = [
   },
 ]
 
+// Hook to close sidebar on mobile when navigating
+function useCloseSidebarOnMobile() {
+  const { setOpenMobile, isMobile } = useSidebar()
+
+  return () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
+}
+
+// Navigation component that can access sidebar context
+function SidebarNavigation({
+  menuItems,
+  pathname,
+  isAdmin
+}: {
+  menuItems: typeof userMenuItems
+  pathname: string | null
+  isAdmin: boolean
+}) {
+  const handleNavClick = useCloseSidebarOnMobile()
+
+  return (
+    <SidebarContent className="px-3 py-4">
+      <SidebarGroup>
+        <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+          {isAdmin ? "Administration" : "Navigation"}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    className={cn(
+                      "group relative h-11 px-3 rounded-lg transition-all duration-200",
+                      "text-gray-300 hover:text-white",
+                      "hover:bg-gradient-to-r hover:from-cyan-600/30 hover:to-blue-700/30",
+                      "hover:border-l-2 hover:border-cyan-500/50",
+                      "hover:shadow-md hover:shadow-cyan-500/10",
+                      "data-[active=true]:bg-gradient-to-r data-[active=true]:from-cyan-600/30 data-[active=true]:to-blue-700/30",
+                      "data-[active=true]:text-cyan-400 data-[active=true]:font-semibold",
+                      "data-[active=true]:shadow-lg data-[active=true]:shadow-cyan-500/10",
+                      "data-[active=true]:border-l-2 data-[active=true]:border-cyan-500"
+                    )}
+                  >
+                    <Link href={item.href} onClick={handleNavClick} className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-1.5 rounded-md transition-all",
+                          isActive
+                            ? "bg-cyan-600/30 text-cyan-400"
+                            : "bg-white/5 text-gray-400 group-hover:bg-cyan-600/30 group-hover:text-cyan-400 group-hover:scale-105"
+                        )}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{item.title}</p>
+                          {item.description && (
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.badge && (
+                          <Badge
+                            variant={item.badge === "New" ? "default" : "secondary"}
+                            className={cn(
+                              "h-5 px-1.5 text-[10px] font-semibold",
+                              item.badge === "New"
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                            )}
+                          >
+                            {item.badge}
+                          </Badge>
+                        )}
+                        {isActive && (
+                          <ChevronRight className="w-3 h-3 text-cyan-400" />
+                        )}
+                      </div>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </SidebarContent>
+  )
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -206,81 +307,7 @@ export default function DashboardLayout({
             </Link>
           </SidebarHeader>
 
-          <SidebarContent className="px-3 py-4">
-            {/* Navigation Menu */}
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
-                {isAdmin ? "Administration" : "Navigation"}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="space-y-1">
-                  {menuItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = pathname === item.href
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          className={cn(
-                            "group relative h-11 px-3 rounded-lg transition-all duration-200",
-                            "text-gray-300 hover:text-white",
-                            "hover:bg-gradient-to-r hover:from-cyan-600/30 hover:to-blue-700/30",
-                            "hover:border-l-2 hover:border-cyan-500/50",
-                            "hover:shadow-md hover:shadow-cyan-500/10",
-                            "data-[active=true]:bg-gradient-to-r data-[active=true]:from-cyan-600/30 data-[active=true]:to-blue-700/30",
-                            "data-[active=true]:text-cyan-400 data-[active=true]:font-semibold",
-                            "data-[active=true]:shadow-lg data-[active=true]:shadow-cyan-500/10",
-                            "data-[active=true]:border-l-2 data-[active=true]:border-cyan-500"
-                          )}
-                        >
-                          <Link href={item.href} className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "p-1.5 rounded-md transition-all",
-                                isActive 
-                                  ? "bg-cyan-600/30 text-cyan-400" 
-                                  : "bg-white/5 text-gray-400 group-hover:bg-cyan-600/30 group-hover:text-cyan-400 group-hover:scale-105"
-                              )}>
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">{item.title}</p>
-                                {item.description && (
-                                  <p className="text-[10px] text-gray-500 truncate">
-                                    {item.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {item.badge && (
-                                <Badge 
-                                  variant={item.badge === "New" ? "default" : "secondary"}
-                                  className={cn(
-                                    "h-5 px-1.5 text-[10px] font-semibold",
-                                    item.badge === "New" 
-                                      ? "bg-green-500/20 text-green-400 border-green-500/30" 
-                                      : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
-                                  )}
-                                >
-                                  {item.badge}
-                                </Badge>
-                              )}
-                              {isActive && (
-                                <ChevronRight className="w-3 h-3 text-cyan-400" />
-                              )}
-                            </div>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-          </SidebarContent>
+          <SidebarNavigation menuItems={menuItems} pathname={pathname} isAdmin={isAdmin} />
 
           {/* Footer with User Profile */}
           <div className="p-4 border-t border-white/10 bg-black/50 backdrop-blur-sm">

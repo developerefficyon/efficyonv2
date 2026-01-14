@@ -50,6 +50,11 @@ import {
   Zap,
   DollarSign,
   Download,
+  Key,
+  Timer,
+  Shield,
+  Copy,
+  Settings,
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -90,6 +95,11 @@ export default function ToolDetailPage() {
     customers?: any[]
     suppliers?: any[]
   }>({})
+  const [microsoft365Info, setMicrosoft365Info] = useState<{
+    licenses?: any[]
+    users?: any[]
+    usageReports?: any
+  }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
@@ -105,6 +115,15 @@ export default function ToolDetailPage() {
   const [showPdfPreview, setShowPdfPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const ITEMS_PER_PAGE = 10
+
+  // Data tab pagination states
+  const [customersPage, setCustomersPage] = useState(1)
+  const [invoicesPage, setInvoicesPage] = useState(1)
+  const [supplierInvoicesPage, setSupplierInvoicesPage] = useState(1)
+  const [accountsPage, setAccountsPage] = useState(1)
+  const [articlesPage, setArticlesPage] = useState(1)
+  const [suppliersPage, setSuppliersPage] = useState(1)
+  const [activeDataTab, setActiveDataTab] = useState<string>("company")
 
   useEffect(() => {
     if (authLoading) {
@@ -154,6 +173,11 @@ export default function ToolDetailPage() {
       if (found.tool_name === "Fortnox" && found.status === "connected") {
         void loadFortnoxInfo(found)
         // Analysis is only loaded when user clicks "Analyze Cost Leaks" button
+      }
+
+      // If it's Microsoft 365 and connected, load the information
+      if (found.tool_name === "Microsoft365" && found.status === "connected") {
+        void loadMicrosoft365Info(found)
       }
     } catch (error) {
       console.error("Error loading integration:", error)
@@ -225,6 +249,31 @@ export default function ToolDetailPage() {
       ])
 
       const info: any = {}
+
+      // Check if any response indicates token expiration
+      const allResponses = [
+        companyRes, settingsRes, invoicesRes, supplierInvoicesRes,
+        expensesRes, vouchersRes, accountsRes, articlesRes, customersRes, suppliersRes
+      ]
+
+      for (const response of allResponses) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Fortnox integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
 
       if (companyRes.status === "fulfilled" && companyRes.value.ok) {
         try {
@@ -325,6 +374,137 @@ export default function ToolDetailPage() {
     }
   }
 
+  const loadMicrosoft365Info = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setMicrosoft365Info({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [licensesRes, usersRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/microsoft365/licenses`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/microsoft365/users`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      // Check if any response indicates token expiration
+      for (const response of [licensesRes, usersRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Microsoft 365 integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (licensesRes.status === "fulfilled" && licensesRes.value.ok) {
+        try {
+          const data = await licensesRes.value.json()
+          info.licenses = data.licenses || []
+        } catch (e) {
+          console.error("Error parsing licenses:", e)
+        }
+      }
+
+      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+        try {
+          const data = await usersRes.value.json()
+          info.users = data.users || []
+        } catch (e) {
+          console.error("Error parsing users:", e)
+        }
+      }
+
+      setMicrosoft365Info(info)
+    } catch (error) {
+      console.error("Error loading Microsoft 365 info:", error)
+      toast.error("Failed to load Microsoft 365 information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const fetchMicrosoft365CostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        router.push("/login")
+        setIsLoadingAnalysis(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
+          })
+          router.push("/login")
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        // Check if it's a token expired error that requires reconnection
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Microsoft 365 integration to continue.",
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        throw new Error(errorData.error || "Failed to analyze cost leaks")
+      }
+
+      const data = await res.json()
+      setCostLeakAnalysis(data)
+      toast.success("Analysis complete", {
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+      })
+    } catch (error) {
+      console.error("Error analyzing Microsoft 365 cost leaks:", error)
+      toast.error("Failed to analyze cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
       return <CheckCircle className="w-5 h-5 text-green-400" />
@@ -367,10 +547,10 @@ export default function ToolDetailPage() {
       })
 
       if (!res.ok) {
-        // Handle authentication errors
+        // Handle authentication errors (actual session expiry)
         if (res.status === 401 || res.status === 403) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
           })
           router.push("/login")
           setIsLoadingAnalysis(false)
@@ -379,17 +559,17 @@ export default function ToolDetailPage() {
 
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
         const errorMessage = errorData.error || "Failed to analyze cost leaks"
-        
-        // Check if it's a token refresh error
-        if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("refresh")) {
-          toast.error("Session expired", { 
-            description: "Please log in again to continue" 
+
+        // Check if it's a token expired error that requires reconnection (not login)
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Fortnox integration to continue.",
+            duration: 10000,
           })
-          router.push("/login")
           setIsLoadingAnalysis(false)
           return
         }
-        
+
         throw new Error(errorMessage)
       }
 
@@ -397,14 +577,9 @@ export default function ToolDetailPage() {
       setCostLeakAnalysis(data)
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
-      
-      // Don't show error toast if we're redirecting to login
-      if (!error.message?.toLowerCase().includes("session expired") && 
-          !error.message?.toLowerCase().includes("token")) {
-        toast.error("Failed to analyze cost leaks", {
-          description: error.message || "An error occurred.",
-        })
-      }
+      toast.error("Failed to analyze cost leaks", {
+        description: error.message || "An error occurred.",
+      })
     } finally {
       setIsLoadingAnalysis(false)
     }
@@ -868,7 +1043,7 @@ export default function ToolDetailPage() {
         <Button
           variant="ghost"
           onClick={() => router.push("/dashboard/tools")}
-          className="text-gray-400 hover:text-white self-start"
+          className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors self-start"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Tools
@@ -1485,41 +1660,169 @@ export default function ToolDetailPage() {
           </TabsContent>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-0">
+          <TabsContent value="overview" className="mt-0 space-y-6">
+            {/* Connection Details Card */}
             <Card className="bg-black/80 backdrop-blur-xl border-white/10">
               <CardHeader>
-                <CardTitle className="text-white">Integration Information</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-cyan-400" />
+                  Connection Details
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Connection Type</p>
-                    <p className="text-white">{integration.connection_type || "N/A"}</p>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
+                    <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Environment</p>
-                    <p className="text-white">{integration.environment || "N/A"}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
+                    <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                      {integration.environment || "N/A"}
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Created</p>
-                    <p className="text-white">{formatDate(integration.created_at)}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
+                    <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Last Updated</p>
-                    <p className="text-white">{formatDate(integration.updated_at)}</p>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
+                    <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
                   </div>
                 </div>
-
-                {integration.settings && (
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Settings</p>
-                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300">
-                      {JSON.stringify(integration.settings, null, 2)}
-                    </pre>
-                  </div>
-                )}
               </CardContent>
             </Card>
+
+            {/* Token Information Card */}
+            {integration.settings?.oauth_data?.tokens && (
+              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Key className="w-5 h-5 text-cyan-400" />
+                    Authentication Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Token Status Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Token Expiry */}
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
+                      </div>
+                      <p className="text-white font-medium">
+                        {integration.settings.oauth_data.tokens.expires_at
+                          ? new Date(integration.settings.oauth_data.tokens.expires_at * 1000).toLocaleString()
+                          : "N/A"}
+                      </p>
+                      {integration.settings.oauth_data.tokens.expires_at && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
+                            ? <span className="text-green-400">Active</span>
+                            : <span className="text-red-400">Expired</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Token Duration */}
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Timer className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
+                      </div>
+                      <p className="text-white font-medium">
+                        {integration.settings.oauth_data.tokens.expires_in
+                          ? `${Math.floor(integration.settings.oauth_data.tokens.expires_in / 60)} minutes`
+                          : "N/A"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {integration.settings.oauth_data.tokens.expires_in} seconds
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Access Token */}
+                  {integration.settings.oauth_data.tokens.access_token && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-cyan-400" />
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
+                        </div>
+                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                          {integration.settings.oauth_data.tokens.token_type || "bearer"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                          {integration.settings.oauth_data.tokens.access_token.substring(0, 50)}...
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
+                            toast.success("Access token copied to clipboard")
+                          }}
+                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Refresh Token */}
+                  {integration.settings.oauth_data.tokens.refresh_token && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4 text-green-400" />
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
+                        </div>
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                          Available
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                          {integration.settings.oauth_data.tokens.refresh_token.substring(0, 50)}...
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
+                            toast.success("Refresh token copied to clipboard")
+                          }}
+                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scopes */}
+                  {integration.settings.oauth_data.tokens.scope && (
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle className="w-4 h-4 text-gray-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {integration.settings.oauth_data.tokens.scope.split(" ").map((scope: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs text-gray-300 border-white/20 bg-white/5">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Data Tab */}
@@ -1564,120 +1867,689 @@ export default function ToolDetailPage() {
                     </div>
                   ) : (
                     <>
-                      {/* Search */}
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <Input
-                          placeholder="Search data..."
-                          value={infoSearchQuery}
-                          onChange={(e) => setInfoSearchQuery(e.target.value)}
-                          className="pl-10 bg-black/50 border-white/10 text-white"
-                        />
+                      {/* Search and Tab Navigation */}
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            placeholder="Search data..."
+                            value={infoSearchQuery}
+                            onChange={(e) => setInfoSearchQuery(e.target.value)}
+                            className="pl-10 bg-black/50 border-white/10 text-white"
+                          />
+                        </div>
+
+                        {/* Data Tab Navigation */}
+                        <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                          <button
+                            onClick={() => setActiveDataTab("company")}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                              activeDataTab === "company"
+                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                : "text-gray-400 hover:text-white hover:bg-white/5"
+                            }`}
+                          >
+                            <Wallet className="w-4 h-4" />
+                            <span className="hidden sm:inline">Company</span>
+                          </button>
+                          {fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("customers")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "customers"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Customers</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.customers.length}
+                              </Badge>
+                            </button>
+                          )}
+                          {fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("invoices")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "invoices"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="hidden sm:inline">Invoices</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.invoices.length}
+                              </Badge>
+                            </button>
+                          )}
+                          {fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("supplierInvoices")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "supplierInvoices"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Receipt className="w-4 h-4" />
+                              <span className="hidden sm:inline">Supplier Inv.</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.supplierInvoices.length}
+                              </Badge>
+                            </button>
+                          )}
+                          {fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("accounts")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "accounts"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <BookOpen className="w-4 h-4" />
+                              <span className="hidden sm:inline">Accounts</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.accounts.length}
+                              </Badge>
+                            </button>
+                          )}
+                          {fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("articles")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "articles"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Package className="w-4 h-4" />
+                              <span className="hidden sm:inline">Articles</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.articles.length}
+                              </Badge>
+                            </button>
+                          )}
+                          {fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (
+                            <button
+                              onClick={() => setActiveDataTab("suppliers")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "suppliers"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Suppliers</span>
+                              <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                {fortnoxInfo.suppliers.length}
+                              </Badge>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Company Information */}
-                      {fortnoxInfo.company && (
+                      {/* Company Information Tab */}
+                      {activeDataTab === "company" && fortnoxInfo.company && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Wallet className="w-4 h-4" />
+                            <Wallet className="w-4 h-4 text-cyan-400" />
                             Company Information
                           </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(fortnoxInfo.company, null, 2)}
-                          </pre>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {(fortnoxInfo.company.CompanyName || fortnoxInfo.company.Name) && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.CompanyName || fortnoxInfo.company.Name}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.OrganisationNumber && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Organization Number</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.OrganisationNumber}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.Email && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.Email}</p>
+                              </div>
+                            )}
+                            {(fortnoxInfo.company.Phone1 || fortnoxInfo.company.Phone) && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Phone</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.Phone1 || fortnoxInfo.company.Phone}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.Address && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Address</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.Address}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.City && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">City</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.City}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.ZipCode && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Zip Code</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.ZipCode}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.Country && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.Country}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.CountryCode && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country Code</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.CountryCode}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.WWW && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Website</p>
+                                <p className="text-cyan-400 font-medium">{fortnoxInfo.company.WWW}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.VatNumber && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">VAT Number</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.VatNumber}</p>
+                              </div>
+                            )}
+                            {fortnoxInfo.company.DatabaseNumber && (
+                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Database Number</p>
+                                <p className="text-white font-medium">{fortnoxInfo.company.DatabaseNumber}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Settings sub-section */}
+                          {fortnoxInfo.settings && Object.keys(fortnoxInfo.settings).length > 0 && (
+                            <div className="mt-6">
+                              <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
+                                <Settings className="w-4 h-4 text-cyan-400" />
+                                Settings
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Object.entries(fortnoxInfo.settings).map(([key, value]) => (
+                                  <div key={key} className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                                    </p>
+                                    <p className="text-white font-medium">
+                                      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value || 'N/A')}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* Settings */}
-                      {fortnoxInfo.settings && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4" />
-                            Settings
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(fortnoxInfo.settings, null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Customers Tab */}
+                      {activeDataTab === "customers" && fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (() => {
+                        const filteredCustomers = filterData(fortnoxInfo.customers, infoSearchQuery)
+                        const totalCustomerPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE)
+                        const paginatedCustomers = filteredCustomers.slice(
+                          (customersPage - 1) * ITEMS_PER_PAGE,
+                          customersPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Users className="w-4 h-4 text-cyan-400" />
+                                Customers
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredCustomers.length}
+                                </Badge>
+                              </h3>
+                              {totalCustomerPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCustomersPage(p => Math.max(1, p - 1))}
+                                    disabled={customersPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {customersPage} / {totalCustomerPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCustomersPage(p => Math.min(totalCustomerPages, p + 1))}
+                                    disabled={customersPage === totalCustomerPages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Customer</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Number</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">Email</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">City</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedCustomers.map((customer: any, idx: number) => (
+                                    <tr key={customer.CustomerNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3">
+                                        <p className="text-white font-medium">{customer.Name || 'N/A'}</p>
+                                        <p className="text-xs text-gray-500 sm:hidden">{customer.Email || '-'}</p>
+                                      </td>
+                                      <td className="p-3 text-gray-300">{customer.CustomerNumber || '-'}</td>
+                                      <td className="p-3 text-gray-300 hidden sm:table-cell">{customer.Email || '-'}</td>
+                                      <td className="p-3 text-gray-300 hidden md:table-cell">{customer.City || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
-                      {/* Customers */}
-                      {fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            Customers ({fortnoxInfo.customers.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.customers, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Invoices Tab */}
+                      {activeDataTab === "invoices" && fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (() => {
+                        const filteredInvoices = filterData(fortnoxInfo.invoices, infoSearchQuery)
+                        const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE)
+                        const paginatedInvoices = filteredInvoices.slice(
+                          (invoicesPage - 1) * ITEMS_PER_PAGE,
+                          invoicesPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-cyan-400" />
+                                Invoices
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredInvoices.length}
+                                </Badge>
+                              </h3>
+                              {totalInvoicePages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setInvoicesPage(p => Math.max(1, p - 1))}
+                                    disabled={invoicesPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {invoicesPage} / {totalInvoicePages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setInvoicesPage(p => Math.min(totalInvoicePages, p + 1))}
+                                    disabled={invoicesPage === totalInvoicePages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Invoice #</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Customer</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">Date</th>
+                                    <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Amount</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedInvoices.map((invoice: any, idx: number) => (
+                                    <tr key={invoice.DocumentNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3 text-white font-medium">{invoice.DocumentNumber || '-'}</td>
+                                      <td className="p-3">
+                                        <p className="text-gray-300">{invoice.CustomerName || '-'}</p>
+                                        <p className="text-xs text-gray-500 sm:hidden">{invoice.InvoiceDate || '-'}</p>
+                                      </td>
+                                      <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
+                                      <td className="p-3 text-right text-white font-medium">
+                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                      </td>
+                                      <td className="p-3 hidden md:table-cell">
+                                        <Badge className={
+                                          invoice.Cancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                                          invoice.Booked ? "bg-green-500/20 text-green-400 border-green-500/30" :
+                                          "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                        }>
+                                          {invoice.Cancelled ? 'Cancelled' : invoice.Booked ? 'Booked' : 'Draft'}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
-                      {/* Invoices */}
-                      {fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Invoices ({fortnoxInfo.invoices.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.invoices, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Supplier Invoices Tab */}
+                      {activeDataTab === "supplierInvoices" && fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (() => {
+                        const filteredSupplierInvoices = filterData(fortnoxInfo.supplierInvoices, infoSearchQuery)
+                        const totalSupplierInvoicePages = Math.ceil(filteredSupplierInvoices.length / ITEMS_PER_PAGE)
+                        const paginatedSupplierInvoices = filteredSupplierInvoices.slice(
+                          (supplierInvoicesPage - 1) * ITEMS_PER_PAGE,
+                          supplierInvoicesPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Receipt className="w-4 h-4 text-cyan-400" />
+                                Supplier Invoices
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredSupplierInvoices.length}
+                                </Badge>
+                              </h3>
+                              {totalSupplierInvoicePages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSupplierInvoicesPage(p => Math.max(1, p - 1))}
+                                    disabled={supplierInvoicesPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {supplierInvoicesPage} / {totalSupplierInvoicePages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSupplierInvoicesPage(p => Math.min(totalSupplierInvoicePages, p + 1))}
+                                    disabled={supplierInvoicesPage === totalSupplierInvoicePages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Invoice #</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Supplier</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">Date</th>
+                                    <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Amount</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">Due Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedSupplierInvoices.map((invoice: any, idx: number) => (
+                                    <tr key={invoice.GivenNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3 text-white font-medium">{invoice.GivenNumber || '-'}</td>
+                                      <td className="p-3">
+                                        <p className="text-gray-300">{invoice.SupplierName || '-'}</p>
+                                        <p className="text-xs text-gray-500 sm:hidden">{invoice.InvoiceDate || '-'}</p>
+                                      </td>
+                                      <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
+                                      <td className="p-3 text-right text-white font-medium">
+                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                      </td>
+                                      <td className="p-3 text-gray-300 hidden md:table-cell">{invoice.DueDate || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
-                      {/* Supplier Invoices */}
-                      {fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Receipt className="w-4 h-4" />
-                            Supplier Invoices ({fortnoxInfo.supplierInvoices.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.supplierInvoices, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Accounts Tab */}
+                      {activeDataTab === "accounts" && fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (() => {
+                        const filteredAccounts = filterData(fortnoxInfo.accounts, infoSearchQuery)
+                        const totalAccountPages = Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE)
+                        const paginatedAccounts = filteredAccounts.slice(
+                          (accountsPage - 1) * ITEMS_PER_PAGE,
+                          accountsPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <BookOpen className="w-4 h-4 text-cyan-400" />
+                                Accounts
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredAccounts.length}
+                                </Badge>
+                              </h3>
+                              {totalAccountPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setAccountsPage(p => Math.max(1, p - 1))}
+                                    disabled={accountsPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {accountsPage} / {totalAccountPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setAccountsPage(p => Math.min(totalAccountPages, p + 1))}
+                                    disabled={accountsPage === totalAccountPages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Account #</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Description</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">SRU</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedAccounts.map((account: any, idx: number) => (
+                                    <tr key={account.Number || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3 text-white font-medium">{account.Number || '-'}</td>
+                                      <td className="p-3 text-gray-300">{account.Description || '-'}</td>
+                                      <td className="p-3 text-gray-300 hidden sm:table-cell">{account.SRU || '-'}</td>
+                                      <td className="p-3 hidden md:table-cell">
+                                        <Badge className={account.Active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}>
+                                          {account.Active ? 'Active' : 'Inactive'}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
-                      {/* Accounts */}
-                      {fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <BookOpen className="w-4 h-4" />
-                            Accounts ({fortnoxInfo.accounts.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.accounts, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Articles Tab */}
+                      {activeDataTab === "articles" && fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (() => {
+                        const filteredArticles = filterData(fortnoxInfo.articles, infoSearchQuery)
+                        const totalArticlePages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE)
+                        const paginatedArticles = filteredArticles.slice(
+                          (articlesPage - 1) * ITEMS_PER_PAGE,
+                          articlesPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Package className="w-4 h-4 text-cyan-400" />
+                                Articles
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredArticles.length}
+                                </Badge>
+                              </h3>
+                              {totalArticlePages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setArticlesPage(p => Math.max(1, p - 1))}
+                                    disabled={articlesPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {articlesPage} / {totalArticlePages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setArticlesPage(p => Math.min(totalArticlePages, p + 1))}
+                                    disabled={articlesPage === totalArticlePages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Article #</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Description</th>
+                                    <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">Price</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">Unit</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedArticles.map((article: any, idx: number) => (
+                                    <tr key={article.ArticleNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3 text-white font-medium">{article.ArticleNumber || '-'}</td>
+                                      <td className="p-3 text-gray-300">{article.Description || '-'}</td>
+                                      <td className="p-3 text-right text-white font-medium hidden sm:table-cell">
+                                        {article.SalesPrice ? `${Number(article.SalesPrice).toLocaleString()} kr` : '-'}
+                                      </td>
+                                      <td className="p-3 text-gray-300 hidden md:table-cell">{article.Unit || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
-                      {/* Articles */}
-                      {fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Package className="w-4 h-4" />
-                            Articles ({fortnoxInfo.articles.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.articles, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
-
-                      {/* Suppliers */}
-                      {fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            Suppliers ({fortnoxInfo.suppliers.length})
-                          </h3>
-                          <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300 max-h-96">
-                            {JSON.stringify(filterData(fortnoxInfo.suppliers, infoSearchQuery), null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                      {/* Suppliers Tab */}
+                      {activeDataTab === "suppliers" && fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (() => {
+                        const filteredSuppliers = filterData(fortnoxInfo.suppliers, infoSearchQuery)
+                        const totalSupplierPages = Math.ceil(filteredSuppliers.length / ITEMS_PER_PAGE)
+                        const paginatedSuppliers = filteredSuppliers.slice(
+                          (suppliersPage - 1) * ITEMS_PER_PAGE,
+                          suppliersPage * ITEMS_PER_PAGE
+                        )
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Users className="w-4 h-4 text-cyan-400" />
+                                Suppliers
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                  {filteredSuppliers.length}
+                                </Badge>
+                              </h3>
+                              {totalSupplierPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSuppliersPage(p => Math.max(1, p - 1))}
+                                    disabled={suppliersPage === 1}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </Button>
+                                  <span className="text-sm text-gray-400">
+                                    {suppliersPage} / {totalSupplierPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSuppliersPage(p => Math.min(totalSupplierPages, p + 1))}
+                                    disabled={suppliersPage === totalSupplierPages}
+                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-white/5 border-b border-white/10">
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Supplier</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3">Number</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden sm:table-cell">Email</th>
+                                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider p-3 hidden md:table-cell">City</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedSuppliers.map((supplier: any, idx: number) => (
+                                    <tr key={supplier.SupplierNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                      <td className="p-3">
+                                        <p className="text-white font-medium">{supplier.Name || 'N/A'}</p>
+                                        <p className="text-xs text-gray-500 sm:hidden">{supplier.Email || '-'}</p>
+                                      </td>
+                                      <td className="p-3 text-gray-300">{supplier.SupplierNumber || '-'}</td>
+                                      <td className="p-3 text-gray-300 hidden sm:table-cell">{supplier.Email || '-'}</td>
+                                      <td className="p-3 text-gray-300 hidden md:table-cell">{supplier.City || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
                       {/* Show message if no data */}
                       {Object.keys(fortnoxInfo).length === 0 && (
@@ -1694,40 +2566,170 @@ export default function ToolDetailPage() {
         </Tabs>
       ) : (
         /* Non-Fortnox or not connected - show only Overview */
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white">Integration Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Connection Type</p>
-                <p className="text-white">{integration.connection_type || "N/A"}</p>
+        <div className="space-y-6">
+          {/* Connection Details Card */}
+          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-cyan-400" />
+                Connection Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
+                  <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
+                  <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                    {integration.environment || "N/A"}
+                  </Badge>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
+                  <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
+                  <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Environment</p>
-                <p className="text-white">{integration.environment || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Created</p>
-                <p className="text-white">{formatDate(integration.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Last Updated</p>
-                <p className="text-white">{formatDate(integration.updated_at)}</p>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {integration.settings && (
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Settings</p>
-                <pre className="bg-black/50 p-4 rounded-lg overflow-auto text-xs text-gray-300">
-                  {JSON.stringify(integration.settings, null, 2)}
-                </pre>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Token Information Card */}
+          {integration.settings?.oauth_data?.tokens && (
+            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Key className="w-5 h-5 text-cyan-400" />
+                  Authentication Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Token Status Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Token Expiry */}
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
+                    </div>
+                    <p className="text-white font-medium">
+                      {integration.settings.oauth_data.tokens.expires_at
+                        ? new Date(integration.settings.oauth_data.tokens.expires_at * 1000).toLocaleString()
+                        : "N/A"}
+                    </p>
+                    {integration.settings.oauth_data.tokens.expires_at && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
+                          ? <span className="text-green-400">Active</span>
+                          : <span className="text-red-400">Expired</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Token Duration */}
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Timer className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
+                    </div>
+                    <p className="text-white font-medium">
+                      {integration.settings.oauth_data.tokens.expires_in
+                        ? `${Math.floor(integration.settings.oauth_data.tokens.expires_in / 60)} minutes`
+                        : "N/A"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {integration.settings.oauth_data.tokens.expires_in} seconds
+                    </p>
+                  </div>
+                </div>
+
+                {/* Access Token */}
+                {integration.settings.oauth_data.tokens.access_token && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-cyan-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
+                      </div>
+                      <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                        {integration.settings.oauth_data.tokens.token_type || "bearer"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                        {integration.settings.oauth_data.tokens.access_token.substring(0, 50)}...
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
+                          toast.success("Access token copied to clipboard")
+                        }}
+                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Refresh Token */}
+                {integration.settings.oauth_data.tokens.refresh_token && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-green-400" />
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
+                      </div>
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        Available
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm text-gray-400 bg-black/50 px-3 py-2 rounded-md truncate">
+                        {integration.settings.oauth_data.tokens.refresh_token.substring(0, 50)}...
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
+                          toast.success("Refresh token copied to clipboard")
+                        }}
+                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scopes */}
+                {integration.settings.oauth_data.tokens.scope && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="w-4 h-4 text-gray-400" />
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {integration.settings.oauth_data.tokens.scope.split(" ").map((scope: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs text-gray-300 border-white/20 bg-white/5">
+                          {scope}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Legacy Cost Leak Analysis Section - Remove this after confirming tabs work */}
