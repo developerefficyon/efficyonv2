@@ -194,18 +194,8 @@ async function sendPasswordResetEmailHandler(req, res) {
   }
 
   try {
-    // Check if user exists
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email)
-
-    if (userError || !userData?.user) {
-      // Don't reveal if user exists or not for security
-      log("log", endpoint, `Password reset requested for ${email} (user may not exist)`)
-      return res.json({ 
-        message: "If an account exists with this email, a password reset link has been sent.",
-      })
-    }
-
     // Generate a password reset token using Supabase Admin API
+    // If user doesn't exist, this will fail and we return a generic message
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email: email,
