@@ -13,7 +13,14 @@ app.use((req, res, next) => {
 
 // Global middleware
 app.use(cors())
-app.use(express.json())
+// Skip JSON parsing for Stripe webhook (needs raw body for signature verification)
+app.use((req, res, next) => {
+  if (req.path === '/api/stripe/webhook') {
+    next()
+  } else {
+    express.json()(req, res, next)
+  }
+})
 
 // Routes
 app.use("/", routes)
