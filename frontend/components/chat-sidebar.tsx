@@ -144,7 +144,7 @@ export function ChatSidebar({
               <div
                 key={conv.id}
                 className={cn(
-                  "group relative flex items-center rounded-lg transition-all duration-200",
+                  "group flex items-center rounded-lg transition-all duration-200",
                   activeConversationId === conv.id
                     ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30"
                     : "hover:bg-white/5"
@@ -159,14 +159,14 @@ export function ChatSidebar({
                         if (e.key === "Enter") handleSaveEdit()
                         if (e.key === "Escape") handleCancelEdit()
                       }}
-                      className="h-7 text-sm bg-black/50 border-white/20 text-white"
+                      className="h-7 text-sm bg-black/50 border-white/20 text-white flex-1 min-w-0"
                       autoFocus
                     />
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={handleSaveEdit}
-                      className="h-7 w-7 text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                      className="h-7 w-7 shrink-0 text-green-400 hover:text-green-300 hover:bg-green-500/20"
                     >
                       <Check className="h-3 w-3" />
                     </Button>
@@ -174,20 +174,20 @@ export function ChatSidebar({
                       size="icon"
                       variant="ghost"
                       onClick={handleCancelEdit}
-                      className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                      className="h-7 w-7 shrink-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
                     >
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
                 ) : (
-                  <>
+                  <div className="flex items-center w-full">
                     <button
                       onClick={() => onSelectConversation(conv.id)}
-                      className="flex-1 text-left p-3 pr-10"
+                      className="flex-1 text-left p-3 overflow-hidden"
                     >
                       <p
                         className={cn(
-                          "text-sm truncate",
+                          "text-sm truncate max-w-[180px]",
                           activeConversationId === conv.id
                             ? "text-white font-medium"
                             : "text-gray-300"
@@ -199,20 +199,21 @@ export function ChatSidebar({
                         {new Date(conv.updated_at).toLocaleDateString()}
                       </p>
                     </button>
-                    <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="shrink-0 pr-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/10"
+                            className="h-7 w-7 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border hover:border-cyan-500/30 transition-opacity"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="bg-black/95 border-white/10"
+                          sideOffset={5}
+                          className="bg-black/95 border-white/10 z-[100]"
                         >
                           <DropdownMenuItem
                             onClick={() => handleStartEdit(conv)}
@@ -231,7 +232,7 @@ export function ChatSidebar({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
