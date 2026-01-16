@@ -585,7 +585,7 @@ export default function AdminCustomersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border hover:border-cyan-500/30"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </Button>
@@ -1010,7 +1010,7 @@ export default function AdminCustomersPage() {
                 setSelectedPlan("")
                 setResetTokens(true)
               }}
-              className="border-white/10 bg-transparent text-white hover:bg-white/10"
+              className="border-white/10 bg-transparent text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-500/30"
             >
               Cancel
             </Button>

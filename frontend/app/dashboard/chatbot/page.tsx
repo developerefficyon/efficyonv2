@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   MessageSquare,
@@ -20,6 +19,10 @@ import { useAuth } from "@/lib/auth-context"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { ChatSidebar, useChatConversations } from "@/components/chat-sidebar"
+import { ToolChatTabs, useConnectedTools, getToolDisplayName } from "@/components/tool-chat-tabs"
+import { ChatMessageRenderer } from "@/components/chat-message-renderer"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type Message = {
   id: string
@@ -28,22 +31,83 @@ type Message = {
   timestamp: Date
 }
 
-const suggestedQuestions = [
-  "What are my current cost optimization opportunities?",
-  "How can I reduce my software subscription costs?",
-  "Which tools have unused seats?",
-  "Show me my monthly spending trends",
-  "What integrations need attention?",
-]
+const suggestedQuestions = {
+  general: [
+    "What are my current cost optimization opportunities?",
+    "How can I reduce my software subscription costs?",
+    "Which tools have unused seats?",
+    "Show me my monthly spending trends",
+    "What integrations need attention?",
+  ],
+  fortnox: [
+    "Show me all overdue invoices",
+    "What's my total outstanding amount?",
+    "Analyze my spending patterns",
+    "Show supplier invoice breakdown",
+    "Find potential duplicate payments",
+  ],
+  microsoft365: [
+    "Show license utilization",
+    "Which users haven't signed in recently?",
+    "How many unused licenses do I have?",
+    "Analyze user activity patterns",
+    "What's my license cost optimization potential?",
+  ],
+  default: [
+    "Show me a summary of the data",
+    "What insights can you find?",
+    "Analyze cost optimization opportunities",
+    "Show me key metrics",
+    "What actions do you recommend?",
+  ],
+}
 
 export default function ChatbotPage() {
   const { user } = useAuth()
+  const isMobile = useIsMobile()
+  const [activeTab, setActiveTab] = useState("general")
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Get connected tools
+  const { tools } = useConnectedTools()
+
+  // Get current tool info
+  const currentTool = activeTab === "general" ? null : tools.find((t) => t.id === activeTab)
+  const currentToolId = activeTab === "general" ? null : activeTab
+
+  // Chat conversations hook - filtered by current tool
+  const {
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+    isLoading: conversationsLoading,
+    createConversation,
+    deleteConversation,
+    renameConversation,
+    addMessageToConversation,
+    loadConversation,
+  } = useChatConversations(currentToolId)
+
+  // Set sidebar closed by default on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false)
+    } else {
+      setSidebarOpen(true)
+    }
+  }, [isMobile])
+
+  // Reset messages when tab changes
+  useEffect(() => {
+    setMessages([])
+    setError(null)
+  }, [activeTab])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -53,9 +117,53 @@ export default function ChatbotPage() {
     scrollToBottom()
   }, [messages])
 
+  // Load conversation messages when selecting a conversation
+  const handleSelectConversation = async (id: string) => {
+    setActiveConversationId(id)
+    setError(null)
+
+    const conversation = await loadConversation(id)
+    if (conversation?.messages) {
+      const loadedMessages: Message[] = conversation.messages.map(
+        (msg: { id: string; role: "user" | "assistant"; content: string; created_at: string }) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
+        })
+      )
+      setMessages(loadedMessages)
+    }
+
+    // Close sidebar on mobile after selection
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }
+
+  // Create new conversation
+  const handleNewConversation = async () => {
+    const newId = await createConversation()
+    if (newId) {
+      setMessages([])
+      setError(null)
+      // Close sidebar on mobile after creating new chat
+      if (isMobile) {
+        setSidebarOpen(false)
+      }
+    }
+  }
+
   const sendMessage = async (messageText?: string) => {
     const text = messageText || input.trim()
     if (!text || isLoading) return
+
+    // Create conversation if none exists
+    let conversationId = activeConversationId
+    if (!conversationId) {
+      conversationId = await createConversation()
+      if (!conversationId) return
+    }
 
     setError(null)
     const userMessage: Message = {
@@ -69,6 +177,9 @@ export default function ChatbotPage() {
     setInput("")
     setIsLoading(true)
 
+    // Save user message to database
+    addMessageToConversation(conversationId, "user", text)
+
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getValidSessionToken()
@@ -77,24 +188,51 @@ export default function ChatbotPage() {
         throw new Error("Session expired. Please log in again.")
       }
 
-      const response = await fetch(`${apiBase}/api/ai/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          question: text,
-          chatType: "general",
-        }),
-      })
+      let response
+      let data
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to get response from AI")
+      if (activeTab === "general") {
+        // General chat - use existing endpoint
+        response = await fetch(`${apiBase}/api/ai/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            question: text,
+            chatType: "general",
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to get response from AI")
+        }
+
+        data = await response.json()
+      } else {
+        // Tool-specific chat - use new endpoint
+        response = await fetch(`${apiBase}/api/chat/tool`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            question: text,
+            toolId: activeTab,
+            dataType: detectDataType(text),
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to get response from AI")
+        }
+
+        data = await response.json()
       }
-
-      const data = await response.json()
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -104,6 +242,9 @@ export default function ChatbotPage() {
       }
 
       setMessages((prev) => [...prev, assistantMessage])
+
+      // Save assistant message to database
+      addMessageToConversation(conversationId, "assistant", assistantMessage.content)
     } catch (err) {
       console.error("Chat error:", err)
       setError(err instanceof Error ? err.message : "An error occurred")
@@ -116,6 +257,26 @@ export default function ChatbotPage() {
     }
   }
 
+  // Detect data type from question for tool-specific queries
+  const detectDataType = (question: string): string => {
+    const q = question.toLowerCase()
+
+    // Fortnox data types
+    if (q.includes("invoice") && !q.includes("supplier")) return "invoices"
+    if (q.includes("supplier invoice") || q.includes("vendor invoice") || q.includes("bill")) return "supplier-invoices"
+    if (q.includes("customer")) return "customers"
+    if (q.includes("supplier") || q.includes("vendor")) return "suppliers"
+    if (q.includes("expense")) return "expenses"
+    if (q.includes("cost leak") || q.includes("saving") || q.includes("optimize") || q.includes("duplicate")) return "cost-leaks"
+
+    // Microsoft 365 data types
+    if (q.includes("license") || q.includes("subscription")) return "licenses"
+    if (q.includes("user") || q.includes("sign in") || q.includes("login") || q.includes("inactive")) return "users"
+    if (q.includes("usage") || q.includes("activity") || q.includes("teams") || q.includes("mailbox")) return "usage"
+
+    return "general"
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -123,44 +284,90 @@ export default function ChatbotPage() {
     }
   }
 
-  const clearChat = () => {
+  const clearChat = async () => {
     setMessages([])
     setError(null)
+    await handleNewConversation()
+  }
+
+  // Get suggested questions for current tab
+  const getSuggestedQuestions = () => {
+    if (activeTab === "general") return suggestedQuestions.general
+    const tool = tools.find((t) => t.id === activeTab)
+    if (tool) {
+      const provider = tool.provider.toLowerCase().replace(" ", "")
+      return suggestedQuestions[provider as keyof typeof suggestedQuestions] || suggestedQuestions.default
+    }
+    return suggestedQuestions.default
+  }
+
+  // Get title for current tab
+  const getTabTitle = () => {
+    if (activeTab === "general") return "General Assistant"
+    const tool = tools.find((t) => t.id === activeTab)
+    return tool ? `${getToolDisplayName(tool.provider)} Assistant` : "Tool Assistant"
+  }
+
+  // Get description for current tab
+  const getTabDescription = () => {
+    if (activeTab === "general") {
+      return "Ask questions about your tools, costs, and optimizations"
+    }
+    const tool = tools.find((t) => t.id === activeTab)
+    if (tool) {
+      const provider = tool.provider.toLowerCase()
+      if (provider === "fortnox") {
+        return "Ask about invoices, expenses, customers, and financial analysis"
+      }
+      if (provider === "microsoft365" || provider === "microsoft 365") {
+        return "Ask about licenses, users, usage, and optimization opportunities"
+      }
+    }
+    return "Ask questions about this tool's data and get insights"
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Chatbot</h2>
-        <p className="text-sm sm:text-base text-gray-400">
-          AI-powered assistant to help you optimize your SaaS costs
-        </p>
-      </div>
+    <div className="flex h-[calc(100vh-10rem)] -mx-3 sm:-mx-4 lg:-mx-6 -mb-3 sm:-mb-4 lg:-mb-6 relative">
+      {/* Chat Sidebar */}
+      <ChatSidebar
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={deleteConversation}
+        onRenameConversation={renameConversation}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        isLoading={conversationsLoading}
+        toolName={currentTool ? getToolDisplayName(currentTool.provider) : undefined}
+      />
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
-          <TabsTrigger
-            value="general"
-            className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
-          >
-            <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            General
-          </TabsTrigger>
-          {/* Future tabs will be added here for each connected tool and comparison */}
-        </TabsList>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="mb-4 pt-3 sm:pt-4 lg:pt-6 px-3 sm:px-4 lg:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Chatbot</h2>
+          <p className="text-sm sm:text-base text-gray-400 mb-4">
+            AI-powered assistant to help you optimize your SaaS costs
+          </p>
 
-        <TabsContent value="general" className="mt-0">
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader className="border-b border-white/10">
+          {/* Tool Tabs */}
+          <ToolChatTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+
+        {/* Chat Card - Takes remaining height */}
+        <div className="flex-1 min-h-0 px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+          <Card className="bg-black/80 backdrop-blur-xl border-white/10 h-full flex flex-col">
+            <CardHeader className="border-b border-white/10 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
                     <Bot className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-white">General Assistant</CardTitle>
+                    <CardTitle className="text-white">{getTabTitle()}</CardTitle>
                     <CardDescription className="text-gray-400">
-                      Ask questions about your tools, costs, and optimizations
+                      {getTabDescription()}
                     </CardDescription>
                   </div>
                 </div>
@@ -172,14 +379,14 @@ export default function ChatbotPage() {
                     className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Clear Chat
+                    New Chat
                   </Button>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              {/* Chat Messages Area */}
-              <ScrollArea className="h-[400px] sm:h-[500px] p-4">
+            <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+              {/* Chat Messages Area - Flexible height */}
+              <ScrollArea className="flex-1 p-4">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center mb-4">
@@ -189,11 +396,12 @@ export default function ChatbotPage() {
                       How can I help you today?
                     </h3>
                     <p className="text-sm text-gray-400 mb-6 max-w-md">
-                      Ask me anything about your connected tools, subscription costs,
-                      optimization opportunities, or general SaaS management questions.
+                      {activeTab === "general"
+                        ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
+                        : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                      {suggestedQuestions.map((question, index) => (
+                      {getSuggestedQuestions().map((question, index) => (
                         <Button
                           key={index}
                           variant="outline"
@@ -223,13 +431,17 @@ export default function ChatbotPage() {
                         )}
                         <div
                           className={cn(
-                            "max-w-[80%] rounded-2xl px-4 py-3",
+                            "max-w-[85%] rounded-2xl px-4 py-3",
                             message.role === "user"
                               ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
                               : "bg-white/5 border border-white/10 text-gray-100"
                           )}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          {message.role === "assistant" ? (
+                            <ChatMessageRenderer content={message.content} />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          )}
                           <p
                             className={cn(
                               "text-[10px] mt-2",
@@ -257,7 +469,9 @@ export default function ChatbotPage() {
                         <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-                            <span className="text-sm text-gray-400">Thinking...</span>
+                            <span className="text-sm text-gray-400">
+                              {activeTab === "general" ? "Thinking..." : "Fetching data and analyzing..."}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -269,21 +483,25 @@ export default function ChatbotPage() {
 
               {/* Error Display */}
               {error && (
-                <div className="mx-4 mb-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+                <div className="mx-4 mb-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2 shrink-0">
                   <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <p className="text-sm text-red-400">{error}</p>
                 </div>
               )}
 
-              {/* Input Area */}
-              <div className="p-4 border-t border-white/10">
+              {/* Input Area - Fixed at bottom */}
+              <div className="p-4 border-t border-white/10 shrink-0 bg-black/40">
                 <div className="flex gap-2">
                   <Input
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your message..."
+                    placeholder={
+                      activeTab === "general"
+                        ? "Type your message..."
+                        : `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
+                    }
                     disabled={isLoading}
                     className="flex-1 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50"
                   />
@@ -305,8 +523,8 @@ export default function ChatbotPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   )
 }
