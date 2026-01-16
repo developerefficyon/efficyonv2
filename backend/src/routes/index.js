@@ -97,6 +97,17 @@ const {
   sendPasswordResetEmailHandler,
 } = require("../controllers/emailController")
 
+// Chat Controller - chat conversations and history
+const {
+  getConversations,
+  getConversation,
+  createConversation,
+  updateConversation,
+  deleteConversation,
+  addMessage,
+  chatWithTool,
+} = require("../controllers/chatController")
+
 const router = express.Router()
 
 // Health
@@ -187,6 +198,15 @@ router.post("/api/auth/register", registerUserHandler)
 // Email Routes (public - no auth required for sending emails)
 router.post("/api/email/send-verification", sendVerificationEmailHandler)
 router.post("/api/email/send-password-reset", sendPasswordResetEmailHandler)
+
+// Chat Conversation Routes
+router.get("/api/chat/conversations", requireAuth, getConversations)
+router.get("/api/chat/conversations/:id", requireAuth, getConversation)
+router.post("/api/chat/conversations", requireAuth, createConversation)
+router.put("/api/chat/conversations/:id", requireAuth, updateConversation)
+router.delete("/api/chat/conversations/:id", requireAuth, deleteConversation)
+router.post("/api/chat/conversations/:id/messages", requireAuth, addMessage)
+router.post("/api/chat/tool", requireAuth, chatWithTool)
 
 module.exports = router
 

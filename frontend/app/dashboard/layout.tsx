@@ -35,6 +35,7 @@ import {
   Search,
   ChevronRight,
   Coins,
+  MessageSquare,
 } from "lucide-react"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
 import { LowTokenWarning } from "@/components/low-token-warning"
@@ -59,6 +60,13 @@ const userMenuItems = [
     href: "/dashboard/tools",
     badge: null,
     description: "Connected tools",
+  },
+  {
+    title: "Chatbot",
+    icon: MessageSquare,
+    href: "/dashboard/chatbot",
+    badge: null,
+    description: "AI assistant",
   },
   {
     title: "Recommendations",

@@ -315,10 +315,102 @@ async function enhanceFindingsWithAI(findings) {
   }
 }
 
+/**
+ * Chat with AI using tool context - generates rich responses with markdown formatting
+ * @param {string} question - User's question
+ * @param {Object} toolContext - Tool context including data
+ * @returns {Promise<string>} AI response with markdown formatting
+ */
+async function chatWithToolContext(question, toolContext) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured")
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Tool chat query for ${toolContext.toolName}: ${question}`)
+
+    const { toolName, dataType, data, dataDescription } = toolContext
+
+    // Build context string from tool data
+    let dataContext = ""
+    if (data) {
+      // Limit data size for context
+      const dataStr = JSON.stringify(data, null, 2)
+      dataContext = dataStr.length > 15000 ? dataStr.substring(0, 15000) + "...(truncated)" : dataStr
+    }
+
+    const systemPrompt = `You are an expert business analyst assistant specialized in ${toolName} data analysis. You help users understand and analyze their ${toolName} data.
+
+CURRENT DATA CONTEXT:
+- Tool: ${toolName}
+- Data Type: ${dataType || "general"}
+- Description: ${dataDescription}
+
+AVAILABLE DATA:
+${dataContext || "No specific data loaded. Answer based on general knowledge about " + toolName + "."}
+
+RESPONSE FORMATTING GUIDELINES:
+1. Use markdown formatting for clear, readable responses
+2. Use **bold** for important numbers and key findings
+3. Use tables (markdown format) when presenting structured data:
+   | Column1 | Column2 | Column3 |
+   |---------|---------|---------|
+   | data    | data    | data    |
+
+4. Use bullet points for lists of findings or recommendations
+5. Use headers (##, ###) to organize longer responses
+6. When showing financial amounts, format them clearly (e.g., **$12,500** or **12,500 SEK**)
+7. Highlight actionable insights and recommendations
+8. If the user asks for charts/visualizations, describe what data would be shown and format it as a table that could be charted
+
+SPECIAL INSTRUCTIONS FOR DATA TYPES:
+- For invoices: Show status breakdown, overdue items, and payment trends
+- For licenses: Show utilization rates, unused licenses, and optimization opportunities
+- For users: Show activity levels, inactive accounts, and recommendations
+- For cost-leaks: Prioritize by potential savings and urgency
+
+Be concise but thorough. Focus on actionable insights.`
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const answer = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] Tool chat response generated for ${toolName}`)
+
+    return answer
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in tool chat:`, error.message)
+    throw new Error(`Failed to process tool chat request: ${error.message}`)
+  }
+}
+
 module.exports = {
   generateAnalysisSummary,
   generateRecommendations,
   estimatePotentialSavings,
   chatAboutAnalysis,
   enhanceFindingsWithAI,
+  chatWithToolContext,
 }
