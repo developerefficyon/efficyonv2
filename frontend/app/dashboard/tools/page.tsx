@@ -85,6 +85,14 @@ interface AvailableTool {
   created_at: string
 }
 
+interface IntegrationLimits {
+  current: number
+  max: number
+  canAddMore: boolean
+  planTier: string
+  planName: string
+}
+
 export default function ToolsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
@@ -93,6 +101,13 @@ export default function ToolsPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [availableTools, setAvailableTools] = useState<AvailableTool[]>([])
+  const [integrationLimits, setIntegrationLimits] = useState<IntegrationLimits>({
+    current: 0,
+    max: 5,
+    canAddMore: true,
+    planTier: "startup",
+    planName: "Startup",
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingTools, setIsLoadingTools] = useState(false)
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false)
@@ -193,6 +208,17 @@ export default function ToolsPage() {
       const data = await res.json()
       console.log("Integrations loaded:", data.integrations?.length || 0)
       setIntegrations(data.integrations || [])
+
+      // Update integration limits from response
+      if (data.limits) {
+        setIntegrationLimits({
+          current: data.limits.current || 0,
+          max: data.limits.max || 5,
+          canAddMore: data.limits.canAddMore ?? true,
+          planTier: data.limits.planTier || "startup",
+          planName: data.limits.planName || "Startup",
+        })
+      }
     } catch (error) {
       console.error("Error loading integrations:", error)
       toast.error("Failed to load integrations", {
@@ -417,6 +443,18 @@ export default function ToolsPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        // Handle integration limit error specifically
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          // Refresh limits to ensure UI is in sync
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+
         throw new Error(errorData.error || "Failed to connect Fortnox")
       }
 
@@ -499,6 +537,18 @@ export default function ToolsPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        // Handle integration limit error specifically
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          // Refresh limits to ensure UI is in sync
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+
         throw new Error(errorData.error || "Failed to save Microsoft 365 configuration")
       }
 
@@ -781,13 +831,30 @@ export default function ToolsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Tools & Integrations</h2>
           <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
         </div>
-        <Button 
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white w-full sm:w-auto"
-          onClick={() => setIsConnectModalOpen(true)}
-        >
-          <ExternalLink className="w-4 h-4 mr-2" />
-          Connect New Tool
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            className={`w-full sm:w-auto ${
+              integrationLimits.canAddMore
+                ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
+                : "bg-gray-600 text-gray-300 cursor-not-allowed"
+            }`}
+            onClick={() => {
+              if (!integrationLimits.canAddMore) {
+                toast.error("Integration limit reached", {
+                  description: `Your ${integrationLimits.planName} plan allows up to ${integrationLimits.max} integrations. Upgrade your plan to connect more tools.`,
+                })
+                return
+              }
+              setIsConnectModalOpen(true)
+            }}
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Connect New Tool
+          </Button>
+          {!integrationLimits.canAddMore && (
+            <p className="text-xs text-orange-400">Limit reached - upgrade to add more</p>
+          )}
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -796,8 +863,14 @@ export default function ToolsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Total Tools</p>
-                <p className="text-2xl font-bold text-white">{tools.length}</p>
+                <p className="text-sm text-gray-400 mb-1">Connected Tools</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-white">
+                    {integrationLimits.current}
+                    <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "∞" : integrationLimits.max}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{integrationLimits.planName} plan</p>
               </div>
               <BarChart3 className="w-8 h-8 text-cyan-400 opacity-50" />
             </div>

@@ -108,6 +108,12 @@ const {
   chatWithTool,
 } = require("../controllers/chatController")
 
+// Comparison Controller - cross-platform analysis
+const {
+  chatComparison,
+  checkComparisonAvailability,
+} = require("../controllers/comparisonController")
+
 const router = express.Router()
 
 // Health
@@ -207,6 +213,10 @@ router.put("/api/chat/conversations/:id", requireAuth, updateConversation)
 router.delete("/api/chat/conversations/:id", requireAuth, deleteConversation)
 router.post("/api/chat/conversations/:id/messages", requireAuth, addMessage)
 router.post("/api/chat/tool", requireAuth, chatWithTool)
+
+// Cross-Platform Comparison Routes
+router.post("/api/chat/comparison", requireAuth, chatComparison)
+router.get("/api/chat/comparison/availability", requireAuth, checkComparisonAvailability)
 
 module.exports = router
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Loader2, MessageSquare, Zap } from "lucide-react"
+import { Loader2, MessageSquare, Zap, GitCompare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 
@@ -184,6 +184,35 @@ export function ToolChatTabs({ activeTab, onTabChange, className }: ToolChatTabs
               <span className="text-gray-200">{getToolDisplayName(tool.provider)}</span>
             </TabsTrigger>
           ))}
+
+          {/* Comparison Tab - Only show when both Fortnox and Microsoft 365 are connected */}
+          {(() => {
+            const hasFortnox = tools.some(t => t.provider?.toLowerCase() === "fortnox")
+            const hasMicrosoft365 = tools.some(t =>
+              t.provider?.toLowerCase() === "microsoft365" ||
+              t.provider?.toLowerCase() === "microsoft 365"
+            )
+            const showComparison = hasFortnox && hasMicrosoft365
+
+            return showComparison ? (
+              <TabsTrigger
+                value="comparison"
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
+                  "data-[state=inactive]:bg-white/5 data-[state=inactive]:hover:bg-white/10",
+                  "data-[state=inactive]:border data-[state=inactive]:border-white/10",
+                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/20 data-[state=active]:to-teal-500/20",
+                  "data-[state=active]:border data-[state=active]:border-purple-500/30",
+                  "text-sm font-medium"
+                )}
+              >
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center">
+                  <GitCompare className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="text-gray-200">Comparison</span>
+              </TabsTrigger>
+            ) : null
+          })()}
 
           {/* No tools message */}
           {tools.length === 0 && (
