@@ -823,7 +823,8 @@ export default function ToolDetailPage() {
     yPosition = 45
 
     const summary = costLeakAnalysis.overallSummary || { totalFindings: 0, totalPotentialSavings: 0, highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 }
-    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || []
+    // Get findings from either Fortnox (supplierInvoiceAnalysis) or Microsoft 365 (licenseAnalysis)
+    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || costLeakAnalysis.licenseAnalysis?.findings || []
 
     // ===== KEY METRICS ROW =====
     const metricCardWidth = (pageWidth - margin * 2 - 12) / 4
@@ -968,61 +969,62 @@ export default function ToolDetailPage() {
 
     // Group findings by category and calculate savings
     const categoryMap: Record<string, { name: string, savings: number, color: [number, number, number] }> = {
-      duplicates: { name: "Duplicates", savings: 0, color: highSeverity },
-      anomalies: { name: "Price Issues", savings: 0, color: mediumSeverity },
-      overdue: { name: "Payment Issues", savings: 0, color: [249, 115, 22] },
+      duplicates: { name: "Duplicate/Unused", savings: 0, color: highSeverity },
+      anomalies: { name: "Price/License Issues", savings: 0, color: mediumSeverity },
+      overdue: { name: "Payment/Inactive", savings: 0, color: [249, 115, 22] },
       other: { name: "Other", savings: 0, color: lowSeverity },
     }
 
     findings.forEach((finding: any) => {
       const savings = finding.potentialSavings || 0
-      if (finding.title?.toLowerCase().includes("duplicate")) {
+      const title = finding.title?.toLowerCase() || ''
+
+      if (title.includes("duplicate") || title.includes("orphan") || title.includes("unused")) {
         categoryMap.duplicates.savings += savings
-      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+      } else if (title.includes("price") || title.includes("anomal") || title.includes("over-provision") || title.includes("downgrade")) {
         categoryMap.anomalies.savings += savings
-      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+      } else if (title.includes("overdue") || title.includes("payment") || title.includes("inactive")) {
         categoryMap.overdue.savings += savings
       } else {
         categoryMap.other.savings += savings
       }
     })
 
-    const categories = Object.values(categoryMap).filter(c => c.savings > 0).sort((a, b) => b.savings - a.savings)
+    // Limit to top 3 categories like the preview
+    const categories = Object.values(categoryMap).filter(c => c.savings > 0).sort((a, b) => b.savings - a.savings).slice(0, 3)
     const maxSavings = Math.max(...categories.map(c => c.savings), 1)
-    const barMaxWidth = columnWidth - 50
-    let barY = chartSectionY + 10
+    const barMaxWidth = columnWidth - 10
+    let barY = chartSectionY + 12
 
     if (categories.length > 0) {
       categories.forEach((cat) => {
         const barWidth = (cat.savings / maxSavings) * barMaxWidth
 
-        // Category name
+        // Row 1: Category name (left) and Amount (right) - matching preview layout
         doc.setFont("helvetica", "normal")
         doc.setFontSize(8)
         doc.setTextColor(71, 85, 105)
-        doc.text(cat.name, rightColumnX, barY + 5)
+        doc.text(cat.name, rightColumnX, barY)
 
-        // Bar background
-        drawRoundedRect(rightColumnX, barY + 8, barMaxWidth, 10, 2, [241, 245, 249])
-
-        // Bar fill
-        if (barWidth > 0) {
-          drawRoundedRect(rightColumnX, barY + 8, Math.max(barWidth, 4), 10, 2, cat.color)
-        }
-
-        // Amount
         doc.setFont("helvetica", "bold")
         doc.setFontSize(8)
         doc.setTextColor(15, 23, 42)
-        doc.text(`$${cat.savings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, rightColumnX + barMaxWidth + 3, barY + 15)
+        const amountText = `$${cat.savings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+        doc.text(amountText, rightColumnX + barMaxWidth - doc.getTextWidth(amountText), barY)
 
-        barY += 22
+        // Row 2: Bar below the text
+        drawRoundedRect(rightColumnX, barY + 3, barMaxWidth, 6, 1, [241, 245, 249])
+        if (barWidth > 0) {
+          drawRoundedRect(rightColumnX, barY + 3, Math.max(barWidth, 2), 6, 1, cat.color)
+        }
+
+        barY += 18
       })
     } else {
       doc.setFont("helvetica", "normal")
       doc.setFontSize(9)
       doc.setTextColor(100, 116, 139)
-      doc.text("No savings identified", rightColumnX, barY + 20)
+      doc.text("No savings identified", rightColumnX, barY + 10)
     }
 
     yPosition = Math.max(chartCenterY + chartRadius + 15, barY + 5)
@@ -1055,10 +1057,10 @@ export default function ToolDetailPage() {
       }
     })
 
-    // Sort by total savings and take top 5
+    // Sort by total savings and take top 3 (matching preview)
     const topActions = Object.values(consolidatedFindings)
       .sort((a, b) => b.totalSavings - a.totalSavings)
-      .slice(0, 5)
+      .slice(0, 3)
 
     if (topActions.length > 0) {
       topActions.forEach((action, index: number) => {
@@ -1145,23 +1147,27 @@ export default function ToolDetailPage() {
 
   // Get grouped findings for preview
   const getGroupedFindingsForPreview = () => {
-    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []
+    // Get findings from either Fortnox (supplierInvoiceAnalysis) or Microsoft 365 (licenseAnalysis)
+    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
     const grouped = {
-      duplicates: { title: "Duplicate Payments", count: 0, savings: 0, color: "red" },
-      anomalies: { title: "Price Anomalies", count: 0, savings: 0, color: "amber" },
-      overdue: { title: "Overdue & Payment Issues", count: 0, savings: 0, color: "orange" },
+      duplicates: { title: "Duplicate/Unused", count: 0, savings: 0, color: "red" },
+      anomalies: { title: "Price/License Issues", count: 0, savings: 0, color: "amber" },
+      overdue: { title: "Payment/Inactive", count: 0, savings: 0, color: "orange" },
       other: { title: "Other Findings", count: 0, savings: 0, color: "slate" },
     }
 
     findings.forEach((finding: any) => {
       const savings = finding.potentialSavings || 0
-      if (finding.title?.toLowerCase().includes("duplicate")) {
+      const title = finding.title?.toLowerCase() || ''
+
+      // Fortnox categories
+      if (title.includes("duplicate") || title.includes("orphan") || title.includes("unused")) {
         grouped.duplicates.count++
         grouped.duplicates.savings += savings
-      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+      } else if (title.includes("price") || title.includes("anomal") || title.includes("over-provision") || title.includes("downgrade")) {
         grouped.anomalies.count++
         grouped.anomalies.savings += savings
-      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+      } else if (title.includes("overdue") || title.includes("payment") || title.includes("inactive")) {
         grouped.overdue.count++
         grouped.overdue.savings += savings
       } else {
@@ -3498,8 +3504,8 @@ export default function ToolDetailPage() {
                 <h4 className="text-[10px] font-bold text-slate-700 mb-2">Top Priority Actions</h4>
                 <div className="space-y-1">
                   {(() => {
-                    // Consolidate findings by title
-                    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []
+                    // Consolidate findings by title (check both Fortnox and M365 data sources)
+                    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
                     const consolidated: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
                     findings.forEach((f: any) => {
                       const title = f.title || 'Untitled'
@@ -3564,7 +3570,7 @@ export default function ToolDetailPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Top 5 priority actions with potential savings
+                  Top 3 priority actions with potential savings
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
