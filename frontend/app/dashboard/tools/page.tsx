@@ -833,9 +833,10 @@ export default function ToolsPage() {
         </div>
         <div className="flex flex-col items-end gap-1">
           <Button
+            disabled={isLoading}
             className={`w-full sm:w-auto ${
-              integrationLimits.canAddMore
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
+              isLoading || integrationLimits.canAddMore
+                ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
                 : "bg-gray-600 text-gray-300 cursor-not-allowed"
             }`}
             onClick={() => {
@@ -848,10 +849,14 @@ export default function ToolsPage() {
               setIsConnectModalOpen(true)
             }}
           >
-            <ExternalLink className="w-4 h-4 mr-2" />
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <ExternalLink className="w-4 h-4 mr-2" />
+            )}
             Connect New Tool
           </Button>
-          {!integrationLimits.canAddMore && (
+          {!isLoading && !integrationLimits.canAddMore && (
             <p className="text-xs text-orange-400">Limit reached - upgrade to add more</p>
           )}
         </div>
@@ -864,13 +869,22 @@ export default function ToolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Connected Tools</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-white">
-                    {integrationLimits.current}
-                    <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "∞" : integrationLimits.max}</span>
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{integrationLimits.planName} plan</p>
+                {isLoading ? (
+                  <>
+                    <div className="h-8 w-16 bg-white/10 rounded animate-pulse" />
+                    <div className="h-3 w-20 bg-white/5 rounded animate-pulse mt-2" />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-white">
+                        {integrationLimits.current}
+                        <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "∞" : integrationLimits.max}</span>
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{integrationLimits.planName} plan</p>
+                  </>
+                )}
               </div>
               <BarChart3 className="w-8 h-8 text-cyan-400 opacity-50" />
             </div>
@@ -881,7 +895,11 @@ export default function ToolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Total Monthly Cost</p>
-                <p className="text-2xl font-bold text-white">${totalCost.toLocaleString()}</p>
+                {isLoading ? (
+                  <div className="h-8 w-20 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <p className="text-2xl font-bold text-white">${totalCost.toLocaleString()}</p>
+                )}
               </div>
               <DollarSign className="w-8 h-8 text-green-400 opacity-50" />
             </div>
@@ -892,7 +910,11 @@ export default function ToolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Unused Seats</p>
-                <p className="text-2xl font-bold text-red-400">{totalUnusedSeats}</p>
+                {isLoading ? (
+                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <p className="text-2xl font-bold text-red-400">{totalUnusedSeats}</p>
+                )}
               </div>
               <Users className="w-8 h-8 text-red-400 opacity-50" />
             </div>
@@ -903,7 +925,11 @@ export default function ToolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Needs Attention</p>
-                <p className="text-2xl font-bold text-orange-400">{toolsNeedingAttention}</p>
+                {isLoading ? (
+                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <p className="text-2xl font-bold text-orange-400">{toolsNeedingAttention}</p>
+                )}
               </div>
               <AlertTriangle className="w-8 h-8 text-orange-400 opacity-50" />
             </div>
