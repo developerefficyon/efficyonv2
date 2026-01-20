@@ -728,7 +728,7 @@ export default function ToolDetailPage() {
     setShowPdfPreview(true)
   }
 
-  // PDF Export Function
+  // PDF Export Function - Concise 1-Page Summary
   const exportToPDF = () => {
     if (!costLeakAnalysis) {
       toast.error("No analysis data to export")
@@ -739,27 +739,16 @@ export default function ToolDetailPage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 20
+    const margin = 15
     let yPosition = margin
 
     // Colors
     const primaryColor: [number, number, number] = [6, 182, 212] // Cyan-500
-    const secondaryColor: [number, number, number] = [59, 130, 246] // Blue-500
     const darkBg: [number, number, number] = [15, 23, 42] // Slate-900
     const highSeverity: [number, number, number] = [239, 68, 68] // Red-500
     const mediumSeverity: [number, number, number] = [245, 158, 11] // Amber-500
     const lowSeverity: [number, number, number] = [100, 116, 139] // Slate-500
     const successColor: [number, number, number] = [16, 185, 129] // Emerald-500
-
-    // Helper function to add a new page if needed
-    const checkPageBreak = (requiredSpace: number) => {
-      if (yPosition + requiredSpace > pageHeight - margin) {
-        doc.addPage()
-        yPosition = margin
-        return true
-      }
-      return false
-    }
 
     // Helper function to draw rounded rectangle
     const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number, color: [number, number, number]) => {
@@ -767,259 +756,387 @@ export default function ToolDetailPage() {
       doc.roundedRect(x, y, w, h, r, r, 'F')
     }
 
+    // Helper to draw a pie/donut chart segment
+    const drawPieSegment = (cx: number, cy: number, radius: number, startAngle: number, endAngle: number, color: [number, number, number]) => {
+      doc.setFillColor(...color)
+      const steps = 50
+      const angleStep = (endAngle - startAngle) / steps
+      const points: [number, number][] = [[cx, cy]]
+
+      for (let i = 0; i <= steps; i++) {
+        const angle = startAngle + i * angleStep
+        points.push([
+          cx + radius * Math.cos(angle),
+          cy + radius * Math.sin(angle)
+        ])
+      }
+
+      // Draw filled polygon
+      doc.setFillColor(...color)
+      let path = `M ${cx} ${cy} `
+      points.forEach((p, i) => {
+        if (i === 0) return
+        path += `L ${p[0]} ${p[1]} `
+      })
+      path += 'Z'
+
+      // Simple triangle fan approach
+      for (let i = 1; i < points.length - 1; i++) {
+        doc.triangle(
+          cx, cy,
+          points[i][0], points[i][1],
+          points[i + 1][0], points[i + 1][1],
+          'F'
+        )
+      }
+    }
+
     // ===== HEADER =====
-    // Header background
-    drawRoundedRect(0, 0, pageWidth, 45, 0, darkBg)
-
-    // Gradient accent line
+    drawRoundedRect(0, 0, pageWidth, 35, 0, darkBg)
     doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(3)
-    doc.line(0, 45, pageWidth, 45)
+    doc.setLineWidth(2)
+    doc.line(0, 35, pageWidth, 35)
 
-    // Logo placeholder (circle)
+    // Logo
     doc.setFillColor(...primaryColor)
-    doc.circle(margin + 8, 22, 8, 'F')
+    doc.circle(margin + 6, 17, 6, 'F')
     doc.setFillColor(255, 255, 255)
-    doc.circle(margin + 5, 19, 2, 'F')
-    doc.circle(margin + 11, 19, 1.5, 'F')
-    doc.circle(margin + 5, 25, 1.5, 'F')
+    doc.circle(margin + 4, 15, 1.5, 'F')
+    doc.circle(margin + 8, 15, 1, 'F')
+    doc.circle(margin + 4, 19, 1, 'F')
 
     // Title
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(22)
+    doc.setFontSize(18)
     doc.setTextColor(255, 255, 255)
-    doc.text("Efficyon", margin + 22, 20)
-
+    doc.text("Efficyon", margin + 16, 15)
     doc.setFont("helvetica", "normal")
-    doc.setFontSize(12)
-    doc.setTextColor(148, 163, 184)
-    doc.text("Cost Leak Analysis Report", margin + 22, 30)
-
-    // Date
     doc.setFontSize(10)
     doc.setTextColor(148, 163, 184)
-    const reportDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-    doc.text(`Generated: ${reportDate}`, pageWidth - margin - 60, 25)
+    doc.text("Cost Leak Analysis Summary", margin + 16, 23)
 
-    yPosition = 60
+    // Date
+    doc.setFontSize(9)
+    const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    doc.text(reportDate, pageWidth - margin - 30, 20)
 
-    // ===== EXECUTIVE SUMMARY =====
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(16)
-    doc.setTextColor(15, 23, 42)
-    doc.text("Executive Summary", margin, yPosition)
-    yPosition += 12
+    yPosition = 45
 
-    if (costLeakAnalysis.overallSummary) {
-      const summary = costLeakAnalysis.overallSummary
-      const cardWidth = (pageWidth - margin * 2 - 15) / 4
-      const cardHeight = 35
-
-      // Card 1: Total Issues
-      drawRoundedRect(margin, yPosition, cardWidth, cardHeight, 3, [241, 245, 249])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(100, 116, 139)
-      doc.text("TOTAL ISSUES", margin + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(15, 23, 42)
-      doc.text(String(summary.totalFindings || 0), margin + 5, yPosition + 26)
-
-      // Card 2: Potential Savings
-      const card2X = margin + cardWidth + 5
-      drawRoundedRect(card2X, yPosition, cardWidth, cardHeight, 3, [209, 250, 229])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...successColor)
-      doc.text("POTENTIAL SAVINGS", card2X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(16)
-      doc.setTextColor(5, 150, 105)
-      const savingsText = `$${(summary.totalPotentialSavings || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
-      doc.text(savingsText, card2X + 5, yPosition + 26)
-
-      // Card 3: High Priority
-      const card3X = margin + (cardWidth + 5) * 2
-      drawRoundedRect(card3X, yPosition, cardWidth, cardHeight, 3, [254, 226, 226])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...highSeverity)
-      doc.text("HIGH PRIORITY", card3X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(185, 28, 28)
-      doc.text(String(summary.highSeverity || 0), card3X + 5, yPosition + 26)
-
-      // Card 4: Medium Priority
-      const card4X = margin + (cardWidth + 5) * 3
-      drawRoundedRect(card4X, yPosition, cardWidth, cardHeight, 3, [254, 243, 199])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...mediumSeverity)
-      doc.text("MEDIUM PRIORITY", card4X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(180, 83, 9)
-      doc.text(String(summary.mediumSeverity || 0), card4X + 5, yPosition + 26)
-
-      yPosition += cardHeight + 15
-    }
-
-    // ===== AI INSIGHTS =====
-    if (costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0) {
-      checkPageBreak(50)
-
-      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 40, 5, [236, 254, 255])
-      doc.setDrawColor(...primaryColor)
-      doc.setLineWidth(0.5)
-      doc.roundedRect(margin, yPosition, pageWidth - margin * 2, 40, 5, 5, 'S')
-
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(11)
-      doc.setTextColor(...primaryColor)
-      doc.text("AI Analysis Summary", margin + 8, yPosition + 12)
-
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(9)
-      doc.setTextColor(71, 85, 105)
-      const insightText = `We identified ${costLeakAnalysis.overallSummary.totalFindings} potential cost leaks that could save your company approximately $${(costLeakAnalysis.overallSummary.totalPotentialSavings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD. Review the detailed findings below to take action.`
-      const splitInsight = doc.splitTextToSize(insightText, pageWidth - margin * 2 - 16)
-      doc.text(splitInsight, margin + 8, yPosition + 24)
-
-      yPosition += 50
-    }
-
-    // ===== DETAILED FINDINGS =====
+    const summary = costLeakAnalysis.overallSummary || { totalFindings: 0, totalPotentialSavings: 0, highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 }
     const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || []
 
-    if (findings.length > 0) {
-      checkPageBreak(30)
+    // ===== KEY METRICS ROW =====
+    const metricCardWidth = (pageWidth - margin * 2 - 12) / 4
+    const metricCardHeight = 28
 
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(16)
-      doc.setTextColor(15, 23, 42)
-      doc.text("Detailed Findings", margin, yPosition)
-      yPosition += 15
+    // Total Issues
+    drawRoundedRect(margin, yPosition, metricCardWidth, metricCardHeight, 3, [241, 245, 249])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(100, 116, 139)
+    doc.text("TOTAL ISSUES", margin + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(18)
+    doc.setTextColor(15, 23, 42)
+    doc.text(String(summary.totalFindings || 0), margin + 4, yPosition + 22)
 
-      // Group findings
-      const grouped = {
-        duplicates: { title: "Duplicate Payments", findings: [] as any[], color: highSeverity },
-        anomalies: { title: "Price Anomalies", findings: [] as any[], color: mediumSeverity },
-        overdue: { title: "Overdue & Payment Issues", findings: [] as any[], color: [249, 115, 22] as [number, number, number] },
-        other: { title: "Other Findings", findings: [] as any[], color: lowSeverity },
+    // Potential Savings
+    const card2X = margin + metricCardWidth + 4
+    drawRoundedRect(card2X, yPosition, metricCardWidth, metricCardHeight, 3, [209, 250, 229])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(5, 150, 105)
+    doc.text("POTENTIAL SAVINGS", card2X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(14)
+    doc.text(`$${(summary.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`, card2X + 4, yPosition + 22)
+
+    // High Priority
+    const card3X = margin + (metricCardWidth + 4) * 2
+    drawRoundedRect(card3X, yPosition, metricCardWidth, metricCardHeight, 3, [254, 226, 226])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(185, 28, 28)
+    doc.text("HIGH PRIORITY", card3X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(18)
+    doc.text(String(summary.highSeverity || 0), card3X + 4, yPosition + 22)
+
+    // Medium Priority
+    const card4X = margin + (metricCardWidth + 4) * 3
+    drawRoundedRect(card4X, yPosition, metricCardWidth, metricCardHeight, 3, [254, 243, 199])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(180, 83, 9)
+    doc.text("MEDIUM PRIORITY", card4X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(18)
+    doc.text(String(summary.mediumSeverity || 0), card4X + 4, yPosition + 22)
+
+    yPosition += metricCardHeight + 10
+
+    // ===== CHARTS SECTION =====
+    const chartSectionY = yPosition
+    const leftColumnX = margin
+    const rightColumnX = pageWidth / 2 + 5
+    const columnWidth = (pageWidth - margin * 2 - 10) / 2
+
+    // Left: Severity Distribution (Donut Chart)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Issues by Severity", leftColumnX, yPosition)
+    yPosition += 8
+
+    const total = (summary.highSeverity || 0) + (summary.mediumSeverity || 0) + (summary.lowSeverity || 0)
+    const chartCenterX = leftColumnX + 35
+    const chartCenterY = yPosition + 30
+    const chartRadius = 25
+
+    if (total > 0) {
+      let currentAngle = -Math.PI / 2 // Start from top
+
+      // High severity (red)
+      if (summary.highSeverity > 0) {
+        const highAngle = (summary.highSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + highAngle, highSeverity)
+        currentAngle += highAngle
       }
 
-      findings.forEach((finding: any) => {
-        if (finding.title?.toLowerCase().includes("duplicate")) {
-          grouped.duplicates.findings.push(finding)
-        } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
-          grouped.anomalies.findings.push(finding)
-        } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
-          grouped.overdue.findings.push(finding)
-        } else {
-          grouped.other.findings.push(finding)
+      // Medium severity (amber)
+      if (summary.mediumSeverity > 0) {
+        const medAngle = (summary.mediumSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + medAngle, mediumSeverity)
+        currentAngle += medAngle
+      }
+
+      // Low severity (gray)
+      if (summary.lowSeverity > 0) {
+        const lowAngle = (summary.lowSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + lowAngle, lowSeverity)
+      }
+
+      // Center circle (donut hole)
+      doc.setFillColor(255, 255, 255)
+      doc.circle(chartCenterX, chartCenterY, 12, 'F')
+
+      // Center text
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(14)
+      doc.setTextColor(15, 23, 42)
+      doc.text(String(total), chartCenterX - 4, chartCenterY + 2)
+      doc.setFontSize(6)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(100, 116, 139)
+      doc.text("issues", chartCenterX - 5, chartCenterY + 8)
+    } else {
+      doc.setFillColor(241, 245, 249)
+      doc.circle(chartCenterX, chartCenterY, chartRadius, 'F')
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No issues", chartCenterX - 10, chartCenterY + 3)
+    }
+
+    // Legend for pie chart
+    const legendX = leftColumnX + 70
+    const legendY = chartCenterY - 15
+
+    // High
+    doc.setFillColor(...highSeverity)
+    doc.rect(legendX, legendY, 8, 8, 'F')
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8)
+    doc.setTextColor(71, 85, 105)
+    doc.text(`High (${summary.highSeverity || 0})`, legendX + 11, legendY + 6)
+
+    // Medium
+    doc.setFillColor(...mediumSeverity)
+    doc.rect(legendX, legendY + 12, 8, 8, 'F')
+    doc.text(`Medium (${summary.mediumSeverity || 0})`, legendX + 11, legendY + 18)
+
+    // Low
+    doc.setFillColor(...lowSeverity)
+    doc.rect(legendX, legendY + 24, 8, 8, 'F')
+    doc.text(`Low (${summary.lowSeverity || 0})`, legendX + 11, legendY + 30)
+
+    // Right: Savings by Category (Horizontal Bar Chart)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Savings by Category", rightColumnX, chartSectionY)
+
+    // Group findings by category and calculate savings
+    const categoryMap: Record<string, { name: string, savings: number, color: [number, number, number] }> = {
+      duplicates: { name: "Duplicates", savings: 0, color: highSeverity },
+      anomalies: { name: "Price Issues", savings: 0, color: mediumSeverity },
+      overdue: { name: "Payment Issues", savings: 0, color: [249, 115, 22] },
+      other: { name: "Other", savings: 0, color: lowSeverity },
+    }
+
+    findings.forEach((finding: any) => {
+      const savings = finding.potentialSavings || 0
+      if (finding.title?.toLowerCase().includes("duplicate")) {
+        categoryMap.duplicates.savings += savings
+      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+        categoryMap.anomalies.savings += savings
+      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+        categoryMap.overdue.savings += savings
+      } else {
+        categoryMap.other.savings += savings
+      }
+    })
+
+    const categories = Object.values(categoryMap).filter(c => c.savings > 0).sort((a, b) => b.savings - a.savings)
+    const maxSavings = Math.max(...categories.map(c => c.savings), 1)
+    const barMaxWidth = columnWidth - 50
+    let barY = chartSectionY + 10
+
+    if (categories.length > 0) {
+      categories.forEach((cat) => {
+        const barWidth = (cat.savings / maxSavings) * barMaxWidth
+
+        // Category name
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(8)
+        doc.setTextColor(71, 85, 105)
+        doc.text(cat.name, rightColumnX, barY + 5)
+
+        // Bar background
+        drawRoundedRect(rightColumnX, barY + 8, barMaxWidth, 10, 2, [241, 245, 249])
+
+        // Bar fill
+        if (barWidth > 0) {
+          drawRoundedRect(rightColumnX, barY + 8, Math.max(barWidth, 4), 10, 2, cat.color)
+        }
+
+        // Amount
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(8)
+        doc.setTextColor(15, 23, 42)
+        doc.text(`$${cat.savings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, rightColumnX + barMaxWidth + 3, barY + 15)
+
+        barY += 22
+      })
+    } else {
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No savings identified", rightColumnX, barY + 20)
+    }
+
+    yPosition = Math.max(chartCenterY + chartRadius + 15, barY + 5)
+
+    // ===== TOP ACTIONS SECTION =====
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Top Priority Actions", margin, yPosition)
+    yPosition += 8
+
+    // Consolidate findings by title to avoid duplicates
+    const consolidatedFindings: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
+    findings.forEach((finding: any) => {
+      const title = finding.title || 'Untitled'
+      if (!consolidatedFindings[title]) {
+        consolidatedFindings[title] = {
+          title,
+          count: 0,
+          totalSavings: 0,
+          severity: finding.severity || 'low'
+        }
+      }
+      consolidatedFindings[title].count++
+      consolidatedFindings[title].totalSavings += finding.potentialSavings || 0
+      // Keep highest severity
+      if (finding.severity === 'high') consolidatedFindings[title].severity = 'high'
+      else if (finding.severity === 'medium' && consolidatedFindings[title].severity !== 'high') {
+        consolidatedFindings[title].severity = 'medium'
+      }
+    })
+
+    // Sort by total savings and take top 5
+    const topActions = Object.values(consolidatedFindings)
+      .sort((a, b) => b.totalSavings - a.totalSavings)
+      .slice(0, 5)
+
+    if (topActions.length > 0) {
+      topActions.forEach((action, index: number) => {
+        const rowY = yPosition + index * 18
+
+        // Row background
+        drawRoundedRect(margin, rowY, pageWidth - margin * 2, 16, 2, index % 2 === 0 ? [248, 250, 252] : [255, 255, 255])
+
+        // Priority number
+        const severityColor = action.severity === 'high' ? highSeverity : action.severity === 'medium' ? mediumSeverity : lowSeverity
+        doc.setFillColor(...severityColor)
+        doc.circle(margin + 8, rowY + 8, 5, 'F')
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(8)
+        doc.setTextColor(255, 255, 255)
+        doc.text(String(index + 1), margin + 6.5, rowY + 10)
+
+        // Finding title with count if multiple
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(8)
+        doc.setTextColor(15, 23, 42)
+        const countText = action.count > 1 ? ` (${action.count} instances)` : ''
+        const maxTitleLength = action.count > 1 ? 35 : 50
+        const titleText = action.title.substring(0, maxTitleLength) + (action.title.length > maxTitleLength ? '...' : '') + countText
+        doc.text(titleText, margin + 18, rowY + 10)
+
+        // Savings amount
+        if (action.totalSavings > 0) {
+          doc.setFont("helvetica", "bold")
+          doc.setTextColor(5, 150, 105)
+          doc.text(`$${action.totalSavings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, pageWidth - margin - 25, rowY + 10)
         }
       })
+      yPosition += topActions.length * 18 + 8
+    } else {
+      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 20, 3, [241, 245, 249])
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No action items identified - great job!", margin + (pageWidth - margin * 2) / 2 - 35, yPosition + 12)
+      yPosition += 28
+    }
 
-      // Render each group
-      Object.entries(grouped).forEach(([key, group]) => {
-        if (group.findings.length === 0) return
+    // ===== AI INSIGHT BOX =====
+    if (summary.totalFindings > 0) {
+      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 30, 4, [236, 254, 255])
+      doc.setDrawColor(...primaryColor)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(margin, yPosition, pageWidth - margin * 2, 30, 4, 4, 'S')
 
-        checkPageBreak(40)
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9)
+      doc.setTextColor(...primaryColor)
+      doc.text("AI Insight", margin + 6, yPosition + 10)
 
-        // Group header
-        drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 12, 3, group.color)
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(10)
-        doc.setTextColor(255, 255, 255)
-        doc.text(`${group.title} (${group.findings.length})`, margin + 5, yPosition + 8)
-        yPosition += 16
-
-        // Findings table
-        const tableData = group.findings.map((finding: any) => [
-          finding.severity?.toUpperCase() || 'N/A',
-          finding.title || 'Untitled',
-          finding.description?.substring(0, 80) + (finding.description?.length > 80 ? '...' : '') || 'No description',
-          finding.potentialSavings ? `$${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-',
-          finding.invoices?.length ? `${finding.invoices.length} invoice(s)` : '-'
-        ])
-
-        autoTable(doc, {
-          startY: yPosition,
-          head: [['Severity', 'Issue', 'Description', 'Savings', 'Related']],
-          body: tableData,
-          margin: { left: margin, right: margin },
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [226, 232, 240],
-            lineWidth: 0.1,
-          },
-          headStyles: {
-            fillColor: darkBg,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            fontSize: 8,
-          },
-          columnStyles: {
-            0: { cellWidth: 18, halign: 'center' },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 65 },
-            3: { cellWidth: 25, halign: 'right' },
-            4: { cellWidth: 25, halign: 'center' },
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252],
-          },
-          didParseCell: (data) => {
-            if (data.section === 'body' && data.column.index === 0) {
-              const severity = data.cell.raw as string
-              if (severity === 'HIGH') {
-                data.cell.styles.textColor = highSeverity
-                data.cell.styles.fontStyle = 'bold'
-              } else if (severity === 'MEDIUM') {
-                data.cell.styles.textColor = mediumSeverity
-                data.cell.styles.fontStyle = 'bold'
-              } else {
-                data.cell.styles.textColor = lowSeverity
-              }
-            }
-          },
-        })
-
-        yPosition = (doc as any).lastAutoTable.finalY + 10
-      })
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(8)
+      doc.setTextColor(71, 85, 105)
+      const insightText = `Based on our analysis, addressing the top ${Math.min(3, topActions.length)} issues could recover approximately $${topActions.slice(0, 3).reduce((sum: number, a: any) => sum + (a.totalSavings || 0), 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} in savings. We recommend prioritizing the highest-impact items first.`
+      const splitInsight = doc.splitTextToSize(insightText, pageWidth - margin * 2 - 12)
+      doc.text(splitInsight, margin + 6, yPosition + 20)
     }
 
     // ===== FOOTER =====
-    const totalPages = doc.getNumberOfPages()
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.5)
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
 
-      // Footer line
-      doc.setDrawColor(226, 232, 240)
-      doc.setLineWidth(0.5)
-      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
-
-      // Footer text
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(148, 163, 184)
-      doc.text("Confidential - For internal use only", margin, pageHeight - 8)
-      doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 25, pageHeight - 8)
-
-      // Efficyon branding
-      doc.setTextColor(...primaryColor)
-      doc.text("Powered by Efficyon", pageWidth / 2 - 18, pageHeight - 8)
-    }
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(148, 163, 184)
+    doc.text("Confidential - For internal use only", margin, pageHeight - 8)
+    doc.text("Page 1 of 1", pageWidth - margin - 20, pageHeight - 8)
+    doc.setTextColor(...primaryColor)
+    doc.text("Powered by Efficyon", pageWidth / 2 - 15, pageHeight - 8)
 
     // Save the PDF
-    const fileName = `cost-leak-analysis-${new Date().toISOString().split('T')[0]}.pdf`
+    const fileName = `cost-leak-summary-${new Date().toISOString().split('T')[0]}.pdf`
     doc.save(fileName)
     toast.success("PDF exported successfully", { description: fileName })
     setShowPdfPreview(false)
@@ -1030,25 +1147,33 @@ export default function ToolDetailPage() {
   const getGroupedFindingsForPreview = () => {
     const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []
     const grouped = {
-      duplicates: { title: "Duplicate Payments", count: 0, color: "red" },
-      anomalies: { title: "Price Anomalies", count: 0, color: "amber" },
-      overdue: { title: "Overdue & Payment Issues", count: 0, color: "orange" },
-      other: { title: "Other Findings", count: 0, color: "slate" },
+      duplicates: { title: "Duplicate Payments", count: 0, savings: 0, color: "red" },
+      anomalies: { title: "Price Anomalies", count: 0, savings: 0, color: "amber" },
+      overdue: { title: "Overdue & Payment Issues", count: 0, savings: 0, color: "orange" },
+      other: { title: "Other Findings", count: 0, savings: 0, color: "slate" },
     }
 
     findings.forEach((finding: any) => {
+      const savings = finding.potentialSavings || 0
       if (finding.title?.toLowerCase().includes("duplicate")) {
         grouped.duplicates.count++
+        grouped.duplicates.savings += savings
       } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
         grouped.anomalies.count++
+        grouped.anomalies.savings += savings
       } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
         grouped.overdue.count++
+        grouped.overdue.savings += savings
       } else {
         grouped.other.count++
+        grouped.other.savings += savings
       }
     })
 
-    return Object.entries(grouped).filter(([_, g]) => g.count > 0)
+    // Sort by savings (highest first) and filter out empty groups
+    return Object.entries(grouped)
+      .filter(([_, g]) => g.count > 0)
+      .sort((a, b) => b[1].savings - a[1].savings)
   }
 
   const activeFindings = getFilteredFindings()
@@ -3244,97 +3369,175 @@ export default function ToolDetailPage() {
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              PDF Export Preview
+              PDF Summary Preview
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Review the content that will be included in your PDF report before downloading.
+              A concise 1-page summary with key metrics, charts, and top priority actions.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-4 py-4">
             {/* PDF Preview Content */}
-            <div className="bg-white rounded-lg p-6 text-slate-900 shadow-xl">
+            <div className="bg-white rounded-lg p-4 text-slate-900 shadow-xl">
               {/* Mock PDF Header */}
-              <div className="bg-slate-900 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full" />
+              <div className="bg-slate-900 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-sm">Efficyon</h3>
+                      <p className="text-gray-400 text-[10px]">Cost Leak Analysis Summary</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">Efficyon</h3>
-                    <p className="text-gray-400 text-sm">Cost Leak Analysis Report</p>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-slate-700">
-                  <p className="text-gray-400 text-xs">
-                    Generated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  <p className="text-gray-400 text-[10px]">
+                    {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               </div>
 
-              {/* Executive Summary Preview */}
-              <div className="mb-6">
-                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-slate-600" />
-                  Executive Summary
-                </h4>
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-slate-100 rounded-lg p-3 text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Issues</p>
-                    <p className="text-xl font-bold text-slate-800">
-                      {costLeakAnalysis?.overallSummary?.totalFindings || 0}
-                    </p>
+              {/* Key Metrics */}
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="bg-slate-100 rounded p-2 text-center">
+                  <p className="text-[8px] text-slate-500 uppercase">Total Issues</p>
+                  <p className="text-lg font-bold text-slate-800">
+                    {costLeakAnalysis?.overallSummary?.totalFindings || 0}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded p-2 text-center border border-emerald-200">
+                  <p className="text-[8px] text-emerald-600 uppercase">Savings</p>
+                  <p className="text-sm font-bold text-emerald-600">
+                    ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+                <div className="bg-red-50 rounded p-2 text-center border border-red-200">
+                  <p className="text-[8px] text-red-600 uppercase">High</p>
+                  <p className="text-lg font-bold text-red-600">
+                    {costLeakAnalysis?.overallSummary?.highSeverity || 0}
+                  </p>
+                </div>
+                <div className="bg-amber-50 rounded p-2 text-center border border-amber-200">
+                  <p className="text-[8px] text-amber-600 uppercase">Medium</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Donut Chart Preview */}
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Issues by Severity</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-16 h-16">
+                      <svg viewBox="0 0 36 36" className="w-full h-full">
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                        {(costLeakAnalysis?.overallSummary?.highSeverity || 0) > 0 && (
+                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="3"
+                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
+                            strokeDashoffset="25" />
+                        )}
+                        {(costLeakAnalysis?.overallSummary?.mediumSeverity || 0) > 0 && (
+                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3"
+                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.mediumSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
+                            strokeDashoffset={`${25 - ((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100}`} />
+                        )}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-bold text-slate-700">{costLeakAnalysis?.overallSummary?.totalFindings || 0}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-[9px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-sm" />
+                        <span className="text-slate-600">High ({costLeakAnalysis?.overallSummary?.highSeverity || 0})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-amber-500 rounded-sm" />
+                        <span className="text-slate-600">Medium ({costLeakAnalysis?.overallSummary?.mediumSeverity || 0})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-sm" />
+                        <span className="text-slate-600">Low ({costLeakAnalysis?.overallSummary?.lowSeverity || 0})</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-200">
-                    <p className="text-[10px] text-emerald-600 uppercase tracking-wider">Savings</p>
-                    <p className="text-lg font-bold text-emerald-600">
-                      ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg p-3 text-center border border-red-200">
-                    <p className="text-[10px] text-red-600 uppercase tracking-wider">High</p>
-                    <p className="text-xl font-bold text-red-600">
-                      {costLeakAnalysis?.overallSummary?.highSeverity || 0}
-                    </p>
-                  </div>
-                  <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-200">
-                    <p className="text-[10px] text-amber-600 uppercase tracking-wider">Medium</p>
-                    <p className="text-xl font-bold text-amber-600">
-                      {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
-                    </p>
+                </div>
+
+                {/* Bar Chart Preview */}
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Savings by Category</h4>
+                  <div className="space-y-2">
+                    {getGroupedFindingsForPreview().slice(0, 3).map(([key, group]) => (
+                      <div key={key} className="space-y-0.5">
+                        <div className="flex justify-between text-[8px]">
+                          <span className="text-slate-600">{group.title}</span>
+                          <span className="font-medium text-slate-700">${(group.savings || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded overflow-hidden">
+                          <div
+                            className={`h-full rounded ${
+                              group.color === 'red' ? 'bg-red-500' :
+                              group.color === 'amber' ? 'bg-amber-500' :
+                              group.color === 'orange' ? 'bg-orange-500' :
+                              'bg-slate-400'
+                            }`}
+                            style={{ width: `${Math.min(((group.savings || 0) / Math.max(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 1, 1)) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Findings Preview */}
-              <div className="mb-4">
-                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-slate-600" />
-                  Detailed Findings
-                </h4>
-                <div className="space-y-2">
-                  {getGroupedFindingsForPreview().map(([key, group]) => (
-                    <div key={key} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          group.color === 'red' ? 'bg-red-500' :
-                          group.color === 'amber' ? 'bg-amber-500' :
-                          group.color === 'orange' ? 'bg-orange-500' :
-                          'bg-slate-500'
-                        }`} />
-                        <span className="text-sm text-slate-700">{group.title}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-                        {group.count} item{group.count !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  ))}
+              {/* Top Actions Preview */}
+              <div className="mb-3">
+                <h4 className="text-[10px] font-bold text-slate-700 mb-2">Top Priority Actions</h4>
+                <div className="space-y-1">
+                  {(() => {
+                    // Consolidate findings by title
+                    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []
+                    const consolidated: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
+                    findings.forEach((f: any) => {
+                      const title = f.title || 'Untitled'
+                      if (!consolidated[title]) {
+                        consolidated[title] = { title, count: 0, totalSavings: 0, severity: f.severity || 'low' }
+                      }
+                      consolidated[title].count++
+                      consolidated[title].totalSavings += f.potentialSavings || 0
+                      if (f.severity === 'high') consolidated[title].severity = 'high'
+                      else if (f.severity === 'medium' && consolidated[title].severity !== 'high') {
+                        consolidated[title].severity = 'medium'
+                      }
+                    })
+                    return Object.values(consolidated)
+                      .sort((a, b) => b.totalSavings - a.totalSavings)
+                      .slice(0, 3)
+                      .map((action, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1.5">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${
+                            action.severity === 'high' ? 'bg-red-500' : action.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <span className="text-[9px] text-slate-700 flex-1 truncate">
+                            {action.title}{action.count > 1 ? ` (${action.count})` : ''}
+                          </span>
+                          <span className="text-[9px] font-bold text-emerald-600">
+                            ${action.totalSavings.toLocaleString()}
+                          </span>
+                        </div>
+                      ))
+                  })()}
                 </div>
               </div>
 
               {/* Footer Preview */}
-              <div className="border-t border-slate-200 pt-3 mt-4 flex items-center justify-between text-[10px] text-slate-400">
-                <span>Confidential - For internal use only</span>
+              <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[8px] text-slate-400">
+                <span>Confidential</span>
                 <span className="text-cyan-600">Powered by Efficyon</span>
                 <span>Page 1 of 1</span>
               </div>
@@ -3349,23 +3552,23 @@ export default function ToolDetailPage() {
               <ul className="text-xs text-gray-400 space-y-1.5">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Executive summary with key metrics
+                  Key metrics summary (issues, savings, severity counts)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  AI analysis summary and insights
+                  Visual donut chart showing severity distribution
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  All {costLeakAnalysis?.supplierInvoiceAnalysis?.findings?.length || 0} findings grouped by category
+                  Bar chart showing savings by category
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Detailed tables with severity, descriptions, and savings
+                  Top 5 priority actions with potential savings
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Professional formatting with Efficyon branding
+                  AI insight with actionable recommendation
                 </li>
               </ul>
             </div>
