@@ -319,7 +319,7 @@ type MessagesCache = {
 }
 
 // Hook to manage chat conversations with tool support and caching
-export function useChatConversations(toolId: string | null = null) {
+export function useChatConversations(chatType: "general" | "comparison" | "tool" = "general", toolId: string | null = null) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -329,7 +329,7 @@ export function useChatConversations(toolId: string | null = null) {
   const messagesCacheRef = useRef<MessagesCache>({})
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-  const cacheKey = toolId || "general"
+  const cacheKey = chatType === "tool" && toolId ? `tool-${toolId}` : chatType
   const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
   const fetchConversations = useCallback(async (forceRefresh = false) => {
@@ -349,7 +349,8 @@ export function useChatConversations(toolId: string | null = null) {
       if (!accessToken) return
 
       const url = new URL(`${apiBase}/api/chat/conversations`)
-      if (toolId) {
+      url.searchParams.set("chatType", chatType)
+      if (chatType === "tool" && toolId) {
         url.searchParams.set("toolId", toolId)
       }
 
@@ -376,7 +377,7 @@ export function useChatConversations(toolId: string | null = null) {
     } finally {
       setIsLoading(false)
     }
-  }, [apiBase, toolId, cacheKey])
+  }, [apiBase, chatType, toolId, cacheKey])
 
   const createConversation = useCallback(async (): Promise<string | null> => {
     try {
@@ -394,7 +395,8 @@ export function useChatConversations(toolId: string | null = null) {
         },
         body: JSON.stringify({
           title: "New Chat",
-          toolId: toolId,
+          chatType: chatType,
+          toolId: chatType === "tool" ? toolId : null,
         }),
       })
 
@@ -418,7 +420,7 @@ export function useChatConversations(toolId: string | null = null) {
       toast.error("Failed to create new chat")
       return null
     }
-  }, [apiBase, toolId, cacheKey, conversations])
+  }, [apiBase, chatType, toolId, cacheKey, conversations])
 
   const deleteConversation = useCallback(async (id: string) => {
     try {
@@ -558,11 +560,11 @@ export function useChatConversations(toolId: string | null = null) {
     messagesCacheRef.current = {}
   }, [])
 
-  // Fetch conversations when hook mounts or toolId changes
+  // Fetch conversations when hook mounts or chatType/toolId changes
   useEffect(() => {
-    setActiveConversationId(null) // Reset active conversation when tool changes
+    setActiveConversationId(null) // Reset active conversation when chat type changes
     fetchConversations()
-  }, [toolId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatType, toolId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     conversations,

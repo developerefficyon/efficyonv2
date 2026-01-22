@@ -85,11 +85,16 @@ export default function ChatbotPage() {
   // Get connected tools
   const { tools } = useConnectedTools()
 
-  // Get current tool info
-  const currentTool = activeTab === "general" ? null : tools.find((t) => t.id === activeTab)
-  const currentToolId = activeTab === "general" ? null : activeTab
+  // Get current tool info and chat type
+  // Determine chatType based on activeTab
+  const chatType: "general" | "comparison" | "tool" =
+    activeTab === "general" ? "general" :
+    activeTab === "comparison" ? "comparison" : "tool"
 
-  // Chat conversations hook - filtered by current tool
+  const currentTool = chatType === "tool" ? tools.find((t) => t.id === activeTab) : null
+  const currentToolId = chatType === "tool" ? activeTab : null
+
+  // Chat conversations hook - filtered by chat type and tool
   const {
     conversations,
     activeConversationId,
@@ -100,7 +105,7 @@ export default function ChatbotPage() {
     renameConversation,
     addMessageToConversation,
     loadConversation,
-  } = useChatConversations(currentToolId)
+  } = useChatConversations(chatType, currentToolId)
 
   // Set sidebar closed by default on mobile
   useEffect(() => {
