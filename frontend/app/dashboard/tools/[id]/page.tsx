@@ -171,6 +171,13 @@ export default function ToolDetailPage() {
 
       setIntegration(found)
 
+      // Set default data tab based on integration type
+      if (found.tool_name === "Microsoft365" || found.provider === "Microsoft365") {
+        setActiveDataTab("licenses")
+      } else {
+        setActiveDataTab("company")
+      }
+
       // If it's Fortnox and connected, load the information (but not analysis - user must click button)
       if (found.tool_name === "Fortnox" && found.status === "connected") {
         void loadFortnoxInfo(found)
@@ -618,11 +625,27 @@ export default function ToolDetailPage() {
     }
   }
 
+  // Wrapper function to call appropriate analysis based on integration type
+  const handleAnalyzeCostLeaks = () => {
+    if (!integration) return
+
+    if (integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365") {
+      fetchMicrosoft365CostLeakAnalysis()
+    } else {
+      fetchCostLeakAnalysis()
+    }
+  }
+
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    if (!costLeakAnalysis?.supplierInvoiceAnalysis?.findings) return []
+    // Support both Fortnox (supplierInvoiceAnalysis) and Microsoft 365 (licenseAnalysis)
+    const findings_source = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
+                           costLeakAnalysis?.licenseAnalysis?.findings ||
+                           []
 
-    let findings = costLeakAnalysis.supplierInvoiceAnalysis.findings
+    if (findings_source.length === 0) return []
+
+    let findings = [...findings_source]
 
     // Filter by severity
     if (findingsFilter !== "all") {
@@ -649,25 +672,57 @@ export default function ToolDetailPage() {
   }
 
   const groupFindings = (findings: any[]) => {
-    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = {
-      duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
-      anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
-      overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
-      other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-    }
+    // Dynamic groups based on integration type
+    const isMicrosoft365Analysis = costLeakAnalysis?.licenseAnalysis?.findings?.length > 0
+
+    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = isMicrosoft365Analysis
+      ? {
+          orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
+          inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
+          overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
+          unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
+          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+        }
+      : {
+          duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
+          anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
+          overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+        }
+
+    // Get the original findings source for index lookup
+    const findingsSource = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
+                          costLeakAnalysis?.licenseAnalysis?.findings ||
+                          []
 
     findings.forEach((finding: any, idx: number) => {
-      const originalIdx = costLeakAnalysis?.supplierInvoiceAnalysis?.findings?.indexOf(finding) ?? idx
+      const originalIdx = findingsSource.indexOf(finding) ?? idx
       const findingWithIdx = { ...finding, originalIdx }
 
-      if (finding.title?.toLowerCase().includes("duplicate")) {
-        groups.duplicates.findings.push(findingWithIdx)
-      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
-        groups.anomalies.findings.push(findingWithIdx)
-      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
-        groups.overdue.findings.push(findingWithIdx)
+      if (isMicrosoft365Analysis) {
+        // Microsoft 365 grouping
+        if (finding.type === "orphaned_license" || finding.title?.toLowerCase().includes("orphan") || finding.title?.toLowerCase().includes("disabled")) {
+          groups.orphaned.findings.push(findingWithIdx)
+        } else if (finding.type === "inactive_license" || finding.title?.toLowerCase().includes("inactive") || finding.title?.toLowerCase().includes("never signed")) {
+          groups.inactive.findings.push(findingWithIdx)
+        } else if (finding.type === "over_provisioned" || finding.title?.toLowerCase().includes("over-provisioned") || finding.title?.toLowerCase().includes("downgrade")) {
+          groups.overprovisioned.findings.push(findingWithIdx)
+        } else if (finding.type === "unused_addon" || finding.title?.toLowerCase().includes("unused") || finding.title?.toLowerCase().includes("add-on")) {
+          groups.unused.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
       } else {
-        groups.other.findings.push(findingWithIdx)
+        // Fortnox grouping
+        if (finding.title?.toLowerCase().includes("duplicate")) {
+          groups.duplicates.findings.push(findingWithIdx)
+        } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+          groups.anomalies.findings.push(findingWithIdx)
+        } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+          groups.overdue.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
       }
     })
 
@@ -1200,6 +1255,8 @@ export default function ToolDetailPage() {
   }
 
   const isFortnox = integration.tool_name === "Fortnox" || integration.provider === "Fortnox"
+  const isMicrosoft365 = integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365"
+  const hasFullUI = isFortnox || isMicrosoft365
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -1233,7 +1290,7 @@ export default function ToolDetailPage() {
       </div>
 
       {/* Tabs for organized sections */}
-      {isFortnox && integration.status === "connected" ? (
+      {hasFullUI && integration.status === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
             <TabsTrigger 
@@ -1308,7 +1365,7 @@ export default function ToolDetailPage() {
                       </>
                     )}
                     <Button
-                      onClick={fetchCostLeakAnalysis}
+                      onClick={handleAnalyzeCostLeaks}
                       disabled={isLoadingAnalysis}
                       className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
                     >
@@ -1766,7 +1823,9 @@ export default function ToolDetailPage() {
                       </div>
                       <h3 className="text-white font-bold text-xl mb-2">Excellent! No Cost Leaks Detected</h3>
                       <p className="text-gray-400 max-w-md mx-auto">
-                        Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns.
+                        {isMicrosoft365
+                          ? "Your Microsoft 365 licenses appear well-optimized with no inactive users, orphaned licenses, or over-provisioning detected."
+                          : "Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns."}
                       </p>
                     </CardContent>
                   </Card>
@@ -1794,10 +1853,12 @@ export default function ToolDetailPage() {
                   </div>
                   <h3 className="text-white font-bold text-xl mb-2">Ready to Analyze</h3>
                   <p className="text-gray-400 max-w-md mx-auto mb-6">
-                    Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities.
+                    {isMicrosoft365
+                      ? "Our AI will analyze your Microsoft 365 licenses to identify inactive users, orphaned licenses, over-provisioning, and cost optimization opportunities."
+                      : "Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities."}
                   </p>
                   <Button
-                    onClick={fetchCostLeakAnalysis}
+                    onClick={handleAnalyzeCostLeaks}
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25"
                   >
                     <Search className="w-4 h-4 mr-2" />
@@ -1996,7 +2057,7 @@ export default function ToolDetailPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
                     <Package className="w-5 h-5" />
-                    Fortnox Data
+                    {isMicrosoft365 ? "Microsoft 365 Data" : "Fortnox Data"}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2043,7 +2104,46 @@ export default function ToolDetailPage() {
                           />
                         </div>
 
-                        {/* Data Tab Navigation */}
+                        {/* Data Tab Navigation - Microsoft 365 */}
+                        {isMicrosoft365 && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("licenses")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "licenses"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Key className="w-4 h-4" />
+                              <span className="hidden sm:inline">Licenses</span>
+                              {microsoft365Info.licenses && microsoft365Info.licenses.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {microsoft365Info.licenses.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("users")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "users"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Users</span>
+                              {microsoft365Info.users && microsoft365Info.users.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {microsoft365Info.users.length}
+                                </Badge>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Data Tab Navigation - Fortnox */}
+                        {isFortnox && (
                         <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
                           <button
                             onClick={() => setActiveDataTab("company")}
@@ -2153,10 +2253,140 @@ export default function ToolDetailPage() {
                             </button>
                           )}
                         </div>
+                        )}
                       </div>
 
-                      {/* Company Information Tab */}
-                      {activeDataTab === "company" && fortnoxInfo.company && (
+                      {/* Microsoft 365 Licenses Tab */}
+                      {isMicrosoft365 && activeDataTab === "licenses" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Key className="w-4 h-4 text-cyan-400" />
+                            Licenses
+                            {microsoft365Info.licenses && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {microsoft365Info.licenses.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {microsoft365Info.licenses && microsoft365Info.licenses.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">License Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">SKU ID</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Consumed</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Available</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(microsoft365Info.licenses, infoSearchQuery).map((license: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {license.skuPartNumber || license.displayName || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 font-mono text-xs">
+                                        {license.skuId?.substring(0, 8)}...
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-white">
+                                        {license.consumedUnits || 0}
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-green-400">
+                                        {(license.prepaidUnits?.enabled || 0) - (license.consumedUnits || 0)}
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">
+                                        {license.prepaidUnits?.enabled || 0}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No licenses found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Microsoft 365 Users Tab */}
+                      {isMicrosoft365 && activeDataTab === "users" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            Users
+                            {microsoft365Info.users && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {microsoft365Info.users.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {microsoft365Info.users && microsoft365Info.users.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Email</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Licenses</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Last Sign-In</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(microsoft365Info.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {user.displayName || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400">
+                                        {user.mail || user.userPrincipalName || "N/A"}
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={user.accountEnabled
+                                          ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                          : "bg-red-500/20 text-red-400 border-red-500/30"
+                                        }>
+                                          {user.accountEnabled ? "Active" : "Disabled"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-center text-cyan-400">
+                                        {user.assignedLicenses?.length || 0}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {user.signInActivity?.lastSignInDateTime
+                                          ? new Date(user.signInActivity.lastSignInDateTime).toLocaleDateString()
+                                          : "Never"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {microsoft365Info.users.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {microsoft365Info.users.length} users. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No users found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no M365 data */}
+                      {isMicrosoft365 && Object.keys(microsoft365Info).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* Company Information Tab - Fortnox */}
+                      {isFortnox && activeDataTab === "company" && fortnoxInfo.company && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                             <Wallet className="w-4 h-4 text-cyan-400" />
@@ -2262,7 +2492,7 @@ export default function ToolDetailPage() {
                       )}
 
                       {/* Customers Tab */}
-                      {activeDataTab === "customers" && fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "customers" && fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (() => {
                         const filteredCustomers = filterData(fortnoxInfo.customers, infoSearchQuery)
                         const totalCustomerPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE)
                         const paginatedCustomers = filteredCustomers.slice(
@@ -2335,7 +2565,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Invoices Tab */}
-                      {activeDataTab === "invoices" && fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "invoices" && fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (() => {
                         const filteredInvoices = filterData(fortnoxInfo.invoices, infoSearchQuery)
                         const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE)
                         const paginatedInvoices = filteredInvoices.slice(
@@ -2420,7 +2650,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Supplier Invoices Tab */}
-                      {activeDataTab === "supplierInvoices" && fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "supplierInvoices" && fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (() => {
                         const filteredSupplierInvoices = filterData(fortnoxInfo.supplierInvoices, infoSearchQuery)
                         const totalSupplierInvoicePages = Math.ceil(filteredSupplierInvoices.length / ITEMS_PER_PAGE)
                         const paginatedSupplierInvoices = filteredSupplierInvoices.slice(
@@ -2497,7 +2727,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Accounts Tab */}
-                      {activeDataTab === "accounts" && fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "accounts" && fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (() => {
                         const filteredAccounts = filterData(fortnoxInfo.accounts, infoSearchQuery)
                         const totalAccountPages = Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE)
                         const paginatedAccounts = filteredAccounts.slice(
@@ -2571,7 +2801,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Articles Tab */}
-                      {activeDataTab === "articles" && fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "articles" && fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (() => {
                         const filteredArticles = filterData(fortnoxInfo.articles, infoSearchQuery)
                         const totalArticlePages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE)
                         const paginatedArticles = filteredArticles.slice(
@@ -2643,7 +2873,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Suppliers Tab */}
-                      {activeDataTab === "suppliers" && fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "suppliers" && fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (() => {
                         const filteredSuppliers = filterData(fortnoxInfo.suppliers, infoSearchQuery)
                         const totalSupplierPages = Math.ceil(filteredSuppliers.length / ITEMS_PER_PAGE)
                         const paginatedSuppliers = filteredSuppliers.slice(
@@ -2715,8 +2945,8 @@ export default function ToolDetailPage() {
                         )
                       })()}
 
-                      {/* Show message if no data */}
-                      {Object.keys(fortnoxInfo).length === 0 && (
+                      {/* Show message if no Fortnox data */}
+                      {isFortnox && Object.keys(fortnoxInfo).length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-gray-400">No data available. Click "Show" to load information.</p>
                         </div>
@@ -3102,7 +3332,7 @@ export default function ToolDetailPage() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchCostLeakAnalysis}
+                  onClick={handleAnalyzeCostLeaks}
                   disabled={isLoadingAnalysis}
                   className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white"
                 >
@@ -3348,7 +3578,9 @@ export default function ToolDetailPage() {
                     <CheckCircle className="w-8 h-8 text-green-400" />
                   </div>
                   <p className="text-white font-semibold text-lg mb-1">No cost leaks detected!</p>
-                  <p className="text-gray-400 text-sm">Your supplier invoices look good.</p>
+                  <p className="text-gray-400 text-sm">
+                    {isMicrosoft365 ? "Your Microsoft 365 licenses are well-optimized." : "Your supplier invoices look good."}
+                  </p>
                 </div>
               )}
 

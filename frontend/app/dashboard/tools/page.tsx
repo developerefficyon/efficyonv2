@@ -404,6 +404,52 @@ export default function ToolsPage() {
     }
   }
 
+  const startMicrosoft365OAuth = async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getValidSessionToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/microsoft365/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start Microsoft 365 OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Microsoft to authorize...", {
+        description: "You'll be taken to Microsoft to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting Microsoft 365 OAuth:", error)
+      toast.error("Failed to start Microsoft 365 OAuth", {
+        description: error.message || "An error occurred.",
+      })
+    }
+  }
+
   const handleConnectFortnox = async () => {
     if (!fortnoxForm.clientId || !fortnoxForm.clientSecret) {
       toast.error("Please fill in all required fields")
@@ -1112,6 +1158,20 @@ export default function ToolsPage() {
                                     : "border-white/10 bg-black/50 text-white border"
                                 }`}
                                 onClick={startFortnoxOAuth}
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Reconnect
+                              </Button>
+                            )}
+                            {integration.tool_name === "Microsoft365" && (
+                              <Button
+                                size="sm"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
+                                onClick={startMicrosoft365OAuth}
                               >
                                 <RefreshCw className="w-3 h-3 mr-1" />
                                 Reconnect
