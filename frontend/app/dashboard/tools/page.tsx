@@ -231,34 +231,12 @@ export default function ToolsPage() {
     }
   }, [router])
 
+  // Separate effect for OAuth callback handling - runs immediately regardless of auth state
   useEffect(() => {
-    if (authLoading) {
-      return
-    }
-
-    if (!user) {
-      setIsLoading(false)
-      hasLoadedRef.current = false
-      lastUserIdRef.current = null
-      return
-    }
-
-    const currentUserId = user.id
-    const userChanged = lastUserIdRef.current !== currentUserId
-    
-    if (userChanged) {
-      lastUserIdRef.current = currentUserId
-      hasLoadedRef.current = false
-    }
-
-    // Check for OAuth callback result in URL params
     const params = new URLSearchParams(window.location.search)
-    const fortnoxStatus = params.get("fortnox")
     const microsoft365Status = params.get("microsoft365")
-    const fortnoxError = params.get("error")
-    const fortnoxErrorDesc = params.get("error_desc")
 
-    // Handle Microsoft 365 OAuth callback
+    // Handle Microsoft 365 OAuth callback immediately (before auth check)
     if (microsoft365Status) {
       setIsConnecting(false)
       window.history.replaceState({}, "", window.location.pathname)
@@ -274,12 +252,34 @@ export default function ToolsPage() {
           duration: 10000,
         })
       }
+    }
+  }, []) // Run once on mount
 
-      hasLoadedRef.current = true
-      loadIntegrations().then(() => setIsLoading(false)).catch(() => setIsLoading(false))
-      loadTools().catch(() => {})
+  useEffect(() => {
+    if (authLoading) {
       return
     }
+
+    if (!user) {
+      setIsLoading(false)
+      hasLoadedRef.current = false
+      lastUserIdRef.current = null
+      return
+    }
+
+    const currentUserId = user.id
+    const userChanged = lastUserIdRef.current !== currentUserId
+
+    if (userChanged) {
+      lastUserIdRef.current = currentUserId
+      hasLoadedRef.current = false
+    }
+
+    // Check for OAuth callback result in URL params
+    const params = new URLSearchParams(window.location.search)
+    const fortnoxStatus = params.get("fortnox")
+    const fortnoxError = params.get("error")
+    const fortnoxErrorDesc = params.get("error_desc")
 
     if (fortnoxStatus || fortnoxError) {
       setIsConnecting(false)
