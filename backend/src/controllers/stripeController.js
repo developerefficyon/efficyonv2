@@ -49,10 +49,14 @@ async function createPaymentIntent(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { planTier, email, companyName, returnUrl } = req.body
+    const { planTier, email, companyName, returnUrl, billingPeriod = "monthly" } = req.body
 
     if (!planTier) {
       return res.status(400).json({ error: "Plan tier is required" })
+    }
+
+    if (!["monthly", "annual"].includes(billingPeriod)) {
+      return res.status(400).json({ error: "Invalid billing period. Must be 'monthly' or 'annual'" })
     }
 
     // Determine success and cancel URLs based on returnUrl or default to onboarding
@@ -95,6 +99,10 @@ async function createPaymentIntent(req, res) {
         .maybeSingle()
 
       // Create initial subscription record (will be updated by webhook)
+      const initialAmountCents = billingPeriod === "annual"
+        ? plan.price_annual_cents
+        : plan.price_monthly_cents
+
       const { data: newSubscription, error: subInsertError } = await supabase
         .from("subscriptions")
         .insert({
@@ -103,7 +111,7 @@ async function createPaymentIntent(req, res) {
           plan_tier: planTier,
           stripe_customer_id: stripeCustomerId,
           status: "incomplete",
-          amount_cents: plan.price_monthly_cents,
+          amount_cents: initialAmountCents,
           currency: "usd",
         })
         .select()
@@ -116,24 +124,28 @@ async function createPaymentIntent(req, res) {
       }
     }
 
-    // Create checkout session for hosted checkout page
+    // Get the appropriate Stripe Price ID based on billing period
+    const stripePriceId = billingPeriod === "annual"
+      ? plan.stripe_price_annual_id
+      : plan.stripe_price_monthly_id
+
+    if (!stripePriceId) {
+      console.error(`[${new Date().toISOString()}] No Stripe Price ID configured for ${plan.name} (${billingPeriod})`)
+      return res.status(400).json({
+        error: `Stripe Price ID not configured for ${plan.name} plan (${billingPeriod}). Please contact support.`
+      })
+    }
+
+    console.log(`[${new Date().toISOString()}] Using Stripe Price ID: ${stripePriceId} for ${plan.name} (${billingPeriod})`)
+
+    // Create checkout session using Stripe Price ID
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "subscription",
       customer: stripeCustomerId,
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `Efficyon ${plan.name} Plan`,
-              description: plan.description || "Professional plan",
-            },
-            unit_amount: plan.price_monthly_cents,
-            recurring: {
-              interval: "month",
-            },
-          },
+          price: stripePriceId,
           quantity: 1,
         },
       ],
@@ -143,10 +155,15 @@ async function createPaymentIntent(req, res) {
         userId: user.id,
         planTier,
         companyName,
+        billingPeriod,
       },
     })
 
     console.log(`[${new Date().toISOString()}] Checkout session created: ${checkoutSession.id}`)
+
+    const priceAmount = billingPeriod === "annual"
+      ? plan.price_annual_cents
+      : plan.price_monthly_cents
 
     return res.json({
       sessionId: checkoutSession.id,
@@ -154,7 +171,10 @@ async function createPaymentIntent(req, res) {
       plan: {
         tier: planTier,
         name: plan.name,
+        billingPeriod,
+        price: priceAmount,
         monthlyPrice: plan.price_monthly_cents,
+        annualPrice: plan.price_annual_cents,
         tokens: plan.included_tokens,
       },
     })

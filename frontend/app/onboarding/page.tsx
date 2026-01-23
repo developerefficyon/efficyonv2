@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,6 +78,7 @@ function OnboardingPageContent() {
     secondaryGoals: [] as string[],
     // Step 4: Plan
     plan: "",
+    billingPeriod: "monthly" as "monthly" | "annual",
     // Step 6: Billing
     billingName: "",
     billingEmail: "",
@@ -261,6 +263,13 @@ function OnboardingPageContent() {
           return
         }
         
+        // For Enterprise plan, redirect to contact sales
+        if (formData.plan === "custom") {
+          console.log("Step 4: Enterprise plan selected, redirecting to contact sales")
+          window.location.href = "mailto:sales@efficyon.com?subject=Enterprise%20Plan%20Inquiry&body=Hi,%20I'm%20interested%20in%20the%20Enterprise%20plan%20for%20my%20company."
+          return
+        }
+
         // For non-free-trial plans, save company first, then redirect to Stripe checkout
         console.log("Step 4: Paid plan selected, saving company and redirecting to Stripe checkout")
         setIsSubmitting(true)
@@ -313,6 +322,7 @@ function OnboardingPageContent() {
               planTier: formData.plan.toLowerCase(),
               email: formData.email,
               companyName: formData.companyName || formData.name,
+              billingPeriod: formData.billingPeriod,
             }),
           })
 
@@ -524,6 +534,7 @@ function OnboardingPageContent() {
     id: string
     name: string
     price: string
+    annualPrice: string
     period: string
     description: string
     features: string[]
@@ -538,6 +549,7 @@ function OnboardingPageContent() {
       id: "Free Trial",
       name: "7-Day Free Trial",
       price: "Free",
+      annualPrice: "Free",
       period: "7 days",
       description: "Try Efficyon risk-free with one tool",
       features: [
@@ -552,6 +564,7 @@ function OnboardingPageContent() {
       id: "startup",
       name: "Startup",
       price: "$39",
+      annualPrice: "$31",
       period: "month",
       description: "For companies with 1-10 employees",
       features: [
@@ -566,6 +579,7 @@ function OnboardingPageContent() {
       id: "growth",
       name: "Growth",
       price: "$119",
+      annualPrice: "$95",
       period: "month",
       description: "For companies with 11-50 employees",
       features: [
@@ -581,7 +595,8 @@ function OnboardingPageContent() {
     {
       id: "custom",
       name: "Enterprise",
-      price: "$299",
+      price: "Custom",
+      annualPrice: "Custom",
       period: "month",
       description: "For companies with 50+ employees",
       features: [
@@ -923,6 +938,35 @@ function OnboardingPageContent() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Billing Period Toggle */}
+                  <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-black/30 rounded-lg border border-white/10">
+                    <span className={cn(
+                      "text-sm font-medium transition-colors",
+                      formData.billingPeriod === "monthly" ? "text-white" : "text-gray-500"
+                    )}>
+                      Monthly
+                    </span>
+                    <Switch
+                      checked={formData.billingPeriod === "annual"}
+                      onCheckedChange={(checked) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          billingPeriod: checked ? "annual" : "monthly"
+                        }))
+                      }}
+                    />
+                    <span className={cn(
+                      "text-sm font-medium transition-colors",
+                      formData.billingPeriod === "annual" ? "text-white" : "text-gray-500"
+                    )}>
+                      Annual
+                    </span>
+                    {formData.billingPeriod === "annual" && (
+                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                        Save 20%
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {plans.map((plan) => (
                       <button
@@ -966,14 +1010,30 @@ function OnboardingPageContent() {
                         )}
                         <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                         <div className="flex items-baseline gap-1 mb-2">
-                          <span className="text-2xl font-bold text-white">{plan.price}</span>
+                          <span className="text-2xl font-bold text-white">
+                            {plan.price === "Custom"
+                              ? "Custom"
+                              : (plan.isTrial ? plan.price : (formData.billingPeriod === "annual" ? plan.annualPrice : plan.price))}
+                          </span>
+                          {!plan.isTrial && plan.price !== "Custom" && formData.billingPeriod === "annual" && (
+                            <span className="text-sm text-gray-500 line-through ml-1">
+                              {plan.price}
+                            </span>
+                          )}
                           {plan.originalPrice && (
                             <span className="text-sm text-gray-500 line-through ml-1">
                               {plan.originalPrice}
                             </span>
                           )}
-                          <span className="text-sm text-gray-400">/{plan.period}</span>
+                          <span className="text-sm text-gray-400">
+                            {plan.price === "Custom"
+                              ? "/month"
+                              : `/${plan.isTrial ? plan.period : (formData.billingPeriod === "annual" ? "mo (billed yearly)" : plan.period)}`}
+                          </span>
                         </div>
+                        {plan.id === "custom" && (
+                          <p className="text-xs text-purple-400 mb-2">Contact sales for pricing</p>
+                        )}
                         <p className="text-sm text-gray-400 mb-3">{plan.description}</p>
                         <ul className="space-y-2">
                           {plan.features.map((feature, idx) => (
@@ -1003,8 +1063,16 @@ function OnboardingPageContent() {
                   {formData.plan === "Free Trial" && (
                     <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                       <p className="text-sm text-green-400">
-                        <strong>Great choice!</strong> You'll get 7 days to explore Efficyon. 
+                        <strong>Great choice!</strong> You'll get 7 days to explore Efficyon.
                         After your trial, upgrade to Startup at 50% off to unlock full analysis and insights.
+                      </p>
+                    </div>
+                  )}
+                  {formData.plan === "custom" && (
+                    <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                      <p className="text-sm text-purple-400">
+                        <strong>Enterprise Plan</strong> - Clicking "Next" will open an email to our sales team.
+                        We'll work with you to create a custom plan that fits your organization's needs.
                       </p>
                     </div>
                   )}
