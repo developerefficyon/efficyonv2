@@ -79,7 +79,7 @@ export function LowTokenWarning() {
           </Link>
           <Button
             variant="outline"
-            className="w-full border-white/10 text-white hover:bg-white/5"
+            className="w-full bg-transparent border-white/20 text-gray-300 hover:bg-white/10 hover:text-white hover:border-white/30"
             onClick={() => {
               setShowWarning(false)
               setDismissed(true)
