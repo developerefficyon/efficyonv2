@@ -63,6 +63,7 @@ import { useTokens } from "@/lib/token-context"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
+import { formatCurrencyForIntegration } from "@/lib/currency"
 
 interface Integration {
   id: string
@@ -1672,7 +1673,7 @@ export default function ToolDetailPage() {
                                             <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
                                               <DollarSign className="w-3 h-3" />
                                               <span className="text-xs font-medium">
-                                                Save ${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                Save {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
                                               </span>
                                             </div>
                                           )}
@@ -2629,7 +2630,7 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium">
-                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(invoice.Total, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 hidden md:table-cell">
                                         <Badge className={
@@ -2714,7 +2715,7 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium">
-                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(invoice.Total, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 text-gray-300 hidden md:table-cell">{invoice.DueDate || '-'}</td>
                                     </tr>
@@ -2860,7 +2861,7 @@ export default function ToolDetailPage() {
                                       <td className="p-3 text-white font-medium">{article.ArticleNumber || '-'}</td>
                                       <td className="p-3 text-gray-300">{article.Description || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium hidden sm:table-cell">
-                                        {article.SalesPrice ? `${Number(article.SalesPrice).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(article.SalesPrice, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 text-gray-300 hidden md:table-cell">{article.Unit || '-'}</td>
                                     </tr>
@@ -3365,9 +3366,10 @@ export default function ToolDetailPage() {
                   <div className="bg-black/40 rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
                     <p className="text-2xl font-bold text-green-400">
-                      {costLeakAnalysis.overallSummary.totalPotentialSavings 
-                        ? `${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('sv-SE')} SEK`
-                        : "0 SEK"}
+                      {formatCurrencyForIntegration(
+                        costLeakAnalysis.overallSummary.totalPotentialSavings || 0,
+                        integration?.connection_type || 'fortnox'
+                      )}
                     </p>
                   </div>
                   <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
@@ -3518,7 +3520,7 @@ export default function ToolDetailPage() {
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs text-gray-400">Potential Savings:</span>
                                 <span className="text-sm font-semibold text-green-400">
-                                  {finding.potentialSavings.toLocaleString('sv-SE')} SEK
+                                  {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
                                 </span>
                               </div>
                             )}
@@ -3541,7 +3543,7 @@ export default function ToolDetailPage() {
                                         <div className="flex items-center gap-3 text-gray-400">
                                           <span>{inv.InvoiceDate || 'N/A'}</span>
                                           <span className="text-green-400 font-medium">
-                                            {inv.calculatedTotal ? `${inv.calculatedTotal.toLocaleString('sv-SE')} SEK` : '0 SEK'}
+                                            {formatCurrencyForIntegration(inv.calculatedTotal || 0, integration?.connection_type || 'fortnox')}
                                           </span>
                                         </div>
                                       </div>

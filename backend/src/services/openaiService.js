@@ -1,4 +1,5 @@
 const axios = require("axios")
+const { formatCurrencyForIntegration, getCurrencyForIntegration } = require("../utils/currency")
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"
@@ -125,7 +126,7 @@ async function estimatePotentialSavings(finding) {
     console.log(`[${new Date().toISOString()}] Estimating savings for: ${finding.type}`)
 
     const prompt = `
-Based on this cost leak finding, estimate the annual savings potential (in SEK or USD):
+Based on this cost leak finding, estimate the annual savings potential (in USD):
 
 Type: ${finding.type}
 Current Amount: ${finding.amount || finding.total}
@@ -359,7 +360,7 @@ RESPONSE FORMATTING GUIDELINES:
 
 4. Use bullet points for lists of findings or recommendations
 5. Use headers (##, ###) to organize longer responses
-6. When showing financial amounts, format them clearly (e.g., **$12,500** or **12,500 SEK**)
+6. When showing financial amounts, format them clearly in USD (e.g., **$12,500**)
 7. Highlight actionable insights and recommendations
 8. If the user asks for charts/visualizations, describe what data would be shown and format it as a table that could be charted
 
@@ -504,7 +505,7 @@ Use this EXACT format for tables:
 ### General Formatting:
 1. Use **bold** for important numbers and key findings
 2. Use headers (##, ###) to organize sections
-3. Format currency clearly (e.g., **$12,500/month** or **12,500 SEK**)
+3. Format currency clearly in USD (e.g., **$12,500/month**)
 4. Always include a "Recommended Actions" section with prioritized steps
 5. When comparing platforms, use side-by-side tables or comparison charts
 
@@ -574,7 +575,7 @@ function buildFortnoxContext(fortnoxData) {
       return sum + total
     }, 0)
 
-    parts.push(`Supplier Invoices: ${supplierInvoices.length} invoices, Total: ${totalAmount.toFixed(2)} SEK`)
+    parts.push(`Supplier Invoices: ${supplierInvoices.length} invoices, Total: ${formatCurrencyForIntegration(totalAmount, 'fortnox')}`)
   }
 
   // Cost leak findings
@@ -589,7 +590,7 @@ function buildFortnoxContext(fortnoxData) {
     parts.push(`- Recurring Subscriptions: ${summary.recurringSubscriptions?.length || 0}`)
     parts.push(`- Overdue Invoices: ${summary.overdueInvoices?.length || 0}`)
     parts.push(`- Price Increases: ${summary.priceIncreases?.length || 0}`)
-    parts.push(`- Total Potential Savings: ${summary.totalPotentialSavings?.toFixed(2) || 0} SEK`)
+    parts.push(`- Total Potential Savings: ${formatCurrencyForIntegration(summary.totalPotentialSavings || 0, 'fortnox')}`)
 
     // Top findings details
     if (analysis.findings && analysis.findings.length > 0) {
@@ -669,7 +670,7 @@ function buildM365Context(m365Data) {
     parts.push(`- Orphaned Licenses: ${analysis.findings?.filter(f => f.type === 'orphaned_license')?.length || 0}`)
     parts.push(`- Over-Provisioned: ${analysis.findings?.filter(f => f.type === 'over_provisioned')?.length || 0}`)
     parts.push(`- Unused Add-ons: ${analysis.findings?.filter(f => f.type === 'unused_addon')?.length || 0}`)
-    parts.push(`- Total Potential Savings: $${summary.totalPotentialSavings?.toFixed(2) || 0}/month`)
+    parts.push(`- Total Potential Savings: ${formatCurrencyForIntegration(summary.totalPotentialSavings || 0, 'microsoft365')}/month`)
 
     // Top findings details
     if (analysis.findings && analysis.findings.length > 0) {
