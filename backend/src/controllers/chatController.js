@@ -3,7 +3,7 @@ const openaiService = require("../services/openaiService")
 
 /**
  * Get all conversations for the current user
- * Supports filtering by toolId
+ * Supports filtering by toolId and chatType
  */
 async function getConversations(req, res) {
   console.log(`[${new Date().toISOString()}] GET /api/chat/conversations`)
@@ -14,19 +14,28 @@ async function getConversations(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { toolId } = req.query
+    const { toolId, chatType } = req.query
 
     let query = supabase
       .from("chat_conversations")
-      .select("id, title, tool_id, created_at, updated_at")
+      .select("id, title, tool_id, chat_type, created_at, updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
 
-    // Filter by tool_id (null for general, specific ID for tool chats)
-    if (toolId) {
+    // Filter by chat_type if provided (general, comparison, tool)
+    if (chatType) {
+      query = query.eq("chat_type", chatType)
+
+      // For tool chats, also filter by specific tool_id if provided
+      if (chatType === "tool" && toolId) {
+        query = query.eq("tool_id", toolId)
+      }
+    } else if (toolId) {
+      // Legacy support: if only toolId is provided, filter by it
       query = query.eq("tool_id", toolId)
     } else {
-      query = query.is("tool_id", null)
+      // Default: get general conversations
+      query = query.eq("chat_type", "general")
     }
 
     const { data, error } = await query
@@ -99,7 +108,7 @@ async function getConversation(req, res) {
 
 /**
  * Create a new conversation
- * Supports optional toolId for tool-specific conversations
+ * Supports optional toolId for tool-specific conversations and chatType
  */
 async function createConversation(req, res) {
   console.log(`[${new Date().toISOString()}] POST /api/chat/conversations`)
@@ -110,7 +119,14 @@ async function createConversation(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { title, toolId } = req.body
+    const { title, toolId, chatType } = req.body
+
+    // Determine chat_type: if toolId is provided, it's a tool chat
+    // Otherwise use provided chatType or default to 'general'
+    let determinedChatType = chatType || "general"
+    if (toolId && !chatType) {
+      determinedChatType = "tool"
+    }
 
     const { data, error } = await supabase
       .from("chat_conversations")
@@ -118,6 +134,7 @@ async function createConversation(req, res) {
         user_id: user.id,
         title: title || "New Chat",
         tool_id: toolId || null,
+        chat_type: determinedChatType,
       })
       .select()
       .single()

@@ -4,6 +4,7 @@
  */
 
 const { supabase } = require("../config/supabase")
+const { encryptIntegrationSettings, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -13,6 +14,80 @@ const log = (level, endpoint, message, data = null) => {
     console[level](logMessage, data)
   } else {
     console[level](logMessage)
+  }
+}
+
+/**
+ * Get user's integration limits based on their subscription plan
+ * Returns: { maxIntegrations, currentIntegrations, canAddMore, planTier }
+ */
+async function getIntegrationLimits(userId) {
+  // Get user's profile to find company_id
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (!profile?.company_id) {
+    return {
+      maxIntegrations: 0,
+      currentIntegrations: 0,
+      canAddMore: false,
+      planTier: null,
+      error: "No company associated with user"
+    }
+  }
+
+  // Get user's subscription with plan details
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select(`
+      plan_tier,
+      plan_catalog (
+        tier,
+        name,
+        max_integrations
+      )
+    `)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle()
+
+  // Default to free tier limits if no subscription
+  const maxIntegrations = subscription?.plan_catalog?.max_integrations || 2
+  const planTier = subscription?.plan_tier || "free"
+  const planName = subscription?.plan_catalog?.name || "Free"
+
+  // Count current active integrations for the company
+  // Include both "connected" and "warning" statuses as they represent active integrations
+  const { data: integrations, error: countError } = await supabase
+    .from("company_integrations")
+    .select("id, status")
+    .eq("company_id", profile.company_id)
+    .in("status", ["connected", "warning", "pending"])
+
+  if (countError) {
+    return {
+      maxIntegrations,
+      currentIntegrations: 0,
+      canAddMore: true,
+      planTier,
+      planName,
+      error: countError.message
+    }
+  }
+
+  const currentIntegrations = integrations?.length || 0
+  const canAddMore = currentIntegrations < maxIntegrations
+
+  return {
+    maxIntegrations,
+    currentIntegrations,
+    canAddMore,
+    planTier,
+    planName,
+    companyId: profile.company_id
   }
 }
 
@@ -56,6 +131,45 @@ async function upsertIntegrations(req, res) {
 
   const companyId = profile.company_id
 
+  // Check integration limits before creating new integrations
+  // First, determine how many NEW integrations will be created
+  const newProviders = []
+  for (const i of integrations) {
+    const provider = i.tool_name || i.provider
+    if (!provider) continue
+
+    // Check if this provider already exists for the company
+    const { data: existing } = await supabase
+      .from("company_integrations")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("provider", provider)
+      .maybeSingle()
+
+    if (!existing) {
+      newProviders.push(provider)
+    }
+  }
+
+  // If there are new integrations to be created, check limits
+  if (newProviders.length > 0) {
+    const limits = await getIntegrationLimits(user.id)
+
+    // Check if adding new integrations would exceed the limit
+    const projectedCount = limits.currentIntegrations + newProviders.length
+    if (projectedCount > limits.maxIntegrations) {
+      log("warn", endpoint, `Integration limit exceeded: ${limits.currentIntegrations}/${limits.maxIntegrations}, trying to add ${newProviders.length}`)
+      return res.status(403).json({
+        error: "Integration limit reached",
+        message: `Your ${limits.planName} plan allows up to ${limits.maxIntegrations} integrations. You currently have ${limits.currentIntegrations} connected.`,
+        currentIntegrations: limits.currentIntegrations,
+        maxIntegrations: limits.maxIntegrations,
+        planTier: limits.planTier,
+        planName: limits.planName,
+      })
+    }
+  }
+
   const rows = integrations.map((i) => {
     const provider = i.tool_name || i.provider
 
@@ -79,14 +193,18 @@ async function upsertIntegrations(req, res) {
       api_key: i.api_key || null,
       client_id: i.client_id || null,
       client_secret: i.client_secret || null,
+      tenant_id: i.tenant_id || null,
       webhook_url: i.webhook_url || null,
       ...(i.settings || {}),
     }
 
+    // Encrypt sensitive fields before saving
+    const encryptedSettings = encryptIntegrationSettings(settings)
+
     return {
       company_id: companyId,
       provider: provider,
-      settings: settings,
+      settings: encryptedSettings,
       status: i.status || "connected",
     }
   })
@@ -107,8 +225,10 @@ async function upsertIntegrations(req, res) {
 
     let result
     if (existing) {
-      const currentSettings = existing.settings || {}
-      const mergedSettings = { ...currentSettings, ...row.settings }
+      // Decrypt existing settings before merging, then re-encrypt
+      const currentSettings = decryptIntegrationSettings(existing.settings || {})
+      const newSettings = decryptIntegrationSettings(row.settings || {})
+      const mergedSettings = encryptIntegrationSettings({ ...currentSettings, ...newSettings })
 
       const { data: updated, error: updateError } = await supabase
         .from("company_integrations")
@@ -179,7 +299,18 @@ async function getIntegrations(req, res) {
 
   if (!profile?.company_id) {
     log("log", endpoint, "No company linked to profile")
-    return res.json({ integrations: [] })
+    // Return limits info even when no company
+    const limits = await getIntegrationLimits(user.id)
+    return res.json({
+      integrations: [],
+      limits: {
+        current: 0,
+        max: limits.maxIntegrations,
+        canAddMore: limits.canAddMore,
+        planTier: limits.planTier,
+        planName: limits.planName,
+      }
+    })
   }
 
   const { data, error } = await supabase
@@ -195,7 +326,8 @@ async function getIntegrations(req, res) {
 
   // Map provider to tool_name for backward compatibility
   const mappedIntegrations = (data || []).map((integration) => {
-    const settings = integration.settings || {}
+    // Decrypt sensitive fields before returning to frontend
+    const settings = decryptIntegrationSettings(integration.settings || {})
     return {
       ...integration,
       tool_name: integration.provider,
@@ -209,7 +341,19 @@ async function getIntegrations(req, res) {
     }
   })
 
-  return res.json({ integrations: mappedIntegrations })
+  // Get integration limits for the response
+  const limits = await getIntegrationLimits(user.id)
+
+  return res.json({
+    integrations: mappedIntegrations,
+    limits: {
+      current: limits.currentIntegrations,
+      max: limits.maxIntegrations,
+      canAddMore: limits.canAddMore,
+      planTier: limits.planTier,
+      planName: limits.planName,
+    }
+  })
 }
 
 async function deleteIntegration(req, res) {
@@ -368,4 +512,5 @@ module.exports = {
   getIntegrations,
   deleteIntegration,
   getTools,
+  getIntegrationLimits,
 }

@@ -78,6 +78,7 @@ const {
 const { requireAuth } = require("../middleware/auth")
 const {
   createPaymentIntent,
+  createTrialSetupSession,
   confirmPaymentIntent,
   getUserSubscription,
   getPlansDetails,
@@ -107,6 +108,12 @@ const {
   addMessage,
   chatWithTool,
 } = require("../controllers/chatController")
+
+// Comparison Controller - cross-platform analysis
+const {
+  chatComparison,
+  checkComparisonAvailability,
+} = require("../controllers/comparisonController")
 
 const router = express.Router()
 
@@ -170,6 +177,7 @@ router.post("/api/alerts", requireAuth, upsertAlerts)
 
 // Stripe Payment Routes
 router.post("/api/stripe/create-payment-intent", requireAuth, createPaymentIntent)
+router.post("/api/stripe/create-trial-setup", requireAuth, createTrialSetupSession)
 router.post("/api/stripe/confirm-payment", requireAuth, confirmPaymentIntent)
 router.get("/api/stripe/subscription", requireAuth, getUserSubscription)
 router.get("/api/stripe/plans", getPlansDetails)
@@ -207,6 +215,10 @@ router.put("/api/chat/conversations/:id", requireAuth, updateConversation)
 router.delete("/api/chat/conversations/:id", requireAuth, deleteConversation)
 router.post("/api/chat/conversations/:id/messages", requireAuth, addMessage)
 router.post("/api/chat/tool", requireAuth, chatWithTool)
+
+// Cross-Platform Comparison Routes
+router.post("/api/chat/comparison", requireAuth, chatComparison)
+router.get("/api/chat/comparison/availability", requireAuth, checkComparisonAvailability)
 
 module.exports = router
 

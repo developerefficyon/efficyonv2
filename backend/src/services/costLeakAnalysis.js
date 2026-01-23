@@ -2,6 +2,7 @@
  * Cost Leak Analysis Service
  * Analyzes Fortnox data to identify potential cost leaks and anomalies
  */
+const { formatCurrencyForIntegration } = require("../utils/currency")
 
 /**
  * Analyze supplier invoices for cost leaks
@@ -128,7 +129,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
                 type: "duplicate_payment",
                 severity: "high",
                 title: "Potential Duplicate Payment",
-                description: `Same supplier (${inv1.supplierName || inv1.SupplierName}), same amount (${inv1.calculatedTotal} SEK), within ${Math.round(daysDiff)} days`,
+                description: `Same supplier (${inv1.supplierName || inv1.SupplierName}), same amount (${formatCurrencyForIntegration(inv1.calculatedTotal, 'fortnox')}), within ${Math.round(daysDiff)} days`,
                 invoices: [inv1, inv2],
                 amount: inv1.calculatedTotal,
                 potentialSavings: inv1.calculatedTotal,
@@ -170,7 +171,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
           type: "unusual_amount",
           severity: "medium",
           title: "Unusually High Invoice Amount",
-          description: `Invoice amount (${invoiceTotal.toFixed(2)} SEK) is significantly higher than average (${mean.toFixed(2)} SEK)`,
+          description: `Invoice amount (${formatCurrencyForIntegration(invoiceTotal, 'fortnox')}) is significantly higher than average (${formatCurrencyForIntegration(mean, 'fortnox')})`,
           invoice,
           amount: invoiceTotal,
           averageAmount: mean,
@@ -214,7 +215,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
               type: "recurring_subscription",
               severity: "low",
               title: "Recurring Subscription Detected",
-              description: `Regular payments to ${supplier.supplierName} (~${avgAmount.toFixed(2)} SEK every ${Math.round(avgInterval)} days)`,
+              description: `Regular payments to ${supplier.supplierName} (~${formatCurrencyForIntegration(avgAmount, 'fortnox')} every ${Math.round(avgInterval)} days)`,
               supplier: {
                 number: supplier.supplierNumber,
                 name: supplier.supplierName,

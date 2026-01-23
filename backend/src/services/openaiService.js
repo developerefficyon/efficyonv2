@@ -1,4 +1,5 @@
 const axios = require("axios")
+const { formatCurrencyForIntegration, getCurrencyForIntegration } = require("../utils/currency")
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"
@@ -125,7 +126,7 @@ async function estimatePotentialSavings(finding) {
     console.log(`[${new Date().toISOString()}] Estimating savings for: ${finding.type}`)
 
     const prompt = `
-Based on this cost leak finding, estimate the annual savings potential (in SEK or USD):
+Based on this cost leak finding, estimate the annual savings potential (in USD):
 
 Type: ${finding.type}
 Current Amount: ${finding.amount || finding.total}
@@ -359,7 +360,7 @@ RESPONSE FORMATTING GUIDELINES:
 
 4. Use bullet points for lists of findings or recommendations
 5. Use headers (##, ###) to organize longer responses
-6. When showing financial amounts, format them clearly (e.g., **$12,500** or **12,500 SEK**)
+6. When showing financial amounts, format them clearly in USD (e.g., **$12,500**)
 7. Highlight actionable insights and recommendations
 8. If the user asks for charts/visualizations, describe what data would be shown and format it as a table that could be charted
 
@@ -406,6 +407,283 @@ Be concise but thorough. Focus on actionable insights.`
   }
 }
 
+/**
+ * Chat with AI using cross-platform comparison context
+ * Generates rich responses with charts comparing Fortnox and Microsoft 365 data
+ * @param {string} question - User's question
+ * @param {Object} fortnoxData - Fortnox data including invoices and cost leaks
+ * @param {Object} m365Data - Microsoft 365 data including licenses, users, and cost leaks
+ * @param {Object} metrics - Pre-calculated cross-platform metrics
+ * @returns {Promise<string>} AI response with markdown and chart formatting
+ */
+async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured")
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Cross-platform comparison query: ${question}`)
+
+    // Build comprehensive context from both platforms
+    const fortnoxContext = buildFortnoxContext(fortnoxData)
+    const m365Context = buildM365Context(m365Data)
+    const metricsContext = JSON.stringify(metrics, null, 2)
+
+    const systemPrompt = `You are an expert business analyst specializing in cross-platform SaaS cost optimization. You are analyzing data from TWO integrated platforms:
+
+## PLATFORM 1: FORTNOX (Financial/Accounting)
+${fortnoxContext}
+
+## PLATFORM 2: MICROSOFT 365 (Productivity/Usage)
+${m365Context}
+
+## CROSS-PLATFORM METRICS (Pre-calculated)
+${metricsContext}
+
+## YOUR ANALYSIS TASK
+Find correlations and insights that span BOTH platforms to help the user optimize their software costs:
+- Where is money being spent on software that's not being used?
+- How does software spend relate to user productivity/activity?
+- What's the cost per active user across the tech stack?
+- What are the combined savings opportunities?
+- Prioritize actions based on total impact across both platforms
+
+## RESPONSE FORMATTING - CRITICAL INSTRUCTIONS
+
+### For Charts (REQUIRED for visualization questions):
+Use this EXACT format for charts - the frontend will render these automatically:
+
+\`\`\`chart:bar
+{
+  "title": "Chart Title Here",
+  "data": [
+    { "category": "Label1", "value": 100 },
+    { "category": "Label2", "value": 200 }
+  ],
+  "xKey": "category",
+  "yKeys": ["value"]
+}
+\`\`\`
+
+\`\`\`chart:line
+{
+  "title": "Trend Over Time",
+  "data": [
+    { "month": "Jan", "cost": 5000, "users": 50 },
+    { "month": "Feb", "cost": 5200, "users": 48 }
+  ],
+  "xKey": "month",
+  "yKeys": ["cost", "users"]
+}
+\`\`\`
+
+\`\`\`chart:pie
+{
+  "title": "Distribution",
+  "data": [
+    { "name": "Category A", "value": 30 },
+    { "name": "Category B", "value": 70 }
+  ],
+  "xKey": "name",
+  "yKeys": ["value"]
+}
+\`\`\`
+
+### For Tables:
+Use this EXACT format for tables:
+
+\`\`\`table
+{
+  "headers": ["Priority", "Action", "Platform", "Savings", "Effort"],
+  "rows": [
+    ["1", "Remove orphaned licenses", "Microsoft 365", "$100/mo", "Low"],
+    ["2", "Cancel duplicate subscription", "Fortnox", "$89/mo", "Low"]
+  ]
+}
+\`\`\`
+
+### General Formatting:
+1. Use **bold** for important numbers and key findings
+2. Use headers (##, ###) to organize sections
+3. Format currency clearly in USD (e.g., **$12,500/month**)
+4. Always include a "Recommended Actions" section with prioritized steps
+5. When comparing platforms, use side-by-side tables or comparison charts
+
+### Required Sections for Deep Analysis:
+1. **Executive Summary** - Key headline metrics
+2. **Cost vs. Activity Analysis** - The gap between spending and usage
+3. **Platform Breakdown** - Findings from each platform
+4. **Combined Savings Opportunities** - Total savings from both platforms
+5. **Prioritized Recommendations** - Table with priority, action, platform, savings, effort
+
+Be specific with numbers. Reference actual data from the context. Focus on actionable insights.`
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const answer = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] Cross-platform comparison response generated`)
+
+    return answer
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in comparison chat:`, error.message)
+    throw new Error(`Failed to process comparison request: ${error.message}`)
+  }
+}
+
+/**
+ * Build Fortnox context string for AI prompt
+ */
+function buildFortnoxContext(fortnoxData) {
+  if (!fortnoxData) return "No Fortnox data available."
+
+  const parts = []
+
+  // Supplier invoices summary
+  const supplierInvoices = fortnoxData.supplierInvoices || []
+  if (supplierInvoices.length > 0) {
+    const totalAmount = supplierInvoices.reduce((sum, inv) => {
+      let total = parseFloat(inv.Total) || 0
+      if (total === 0 && inv.SupplierInvoiceRows) {
+        total = inv.SupplierInvoiceRows.reduce((s, row) => {
+          if (row.Code === 'TOT') return s
+          return s + (parseFloat(row.Total) || parseFloat(row.Debit) || 0)
+        }, 0)
+      }
+      return sum + total
+    }, 0)
+
+    parts.push(`Supplier Invoices: ${supplierInvoices.length} invoices, Total: ${formatCurrencyForIntegration(totalAmount, 'fortnox')}`)
+  }
+
+  // Cost leak findings
+  const costLeaks = fortnoxData.costLeaks
+  if (costLeaks?.supplierInvoiceAnalysis) {
+    const analysis = costLeaks.supplierInvoiceAnalysis
+    const summary = analysis.summary || {}
+
+    parts.push(`\nCost Leak Findings:`)
+    parts.push(`- Duplicate Payments: ${summary.duplicatePayments?.length || 0}`)
+    parts.push(`- Unusual Amounts: ${summary.unusualAmounts?.length || 0}`)
+    parts.push(`- Recurring Subscriptions: ${summary.recurringSubscriptions?.length || 0}`)
+    parts.push(`- Overdue Invoices: ${summary.overdueInvoices?.length || 0}`)
+    parts.push(`- Price Increases: ${summary.priceIncreases?.length || 0}`)
+    parts.push(`- Total Potential Savings: ${formatCurrencyForIntegration(summary.totalPotentialSavings || 0, 'fortnox')}`)
+
+    // Top findings details
+    if (analysis.findings && analysis.findings.length > 0) {
+      parts.push(`\nTop Findings:`)
+      analysis.findings.slice(0, 5).forEach((f, i) => {
+        parts.push(`${i + 1}. [${f.severity}] ${f.title}: ${f.description}`)
+      })
+    }
+  }
+
+  return parts.join('\n') || "No significant Fortnox data."
+}
+
+/**
+ * Build Microsoft 365 context string for AI prompt
+ */
+function buildM365Context(m365Data) {
+  if (!m365Data) return "No Microsoft 365 data available."
+
+  const parts = []
+
+  // License summary
+  const licenses = m365Data.licenses || []
+  if (licenses.length > 0) {
+    const totalConsumed = licenses.reduce((sum, sku) => sum + (sku.consumedUnits || 0), 0)
+    const totalAvailable = licenses.reduce((sum, sku) => sum + (sku.prepaidUnits?.enabled || 0), 0)
+    parts.push(`Licenses: ${totalConsumed} consumed of ${totalAvailable} available`)
+
+    // License breakdown
+    parts.push(`\nLicense Types:`)
+    licenses.slice(0, 5).forEach((sku) => {
+      parts.push(`- ${sku.skuPartNumber}: ${sku.consumedUnits}/${sku.prepaidUnits?.enabled || 0}`)
+    })
+  }
+
+  // User activity summary
+  const users = m365Data.users || []
+  if (users.length > 0) {
+    const now = new Date()
+    let activeCount = 0
+    let inactiveCount = 0
+    let disabledCount = 0
+    let neverSignedIn = 0
+
+    users.forEach((user) => {
+      if (!user.accountEnabled) {
+        disabledCount++
+        return
+      }
+      const lastSignIn = user.signInActivity?.lastSignInDateTime
+      if (!lastSignIn) {
+        neverSignedIn++
+        inactiveCount++
+        return
+      }
+      const daysSince = Math.floor((now - new Date(lastSignIn)) / (1000 * 60 * 60 * 24))
+      if (daysSince <= 30) activeCount++
+      else inactiveCount++
+    })
+
+    parts.push(`\nUsers: ${users.length} total`)
+    parts.push(`- Active (30 days): ${activeCount}`)
+    parts.push(`- Inactive: ${inactiveCount}`)
+    parts.push(`- Never signed in: ${neverSignedIn}`)
+    parts.push(`- Disabled accounts: ${disabledCount}`)
+    parts.push(`- Activity Rate: ${((activeCount / (users.length - disabledCount)) * 100).toFixed(1)}%`)
+  }
+
+  // Cost leak findings
+  const costLeaks = m365Data.costLeaks
+  if (costLeaks?.licenseAnalysis) {
+    const analysis = costLeaks.licenseAnalysis
+    const summary = analysis.summary || {}
+
+    parts.push(`\nCost Leak Findings:`)
+    parts.push(`- Inactive Licenses: ${analysis.findings?.filter(f => f.type === 'inactive_license')?.length || 0}`)
+    parts.push(`- Orphaned Licenses: ${analysis.findings?.filter(f => f.type === 'orphaned_license')?.length || 0}`)
+    parts.push(`- Over-Provisioned: ${analysis.findings?.filter(f => f.type === 'over_provisioned')?.length || 0}`)
+    parts.push(`- Unused Add-ons: ${analysis.findings?.filter(f => f.type === 'unused_addon')?.length || 0}`)
+    parts.push(`- Total Potential Savings: ${formatCurrencyForIntegration(summary.totalPotentialSavings || 0, 'microsoft365')}/month`)
+
+    // Top findings details
+    if (analysis.findings && analysis.findings.length > 0) {
+      parts.push(`\nTop Findings:`)
+      analysis.findings.slice(0, 5).forEach((f, i) => {
+        parts.push(`${i + 1}. [${f.severity}] ${f.title}: ${f.description}`)
+      })
+    }
+  }
+
+  return parts.join('\n') || "No significant Microsoft 365 data."
+}
+
 module.exports = {
   generateAnalysisSummary,
   generateRecommendations,
@@ -413,4 +691,5 @@ module.exports = {
   chatAboutAnalysis,
   enhanceFindingsWithAI,
   chatWithToolContext,
+  chatWithComparisonContext,
 }

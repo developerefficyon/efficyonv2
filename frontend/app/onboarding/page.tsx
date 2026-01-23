@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,6 +78,7 @@ function OnboardingPageContent() {
     secondaryGoals: [] as string[],
     // Step 4: Plan
     plan: "",
+    billingPeriod: "monthly" as "monthly" | "annual",
     // Step 6: Billing
     billingName: "",
     billingEmail: "",
@@ -123,26 +125,30 @@ function OnboardingPageContent() {
     loadUserData()
   }, [])
 
-  // Check if returning from successful Stripe payment
+  // Check if returning from successful Stripe payment or trial setup
   useEffect(() => {
     const paymentStatus = searchParams.get("payment")
-    if (paymentStatus === "success") {
-      // Payment was successful, complete onboarding and go to dashboard immediately
-      // Don't show the form - redirect directly
+    const trialStatus = searchParams.get("trial")
+
+    if (paymentStatus === "success" || trialStatus === "success") {
+      // Payment or trial setup was successful, complete onboarding and go to dashboard
       setIsProcessingPaymentSuccess(true)
-      const handlePaymentSuccess = async () => {
+      const handleSuccess = async () => {
         try {
           await completeOnboarding()
         } catch (err) {
-          console.error("Error completing onboarding after payment", err)
+          console.error("Error completing onboarding after payment/trial", err)
           // Even if there's an error, redirect to dashboard
           router.push("/dashboard")
         }
       }
-      handlePaymentSuccess()
+      handleSuccess()
     } else if (paymentStatus === "canceled") {
       // Payment was canceled, show error
       setPaymentError("Payment was canceled. Please try again.")
+    } else if (trialStatus === "canceled") {
+      // Trial setup was canceled, show error
+      setPaymentError("Trial setup was canceled. Please try again.")
     }
   }, [searchParams, router])
 
@@ -188,13 +194,82 @@ function OnboardingPageContent() {
         
         console.log("Step 4: Proceeding with plan:", formData.plan)
         
-        // Skip billing step if free trial is selected
+        // For free trial, redirect to Stripe setup mode to collect card details
         if (formData.plan === "Free Trial") {
-          console.log("Step 4: Free Trial selected, completing onboarding")
-          await completeOnboarding()
+          console.log("Step 4: Free Trial selected, redirecting to Stripe setup mode")
+          setIsSubmitting(true)
+
+          try {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            const accessToken = session?.access_token
+
+            // Save company first before redirecting to Stripe
+            if (formData.companyName && formData.companyName.trim()) {
+              try {
+                await fetch(`${apiBase}/api/company`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                  },
+                  body: JSON.stringify({
+                    name: formData.companyName.trim(),
+                    size: formData.employees ? String(formData.employees) : undefined,
+                    industry: formData.industry || undefined,
+                    website: formData.website || undefined,
+                    phone: formData.phone || undefined,
+                  }),
+                })
+              } catch (err) {
+                console.error("Error saving company before trial setup:", err)
+              }
+            }
+
+            // Create trial setup session (collects card without charging)
+            const response = await fetch(`${apiBase}/api/stripe/create-trial-setup`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                companyName: formData.companyName || formData.name,
+              }),
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || "Failed to create trial session")
+            }
+
+            const data = await response.json()
+
+            // Redirect to Stripe setup mode
+            if (data.sessionUrl) {
+              window.location.href = data.sessionUrl
+              return
+            }
+
+            throw new Error("No checkout URL available")
+          } catch (error) {
+            console.error("Error creating trial session:", error)
+            setPaymentError(error instanceof Error ? error.message : "Failed to start trial setup")
+            setIsSubmitting(false)
+          }
           return
         }
         
+        // For Enterprise plan, redirect to contact sales
+        if (formData.plan === "custom") {
+          console.log("Step 4: Enterprise plan selected, redirecting to contact sales")
+          window.location.href = "mailto:sales@efficyon.com?subject=Enterprise%20Plan%20Inquiry&body=Hi,%20I'm%20interested%20in%20the%20Enterprise%20plan%20for%20my%20company."
+          return
+        }
+
         // For non-free-trial plans, save company first, then redirect to Stripe checkout
         console.log("Step 4: Paid plan selected, saving company and redirecting to Stripe checkout")
         setIsSubmitting(true)
@@ -247,6 +322,7 @@ function OnboardingPageContent() {
               planTier: formData.plan.toLowerCase(),
               email: formData.email,
               companyName: formData.companyName || formData.name,
+              billingPeriod: formData.billingPeriod,
             }),
           })
 
@@ -458,6 +534,7 @@ function OnboardingPageContent() {
     id: string
     name: string
     price: string
+    annualPrice: string
     period: string
     description: string
     features: string[]
@@ -472,6 +549,7 @@ function OnboardingPageContent() {
       id: "Free Trial",
       name: "7-Day Free Trial",
       price: "Free",
+      annualPrice: "Free",
       period: "7 days",
       description: "Try Efficyon risk-free with one tool",
       features: [
@@ -485,7 +563,8 @@ function OnboardingPageContent() {
     {
       id: "startup",
       name: "Startup",
-      price: "$29.99",
+      price: "$39",
+      annualPrice: "$31",
       period: "month",
       description: "For companies with 1-10 employees",
       features: [
@@ -495,12 +574,12 @@ function OnboardingPageContent() {
         "Basic analytics",
         "Up to 3 team members",
       ],
-      discount: "50% off for new customers",
     },
     {
       id: "growth",
       name: "Growth",
-      price: "$99.99",
+      price: "$119",
+      annualPrice: "$95",
       period: "month",
       description: "For companies with 11-50 employees",
       features: [
@@ -516,7 +595,8 @@ function OnboardingPageContent() {
     {
       id: "custom",
       name: "Enterprise",
-      price: "$299.99",
+      price: "Custom",
+      annualPrice: "Custom",
       period: "month",
       description: "For companies with 50+ employees",
       features: [
@@ -858,6 +938,35 @@ function OnboardingPageContent() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Billing Period Toggle */}
+                  <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-black/30 rounded-lg border border-white/10">
+                    <span className={cn(
+                      "text-sm font-medium transition-colors",
+                      formData.billingPeriod === "monthly" ? "text-white" : "text-gray-500"
+                    )}>
+                      Monthly
+                    </span>
+                    <Switch
+                      checked={formData.billingPeriod === "annual"}
+                      onCheckedChange={(checked) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          billingPeriod: checked ? "annual" : "monthly"
+                        }))
+                      }}
+                    />
+                    <span className={cn(
+                      "text-sm font-medium transition-colors",
+                      formData.billingPeriod === "annual" ? "text-white" : "text-gray-500"
+                    )}>
+                      Annual
+                    </span>
+                    {formData.billingPeriod === "annual" && (
+                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                        Save 20%
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {plans.map((plan) => (
                       <button
@@ -901,14 +1010,30 @@ function OnboardingPageContent() {
                         )}
                         <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
                         <div className="flex items-baseline gap-1 mb-2">
-                          <span className="text-2xl font-bold text-white">{plan.price}</span>
+                          <span className="text-2xl font-bold text-white">
+                            {plan.price === "Custom"
+                              ? "Custom"
+                              : (plan.isTrial ? plan.price : (formData.billingPeriod === "annual" ? plan.annualPrice : plan.price))}
+                          </span>
+                          {!plan.isTrial && plan.price !== "Custom" && formData.billingPeriod === "annual" && (
+                            <span className="text-sm text-gray-500 line-through ml-1">
+                              {plan.price}
+                            </span>
+                          )}
                           {plan.originalPrice && (
                             <span className="text-sm text-gray-500 line-through ml-1">
                               {plan.originalPrice}
                             </span>
                           )}
-                          <span className="text-sm text-gray-400">/{plan.period}</span>
+                          <span className="text-sm text-gray-400">
+                            {plan.price === "Custom"
+                              ? "/month"
+                              : `/${plan.isTrial ? plan.period : (formData.billingPeriod === "annual" ? "mo (billed yearly)" : plan.period)}`}
+                          </span>
                         </div>
+                        {plan.id === "custom" && (
+                          <p className="text-xs text-purple-400 mb-2">Contact sales for pricing</p>
+                        )}
                         <p className="text-sm text-gray-400 mb-3">{plan.description}</p>
                         <ul className="space-y-2">
                           {plan.features.map((feature, idx) => (
@@ -938,8 +1063,16 @@ function OnboardingPageContent() {
                   {formData.plan === "Free Trial" && (
                     <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                       <p className="text-sm text-green-400">
-                        <strong>Great choice!</strong> You'll get 7 days to explore Efficyon. 
+                        <strong>Great choice!</strong> You'll get 7 days to explore Efficyon.
                         After your trial, upgrade to Startup at 50% off to unlock full analysis and insights.
+                      </p>
+                    </div>
+                  )}
+                  {formData.plan === "custom" && (
+                    <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                      <p className="text-sm text-purple-400">
+                        <strong>Enterprise Plan</strong> - Clicking "Next" will open an email to our sales team.
+                        We'll work with you to create a custom plan that fits your organization's needs.
                       </p>
                     </div>
                   )}

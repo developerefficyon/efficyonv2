@@ -3,7 +3,9 @@
 import { useAuth } from "@/lib/auth-context"
 import { TokenProvider } from "@/lib/token-context"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { TrialExpiredModal } from "@/components/trial-expired-modal"
+import { supabase } from "@/lib/supabaseClient"
 import {
   Sidebar,
   SidebarContent,
@@ -204,7 +206,11 @@ function SidebarNavigation({
           <SidebarMenu className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              // Use exact match for main dashboard routes, startsWith for others (to match sub-routes)
+              const isDashboardRoot = item.href === "/dashboard" || item.href === "/dashboard/admin"
+              const isActive = isDashboardRoot
+                ? pathname === item.href
+                : pathname?.startsWith(item.href) ?? false
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
@@ -281,13 +287,68 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith("/dashboard/admin")
 
+  // Trial status state
+  const [trialStatus, setTrialStatus] = useState<{
+    isTrialActive: boolean
+    isTrialExpired: boolean
+    trialEndsAt: string | null
+    daysRemaining: number
+  } | null>(null)
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login")
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
+  // Check subscription and trial status
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!user || isAdmin) {
+        setIsCheckingSubscription(false)
+        return
+      }
+
+      try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token
+
+        if (!accessToken) {
+          setIsCheckingSubscription(false)
+          return
+        }
+
+        const response = await fetch(`${apiBase}/api/stripe/subscription`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setTrialStatus(data.trialStatus)
+
+          // Show modal if trial has expired
+          if (data.trialStatus?.isTrialExpired) {
+            setShowTrialExpiredModal(true)
+          }
+        }
+      } catch (error) {
+        console.error("Error checking subscription status:", error)
+      } finally {
+        setIsCheckingSubscription(false)
+      }
+    }
+
+    if (user && !isAdmin) {
+      checkSubscriptionStatus()
+    } else {
+      setIsCheckingSubscription(false)
+    }
+  }, [user, isAdmin])
+
+  if (isLoading || isCheckingSubscription) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-white">Loading...</div>
@@ -300,6 +361,37 @@ export default function DashboardLayout({
   }
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems
+
+  // Handle plan selection from trial expired modal
+  const handleSelectPlan = async (planTier: string) => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          planTier,
+          email: user.email,
+          returnUrl: "/dashboard",
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.sessionUrl) {
+          window.location.href = data.sessionUrl
+        }
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error)
+    }
+  }
 
   return (
     <TokenProvider>
@@ -389,6 +481,15 @@ export default function DashboardLayout({
                   {isAdmin ? "Admin Dashboard" : "Dashboard"}
                 </h1>
               </div>
+              {/* Trial Days Remaining - Only for trial users */}
+              {!isAdmin && trialStatus?.isTrialActive && (
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-medium text-amber-400">
+                    {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} left
+                  </span>
+                </div>
+              )}
               {/* Token Balance Display - Only for non-admin users */}
               {!isAdmin && (
                 <div className="hidden sm:block shrink-0">
@@ -422,6 +523,14 @@ export default function DashboardLayout({
       </div>
       {/* Low Token Warning Modal - Only for non-admin users */}
       {!isAdmin && <LowTokenWarning />}
+      {/* Trial Expired Modal - Only for non-admin users with expired trials */}
+      {!isAdmin && (
+        <TrialExpiredModal
+          open={showTrialExpiredModal}
+          onSelectPlan={handleSelectPlan}
+          trialEndsAt={trialStatus?.trialEndsAt || null}
+        />
+      )}
     </SidebarProvider>
     </TokenProvider>
   )

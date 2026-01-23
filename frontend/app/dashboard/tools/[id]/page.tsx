@@ -63,6 +63,7 @@ import { useTokens } from "@/lib/token-context"
 import { getValidSessionToken } from "@/lib/auth-helpers"
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
+import { formatCurrencyForIntegration } from "@/lib/currency"
 
 interface Integration {
   id: string
@@ -170,6 +171,13 @@ export default function ToolDetailPage() {
       }
 
       setIntegration(found)
+
+      // Set default data tab based on integration type
+      if (found.tool_name === "Microsoft365" || found.provider === "Microsoft365") {
+        setActiveDataTab("licenses")
+      } else {
+        setActiveDataTab("company")
+      }
 
       // If it's Fortnox and connected, load the information (but not analysis - user must click button)
       if (found.tool_name === "Fortnox" && found.status === "connected") {
@@ -618,11 +626,27 @@ export default function ToolDetailPage() {
     }
   }
 
+  // Wrapper function to call appropriate analysis based on integration type
+  const handleAnalyzeCostLeaks = () => {
+    if (!integration) return
+
+    if (integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365") {
+      fetchMicrosoft365CostLeakAnalysis()
+    } else {
+      fetchCostLeakAnalysis()
+    }
+  }
+
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    if (!costLeakAnalysis?.supplierInvoiceAnalysis?.findings) return []
+    // Support both Fortnox (supplierInvoiceAnalysis) and Microsoft 365 (licenseAnalysis)
+    const findings_source = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
+                           costLeakAnalysis?.licenseAnalysis?.findings ||
+                           []
 
-    let findings = costLeakAnalysis.supplierInvoiceAnalysis.findings
+    if (findings_source.length === 0) return []
+
+    let findings = [...findings_source]
 
     // Filter by severity
     if (findingsFilter !== "all") {
@@ -649,25 +673,57 @@ export default function ToolDetailPage() {
   }
 
   const groupFindings = (findings: any[]) => {
-    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = {
-      duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
-      anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
-      overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
-      other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-    }
+    // Dynamic groups based on integration type
+    const isMicrosoft365Analysis = costLeakAnalysis?.licenseAnalysis?.findings?.length > 0
+
+    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = isMicrosoft365Analysis
+      ? {
+          orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
+          inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
+          overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
+          unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
+          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+        }
+      : {
+          duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
+          anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
+          overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+        }
+
+    // Get the original findings source for index lookup
+    const findingsSource = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
+                          costLeakAnalysis?.licenseAnalysis?.findings ||
+                          []
 
     findings.forEach((finding: any, idx: number) => {
-      const originalIdx = costLeakAnalysis?.supplierInvoiceAnalysis?.findings?.indexOf(finding) ?? idx
+      const originalIdx = findingsSource.indexOf(finding) ?? idx
       const findingWithIdx = { ...finding, originalIdx }
 
-      if (finding.title?.toLowerCase().includes("duplicate")) {
-        groups.duplicates.findings.push(findingWithIdx)
-      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
-        groups.anomalies.findings.push(findingWithIdx)
-      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
-        groups.overdue.findings.push(findingWithIdx)
+      if (isMicrosoft365Analysis) {
+        // Microsoft 365 grouping
+        if (finding.type === "orphaned_license" || finding.title?.toLowerCase().includes("orphan") || finding.title?.toLowerCase().includes("disabled")) {
+          groups.orphaned.findings.push(findingWithIdx)
+        } else if (finding.type === "inactive_license" || finding.title?.toLowerCase().includes("inactive") || finding.title?.toLowerCase().includes("never signed")) {
+          groups.inactive.findings.push(findingWithIdx)
+        } else if (finding.type === "over_provisioned" || finding.title?.toLowerCase().includes("over-provisioned") || finding.title?.toLowerCase().includes("downgrade")) {
+          groups.overprovisioned.findings.push(findingWithIdx)
+        } else if (finding.type === "unused_addon" || finding.title?.toLowerCase().includes("unused") || finding.title?.toLowerCase().includes("add-on")) {
+          groups.unused.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
       } else {
-        groups.other.findings.push(findingWithIdx)
+        // Fortnox grouping
+        if (finding.title?.toLowerCase().includes("duplicate")) {
+          groups.duplicates.findings.push(findingWithIdx)
+        } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+          groups.anomalies.findings.push(findingWithIdx)
+        } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+          groups.overdue.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
       }
     })
 
@@ -728,7 +784,7 @@ export default function ToolDetailPage() {
     setShowPdfPreview(true)
   }
 
-  // PDF Export Function
+  // PDF Export Function - Concise 1-Page Summary
   const exportToPDF = () => {
     if (!costLeakAnalysis) {
       toast.error("No analysis data to export")
@@ -739,27 +795,16 @@ export default function ToolDetailPage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 20
+    const margin = 15
     let yPosition = margin
 
     // Colors
     const primaryColor: [number, number, number] = [6, 182, 212] // Cyan-500
-    const secondaryColor: [number, number, number] = [59, 130, 246] // Blue-500
     const darkBg: [number, number, number] = [15, 23, 42] // Slate-900
     const highSeverity: [number, number, number] = [239, 68, 68] // Red-500
     const mediumSeverity: [number, number, number] = [245, 158, 11] // Amber-500
     const lowSeverity: [number, number, number] = [100, 116, 139] // Slate-500
     const successColor: [number, number, number] = [16, 185, 129] // Emerald-500
-
-    // Helper function to add a new page if needed
-    const checkPageBreak = (requiredSpace: number) => {
-      if (yPosition + requiredSpace > pageHeight - margin) {
-        doc.addPage()
-        yPosition = margin
-        return true
-      }
-      return false
-    }
 
     // Helper function to draw rounded rectangle
     const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number, color: [number, number, number]) => {
@@ -767,259 +812,389 @@ export default function ToolDetailPage() {
       doc.roundedRect(x, y, w, h, r, r, 'F')
     }
 
+    // Helper to draw a pie/donut chart segment
+    const drawPieSegment = (cx: number, cy: number, radius: number, startAngle: number, endAngle: number, color: [number, number, number]) => {
+      doc.setFillColor(...color)
+      const steps = 50
+      const angleStep = (endAngle - startAngle) / steps
+      const points: [number, number][] = [[cx, cy]]
+
+      for (let i = 0; i <= steps; i++) {
+        const angle = startAngle + i * angleStep
+        points.push([
+          cx + radius * Math.cos(angle),
+          cy + radius * Math.sin(angle)
+        ])
+      }
+
+      // Draw filled polygon
+      doc.setFillColor(...color)
+      let path = `M ${cx} ${cy} `
+      points.forEach((p, i) => {
+        if (i === 0) return
+        path += `L ${p[0]} ${p[1]} `
+      })
+      path += 'Z'
+
+      // Simple triangle fan approach
+      for (let i = 1; i < points.length - 1; i++) {
+        doc.triangle(
+          cx, cy,
+          points[i][0], points[i][1],
+          points[i + 1][0], points[i + 1][1],
+          'F'
+        )
+      }
+    }
+
     // ===== HEADER =====
-    // Header background
-    drawRoundedRect(0, 0, pageWidth, 45, 0, darkBg)
-
-    // Gradient accent line
+    drawRoundedRect(0, 0, pageWidth, 35, 0, darkBg)
     doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(3)
-    doc.line(0, 45, pageWidth, 45)
+    doc.setLineWidth(2)
+    doc.line(0, 35, pageWidth, 35)
 
-    // Logo placeholder (circle)
+    // Logo
     doc.setFillColor(...primaryColor)
-    doc.circle(margin + 8, 22, 8, 'F')
+    doc.circle(margin + 6, 17, 6, 'F')
     doc.setFillColor(255, 255, 255)
-    doc.circle(margin + 5, 19, 2, 'F')
-    doc.circle(margin + 11, 19, 1.5, 'F')
-    doc.circle(margin + 5, 25, 1.5, 'F')
+    doc.circle(margin + 4, 15, 1.5, 'F')
+    doc.circle(margin + 8, 15, 1, 'F')
+    doc.circle(margin + 4, 19, 1, 'F')
 
     // Title
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(22)
+    doc.setFontSize(18)
     doc.setTextColor(255, 255, 255)
-    doc.text("Efficyon", margin + 22, 20)
-
+    doc.text("Efficyon", margin + 16, 15)
     doc.setFont("helvetica", "normal")
-    doc.setFontSize(12)
-    doc.setTextColor(148, 163, 184)
-    doc.text("Cost Leak Analysis Report", margin + 22, 30)
-
-    // Date
     doc.setFontSize(10)
     doc.setTextColor(148, 163, 184)
-    const reportDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-    doc.text(`Generated: ${reportDate}`, pageWidth - margin - 60, 25)
+    doc.text("Cost Leak Analysis Summary", margin + 16, 23)
 
-    yPosition = 60
+    // Date
+    doc.setFontSize(9)
+    const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    doc.text(reportDate, pageWidth - margin - 30, 20)
 
-    // ===== EXECUTIVE SUMMARY =====
+    yPosition = 45
+
+    const summary = costLeakAnalysis.overallSummary || { totalFindings: 0, totalPotentialSavings: 0, highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 }
+    // Get findings from either Fortnox (supplierInvoiceAnalysis) or Microsoft 365 (licenseAnalysis)
+    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || costLeakAnalysis.licenseAnalysis?.findings || []
+
+    // ===== KEY METRICS ROW =====
+    const metricCardWidth = (pageWidth - margin * 2 - 12) / 4
+    const metricCardHeight = 28
+
+    // Total Issues
+    drawRoundedRect(margin, yPosition, metricCardWidth, metricCardHeight, 3, [241, 245, 249])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(100, 116, 139)
+    doc.text("TOTAL ISSUES", margin + 4, yPosition + 8)
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(16)
+    doc.setFontSize(18)
     doc.setTextColor(15, 23, 42)
-    doc.text("Executive Summary", margin, yPosition)
-    yPosition += 12
+    doc.text(String(summary.totalFindings || 0), margin + 4, yPosition + 22)
 
-    if (costLeakAnalysis.overallSummary) {
-      const summary = costLeakAnalysis.overallSummary
-      const cardWidth = (pageWidth - margin * 2 - 15) / 4
-      const cardHeight = 35
+    // Potential Savings
+    const card2X = margin + metricCardWidth + 4
+    drawRoundedRect(card2X, yPosition, metricCardWidth, metricCardHeight, 3, [209, 250, 229])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(5, 150, 105)
+    doc.text("POTENTIAL SAVINGS", card2X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(14)
+    doc.text(`$${(summary.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`, card2X + 4, yPosition + 22)
 
-      // Card 1: Total Issues
-      drawRoundedRect(margin, yPosition, cardWidth, cardHeight, 3, [241, 245, 249])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(100, 116, 139)
-      doc.text("TOTAL ISSUES", margin + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(15, 23, 42)
-      doc.text(String(summary.totalFindings || 0), margin + 5, yPosition + 26)
+    // High Priority
+    const card3X = margin + (metricCardWidth + 4) * 2
+    drawRoundedRect(card3X, yPosition, metricCardWidth, metricCardHeight, 3, [254, 226, 226])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(185, 28, 28)
+    doc.text("HIGH PRIORITY", card3X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(18)
+    doc.text(String(summary.highSeverity || 0), card3X + 4, yPosition + 22)
 
-      // Card 2: Potential Savings
-      const card2X = margin + cardWidth + 5
-      drawRoundedRect(card2X, yPosition, cardWidth, cardHeight, 3, [209, 250, 229])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...successColor)
-      doc.text("POTENTIAL SAVINGS", card2X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(16)
-      doc.setTextColor(5, 150, 105)
-      const savingsText = `$${(summary.totalPotentialSavings || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
-      doc.text(savingsText, card2X + 5, yPosition + 26)
+    // Medium Priority
+    const card4X = margin + (metricCardWidth + 4) * 3
+    drawRoundedRect(card4X, yPosition, metricCardWidth, metricCardHeight, 3, [254, 243, 199])
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(180, 83, 9)
+    doc.text("MEDIUM PRIORITY", card4X + 4, yPosition + 8)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(18)
+    doc.text(String(summary.mediumSeverity || 0), card4X + 4, yPosition + 22)
 
-      // Card 3: High Priority
-      const card3X = margin + (cardWidth + 5) * 2
-      drawRoundedRect(card3X, yPosition, cardWidth, cardHeight, 3, [254, 226, 226])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...highSeverity)
-      doc.text("HIGH PRIORITY", card3X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(185, 28, 28)
-      doc.text(String(summary.highSeverity || 0), card3X + 5, yPosition + 26)
+    yPosition += metricCardHeight + 10
 
-      // Card 4: Medium Priority
-      const card4X = margin + (cardWidth + 5) * 3
-      drawRoundedRect(card4X, yPosition, cardWidth, cardHeight, 3, [254, 243, 199])
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(...mediumSeverity)
-      doc.text("MEDIUM PRIORITY", card4X + 5, yPosition + 10)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(20)
-      doc.setTextColor(180, 83, 9)
-      doc.text(String(summary.mediumSeverity || 0), card4X + 5, yPosition + 26)
+    // ===== CHARTS SECTION =====
+    const chartSectionY = yPosition
+    const leftColumnX = margin
+    const rightColumnX = pageWidth / 2 + 5
+    const columnWidth = (pageWidth - margin * 2 - 10) / 2
 
-      yPosition += cardHeight + 15
-    }
+    // Left: Severity Distribution (Donut Chart)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Issues by Severity", leftColumnX, yPosition)
+    yPosition += 8
 
-    // ===== AI INSIGHTS =====
-    if (costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0) {
-      checkPageBreak(50)
+    const total = (summary.highSeverity || 0) + (summary.mediumSeverity || 0) + (summary.lowSeverity || 0)
+    const chartCenterX = leftColumnX + 35
+    const chartCenterY = yPosition + 30
+    const chartRadius = 25
 
-      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 40, 5, [236, 254, 255])
-      doc.setDrawColor(...primaryColor)
-      doc.setLineWidth(0.5)
-      doc.roundedRect(margin, yPosition, pageWidth - margin * 2, 40, 5, 5, 'S')
+    if (total > 0) {
+      let currentAngle = -Math.PI / 2 // Start from top
 
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(11)
-      doc.setTextColor(...primaryColor)
-      doc.text("AI Analysis Summary", margin + 8, yPosition + 12)
-
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(9)
-      doc.setTextColor(71, 85, 105)
-      const insightText = `We identified ${costLeakAnalysis.overallSummary.totalFindings} potential cost leaks that could save your company approximately $${(costLeakAnalysis.overallSummary.totalPotentialSavings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD. Review the detailed findings below to take action.`
-      const splitInsight = doc.splitTextToSize(insightText, pageWidth - margin * 2 - 16)
-      doc.text(splitInsight, margin + 8, yPosition + 24)
-
-      yPosition += 50
-    }
-
-    // ===== DETAILED FINDINGS =====
-    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || []
-
-    if (findings.length > 0) {
-      checkPageBreak(30)
-
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(16)
-      doc.setTextColor(15, 23, 42)
-      doc.text("Detailed Findings", margin, yPosition)
-      yPosition += 15
-
-      // Group findings
-      const grouped = {
-        duplicates: { title: "Duplicate Payments", findings: [] as any[], color: highSeverity },
-        anomalies: { title: "Price Anomalies", findings: [] as any[], color: mediumSeverity },
-        overdue: { title: "Overdue & Payment Issues", findings: [] as any[], color: [249, 115, 22] as [number, number, number] },
-        other: { title: "Other Findings", findings: [] as any[], color: lowSeverity },
+      // High severity (red)
+      if (summary.highSeverity > 0) {
+        const highAngle = (summary.highSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + highAngle, highSeverity)
+        currentAngle += highAngle
       }
 
-      findings.forEach((finding: any) => {
-        if (finding.title?.toLowerCase().includes("duplicate")) {
-          grouped.duplicates.findings.push(finding)
-        } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
-          grouped.anomalies.findings.push(finding)
-        } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
-          grouped.overdue.findings.push(finding)
-        } else {
-          grouped.other.findings.push(finding)
+      // Medium severity (amber)
+      if (summary.mediumSeverity > 0) {
+        const medAngle = (summary.mediumSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + medAngle, mediumSeverity)
+        currentAngle += medAngle
+      }
+
+      // Low severity (gray)
+      if (summary.lowSeverity > 0) {
+        const lowAngle = (summary.lowSeverity / total) * 2 * Math.PI
+        drawPieSegment(chartCenterX, chartCenterY, chartRadius, currentAngle, currentAngle + lowAngle, lowSeverity)
+      }
+
+      // Center circle (donut hole)
+      doc.setFillColor(255, 255, 255)
+      doc.circle(chartCenterX, chartCenterY, 12, 'F')
+
+      // Center text
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(14)
+      doc.setTextColor(15, 23, 42)
+      doc.text(String(total), chartCenterX - 4, chartCenterY + 2)
+      doc.setFontSize(6)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(100, 116, 139)
+      doc.text("issues", chartCenterX - 5, chartCenterY + 8)
+    } else {
+      doc.setFillColor(241, 245, 249)
+      doc.circle(chartCenterX, chartCenterY, chartRadius, 'F')
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No issues", chartCenterX - 10, chartCenterY + 3)
+    }
+
+    // Legend for pie chart
+    const legendX = leftColumnX + 70
+    const legendY = chartCenterY - 15
+
+    // High
+    doc.setFillColor(...highSeverity)
+    doc.rect(legendX, legendY, 8, 8, 'F')
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8)
+    doc.setTextColor(71, 85, 105)
+    doc.text(`High (${summary.highSeverity || 0})`, legendX + 11, legendY + 6)
+
+    // Medium
+    doc.setFillColor(...mediumSeverity)
+    doc.rect(legendX, legendY + 12, 8, 8, 'F')
+    doc.text(`Medium (${summary.mediumSeverity || 0})`, legendX + 11, legendY + 18)
+
+    // Low
+    doc.setFillColor(...lowSeverity)
+    doc.rect(legendX, legendY + 24, 8, 8, 'F')
+    doc.text(`Low (${summary.lowSeverity || 0})`, legendX + 11, legendY + 30)
+
+    // Right: Savings by Category (Horizontal Bar Chart)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Savings by Category", rightColumnX, chartSectionY)
+
+    // Group findings by category and calculate savings
+    const categoryMap: Record<string, { name: string, savings: number, color: [number, number, number] }> = {
+      duplicates: { name: "Duplicate/Unused", savings: 0, color: highSeverity },
+      anomalies: { name: "Price/License Issues", savings: 0, color: mediumSeverity },
+      overdue: { name: "Payment/Inactive", savings: 0, color: [249, 115, 22] },
+      other: { name: "Other", savings: 0, color: lowSeverity },
+    }
+
+    findings.forEach((finding: any) => {
+      const savings = finding.potentialSavings || 0
+      const title = finding.title?.toLowerCase() || ''
+
+      if (title.includes("duplicate") || title.includes("orphan") || title.includes("unused")) {
+        categoryMap.duplicates.savings += savings
+      } else if (title.includes("price") || title.includes("anomal") || title.includes("over-provision") || title.includes("downgrade")) {
+        categoryMap.anomalies.savings += savings
+      } else if (title.includes("overdue") || title.includes("payment") || title.includes("inactive")) {
+        categoryMap.overdue.savings += savings
+      } else {
+        categoryMap.other.savings += savings
+      }
+    })
+
+    // Limit to top 3 categories like the preview
+    const categories = Object.values(categoryMap).filter(c => c.savings > 0).sort((a, b) => b.savings - a.savings).slice(0, 3)
+    const maxSavings = Math.max(...categories.map(c => c.savings), 1)
+    const barMaxWidth = columnWidth - 10
+    let barY = chartSectionY + 12
+
+    if (categories.length > 0) {
+      categories.forEach((cat) => {
+        const barWidth = (cat.savings / maxSavings) * barMaxWidth
+
+        // Row 1: Category name (left) and Amount (right) - matching preview layout
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(8)
+        doc.setTextColor(71, 85, 105)
+        doc.text(cat.name, rightColumnX, barY)
+
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(8)
+        doc.setTextColor(15, 23, 42)
+        const amountText = `$${cat.savings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+        doc.text(amountText, rightColumnX + barMaxWidth - doc.getTextWidth(amountText), barY)
+
+        // Row 2: Bar below the text
+        drawRoundedRect(rightColumnX, barY + 3, barMaxWidth, 6, 1, [241, 245, 249])
+        if (barWidth > 0) {
+          drawRoundedRect(rightColumnX, barY + 3, Math.max(barWidth, 2), 6, 1, cat.color)
+        }
+
+        barY += 18
+      })
+    } else {
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No savings identified", rightColumnX, barY + 10)
+    }
+
+    yPosition = Math.max(chartCenterY + chartRadius + 15, barY + 5)
+
+    // ===== TOP ACTIONS SECTION =====
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(15, 23, 42)
+    doc.text("Top Priority Actions", margin, yPosition)
+    yPosition += 8
+
+    // Consolidate findings by title to avoid duplicates
+    const consolidatedFindings: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
+    findings.forEach((finding: any) => {
+      const title = finding.title || 'Untitled'
+      if (!consolidatedFindings[title]) {
+        consolidatedFindings[title] = {
+          title,
+          count: 0,
+          totalSavings: 0,
+          severity: finding.severity || 'low'
+        }
+      }
+      consolidatedFindings[title].count++
+      consolidatedFindings[title].totalSavings += finding.potentialSavings || 0
+      // Keep highest severity
+      if (finding.severity === 'high') consolidatedFindings[title].severity = 'high'
+      else if (finding.severity === 'medium' && consolidatedFindings[title].severity !== 'high') {
+        consolidatedFindings[title].severity = 'medium'
+      }
+    })
+
+    // Sort by total savings and take top 3 (matching preview)
+    const topActions = Object.values(consolidatedFindings)
+      .sort((a, b) => b.totalSavings - a.totalSavings)
+      .slice(0, 3)
+
+    if (topActions.length > 0) {
+      topActions.forEach((action, index: number) => {
+        const rowY = yPosition + index * 18
+
+        // Row background
+        drawRoundedRect(margin, rowY, pageWidth - margin * 2, 16, 2, index % 2 === 0 ? [248, 250, 252] : [255, 255, 255])
+
+        // Priority number
+        const severityColor = action.severity === 'high' ? highSeverity : action.severity === 'medium' ? mediumSeverity : lowSeverity
+        doc.setFillColor(...severityColor)
+        doc.circle(margin + 8, rowY + 8, 5, 'F')
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(8)
+        doc.setTextColor(255, 255, 255)
+        doc.text(String(index + 1), margin + 6.5, rowY + 10)
+
+        // Finding title with count if multiple
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(8)
+        doc.setTextColor(15, 23, 42)
+        const countText = action.count > 1 ? ` (${action.count} instances)` : ''
+        const maxTitleLength = action.count > 1 ? 35 : 50
+        const titleText = action.title.substring(0, maxTitleLength) + (action.title.length > maxTitleLength ? '...' : '') + countText
+        doc.text(titleText, margin + 18, rowY + 10)
+
+        // Savings amount
+        if (action.totalSavings > 0) {
+          doc.setFont("helvetica", "bold")
+          doc.setTextColor(5, 150, 105)
+          doc.text(`$${action.totalSavings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, pageWidth - margin - 25, rowY + 10)
         }
       })
+      yPosition += topActions.length * 18 + 8
+    } else {
+      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 20, 3, [241, 245, 249])
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text("No action items identified - great job!", margin + (pageWidth - margin * 2) / 2 - 35, yPosition + 12)
+      yPosition += 28
+    }
 
-      // Render each group
-      Object.entries(grouped).forEach(([key, group]) => {
-        if (group.findings.length === 0) return
+    // ===== AI INSIGHT BOX =====
+    if (summary.totalFindings > 0) {
+      drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 30, 4, [236, 254, 255])
+      doc.setDrawColor(...primaryColor)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(margin, yPosition, pageWidth - margin * 2, 30, 4, 4, 'S')
 
-        checkPageBreak(40)
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9)
+      doc.setTextColor(...primaryColor)
+      doc.text("AI Insight", margin + 6, yPosition + 10)
 
-        // Group header
-        drawRoundedRect(margin, yPosition, pageWidth - margin * 2, 12, 3, group.color)
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(10)
-        doc.setTextColor(255, 255, 255)
-        doc.text(`${group.title} (${group.findings.length})`, margin + 5, yPosition + 8)
-        yPosition += 16
-
-        // Findings table
-        const tableData = group.findings.map((finding: any) => [
-          finding.severity?.toUpperCase() || 'N/A',
-          finding.title || 'Untitled',
-          finding.description?.substring(0, 80) + (finding.description?.length > 80 ? '...' : '') || 'No description',
-          finding.potentialSavings ? `$${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-',
-          finding.invoices?.length ? `${finding.invoices.length} invoice(s)` : '-'
-        ])
-
-        autoTable(doc, {
-          startY: yPosition,
-          head: [['Severity', 'Issue', 'Description', 'Savings', 'Related']],
-          body: tableData,
-          margin: { left: margin, right: margin },
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            lineColor: [226, 232, 240],
-            lineWidth: 0.1,
-          },
-          headStyles: {
-            fillColor: darkBg,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            fontSize: 8,
-          },
-          columnStyles: {
-            0: { cellWidth: 18, halign: 'center' },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 65 },
-            3: { cellWidth: 25, halign: 'right' },
-            4: { cellWidth: 25, halign: 'center' },
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252],
-          },
-          didParseCell: (data) => {
-            if (data.section === 'body' && data.column.index === 0) {
-              const severity = data.cell.raw as string
-              if (severity === 'HIGH') {
-                data.cell.styles.textColor = highSeverity
-                data.cell.styles.fontStyle = 'bold'
-              } else if (severity === 'MEDIUM') {
-                data.cell.styles.textColor = mediumSeverity
-                data.cell.styles.fontStyle = 'bold'
-              } else {
-                data.cell.styles.textColor = lowSeverity
-              }
-            }
-          },
-        })
-
-        yPosition = (doc as any).lastAutoTable.finalY + 10
-      })
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(8)
+      doc.setTextColor(71, 85, 105)
+      const insightText = `Based on our analysis, addressing the top ${Math.min(3, topActions.length)} issues could recover approximately $${topActions.slice(0, 3).reduce((sum: number, a: any) => sum + (a.totalSavings || 0), 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} in savings. We recommend prioritizing the highest-impact items first.`
+      const splitInsight = doc.splitTextToSize(insightText, pageWidth - margin * 2 - 12)
+      doc.text(splitInsight, margin + 6, yPosition + 20)
     }
 
     // ===== FOOTER =====
-    const totalPages = doc.getNumberOfPages()
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.5)
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
 
-      // Footer line
-      doc.setDrawColor(226, 232, 240)
-      doc.setLineWidth(0.5)
-      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
-
-      // Footer text
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(8)
-      doc.setTextColor(148, 163, 184)
-      doc.text("Confidential - For internal use only", margin, pageHeight - 8)
-      doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 25, pageHeight - 8)
-
-      // Efficyon branding
-      doc.setTextColor(...primaryColor)
-      doc.text("Powered by Efficyon", pageWidth / 2 - 18, pageHeight - 8)
-    }
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(148, 163, 184)
+    doc.text("Confidential - For internal use only", margin, pageHeight - 8)
+    doc.text("Page 1 of 1", pageWidth - margin - 20, pageHeight - 8)
+    doc.setTextColor(...primaryColor)
+    doc.text("Powered by Efficyon", pageWidth / 2 - 15, pageHeight - 8)
 
     // Save the PDF
-    const fileName = `cost-leak-analysis-${new Date().toISOString().split('T')[0]}.pdf`
+    const fileName = `cost-leak-summary-${new Date().toISOString().split('T')[0]}.pdf`
     doc.save(fileName)
     toast.success("PDF exported successfully", { description: fileName })
     setShowPdfPreview(false)
@@ -1028,27 +1203,39 @@ export default function ToolDetailPage() {
 
   // Get grouped findings for preview
   const getGroupedFindingsForPreview = () => {
-    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []
+    // Get findings from either Fortnox (supplierInvoiceAnalysis) or Microsoft 365 (licenseAnalysis)
+    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
     const grouped = {
-      duplicates: { title: "Duplicate Payments", count: 0, color: "red" },
-      anomalies: { title: "Price Anomalies", count: 0, color: "amber" },
-      overdue: { title: "Overdue & Payment Issues", count: 0, color: "orange" },
-      other: { title: "Other Findings", count: 0, color: "slate" },
+      duplicates: { title: "Duplicate/Unused", count: 0, savings: 0, color: "red" },
+      anomalies: { title: "Price/License Issues", count: 0, savings: 0, color: "amber" },
+      overdue: { title: "Payment/Inactive", count: 0, savings: 0, color: "orange" },
+      other: { title: "Other Findings", count: 0, savings: 0, color: "slate" },
     }
 
     findings.forEach((finding: any) => {
-      if (finding.title?.toLowerCase().includes("duplicate")) {
+      const savings = finding.potentialSavings || 0
+      const title = finding.title?.toLowerCase() || ''
+
+      // Fortnox categories
+      if (title.includes("duplicate") || title.includes("orphan") || title.includes("unused")) {
         grouped.duplicates.count++
-      } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
+        grouped.duplicates.savings += savings
+      } else if (title.includes("price") || title.includes("anomal") || title.includes("over-provision") || title.includes("downgrade")) {
         grouped.anomalies.count++
-      } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
+        grouped.anomalies.savings += savings
+      } else if (title.includes("overdue") || title.includes("payment") || title.includes("inactive")) {
         grouped.overdue.count++
+        grouped.overdue.savings += savings
       } else {
         grouped.other.count++
+        grouped.other.savings += savings
       }
     })
 
-    return Object.entries(grouped).filter(([_, g]) => g.count > 0)
+    // Sort by savings (highest first) and filter out empty groups
+    return Object.entries(grouped)
+      .filter(([_, g]) => g.count > 0)
+      .sort((a, b) => b[1].savings - a[1].savings)
   }
 
   const activeFindings = getFilteredFindings()
@@ -1069,6 +1256,8 @@ export default function ToolDetailPage() {
   }
 
   const isFortnox = integration.tool_name === "Fortnox" || integration.provider === "Fortnox"
+  const isMicrosoft365 = integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365"
+  const hasFullUI = isFortnox || isMicrosoft365
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -1102,7 +1291,7 @@ export default function ToolDetailPage() {
       </div>
 
       {/* Tabs for organized sections */}
-      {isFortnox && integration.status === "connected" ? (
+      {hasFullUI && integration.status === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
             <TabsTrigger 
@@ -1177,7 +1366,7 @@ export default function ToolDetailPage() {
                       </>
                     )}
                     <Button
-                      onClick={fetchCostLeakAnalysis}
+                      onClick={handleAnalyzeCostLeaks}
                       disabled={isLoadingAnalysis}
                       className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
                     >
@@ -1484,7 +1673,7 @@ export default function ToolDetailPage() {
                                             <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
                                               <DollarSign className="w-3 h-3" />
                                               <span className="text-xs font-medium">
-                                                Save ${finding.potentialSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                Save {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
                                               </span>
                                             </div>
                                           )}
@@ -1635,7 +1824,9 @@ export default function ToolDetailPage() {
                       </div>
                       <h3 className="text-white font-bold text-xl mb-2">Excellent! No Cost Leaks Detected</h3>
                       <p className="text-gray-400 max-w-md mx-auto">
-                        Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns.
+                        {isMicrosoft365
+                          ? "Your Microsoft 365 licenses appear well-optimized with no inactive users, orphaned licenses, or over-provisioning detected."
+                          : "Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns."}
                       </p>
                     </CardContent>
                   </Card>
@@ -1663,10 +1854,12 @@ export default function ToolDetailPage() {
                   </div>
                   <h3 className="text-white font-bold text-xl mb-2">Ready to Analyze</h3>
                   <p className="text-gray-400 max-w-md mx-auto mb-6">
-                    Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities.
+                    {isMicrosoft365
+                      ? "Our AI will analyze your Microsoft 365 licenses to identify inactive users, orphaned licenses, over-provisioning, and cost optimization opportunities."
+                      : "Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities."}
                   </p>
                   <Button
-                    onClick={fetchCostLeakAnalysis}
+                    onClick={handleAnalyzeCostLeaks}
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25"
                   >
                     <Search className="w-4 h-4 mr-2" />
@@ -1865,7 +2058,7 @@ export default function ToolDetailPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
                     <Package className="w-5 h-5" />
-                    Fortnox Data
+                    {isMicrosoft365 ? "Microsoft 365 Data" : "Fortnox Data"}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1912,7 +2105,46 @@ export default function ToolDetailPage() {
                           />
                         </div>
 
-                        {/* Data Tab Navigation */}
+                        {/* Data Tab Navigation - Microsoft 365 */}
+                        {isMicrosoft365 && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("licenses")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "licenses"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Key className="w-4 h-4" />
+                              <span className="hidden sm:inline">Licenses</span>
+                              {microsoft365Info.licenses && microsoft365Info.licenses.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {microsoft365Info.licenses.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("users")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "users"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Users</span>
+                              {microsoft365Info.users && microsoft365Info.users.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {microsoft365Info.users.length}
+                                </Badge>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Data Tab Navigation - Fortnox */}
+                        {isFortnox && (
                         <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
                           <button
                             onClick={() => setActiveDataTab("company")}
@@ -2022,10 +2254,140 @@ export default function ToolDetailPage() {
                             </button>
                           )}
                         </div>
+                        )}
                       </div>
 
-                      {/* Company Information Tab */}
-                      {activeDataTab === "company" && fortnoxInfo.company && (
+                      {/* Microsoft 365 Licenses Tab */}
+                      {isMicrosoft365 && activeDataTab === "licenses" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Key className="w-4 h-4 text-cyan-400" />
+                            Licenses
+                            {microsoft365Info.licenses && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {microsoft365Info.licenses.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {microsoft365Info.licenses && microsoft365Info.licenses.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">License Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">SKU ID</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Consumed</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Available</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(microsoft365Info.licenses, infoSearchQuery).map((license: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {license.skuPartNumber || license.displayName || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 font-mono text-xs">
+                                        {license.skuId?.substring(0, 8)}...
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-white">
+                                        {license.consumedUnits || 0}
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-green-400">
+                                        {(license.prepaidUnits?.enabled || 0) - (license.consumedUnits || 0)}
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">
+                                        {license.prepaidUnits?.enabled || 0}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No licenses found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Microsoft 365 Users Tab */}
+                      {isMicrosoft365 && activeDataTab === "users" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            Users
+                            {microsoft365Info.users && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {microsoft365Info.users.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {microsoft365Info.users && microsoft365Info.users.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Email</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Licenses</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Last Sign-In</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(microsoft365Info.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {user.displayName || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400">
+                                        {user.mail || user.userPrincipalName || "N/A"}
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={user.accountEnabled
+                                          ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                          : "bg-red-500/20 text-red-400 border-red-500/30"
+                                        }>
+                                          {user.accountEnabled ? "Active" : "Disabled"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-center text-cyan-400">
+                                        {user.assignedLicenses?.length || 0}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {user.signInActivity?.lastSignInDateTime
+                                          ? new Date(user.signInActivity.lastSignInDateTime).toLocaleDateString()
+                                          : "Never"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {microsoft365Info.users.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {microsoft365Info.users.length} users. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No users found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no M365 data */}
+                      {isMicrosoft365 && Object.keys(microsoft365Info).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* Company Information Tab - Fortnox */}
+                      {isFortnox && activeDataTab === "company" && fortnoxInfo.company && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                             <Wallet className="w-4 h-4 text-cyan-400" />
@@ -2131,7 +2493,7 @@ export default function ToolDetailPage() {
                       )}
 
                       {/* Customers Tab */}
-                      {activeDataTab === "customers" && fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "customers" && fortnoxInfo.customers && fortnoxInfo.customers.length > 0 && (() => {
                         const filteredCustomers = filterData(fortnoxInfo.customers, infoSearchQuery)
                         const totalCustomerPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE)
                         const paginatedCustomers = filteredCustomers.slice(
@@ -2204,7 +2566,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Invoices Tab */}
-                      {activeDataTab === "invoices" && fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "invoices" && fortnoxInfo.invoices && fortnoxInfo.invoices.length > 0 && (() => {
                         const filteredInvoices = filterData(fortnoxInfo.invoices, infoSearchQuery)
                         const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE)
                         const paginatedInvoices = filteredInvoices.slice(
@@ -2268,7 +2630,7 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium">
-                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(invoice.Total, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 hidden md:table-cell">
                                         <Badge className={
@@ -2289,7 +2651,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Supplier Invoices Tab */}
-                      {activeDataTab === "supplierInvoices" && fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "supplierInvoices" && fortnoxInfo.supplierInvoices && fortnoxInfo.supplierInvoices.length > 0 && (() => {
                         const filteredSupplierInvoices = filterData(fortnoxInfo.supplierInvoices, infoSearchQuery)
                         const totalSupplierInvoicePages = Math.ceil(filteredSupplierInvoices.length / ITEMS_PER_PAGE)
                         const paginatedSupplierInvoices = filteredSupplierInvoices.slice(
@@ -2353,7 +2715,7 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="p-3 text-gray-300 hidden sm:table-cell">{invoice.InvoiceDate || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium">
-                                        {invoice.Total ? `${Number(invoice.Total).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(invoice.Total, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 text-gray-300 hidden md:table-cell">{invoice.DueDate || '-'}</td>
                                     </tr>
@@ -2366,7 +2728,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Accounts Tab */}
-                      {activeDataTab === "accounts" && fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "accounts" && fortnoxInfo.accounts && fortnoxInfo.accounts.length > 0 && (() => {
                         const filteredAccounts = filterData(fortnoxInfo.accounts, infoSearchQuery)
                         const totalAccountPages = Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE)
                         const paginatedAccounts = filteredAccounts.slice(
@@ -2440,7 +2802,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Articles Tab */}
-                      {activeDataTab === "articles" && fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "articles" && fortnoxInfo.articles && fortnoxInfo.articles.length > 0 && (() => {
                         const filteredArticles = filterData(fortnoxInfo.articles, infoSearchQuery)
                         const totalArticlePages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE)
                         const paginatedArticles = filteredArticles.slice(
@@ -2499,7 +2861,7 @@ export default function ToolDetailPage() {
                                       <td className="p-3 text-white font-medium">{article.ArticleNumber || '-'}</td>
                                       <td className="p-3 text-gray-300">{article.Description || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium hidden sm:table-cell">
-                                        {article.SalesPrice ? `${Number(article.SalesPrice).toLocaleString()} kr` : '-'}
+                                        {formatCurrencyForIntegration(article.SalesPrice, integration?.connection_type || 'fortnox')}
                                       </td>
                                       <td className="p-3 text-gray-300 hidden md:table-cell">{article.Unit || '-'}</td>
                                     </tr>
@@ -2512,7 +2874,7 @@ export default function ToolDetailPage() {
                       })()}
 
                       {/* Suppliers Tab */}
-                      {activeDataTab === "suppliers" && fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (() => {
+                      {isFortnox && activeDataTab === "suppliers" && fortnoxInfo.suppliers && fortnoxInfo.suppliers.length > 0 && (() => {
                         const filteredSuppliers = filterData(fortnoxInfo.suppliers, infoSearchQuery)
                         const totalSupplierPages = Math.ceil(filteredSuppliers.length / ITEMS_PER_PAGE)
                         const paginatedSuppliers = filteredSuppliers.slice(
@@ -2584,8 +2946,8 @@ export default function ToolDetailPage() {
                         )
                       })()}
 
-                      {/* Show message if no data */}
-                      {Object.keys(fortnoxInfo).length === 0 && (
+                      {/* Show message if no Fortnox data */}
+                      {isFortnox && Object.keys(fortnoxInfo).length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-gray-400">No data available. Click "Show" to load information.</p>
                         </div>
@@ -2971,7 +3333,7 @@ export default function ToolDetailPage() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchCostLeakAnalysis}
+                  onClick={handleAnalyzeCostLeaks}
                   disabled={isLoadingAnalysis}
                   className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white"
                 >
@@ -3004,9 +3366,10 @@ export default function ToolDetailPage() {
                   <div className="bg-black/40 rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
                     <p className="text-2xl font-bold text-green-400">
-                      {costLeakAnalysis.overallSummary.totalPotentialSavings 
-                        ? `${costLeakAnalysis.overallSummary.totalPotentialSavings.toLocaleString('sv-SE')} SEK`
-                        : "0 SEK"}
+                      {formatCurrencyForIntegration(
+                        costLeakAnalysis.overallSummary.totalPotentialSavings || 0,
+                        integration?.connection_type || 'fortnox'
+                      )}
                     </p>
                   </div>
                   <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
@@ -3157,7 +3520,7 @@ export default function ToolDetailPage() {
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs text-gray-400">Potential Savings:</span>
                                 <span className="text-sm font-semibold text-green-400">
-                                  {finding.potentialSavings.toLocaleString('sv-SE')} SEK
+                                  {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
                                 </span>
                               </div>
                             )}
@@ -3180,7 +3543,7 @@ export default function ToolDetailPage() {
                                         <div className="flex items-center gap-3 text-gray-400">
                                           <span>{inv.InvoiceDate || 'N/A'}</span>
                                           <span className="text-green-400 font-medium">
-                                            {inv.calculatedTotal ? `${inv.calculatedTotal.toLocaleString('sv-SE')} SEK` : '0 SEK'}
+                                            {formatCurrencyForIntegration(inv.calculatedTotal || 0, integration?.connection_type || 'fortnox')}
                                           </span>
                                         </div>
                                       </div>
@@ -3217,7 +3580,9 @@ export default function ToolDetailPage() {
                     <CheckCircle className="w-8 h-8 text-green-400" />
                   </div>
                   <p className="text-white font-semibold text-lg mb-1">No cost leaks detected!</p>
-                  <p className="text-gray-400 text-sm">Your supplier invoices look good.</p>
+                  <p className="text-gray-400 text-sm">
+                    {isMicrosoft365 ? "Your Microsoft 365 licenses are well-optimized." : "Your supplier invoices look good."}
+                  </p>
                 </div>
               )}
 
@@ -3244,97 +3609,175 @@ export default function ToolDetailPage() {
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              PDF Export Preview
+              PDF Summary Preview
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Review the content that will be included in your PDF report before downloading.
+              A concise 1-page summary with key metrics, charts, and top priority actions.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-4 py-4">
             {/* PDF Preview Content */}
-            <div className="bg-white rounded-lg p-6 text-slate-900 shadow-xl">
+            <div className="bg-white rounded-lg p-4 text-slate-900 shadow-xl">
               {/* Mock PDF Header */}
-              <div className="bg-slate-900 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full" />
+              <div className="bg-slate-900 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-sm">Efficyon</h3>
+                      <p className="text-gray-400 text-[10px]">Cost Leak Analysis Summary</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">Efficyon</h3>
-                    <p className="text-gray-400 text-sm">Cost Leak Analysis Report</p>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-slate-700">
-                  <p className="text-gray-400 text-xs">
-                    Generated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  <p className="text-gray-400 text-[10px]">
+                    {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               </div>
 
-              {/* Executive Summary Preview */}
-              <div className="mb-6">
-                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-slate-600" />
-                  Executive Summary
-                </h4>
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-slate-100 rounded-lg p-3 text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Issues</p>
-                    <p className="text-xl font-bold text-slate-800">
-                      {costLeakAnalysis?.overallSummary?.totalFindings || 0}
-                    </p>
+              {/* Key Metrics */}
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="bg-slate-100 rounded p-2 text-center">
+                  <p className="text-[8px] text-slate-500 uppercase">Total Issues</p>
+                  <p className="text-lg font-bold text-slate-800">
+                    {costLeakAnalysis?.overallSummary?.totalFindings || 0}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 rounded p-2 text-center border border-emerald-200">
+                  <p className="text-[8px] text-emerald-600 uppercase">Savings</p>
+                  <p className="text-sm font-bold text-emerald-600">
+                    ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+                <div className="bg-red-50 rounded p-2 text-center border border-red-200">
+                  <p className="text-[8px] text-red-600 uppercase">High</p>
+                  <p className="text-lg font-bold text-red-600">
+                    {costLeakAnalysis?.overallSummary?.highSeverity || 0}
+                  </p>
+                </div>
+                <div className="bg-amber-50 rounded p-2 text-center border border-amber-200">
+                  <p className="text-[8px] text-amber-600 uppercase">Medium</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Donut Chart Preview */}
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Issues by Severity</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-16 h-16">
+                      <svg viewBox="0 0 36 36" className="w-full h-full">
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                        {(costLeakAnalysis?.overallSummary?.highSeverity || 0) > 0 && (
+                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="3"
+                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
+                            strokeDashoffset="25" />
+                        )}
+                        {(costLeakAnalysis?.overallSummary?.mediumSeverity || 0) > 0 && (
+                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3"
+                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.mediumSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
+                            strokeDashoffset={`${25 - ((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100}`} />
+                        )}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-bold text-slate-700">{costLeakAnalysis?.overallSummary?.totalFindings || 0}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-[9px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-sm" />
+                        <span className="text-slate-600">High ({costLeakAnalysis?.overallSummary?.highSeverity || 0})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-amber-500 rounded-sm" />
+                        <span className="text-slate-600">Medium ({costLeakAnalysis?.overallSummary?.mediumSeverity || 0})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-sm" />
+                        <span className="text-slate-600">Low ({costLeakAnalysis?.overallSummary?.lowSeverity || 0})</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-200">
-                    <p className="text-[10px] text-emerald-600 uppercase tracking-wider">Savings</p>
-                    <p className="text-lg font-bold text-emerald-600">
-                      ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg p-3 text-center border border-red-200">
-                    <p className="text-[10px] text-red-600 uppercase tracking-wider">High</p>
-                    <p className="text-xl font-bold text-red-600">
-                      {costLeakAnalysis?.overallSummary?.highSeverity || 0}
-                    </p>
-                  </div>
-                  <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-200">
-                    <p className="text-[10px] text-amber-600 uppercase tracking-wider">Medium</p>
-                    <p className="text-xl font-bold text-amber-600">
-                      {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
-                    </p>
+                </div>
+
+                {/* Bar Chart Preview */}
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Savings by Category</h4>
+                  <div className="space-y-2">
+                    {getGroupedFindingsForPreview().slice(0, 3).map(([key, group]) => (
+                      <div key={key} className="space-y-0.5">
+                        <div className="flex justify-between text-[8px]">
+                          <span className="text-slate-600">{group.title}</span>
+                          <span className="font-medium text-slate-700">${(group.savings || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded overflow-hidden">
+                          <div
+                            className={`h-full rounded ${
+                              group.color === 'red' ? 'bg-red-500' :
+                              group.color === 'amber' ? 'bg-amber-500' :
+                              group.color === 'orange' ? 'bg-orange-500' :
+                              'bg-slate-400'
+                            }`}
+                            style={{ width: `${Math.min(((group.savings || 0) / Math.max(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 1, 1)) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Findings Preview */}
-              <div className="mb-4">
-                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-slate-600" />
-                  Detailed Findings
-                </h4>
-                <div className="space-y-2">
-                  {getGroupedFindingsForPreview().map(([key, group]) => (
-                    <div key={key} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          group.color === 'red' ? 'bg-red-500' :
-                          group.color === 'amber' ? 'bg-amber-500' :
-                          group.color === 'orange' ? 'bg-orange-500' :
-                          'bg-slate-500'
-                        }`} />
-                        <span className="text-sm text-slate-700">{group.title}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-                        {group.count} item{group.count !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  ))}
+              {/* Top Actions Preview */}
+              <div className="mb-3">
+                <h4 className="text-[10px] font-bold text-slate-700 mb-2">Top Priority Actions</h4>
+                <div className="space-y-1">
+                  {(() => {
+                    // Consolidate findings by title (check both Fortnox and M365 data sources)
+                    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
+                    const consolidated: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
+                    findings.forEach((f: any) => {
+                      const title = f.title || 'Untitled'
+                      if (!consolidated[title]) {
+                        consolidated[title] = { title, count: 0, totalSavings: 0, severity: f.severity || 'low' }
+                      }
+                      consolidated[title].count++
+                      consolidated[title].totalSavings += f.potentialSavings || 0
+                      if (f.severity === 'high') consolidated[title].severity = 'high'
+                      else if (f.severity === 'medium' && consolidated[title].severity !== 'high') {
+                        consolidated[title].severity = 'medium'
+                      }
+                    })
+                    return Object.values(consolidated)
+                      .sort((a, b) => b.totalSavings - a.totalSavings)
+                      .slice(0, 3)
+                      .map((action, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1.5">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${
+                            action.severity === 'high' ? 'bg-red-500' : action.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <span className="text-[9px] text-slate-700 flex-1 truncate">
+                            {action.title}{action.count > 1 ? ` (${action.count})` : ''}
+                          </span>
+                          <span className="text-[9px] font-bold text-emerald-600">
+                            ${action.totalSavings.toLocaleString()}
+                          </span>
+                        </div>
+                      ))
+                  })()}
                 </div>
               </div>
 
               {/* Footer Preview */}
-              <div className="border-t border-slate-200 pt-3 mt-4 flex items-center justify-between text-[10px] text-slate-400">
-                <span>Confidential - For internal use only</span>
+              <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[8px] text-slate-400">
+                <span>Confidential</span>
                 <span className="text-cyan-600">Powered by Efficyon</span>
                 <span>Page 1 of 1</span>
               </div>
@@ -3349,23 +3792,23 @@ export default function ToolDetailPage() {
               <ul className="text-xs text-gray-400 space-y-1.5">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Executive summary with key metrics
+                  Key metrics summary (issues, savings, severity counts)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  AI analysis summary and insights
+                  Visual donut chart showing severity distribution
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  All {costLeakAnalysis?.supplierInvoiceAnalysis?.findings?.length || 0} findings grouped by category
+                  Bar chart showing savings by category
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Detailed tables with severity, descriptions, and savings
+                  Top 3 priority actions with potential savings
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Professional formatting with Efficyon branding
+                  AI insight with actionable recommendation
                 </li>
               </ul>
             </div>

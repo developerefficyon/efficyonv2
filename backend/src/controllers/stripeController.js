@@ -49,10 +49,14 @@ async function createPaymentIntent(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { planTier, email, companyName, returnUrl } = req.body
+    const { planTier, email, companyName, returnUrl, billingPeriod = "monthly" } = req.body
 
     if (!planTier) {
       return res.status(400).json({ error: "Plan tier is required" })
+    }
+
+    if (!["monthly", "annual"].includes(billingPeriod)) {
+      return res.status(400).json({ error: "Invalid billing period. Must be 'monthly' or 'annual'" })
     }
 
     // Determine success and cancel URLs based on returnUrl or default to onboarding
@@ -95,6 +99,10 @@ async function createPaymentIntent(req, res) {
         .maybeSingle()
 
       // Create initial subscription record (will be updated by webhook)
+      const initialAmountCents = billingPeriod === "annual"
+        ? plan.price_annual_cents
+        : plan.price_monthly_cents
+
       const { data: newSubscription, error: subInsertError } = await supabase
         .from("subscriptions")
         .insert({
@@ -103,7 +111,7 @@ async function createPaymentIntent(req, res) {
           plan_tier: planTier,
           stripe_customer_id: stripeCustomerId,
           status: "incomplete",
-          amount_cents: plan.price_monthly_cents,
+          amount_cents: initialAmountCents,
           currency: "usd",
         })
         .select()
@@ -116,24 +124,28 @@ async function createPaymentIntent(req, res) {
       }
     }
 
-    // Create checkout session for hosted checkout page
+    // Get the appropriate Stripe Price ID based on billing period
+    const stripePriceId = billingPeriod === "annual"
+      ? plan.stripe_price_annual_id
+      : plan.stripe_price_monthly_id
+
+    if (!stripePriceId) {
+      console.error(`[${new Date().toISOString()}] No Stripe Price ID configured for ${plan.name} (${billingPeriod})`)
+      return res.status(400).json({
+        error: `Stripe Price ID not configured for ${plan.name} plan (${billingPeriod}). Please contact support.`
+      })
+    }
+
+    console.log(`[${new Date().toISOString()}] Using Stripe Price ID: ${stripePriceId} for ${plan.name} (${billingPeriod})`)
+
+    // Create checkout session using Stripe Price ID
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "subscription",
       customer: stripeCustomerId,
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `Efficyon ${plan.name} Plan`,
-              description: plan.description || "Professional plan",
-            },
-            unit_amount: plan.price_monthly_cents,
-            recurring: {
-              interval: "month",
-            },
-          },
+          price: stripePriceId,
           quantity: 1,
         },
       ],
@@ -143,10 +155,15 @@ async function createPaymentIntent(req, res) {
         userId: user.id,
         planTier,
         companyName,
+        billingPeriod,
       },
     })
 
     console.log(`[${new Date().toISOString()}] Checkout session created: ${checkoutSession.id}`)
+
+    const priceAmount = billingPeriod === "annual"
+      ? plan.price_annual_cents
+      : plan.price_monthly_cents
 
     return res.json({
       sessionId: checkoutSession.id,
@@ -154,12 +171,147 @@ async function createPaymentIntent(req, res) {
       plan: {
         tier: planTier,
         name: plan.name,
+        billingPeriod,
+        price: priceAmount,
         monthlyPrice: plan.price_monthly_cents,
+        annualPrice: plan.price_annual_cents,
         tokens: plan.included_tokens,
       },
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error creating checkout session:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Create a trial setup session (collects card without charging)
+ * Used for 7-day free trial signups
+ */
+async function createTrialSetupSession(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/stripe/create-trial-setup`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { email, companyName } = req.body
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+    const successUrl = `${frontendUrl}/onboarding?trial=success&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${frontendUrl}/onboarding?trial=canceled`
+
+    // Get or create Stripe customer
+    let { data: existingSubscription } = await supabase
+      .from("subscriptions")
+      .select("stripe_customer_id, company_id, status")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    let stripeCustomerId = existingSubscription?.stripe_customer_id
+
+    if (!stripeCustomerId) {
+      stripeCustomerId = await createStripeCustomer(user.id, email, companyName)
+    }
+
+    // Get user's company if it exists
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    // Calculate trial end date (7 days from now)
+    const trialDays = 7
+    const now = new Date()
+    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000)
+
+    // Create or update subscription record with trial status
+    if (existingSubscription) {
+      // Update existing subscription to trial
+      await supabase
+        .from("subscriptions")
+        .update({
+          plan_tier: "free",
+          status: "trialing",
+          trial_started_at: now.toISOString(),
+          trial_ends_at: trialEndsAt.toISOString(),
+          amount_cents: 0,
+          updated_at: now.toISOString(),
+        })
+        .eq("user_id", user.id)
+    } else {
+      // Create new subscription record
+      await supabase
+        .from("subscriptions")
+        .insert({
+          user_id: user.id,
+          company_id: profile?.company_id || null,
+          plan_tier: "free",
+          stripe_customer_id: stripeCustomerId,
+          status: "trialing",
+          trial_started_at: now.toISOString(),
+          trial_ends_at: trialEndsAt.toISOString(),
+          amount_cents: 0,
+          currency: "usd",
+        })
+    }
+
+    // Create checkout session in SETUP mode (collects card without charging)
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "setup",
+      customer: stripeCustomerId,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        userId: user.id,
+        isTrial: "true",
+        companyName: companyName || "",
+      },
+    })
+
+    console.log(`[${new Date().toISOString()}] Trial setup session created: ${checkoutSession.id}`)
+
+    // Initialize trial token balance (5 tokens for trial users)
+    const { data: existingTokenBalance } = await supabase
+      .from("token_balances")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (!existingTokenBalance) {
+      await supabase.from("token_balances").insert({
+        user_id: user.id,
+        company_id: profile?.company_id || null,
+        plan_tier: "free",
+        total_tokens: 5,
+        used_tokens: 0,
+      })
+    } else {
+      await supabase
+        .from("token_balances")
+        .update({
+          plan_tier: "free",
+          total_tokens: 5,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", existingTokenBalance.id)
+    }
+
+    return res.json({
+      sessionId: checkoutSession.id,
+      sessionUrl: checkoutSession.url,
+      trial: {
+        startsAt: now.toISOString(),
+        endsAt: trialEndsAt.toISOString(),
+        daysRemaining: trialDays,
+      },
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error creating trial setup session:`, error.message)
     res.status(500).json({ error: error.message })
   }
 }
@@ -290,10 +442,9 @@ async function getUserSubscription(req, res) {
     }
 
     // Get subscription with plan details
-    // For admins, get the most recent subscription regardless of status
-    // For regular users, only get active subscriptions
+    // Include both active and trialing subscriptions
     const requesterRole = user?.user_metadata?.role
-    
+
     let subscriptionQuery = supabase
       .from("subscriptions")
       .select(`
@@ -310,18 +461,21 @@ async function getUserSubscription(req, res) {
         )
       `)
       .eq("user_id", user.id)
-    
-    // If admin, get most recent subscription (any status), otherwise only active
+
+    // If admin, get most recent subscription (any status)
+    // Otherwise get active or trialing subscriptions
     if (requesterRole === "admin") {
       subscriptionQuery = subscriptionQuery
         .order("created_at", { ascending: false })
         .limit(1)
     } else {
       subscriptionQuery = subscriptionQuery
-        .eq("status", "active")
+        .in("status", ["active", "trialing", "trial_expired"])
+        .order("created_at", { ascending: false })
+        .limit(1)
     }
-    
-    const { data: subscription } = await subscriptionQuery.maybeSingle()
+
+    let { data: subscription } = await subscriptionQuery.maybeSingle()
 
     const { data: tokenBalance } = await supabase
       .from("token_balances")
@@ -329,11 +483,53 @@ async function getUserSubscription(req, res) {
       .eq("user_id", user.id)
       .maybeSingle()
 
+    // Calculate trial status
+    let trialStatus = {
+      isTrialActive: false,
+      isTrialExpired: false,
+      trialEndsAt: null,
+      daysRemaining: 0,
+    }
+
+    if (subscription) {
+      const now = new Date()
+
+      if (subscription.status === "trialing" && subscription.trial_ends_at) {
+        const trialEndsAt = new Date(subscription.trial_ends_at)
+
+        if (now > trialEndsAt) {
+          // Trial has expired - update status in database
+          trialStatus.isTrialExpired = true
+          trialStatus.trialEndsAt = subscription.trial_ends_at
+          trialStatus.daysRemaining = 0
+
+          // Auto-update status to trial_expired
+          await supabase
+            .from("subscriptions")
+            .update({ status: "trial_expired", updated_at: now.toISOString() })
+            .eq("id", subscription.id)
+
+          subscription.status = "trial_expired"
+          console.log(`[${new Date().toISOString()}] Trial expired for user ${user.id}`)
+        } else {
+          // Trial is still active
+          trialStatus.isTrialActive = true
+          trialStatus.trialEndsAt = subscription.trial_ends_at
+          trialStatus.daysRemaining = Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24))
+        }
+      } else if (subscription.status === "trial_expired") {
+        trialStatus.isTrialExpired = true
+        trialStatus.trialEndsAt = subscription.trial_ends_at
+        trialStatus.daysRemaining = 0
+      }
+    }
+
     if (!subscription) {
       return res.json({
         subscription: null,
         tokenBalance: null,
-        message: "No active subscription",
+        trialStatus,
+        message: "No subscription found",
       })
     }
 
@@ -345,6 +541,7 @@ async function getUserSubscription(req, res) {
         ...tokenBalance,
         availableTokens,
       },
+      trialStatus,
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error fetching subscription:`, error.message)
@@ -466,6 +663,11 @@ async function handlePaymentIntentFailed(paymentIntent) {
 
 async function handleCheckoutSessionCompleted(session) {
   console.log(`[${new Date().toISOString()}] Checkout session completed: ${session.id}`)
+
+  // Check if this is a trial setup session (setup mode)
+  if (session.mode === "setup") {
+    return handleTrialSetupCompleted(session)
+  }
 
   const userId = session.metadata?.userId
   const planTier = session.metadata?.planTier
@@ -1100,8 +1302,44 @@ async function adminChangePlan(req, res) {
   }
 }
 
+/**
+ * Handle trial setup session completion (webhook)
+ * Updates subscription with setup intent ID for future payment method use
+ */
+async function handleTrialSetupCompleted(session) {
+  console.log(`[${new Date().toISOString()}] Trial setup session completed: ${session.id}`)
+
+  const userId = session.metadata?.userId
+  const isTrial = session.metadata?.isTrial === "true"
+
+  if (!userId || !isTrial) {
+    console.warn(`[${new Date().toISOString()}] Trial setup session missing metadata:`, session.metadata)
+    return
+  }
+
+  try {
+    // Update subscription with setup intent ID
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({
+        stripe_setup_intent_id: session.setup_intent,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+
+    if (error) {
+      console.error(`[${new Date().toISOString()}] Error updating trial subscription:`, error.message)
+    } else {
+      console.log(`[${new Date().toISOString()}] Trial setup completed for user ${userId}`)
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error handling trial setup:`, error.message)
+  }
+}
+
 module.exports = {
   createPaymentIntent,
+  createTrialSetupSession,
   confirmPaymentIntent,
   getUserSubscription,
   getPlansDetails,

@@ -32,6 +32,8 @@ import {
   Crown,
   ArrowRight,
   X,
+  Clock,
+  AlertCircle,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { supabase } from "@/lib/supabaseClient"
@@ -55,7 +57,7 @@ const plans: Plan[] = [
   {
     id: "startup",
     name: "Startup",
-    price: "$29.99",
+    price: "$39",
     period: "month",
     description: "For companies with 1-10 employees",
     features: [
@@ -69,7 +71,7 @@ const plans: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    price: "$99.99",
+    price: "$119",
     period: "month",
     description: "For companies with 11-50 employees",
     features: [
@@ -85,7 +87,7 @@ const plans: Plan[] = [
   {
     id: "custom",
     name: "Enterprise",
-    price: "$299.99",
+    price: "$299",
     period: "month",
     description: "For companies with 50+ employees",
     features: [
@@ -119,6 +121,51 @@ export default function SettingsPage() {
     nextBilling: "2024-07-15",
     paymentMethod: "•••• •••• •••• 4242",
   })
+
+  // Trial status state
+  const [trialStatus, setTrialStatus] = useState<{
+    isTrialActive: boolean
+    isTrialExpired: boolean
+    trialEndsAt: string | null
+    daysRemaining: number
+  } | null>(null)
+
+  // Fetch subscription and trial status
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const accessToken = await getValidSessionToken()
+
+        if (!accessToken) return
+
+        const response = await fetch(`${apiBase}/api/stripe/subscription`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setTrialStatus(data.trialStatus)
+
+          // Update billing info from subscription
+          if (data.subscription) {
+            const planName = data.subscription.plan_catalog?.name || data.subscription.plan_tier
+            setBilling(prev => ({
+              ...prev,
+              plan: planName || prev.plan,
+              nextBilling: data.subscription.current_period_end
+                ? new Date(data.subscription.current_period_end).toLocaleDateString()
+                : prev.nextBilling,
+            }))
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscription:", error)
+      }
+    }
+
+    fetchSubscriptionStatus()
+  }, [])
 
   // Check for payment success/cancel from Stripe redirect
   useEffect(() => {
@@ -360,6 +407,41 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Trial Status Banner */}
+                  {trialStatus?.isTrialActive && (
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30">
+                          <Clock className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-amber-400">Free Trial Active</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} remaining
+                            {trialStatus.trialEndsAt && (
+                              <span> (expires {new Date(trialStatus.trialEndsAt).toLocaleDateString()})</span>
+                            )}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-white hover:border-amber-500/50"
+                          onClick={() => setIsChangePlanModalOpen(true)}
+                        >
+                          <Sparkles className="w-3 h-3 mr-2" />
+                          Upgrade Now
+                        </Button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-amber-500/20">
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-400/70" />
+                          <span>Upgrade before your trial ends to keep full access to all features</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="p-5 rounded-xl bg-gradient-to-br from-white/5 via-white/5 to-transparent border border-white/10 hover:border-white/20 transition-all">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
@@ -368,23 +450,29 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-white">Current Plan</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{billing.plan} Plan</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {trialStatus?.isTrialActive ? "Free Trial" : `${billing.plan} Plan`}
+                          </p>
                         </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 hover:from-cyan-500/20 hover:to-blue-500/20 hover:text-white hover:border-cyan-500/50 w-full sm:w-auto shadow-lg shadow-cyan-500/10 transition-all"
-                        onClick={() => setIsChangePlanModalOpen(true)}
-                      >
-                        <Sparkles className="w-3 h-3 mr-2" />
-                        Change Plan
-                      </Button>
+                      {!trialStatus?.isTrialActive && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 hover:from-cyan-500/20 hover:to-blue-500/20 hover:text-white hover:border-cyan-500/50 w-full sm:w-auto shadow-lg shadow-cyan-500/10 transition-all"
+                          onClick={() => setIsChangePlanModalOpen(true)}
+                        >
+                          <Sparkles className="w-3 h-3 mr-2" />
+                          Change Plan
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50" />
-                      <span>Next billing: {billing.nextBilling}</span>
-                    </div>
+                    {!trialStatus?.isTrialActive && (
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50" />
+                        <span>Next billing: {billing.nextBilling}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-4 rounded-lg bg-white/5 border border-white/10">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

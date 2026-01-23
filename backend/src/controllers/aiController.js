@@ -222,7 +222,7 @@ async function estimateSavings(req, res) {
       success: true,
       estimatedSavings,
       totalEstimatedSavings,
-      currency: "SEK",
+      currency: "USD",
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error estimating savings:`, error.message)

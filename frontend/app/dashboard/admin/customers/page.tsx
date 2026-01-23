@@ -353,7 +353,7 @@ export default function AdminCustomersPage() {
       await res.json()
 
       const tokensByPlan: Record<string, number> = {
-        free: 0,
+        free: 5,
         startup: 10,
         growth: 50,
         custom: 200,
@@ -952,16 +952,16 @@ export default function AdminCustomersPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-black border-white/10 z-[200]">
                     <SelectItem value="free" className="text-white focus:bg-white/10 focus:text-white">
-                      Free - $0/mo (0 tokens)
+                      Free - $0/mo (5 tokens)
                     </SelectItem>
                     <SelectItem value="startup" className="text-white focus:bg-white/10 focus:text-white">
-                      Startup - $29/mo (10 tokens)
+                      Startup - $39/mo (10 tokens)
                     </SelectItem>
                     <SelectItem value="growth" className="text-white focus:bg-white/10 focus:text-white">
-                      Growth - $99/mo (50 tokens)
+                      Growth - $119/mo (50 tokens)
                     </SelectItem>
                     <SelectItem value="custom" className="text-white focus:bg-white/10 focus:text-white">
-                      Enterprise - $299/mo (200 tokens)
+                      Enterprise - Custom (200 tokens)
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -976,7 +976,7 @@ export default function AdminCustomersPage() {
                   </div>
                   <p className="text-sm text-gray-300">
                     {selectedPlan === "free"
-                      ? "Free plan includes 0 tokens (limited access)"
+                      ? "Free plan includes 5 tokens (trial)"
                       : selectedPlan === "startup"
                         ? "Startup plan includes 10 tokens per month"
                         : selectedPlan === "growth"

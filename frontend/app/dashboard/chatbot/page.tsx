@@ -53,6 +53,14 @@ const suggestedQuestions = {
     "Analyze user activity patterns",
     "What's my license cost optimization potential?",
   ],
+  comparison: [
+    "Run a deep analysis across both platforms",
+    "Show cost vs. activity gap analysis",
+    "What's my cost per active user?",
+    "Compare software spending with user productivity",
+    "Find combined optimization opportunities",
+    "Which software has the lowest utilization?",
+  ],
   default: [
     "Show me a summary of the data",
     "What insights can you find?",
@@ -77,11 +85,16 @@ export default function ChatbotPage() {
   // Get connected tools
   const { tools } = useConnectedTools()
 
-  // Get current tool info
-  const currentTool = activeTab === "general" ? null : tools.find((t) => t.id === activeTab)
-  const currentToolId = activeTab === "general" ? null : activeTab
+  // Get current tool info and chat type
+  // Determine chatType based on activeTab
+  const chatType: "general" | "comparison" | "tool" =
+    activeTab === "general" ? "general" :
+    activeTab === "comparison" ? "comparison" : "tool"
 
-  // Chat conversations hook - filtered by current tool
+  const currentTool = chatType === "tool" ? tools.find((t) => t.id === activeTab) : null
+  const currentToolId = chatType === "tool" ? activeTab : null
+
+  // Chat conversations hook - filtered by chat type and tool
   const {
     conversations,
     activeConversationId,
@@ -92,7 +105,7 @@ export default function ChatbotPage() {
     renameConversation,
     addMessageToConversation,
     loadConversation,
-  } = useChatConversations(currentToolId)
+  } = useChatConversations(chatType, currentToolId)
 
   // Set sidebar closed by default on mobile
   useEffect(() => {
@@ -211,6 +224,25 @@ export default function ChatbotPage() {
         }
 
         data = await response.json()
+      } else if (activeTab === "comparison") {
+        // Cross-platform comparison - use comparison endpoint
+        response = await fetch(`${apiBase}/api/chat/comparison`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            question: text,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to get response from AI")
+        }
+
+        data = await response.json()
       } else {
         // Tool-specific chat - use new endpoint
         response = await fetch(`${apiBase}/api/chat/tool`, {
@@ -293,6 +325,7 @@ export default function ChatbotPage() {
   // Get suggested questions for current tab
   const getSuggestedQuestions = () => {
     if (activeTab === "general") return suggestedQuestions.general
+    if (activeTab === "comparison") return suggestedQuestions.comparison
     const tool = tools.find((t) => t.id === activeTab)
     if (tool) {
       const provider = tool.provider.toLowerCase().replace(" ", "")
@@ -304,6 +337,7 @@ export default function ChatbotPage() {
   // Get title for current tab
   const getTabTitle = () => {
     if (activeTab === "general") return "General Assistant"
+    if (activeTab === "comparison") return "Cross-Platform Analysis"
     const tool = tools.find((t) => t.id === activeTab)
     return tool ? `${getToolDisplayName(tool.provider)} Assistant` : "Tool Assistant"
   }
@@ -312,6 +346,9 @@ export default function ChatbotPage() {
   const getTabDescription = () => {
     if (activeTab === "general") {
       return "Ask questions about your tools, costs, and optimizations"
+    }
+    if (activeTab === "comparison") {
+      return "Cross-reference Fortnox and Microsoft 365 data for unified insights"
     }
     const tool = tools.find((t) => t.id === activeTab)
     if (tool) {
@@ -399,6 +436,8 @@ export default function ChatbotPage() {
                     <p className="text-sm text-gray-400 mb-6 max-w-md">
                       {activeTab === "general"
                         ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
+                        : activeTab === "comparison"
+                        ? "I'll cross-reference your Fortnox financial data with Microsoft 365 usage data to find cost optimization opportunities, activity gaps, and prioritized recommendations."
                         : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center max-w-lg">
@@ -471,7 +510,11 @@ export default function ChatbotPage() {
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
                             <span className="text-sm text-gray-400">
-                              {activeTab === "general" ? "Thinking..." : "Fetching data and analyzing..."}
+                              {activeTab === "general"
+                                ? "Thinking..."
+                                : activeTab === "comparison"
+                                ? "Analyzing both platforms..."
+                                : "Fetching data and analyzing..."}
                             </span>
                           </div>
                         </div>
@@ -502,6 +545,8 @@ export default function ChatbotPage() {
                     placeholder={
                       activeTab === "general"
                         ? "Type your message..."
+                        : activeTab === "comparison"
+                        ? "Ask about cross-platform insights..."
                         : `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
                     }
                     disabled={isLoading}
