@@ -55,7 +55,7 @@ const plans: Plan[] = [
   {
     id: "startup",
     name: "Startup",
-    price: "$29.99",
+    price: "$39",
     period: "month",
     description: "For companies with 1-10 employees",
     features: [
@@ -69,7 +69,7 @@ const plans: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    price: "$99.99",
+    price: "$119",
     period: "month",
     description: "For companies with 11-50 employees",
     features: [
@@ -85,7 +85,7 @@ const plans: Plan[] = [
   {
     id: "custom",
     name: "Enterprise",
-    price: "$299.99",
+    price: "$299",
     period: "month",
     description: "For companies with 50+ employees",
     features: [

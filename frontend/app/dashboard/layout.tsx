@@ -204,7 +204,11 @@ function SidebarNavigation({
           <SidebarMenu className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              // Use exact match for main dashboard routes, startsWith for others (to match sub-routes)
+              const isDashboardRoot = item.href === "/dashboard" || item.href === "/dashboard/admin"
+              const isActive = isDashboardRoot
+                ? pathname === item.href
+                : pathname?.startsWith(item.href) ?? false
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
