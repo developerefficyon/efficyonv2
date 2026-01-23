@@ -481,6 +481,15 @@ export default function DashboardLayout({
                   {isAdmin ? "Admin Dashboard" : "Dashboard"}
                 </h1>
               </div>
+              {/* Trial Days Remaining - Only for trial users */}
+              {!isAdmin && trialStatus?.isTrialActive && (
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-medium text-amber-400">
+                    {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} left
+                  </span>
+                </div>
+              )}
               {/* Token Balance Display - Only for non-admin users */}
               {!isAdmin && (
                 <div className="hidden sm:block shrink-0">
