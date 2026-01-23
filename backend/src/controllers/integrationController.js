@@ -4,6 +4,7 @@
  */
 
 const { supabase } = require("../config/supabase")
+const { encryptIntegrationSettings, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -197,10 +198,13 @@ async function upsertIntegrations(req, res) {
       ...(i.settings || {}),
     }
 
+    // Encrypt sensitive fields before saving
+    const encryptedSettings = encryptIntegrationSettings(settings)
+
     return {
       company_id: companyId,
       provider: provider,
-      settings: settings,
+      settings: encryptedSettings,
       status: i.status || "connected",
     }
   })
@@ -221,8 +225,10 @@ async function upsertIntegrations(req, res) {
 
     let result
     if (existing) {
-      const currentSettings = existing.settings || {}
-      const mergedSettings = { ...currentSettings, ...row.settings }
+      // Decrypt existing settings before merging, then re-encrypt
+      const currentSettings = decryptIntegrationSettings(existing.settings || {})
+      const newSettings = decryptIntegrationSettings(row.settings || {})
+      const mergedSettings = encryptIntegrationSettings({ ...currentSettings, ...newSettings })
 
       const { data: updated, error: updateError } = await supabase
         .from("company_integrations")
@@ -320,7 +326,8 @@ async function getIntegrations(req, res) {
 
   // Map provider to tool_name for backward compatibility
   const mappedIntegrations = (data || []).map((integration) => {
-    const settings = integration.settings || {}
+    // Decrypt sensitive fields before returning to frontend
+    const settings = decryptIntegrationSettings(integration.settings || {})
     return {
       ...integration,
       tool_name: integration.provider,

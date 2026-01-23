@@ -6,6 +6,7 @@
 const { supabase } = require("../config/supabase")
 const { analyzeCostLeaks } = require("../services/costLeakAnalysis")
 const tokenService = require("../services/tokenService")
+const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -53,7 +54,8 @@ async function doTokenRefresh(integration, tokens) {
 
   log("log", "Token refresh", "Performing token refresh")
 
-  const settings = integration.settings || {}
+  // Decrypt settings to get client_id and client_secret
+  const settings = decryptIntegrationSettings(integration.settings || {})
   const clientId = settings.client_id || integration.client_id
   const clientSecret = settings.client_secret || integration.client_secret || ""
 
@@ -105,7 +107,8 @@ async function doTokenRefresh(integration, tokens) {
   const expiresIn = refreshData.expires_in || 3600
   const newExpiresAt = now + expiresIn
 
-  const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+  // Decrypt current OAuth data to get existing values
+  const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
   const currentTokens = currentOauthData.tokens || {}
   const updatedOauthData = {
     ...currentOauthData,
@@ -119,8 +122,10 @@ async function doTokenRefresh(integration, tokens) {
     },
   }
 
+  // Encrypt before saving
+  const encryptedOauthData = encryptOAuthData(updatedOauthData)
   const currentSettings = integration.settings || {}
-  const updatedSettings = { ...currentSettings, oauth_data: updatedOauthData }
+  const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
   await supabase
     .from("company_integrations")
@@ -152,7 +157,9 @@ async function refreshTokenIfNeeded(integration, tokens) {
         .maybeSingle()
 
       if (freshIntegration) {
-        const freshTokens = freshIntegration.settings?.oauth_data?.tokens
+        // Decrypt the oauth_data before reading tokens
+        const freshOauthData = decryptOAuthData(freshIntegration.settings?.oauth_data || {})
+        const freshTokens = freshOauthData?.tokens
         if (freshTokens?.access_token) {
           return freshTokens.access_token
         }
@@ -272,7 +279,8 @@ function createFortnoxDataHandler(endpoint, requiredScope, scopeName, dataKey) {
       return res.status(400).json({ error: "Fortnox integration not configured for this company" })
     }
 
-    const oauthData = integration.settings?.oauth_data || integration.oauth_data
+    // Decrypt OAuth data when reading from database
+    const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
     const tokens = oauthData?.tokens
     if (!tokens?.access_token) {
       return res.status(400).json({ error: "Fortnox is connected but no access token is stored. Please reconnect." })
@@ -486,7 +494,8 @@ async function fortnoxOAuthCallback(req, res) {
     return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_integration_not_found`)
   }
 
-  const settings = integration?.settings || {}
+  // Decrypt settings to get client_id and client_secret
+  const settings = decryptIntegrationSettings(integration?.settings || {})
   const clientId = settings.client_id || integration?.client_id
   const clientSecret = settings.client_secret || integration?.client_secret
   const redirectUri = process.env.FORTNOX_REDIRECT_URI || "http://localhost:4000/api/integrations/fortnox/callback"
@@ -532,13 +541,16 @@ async function fortnoxOAuthCallback(req, res) {
       },
     }
 
+    // Encrypt sensitive OAuth data before saving
+    const encryptedOauthData = encryptOAuthData(newOauthData)
+
     const grantedScopeLower = (grantedScope || "").toLowerCase()
     const hasCustomerScope = grantedScopeLower.includes("customer")
     const hasCompanyInfoScope = grantedScopeLower.includes("companyinformation") || grantedScopeLower.includes("company")
     let integrationStatus = (hasCustomerScope || hasCompanyInfoScope) ? "connected" : "warning"
 
     const currentSettings = integration.settings || {}
-    const updatedSettings = { ...currentSettings, oauth_data: newOauthData }
+    const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
     const maxAttempts = 3
     let updateError = null
@@ -607,7 +619,8 @@ async function syncFortnoxCustomers(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured for this company" })
   }
 
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  // Decrypt OAuth data when reading from database
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -693,7 +706,7 @@ async function getFortnoxCustomers(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured" })
   }
 
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -755,7 +768,7 @@ async function getFortnoxCompanyInfo(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured" })
   }
 
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -850,7 +863,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
     return res.status(400).json({ error: "Fortnox integration not configured" })
   }
 
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {

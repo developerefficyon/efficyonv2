@@ -6,6 +6,7 @@
 const { supabase } = require("../config/supabase")
 const { analyzeM365CostLeaks } = require("../services/microsoft365CostLeakAnalysis")
 const tokenService = require("../services/tokenService")
+const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -57,7 +58,8 @@ async function refreshMicrosoft365TokenIfNeeded(integration, tokens) {
   if (expiresAt && now >= (expiresAt - 300)) {
     log("log", "Token refresh", "Microsoft 365 token refresh needed")
 
-    const settings = integration.settings || {}
+    // Decrypt settings to get client credentials
+    const settings = decryptIntegrationSettings(integration.settings || {})
     const tenantId = settings.tenant_id || integration.tenant_id
     const clientId = settings.client_id || integration.client_id
     const clientSecret = settings.client_secret || integration.client_secret || ""
@@ -92,7 +94,8 @@ async function refreshMicrosoft365TokenIfNeeded(integration, tokens) {
     const expiresIn = refreshData.expires_in || 3600
     const newExpiresAt = now + expiresIn
 
-    const currentOauthData = integration.settings?.oauth_data || integration.oauth_data || {}
+    // Decrypt current OAuth data to get existing values
+    const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
     const currentTokens = currentOauthData.tokens || {}
     const updatedOauthData = {
       ...currentOauthData,
@@ -106,8 +109,10 @@ async function refreshMicrosoft365TokenIfNeeded(integration, tokens) {
       },
     }
 
+    // Encrypt before saving
+    const encryptedOauthData = encryptOAuthData(updatedOauthData)
     const currentSettings = integration.settings || {}
-    const updatedSettings = { ...currentSettings, oauth_data: updatedOauthData }
+    const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
     await supabase
       .from("company_integrations")
@@ -298,7 +303,8 @@ async function microsoft365OAuthCallback(req, res) {
     return res.redirect(`${frontendUrl}/dashboard/tools?microsoft365=error_integration_not_found`)
   }
 
-  const settings = integration?.settings || {}
+  // Decrypt settings to get client credentials
+  const settings = decryptIntegrationSettings(integration?.settings || {})
   const clientId = settings.client_id || integration?.client_id
   const clientSecret = settings.client_secret || integration?.client_secret
   const redirectUri = process.env.MICROSOFT365_REDIRECT_URI || "http://localhost:4000/api/integrations/microsoft365/callback"
@@ -348,8 +354,10 @@ async function microsoft365OAuthCallback(req, res) {
       },
     }
 
+    // Encrypt sensitive OAuth data before saving
+    const encryptedOauthData = encryptOAuthData(newOauthData)
     const currentSettings = integration.settings || {}
-    const updatedSettings = { ...currentSettings, oauth_data: newOauthData }
+    const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
     const { error: updateError } = await supabase
       .from("company_integrations")
@@ -389,7 +397,7 @@ async function getMicrosoft365Licenses(req, res) {
   }
 
   const { integration } = result
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -429,7 +437,7 @@ async function getMicrosoft365Users(req, res) {
   }
 
   const { integration } = result
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -473,7 +481,7 @@ async function getMicrosoft365UsageReports(req, res) {
   }
 
   const { integration } = result
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
@@ -538,7 +546,7 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
   }
 
   const { integration } = result
-  const oauthData = integration.settings?.oauth_data || integration.oauth_data
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
 
   if (!tokens?.access_token) {
