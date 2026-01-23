@@ -78,6 +78,7 @@ const {
 const { requireAuth } = require("../middleware/auth")
 const {
   createPaymentIntent,
+  createTrialSetupSession,
   confirmPaymentIntent,
   getUserSubscription,
   getPlansDetails,
@@ -176,6 +177,7 @@ router.post("/api/alerts", requireAuth, upsertAlerts)
 
 // Stripe Payment Routes
 router.post("/api/stripe/create-payment-intent", requireAuth, createPaymentIntent)
+router.post("/api/stripe/create-trial-setup", requireAuth, createTrialSetupSession)
 router.post("/api/stripe/confirm-payment", requireAuth, confirmPaymentIntent)
 router.get("/api/stripe/subscription", requireAuth, getUserSubscription)
 router.get("/api/stripe/plans", getPlansDetails)

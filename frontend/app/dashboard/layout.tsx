@@ -3,7 +3,9 @@
 import { useAuth } from "@/lib/auth-context"
 import { TokenProvider } from "@/lib/token-context"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { TrialExpiredModal } from "@/components/trial-expired-modal"
+import { supabase } from "@/lib/supabaseClient"
 import {
   Sidebar,
   SidebarContent,
@@ -285,13 +287,68 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith("/dashboard/admin")
 
+  // Trial status state
+  const [trialStatus, setTrialStatus] = useState<{
+    isTrialActive: boolean
+    isTrialExpired: boolean
+    trialEndsAt: string | null
+    daysRemaining: number
+  } | null>(null)
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login")
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
+  // Check subscription and trial status
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!user || isAdmin) {
+        setIsCheckingSubscription(false)
+        return
+      }
+
+      try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token
+
+        if (!accessToken) {
+          setIsCheckingSubscription(false)
+          return
+        }
+
+        const response = await fetch(`${apiBase}/api/stripe/subscription`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setTrialStatus(data.trialStatus)
+
+          // Show modal if trial has expired
+          if (data.trialStatus?.isTrialExpired) {
+            setShowTrialExpiredModal(true)
+          }
+        }
+      } catch (error) {
+        console.error("Error checking subscription status:", error)
+      } finally {
+        setIsCheckingSubscription(false)
+      }
+    }
+
+    if (user && !isAdmin) {
+      checkSubscriptionStatus()
+    } else {
+      setIsCheckingSubscription(false)
+    }
+  }, [user, isAdmin])
+
+  if (isLoading || isCheckingSubscription) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-white">Loading...</div>
@@ -304,6 +361,37 @@ export default function DashboardLayout({
   }
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems
+
+  // Handle plan selection from trial expired modal
+  const handleSelectPlan = async (planTier: string) => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          planTier,
+          email: user.email,
+          returnUrl: "/dashboard",
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.sessionUrl) {
+          window.location.href = data.sessionUrl
+        }
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error)
+    }
+  }
 
   return (
     <TokenProvider>
@@ -426,6 +514,14 @@ export default function DashboardLayout({
       </div>
       {/* Low Token Warning Modal - Only for non-admin users */}
       {!isAdmin && <LowTokenWarning />}
+      {/* Trial Expired Modal - Only for non-admin users with expired trials */}
+      {!isAdmin && (
+        <TrialExpiredModal
+          open={showTrialExpiredModal}
+          onSelectPlan={handleSelectPlan}
+          trialEndsAt={trialStatus?.trialEndsAt || null}
+        />
+      )}
     </SidebarProvider>
     </TokenProvider>
   )

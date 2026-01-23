@@ -123,26 +123,30 @@ function OnboardingPageContent() {
     loadUserData()
   }, [])
 
-  // Check if returning from successful Stripe payment
+  // Check if returning from successful Stripe payment or trial setup
   useEffect(() => {
     const paymentStatus = searchParams.get("payment")
-    if (paymentStatus === "success") {
-      // Payment was successful, complete onboarding and go to dashboard immediately
-      // Don't show the form - redirect directly
+    const trialStatus = searchParams.get("trial")
+
+    if (paymentStatus === "success" || trialStatus === "success") {
+      // Payment or trial setup was successful, complete onboarding and go to dashboard
       setIsProcessingPaymentSuccess(true)
-      const handlePaymentSuccess = async () => {
+      const handleSuccess = async () => {
         try {
           await completeOnboarding()
         } catch (err) {
-          console.error("Error completing onboarding after payment", err)
+          console.error("Error completing onboarding after payment/trial", err)
           // Even if there's an error, redirect to dashboard
           router.push("/dashboard")
         }
       }
-      handlePaymentSuccess()
+      handleSuccess()
     } else if (paymentStatus === "canceled") {
       // Payment was canceled, show error
       setPaymentError("Payment was canceled. Please try again.")
+    } else if (trialStatus === "canceled") {
+      // Trial setup was canceled, show error
+      setPaymentError("Trial setup was canceled. Please try again.")
     }
   }, [searchParams, router])
 
@@ -188,10 +192,72 @@ function OnboardingPageContent() {
         
         console.log("Step 4: Proceeding with plan:", formData.plan)
         
-        // Skip billing step if free trial is selected
+        // For free trial, redirect to Stripe setup mode to collect card details
         if (formData.plan === "Free Trial") {
-          console.log("Step 4: Free Trial selected, completing onboarding")
-          await completeOnboarding()
+          console.log("Step 4: Free Trial selected, redirecting to Stripe setup mode")
+          setIsSubmitting(true)
+
+          try {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            const accessToken = session?.access_token
+
+            // Save company first before redirecting to Stripe
+            if (formData.companyName && formData.companyName.trim()) {
+              try {
+                await fetch(`${apiBase}/api/company`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                  },
+                  body: JSON.stringify({
+                    name: formData.companyName.trim(),
+                    size: formData.employees ? String(formData.employees) : undefined,
+                    industry: formData.industry || undefined,
+                    website: formData.website || undefined,
+                    phone: formData.phone || undefined,
+                  }),
+                })
+              } catch (err) {
+                console.error("Error saving company before trial setup:", err)
+              }
+            }
+
+            // Create trial setup session (collects card without charging)
+            const response = await fetch(`${apiBase}/api/stripe/create-trial-setup`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                companyName: formData.companyName || formData.name,
+              }),
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || "Failed to create trial session")
+            }
+
+            const data = await response.json()
+
+            // Redirect to Stripe setup mode
+            if (data.sessionUrl) {
+              window.location.href = data.sessionUrl
+              return
+            }
+
+            throw new Error("No checkout URL available")
+          } catch (error) {
+            console.error("Error creating trial session:", error)
+            setPaymentError(error instanceof Error ? error.message : "Failed to start trial setup")
+            setIsSubmitting(false)
+          }
           return
         }
         
