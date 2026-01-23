@@ -231,6 +231,9 @@ export default function ToolsPage() {
     }
   }, [router])
 
+  // Track if OAuth callback was just processed (need to force refresh data)
+  const oauthCallbackProcessedRef = useRef(false)
+
   // Separate effect for OAuth callback handling - runs immediately regardless of auth state
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -240,6 +243,7 @@ export default function ToolsPage() {
     if (microsoft365Status) {
       setIsConnecting(false)
       window.history.replaceState({}, "", window.location.pathname)
+      oauthCallbackProcessedRef.current = true // Mark that we need to refresh data
 
       if (microsoft365Status === "connected") {
         toast.success("Microsoft 365 connected successfully!", {
@@ -347,10 +351,17 @@ export default function ToolsPage() {
       }
     }
     
-    if (hasLoadedRef.current && !userChanged) {
+    // Force refresh if OAuth callback was just processed, or if data hasn't been loaded yet
+    const shouldForceRefresh = oauthCallbackProcessedRef.current
+    if (hasLoadedRef.current && !userChanged && !shouldForceRefresh) {
       return
     }
-    
+
+    // Reset the OAuth callback flag
+    if (oauthCallbackProcessedRef.current) {
+      oauthCallbackProcessedRef.current = false
+    }
+
     setIsConnecting(false)
     hasLoadedRef.current = true
     void loadIntegrations()
