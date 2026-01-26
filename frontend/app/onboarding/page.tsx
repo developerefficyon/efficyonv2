@@ -135,11 +135,39 @@ function OnboardingPageContent() {
       setIsProcessingPaymentSuccess(true)
       const handleSuccess = async () => {
         try {
-          await completeOnboarding()
+          const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+          const accessToken = session?.access_token
+
+          // Mark onboarding as completed
+          const completeRes = await fetch(`${apiBase}/api/profile/onboarding-complete`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+          })
+
+          if (!completeRes.ok) {
+            const errorText = await completeRes.text()
+            console.error("Failed to mark onboarding complete:", errorText)
+          } else {
+            console.log("Onboarding marked as complete")
+          }
+
+          // Wait a moment for webhook to process (if needed)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+
+          // Redirect to dashboard
+          router.push("/dashboard")
         } catch (err) {
           console.error("Error completing onboarding after payment/trial", err)
-          // Even if there's an error, redirect to dashboard
-          router.push("/dashboard")
+          // Even if there's an error, redirect to dashboard after a delay
+          setTimeout(() => {
+            router.push("/dashboard")
+          }, 2000)
         }
       }
       handleSuccess()
