@@ -609,6 +609,7 @@ async function handleStripeWebhook(req, res) {
         break
 
       case "invoice.payment_succeeded":
+      case "invoice_payment.paid":
         await handleInvoicePaymentSucceeded(event.data.object)
         break
 
@@ -682,6 +683,24 @@ async function handleCheckoutSessionCompleted(session) {
   }
 
   try {
+    // Verify user profile exists before creating subscription
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, company_id")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (profileError) {
+      console.error(`[${new Date().toISOString()}] Error checking profile:`, profileError.message)
+      return
+    }
+
+    if (!profile) {
+      console.error(`[${new Date().toISOString()}] Profile not found for user_id: ${userId}. Cannot create subscription.`)
+      console.error(`[${new Date().toISOString()}] User must have a profile in the database before subscription can be created.`)
+      return
+    }
+
     // Get plan details
     const plan = await getPlanDetails(planTier)
 
@@ -692,14 +711,7 @@ async function handleCheckoutSessionCompleted(session) {
       console.log(`[${new Date().toISOString()}] Retrieved Stripe subscription: ${stripeSubscription.id}`)
     }
 
-    // Get user's company if it exists
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", userId)
-      .maybeSingle()
-
-    const companyId = profile?.company_id || null
+    const companyId = profile.company_id || null
 
     // Create or update subscription record
     const subscriptionData = {
@@ -730,6 +742,29 @@ async function handleCheckoutSessionCompleted(session) {
 
     if (subError) {
       console.error(`[${new Date().toISOString()}] Error creating subscription:`, subError.message)
+      console.error(`[${new Date().toISOString()}] Subscription data:`, {
+        user_id: userId,
+        company_id: companyId,
+        plan_tier: planTier,
+        stripe_customer_id: session.customer,
+      })
+      
+      // Check if it's a foreign key constraint violation
+      if (subError.message.includes("foreign key constraint") || subError.message.includes("violates foreign key")) {
+        console.error(`[${new Date().toISOString()}] Foreign key violation - user_id ${userId} may not exist in profiles table`)
+        
+        // Verify profile exists
+        const { data: profileCheck } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle()
+        
+        if (!profileCheck) {
+          console.error(`[${new Date().toISOString()}] CRITICAL: Profile does not exist for user_id: ${userId}`)
+          console.error(`[${new Date().toISOString()}] This user needs to have a profile created before subscription can be created.`)
+        }
+      }
       return
     }
 
