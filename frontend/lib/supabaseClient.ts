@@ -9,38 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Helper to get storage with fallback
-function getStorage() {
-  if (typeof window === "undefined") return undefined
-  
-  try {
-    // Test localStorage access
-    const test = "__storage_test__"
-    localStorage.setItem(test, test)
-    localStorage.removeItem(test)
-    return window.localStorage
-  } catch (e) {
-    console.warn('[Auth] localStorage not available, using memory storage')
-    // Fallback to in-memory storage
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-      clear: () => {},
-    } as Storage
-  }
-}
-
+// Supabase client used only for password reset and email verification flows.
+// Session management is handled by NextAuth — not Supabase.
 export const supabase =
   supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
-          persistSession: true,
-          autoRefreshToken: true,
+          persistSession: false,
+          autoRefreshToken: false,
           detectSessionInUrl: true,
-          storage: getStorage(),
         },
       })
     : (null as any)
-
-

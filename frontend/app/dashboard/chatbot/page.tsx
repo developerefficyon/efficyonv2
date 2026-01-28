@@ -15,8 +15,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ChatSidebar, useChatConversations } from "@/components/chat-sidebar"
@@ -195,7 +194,7 @@ export default function ChatbotPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         throw new Error("Session expired. Please log in again.")

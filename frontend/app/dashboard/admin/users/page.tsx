@@ -41,7 +41,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { supabase } from "@/lib/supabaseClient"
+import { getBackendToken } from "@/lib/auth-hooks"
 
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -66,54 +66,7 @@ export default function AdminUsersPage() {
 
   // Helper function to get a fresh access token
   const getAccessToken = async (): Promise<string | null> => {
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-
-      if (sessionError || !session) {
-        // Try to refresh the session
-        const {
-          data: { session: refreshedSession },
-          error: refreshError,
-        } = await supabase.auth.refreshSession()
-
-        if (refreshError || !refreshedSession) {
-          console.error("Failed to refresh session:", refreshError)
-          return null
-        }
-
-        return refreshedSession.access_token
-      }
-
-      // Check if token is close to expiring (within 5 minutes)
-      if (session.expires_at) {
-        const expiresAt = session.expires_at * 1000 // Convert to milliseconds
-        const now = Date.now()
-        const fiveMinutes = 5 * 60 * 1000
-
-        if (expiresAt - now < fiveMinutes) {
-          // Token is expiring soon, refresh it
-          const {
-            data: { session: refreshedSession },
-            error: refreshError,
-          } = await supabase.auth.refreshSession()
-
-          if (refreshError || !refreshedSession) {
-            console.error("Failed to refresh expiring session:", refreshError)
-            return session.access_token // Return current token as fallback
-          }
-
-          return refreshedSession.access_token
-        }
-      }
-
-      return session.access_token
-    } catch (error) {
-      console.error("Error getting access token:", error)
-      return null
-    }
+    return await getBackendToken()
   }
 
   const loadEmployees = async () => {
@@ -209,23 +162,6 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     void loadEmployees()
-
-    // Listen to auth state changes to reload data when session changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // Reload employees when user signs in or token is refreshed
-        await loadEmployees()
-      } else if (event === "SIGNED_OUT") {
-        // Clear employees when user signs out
-        setEmployees([])
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [])
 
   // Get unique roles for filters

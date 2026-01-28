@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-hooks"
 import { SparklesCore } from "@/components/ui/sparkles"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
 

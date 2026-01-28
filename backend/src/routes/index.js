@@ -91,6 +91,9 @@ const {
   adminChangePlan,
 } = require("../controllers/stripeController")
 
+// Auth Controller - login
+const { loginHandler } = require("../controllers/authController")
+
 // Email Controller - Resend email sending
 const {
   registerUserHandler,
@@ -200,8 +203,9 @@ router.post("/api/ai/recommendations", requireAuth, getRecommendations)
 router.post("/api/ai/estimate-savings", requireAuth, estimateSavings)
 router.post("/api/ai/summary", requireAuth, getAnalysisSummary)
 
-// Auth Routes (public - registration)
+// Auth Routes (public - registration and login)
 router.post("/api/auth/register", registerUserHandler)
+router.post("/api/auth/login", loginHandler)
 
 // Email Routes (public - no auth required for sending emails)
 router.post("/api/email/send-verification", sendVerificationEmailHandler)

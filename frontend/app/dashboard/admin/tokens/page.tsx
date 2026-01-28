@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,7 +74,7 @@ export default function AdminTokensPage() {
     setIsLoading(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired")
@@ -114,7 +114,7 @@ export default function AdminTokensPage() {
     setIsAdjusting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired")

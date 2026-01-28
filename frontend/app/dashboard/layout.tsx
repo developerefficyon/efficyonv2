@@ -1,11 +1,10 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { TokenProvider } from "@/lib/token-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { TrialExpiredModal } from "@/components/trial-expired-modal"
-import { supabase } from "@/lib/supabaseClient"
 import {
   Sidebar,
   SidebarContent,
@@ -304,17 +303,17 @@ export default function DashboardLayout({
   }, [user, isLoading, router])
 
   // Check subscription and trial status
+  const userId = user?.id
   useEffect(() => {
     const checkSubscriptionStatus = async () => {
-      if (!user || isAdmin) {
+      if (!userId || isAdmin) {
         setIsCheckingSubscription(false)
         return
       }
 
       try {
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const { data: { session } } = await supabase.auth.getSession()
-        const accessToken = session?.access_token
+        const accessToken = await getBackendToken()
 
         if (!accessToken) {
           setIsCheckingSubscription(false)
@@ -341,12 +340,12 @@ export default function DashboardLayout({
       }
     }
 
-    if (user && !isAdmin) {
+    if (userId && !isAdmin) {
       checkSubscriptionStatus()
     } else {
       setIsCheckingSubscription(false)
     }
-  }, [user, isAdmin])
+  }, [userId, isAdmin])
 
   if (isLoading || isCheckingSubscription) {
     return (
@@ -366,8 +365,7 @@ export default function DashboardLayout({
   const handleSelectPlan = async (planTier: string) => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const { data: { session } } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getBackendToken()
 
       const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {
         method: "POST",
