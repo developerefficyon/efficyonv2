@@ -242,6 +242,7 @@ async function startMicrosoft365OAuth(req, res) {
   authUrl.searchParams.set("response_type", "code")
   authUrl.searchParams.set("scope", scope)
   authUrl.searchParams.set("response_mode", "query")
+  authUrl.searchParams.set("prompt", "consent")
 
   const statePayload = { company_id: companyId, tenant_id: tenantId }
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url")
