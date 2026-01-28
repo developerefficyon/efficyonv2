@@ -30,7 +30,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 
 export type Conversation = {
@@ -345,7 +345,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
 
     setIsLoading(true)
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       const url = new URL(`${apiBase}/api/chat/conversations`)
@@ -381,7 +381,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
 
   const createConversation = useCallback(async (): Promise<string | null> => {
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) {
         toast.error("Session expired. Please log in again.")
         return null
@@ -424,7 +424,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
 
   const deleteConversation = useCallback(async (id: string) => {
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       const response = await fetch(`${apiBase}/api/chat/conversations/${id}`, {
@@ -459,7 +459,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
 
   const renameConversation = useCallback(async (id: string, title: string) => {
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       const response = await fetch(`${apiBase}/api/chat/conversations/${id}`, {
@@ -494,7 +494,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
     content: string
   ) => {
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       await fetch(`${apiBase}/api/chat/conversations/${conversationId}/messages`, {
@@ -526,7 +526,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
     }
 
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return null
 
       const response = await fetch(`${apiBase}/api/chat/conversations/${id}`, {

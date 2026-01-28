@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle, CreditCard } from "lucide-react"
-import { supabase } from "@/lib/supabaseClient"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { loadStripe } from "@stripe/stripe-js"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
@@ -39,10 +39,7 @@ export function PaymentForm({
       setError(null)
 
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getBackendToken()
 
       const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {
         method: "POST",
@@ -79,10 +76,7 @@ export function PaymentForm({
       setError(null)
 
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getBackendToken()
 
       const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {
         method: "POST",

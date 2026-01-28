@@ -58,10 +58,8 @@ import {
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTokens } from "@/lib/token-context"
-import { getValidSessionToken } from "@/lib/auth-helpers"
-import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 import { formatCurrencyForIntegration } from "@/lib/currency"
 
@@ -145,7 +143,7 @@ export default function ToolDetailPage() {
     try {
       setIsLoading(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -206,7 +204,7 @@ export default function ToolDetailPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Authentication required")
@@ -390,7 +388,7 @@ export default function ToolDetailPage() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Authentication required")
@@ -460,7 +458,7 @@ export default function ToolDetailPage() {
     setIsLoadingAnalysis(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", {
@@ -555,7 +553,7 @@ export default function ToolDetailPage() {
     setIsLoadingAnalysis(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { 

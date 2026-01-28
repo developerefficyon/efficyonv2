@@ -1,8 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { useAuth } from "./auth-context"
-import { getValidSessionToken } from "./auth-helpers"
+import { useAuth, getBackendToken } from "./auth-hooks"
 
 interface TokenBalance {
   total: number
@@ -26,8 +25,10 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const userId = user?.id
+
   const refreshTokenBalance = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setTokenBalance(null)
       setIsLoading(false)
       return
@@ -35,7 +36,7 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         console.warn("[Token] No valid session token")
@@ -65,7 +66,7 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user])
+  }, [userId])
 
   // Fetch token balance when user changes
   useEffect(() => {

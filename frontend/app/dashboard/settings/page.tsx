@@ -35,9 +35,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import { supabase } from "@/lib/supabaseClient"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
@@ -135,7 +133,7 @@ export default function SettingsPage() {
     const fetchSubscriptionStatus = async () => {
       try {
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const accessToken = await getValidSessionToken()
+        const accessToken = await getBackendToken()
 
         if (!accessToken) return
 
@@ -222,7 +220,7 @@ export default function SettingsPage() {
     setIsProcessing(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -230,32 +228,8 @@ export default function SettingsPage() {
         return
       }
 
-      // Get user's company name if available
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const userEmail = session?.user?.email || user?.email || ""
-
-      // Get company name from profile or use user name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, company_id")
-        .eq("id", user?.id)
-        .maybeSingle()
-
-      let companyName = profile?.full_name || user?.name || ""
-      
-      // Try to get company name from companies table
-      if (profile?.company_id) {
-        const { data: company } = await supabase
-          .from("companies")
-          .select("name")
-          .eq("id", profile.company_id)
-          .maybeSingle()
-        if (company?.name) {
-          companyName = company.name
-        }
-      }
+      const userEmail = user?.email || ""
+      const companyName = user?.name || ""
 
       // Create Stripe checkout session
       const response = await fetch(`${apiBase}/api/stripe/create-payment-intent`, {

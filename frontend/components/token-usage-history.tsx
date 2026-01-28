@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,7 +29,7 @@ export function TokenUsageHistory() {
   const fetchHistory = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       const response = await fetch(`${apiBase}/api/stripe/token-history?limit=20`, {

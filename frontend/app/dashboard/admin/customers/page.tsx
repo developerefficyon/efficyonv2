@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,7 +55,6 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 
 // Format currency helper function (defined outside component to avoid recreation)
@@ -106,7 +105,7 @@ export default function AdminCustomersPage() {
     try {
       setIsLoading(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         console.error("No access token for loading customers")
@@ -190,7 +189,7 @@ export default function AdminCustomersPage() {
     setApprovingId(customerId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Not authenticated", {
@@ -287,7 +286,7 @@ export default function AdminCustomersPage() {
     setDetailsLoading(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Authentication required", { description: "Please log in again" })
@@ -325,7 +324,7 @@ export default function AdminCustomersPage() {
     setIsChangingPlan(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Authentication required", { description: "Please log in again" })

@@ -40,9 +40,7 @@ import {
   Trash2,
 } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { getValidSessionToken } from "@/lib/auth-helpers"
-import { supabase } from "@/lib/supabaseClient"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 
 interface Integration {
@@ -135,7 +133,7 @@ export default function ToolsPage() {
     try {
       setIsLoadingTools(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         setAvailableTools([])
@@ -183,7 +181,7 @@ export default function ToolsPage() {
     try {
       setIsLoading(true)
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         console.warn("No access token available for loading integrations")
@@ -372,7 +370,7 @@ export default function ToolsPage() {
   const startFortnoxOAuth = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -418,7 +416,7 @@ export default function ToolsPage() {
   const startMicrosoft365OAuth = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -470,7 +468,7 @@ export default function ToolsPage() {
     setIsConnecting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -563,7 +561,7 @@ export default function ToolsPage() {
     setIsConnecting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })
@@ -653,7 +651,7 @@ export default function ToolsPage() {
     setSyncingId(integration.id)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Authentication required", {
@@ -705,7 +703,7 @@ export default function ToolsPage() {
     setIsDeleting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
 
       if (!accessToken) {
         toast.error("Session expired", { description: "Please log in again" })

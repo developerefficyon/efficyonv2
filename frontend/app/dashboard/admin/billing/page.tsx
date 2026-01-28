@@ -17,7 +17,7 @@ import {
   Loader2,
   Search,
 } from "lucide-react"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 
 interface Subscription {
@@ -54,7 +54,7 @@ export default function AdminBillingPage() {
       try {
         setIsLoading(true)
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const accessToken = await getValidSessionToken()
+        const accessToken = await getBackendToken()
 
         if (!accessToken) {
           toast.error("Session expired", { description: "Please log in again" })

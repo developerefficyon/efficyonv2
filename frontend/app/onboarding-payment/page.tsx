@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { supabase } from "@/lib/supabaseClient"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -73,10 +72,7 @@ export default function OnboardingWithPayment() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getBackendToken()
 
       // Save company information
       const response = await fetch(`${apiBase}/api/company`, {
@@ -112,10 +108,7 @@ export default function OnboardingWithPayment() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const accessToken = await getBackendToken()
 
       const response = await fetch(`${apiBase}/api/profile/onboarding-complete`, {
         method: "POST",

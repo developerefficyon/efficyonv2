@@ -2,6 +2,7 @@ const { createClient } = require("@supabase/supabase-js")
 
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.warn(
@@ -9,6 +10,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
   )
 }
 
+// Admin client (service role) - for DB operations and admin API calls
 const supabase =
   supabaseUrl && supabaseServiceKey
     ? createClient(supabaseUrl, supabaseServiceKey, {
@@ -19,8 +21,20 @@ const supabase =
       })
     : null
 
+// Auth client (anon key) - for credential verification (signInWithPassword)
+const supabaseAuth =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null
+
 module.exports = {
   supabase,
+  supabaseAuth,
 }
 
 

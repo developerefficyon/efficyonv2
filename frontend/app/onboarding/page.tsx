@@ -27,8 +27,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabaseClient"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { PaymentForm as StripePaymentForm } from "@/components/payment-form-v2"
 import {
   Select,
@@ -89,41 +88,18 @@ function OnboardingPageContent() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Pre-fill form data from user profile on mount
+  // Pre-fill form data from NextAuth session on mount
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (session?.user) {
-          // Get user email from session
-          const userEmail = session.user.email || ""
-
-          // Fetch profile to get full_name
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", session.user.id)
-            .maybeSingle()
-
-          // Pre-fill form with user data
-          setFormData((prev) => ({
-            ...prev,
-            name: profile?.full_name || session.user.user_metadata?.name || "",
-            email: profile?.email || userEmail || "",
-            billingEmail: profile?.email || userEmail || "",
-            billingName: profile?.full_name || session.user.user_metadata?.name || "",
-          }))
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error)
-      }
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name || "",
+        email: user.email || "",
+        billingEmail: user.email || "",
+        billingName: user.name || "",
+      }))
     }
-
-    loadUserData()
-  }, [])
+  }, [user])
 
   // Check if returning from successful Stripe payment or trial setup
   useEffect(() => {
@@ -136,10 +112,7 @@ function OnboardingPageContent() {
       const handleSuccess = async () => {
         try {
           const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-          const accessToken = session?.access_token
+          const accessToken = await getBackendToken()
 
           // Mark onboarding as completed
           const completeRes = await fetch(`${apiBase}/api/profile/onboarding-complete`, {
@@ -229,10 +202,7 @@ function OnboardingPageContent() {
 
           try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-            const {
-              data: { session },
-            } = await supabase.auth.getSession()
-            const accessToken = session?.access_token
+            const accessToken = await getBackendToken()
 
             // Save company first before redirecting to Stripe
             if (formData.companyName && formData.companyName.trim()) {
@@ -304,10 +274,7 @@ function OnboardingPageContent() {
         
         try {
           const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-          const accessToken = session?.access_token
+          const accessToken = await getBackendToken()
 
           const commonOptions: RequestInit = {
             method: "POST",
@@ -431,11 +398,8 @@ function OnboardingPageContent() {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-      // Get current session for auth
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      // Get current session token for auth
+      const accessToken = await getBackendToken()
 
       const commonOptions: RequestInit = {
         method: "POST",

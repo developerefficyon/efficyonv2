@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Loader2, MessageSquare, Zap, GitCompare } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getValidSessionToken } from "@/lib/auth-helpers"
+import { getBackendToken } from "@/lib/auth-hooks"
 
 // Tool icon mapping
 const toolIcons: Record<string, string> = {
@@ -50,7 +50,7 @@ export function useConnectedTools() {
 
     setIsLoading(true)
     try {
-      const accessToken = await getValidSessionToken()
+      const accessToken = await getBackendToken()
       if (!accessToken) return
 
       const response = await fetch(`${apiBase}/api/integrations`, {
