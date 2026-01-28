@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Navbar } from "@/components/ui/navbar"
 import { useAuth } from "@/lib/auth-hooks"
 import { SparklesCore } from "@/components/ui/sparkles"
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -205,8 +205,9 @@ export default function LoginPage() {
                   </div>
                 </div>
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                    {error}
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{error}</span>
                   </div>
                 )}
                 <p className="text-xs text-gray-500">

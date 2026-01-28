@@ -37,6 +37,22 @@ export function useAuth(): AuthHook {
   }, [session?.user?.id, session?.user?.name, session?.user?.email, session?.user?.role, session?.user?.onboardingCompleted])
 
   const login = async (email: string, password: string): Promise<User | null> => {
+    // Pre-validate credentials directly with backend for specific error codes.
+    // NextAuth wraps authorize() errors in a generic CallbackRouteError,
+    // losing the original error message (INVALID_CREDENTIALS, EMAIL_NOT_CONFIRMED, etc.)
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const checkRes = await fetch(`${apiBase}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    })
+
+    if (!checkRes.ok) {
+      const data = await checkRes.json().catch(() => ({}))
+      throw new Error(data.error || "INVALID_CREDENTIALS")
+    }
+
+    // Credentials valid — create NextAuth session
     const result = await signIn("credentials", {
       email,
       password,
@@ -44,10 +60,10 @@ export function useAuth(): AuthHook {
     })
 
     if (result?.error) {
-      throw new Error(result.error)
+      throw new Error("INVALID_CREDENTIALS")
     }
 
-    // After successful signIn, fetch the updated session
+    // Fetch the session to get user data
     const updatedSession = await getSession()
     if (!updatedSession?.user) {
       throw new Error("INVALID_CREDENTIALS")
