@@ -71,7 +71,7 @@ interface Tool {
   activeSeats: number
   unusedSeats: number
   wasteLevel: "high" | "medium" | "low"
-  status: "connected" | "error" | "disconnected" | "expired"
+  status: "connected" | "error" | "disconnected" | "expired" | "pending"
   lastSync: string
   issues: string[]
 }
@@ -487,7 +487,7 @@ export default function ToolsPage() {
             {
               tool_name: "Fortnox",
               connection_type: "oauth",
-              status: "connected",
+              status: "pending",
               environment: fortnoxForm.environment,
               client_id: fortnoxForm.clientId,
               client_secret: fortnoxForm.clientSecret,
@@ -783,7 +783,7 @@ export default function ToolsPage() {
     // Calculate waste level based on status
     const getWasteLevel = (status: string): "high" | "medium" | "low" => {
       if (status === "error" || status === "expired") return "high"
-      if (status === "disconnected") return "medium"
+      if (status === "disconnected" || status === "pending") return "medium"
       return "low"
     }
 
@@ -814,6 +814,8 @@ export default function ToolsPage() {
         issues.push("Token expired - please reconnect")
       } else if (status === "disconnected") {
         issues.push("Integration disconnected")
+      } else if (status === "pending") {
+        issues.push("Authorization pending - please complete OAuth flow")
       }
       return issues
     }
@@ -834,7 +836,7 @@ export default function ToolsPage() {
       wasteLevel: getWasteLevel(isTokenExpired(integration) ? "expired" : integration.status),
       status: (integration.status === "expired" || isTokenExpired(integration))
         ? "expired"
-        : integration.status as "connected" | "error" | "disconnected" | "expired",
+        : integration.status as "connected" | "error" | "disconnected" | "expired" | "pending",
       lastSync: getLastSync(integration.updated_at),
       issues: getIssues(isTokenExpired(integration) ? "expired" : integration.status),
     }
@@ -861,6 +863,15 @@ export default function ToolsPage() {
             {status === "expired" ? "Reconnect needed" : "Error"}
           </span>
           <XCircle className="w-4 h-4 text-red-400" />
+        </div>
+      )
+    } else if (status === "pending") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            Pending
+          </span>
+          <AlertTriangle className="w-4 h-4 text-yellow-400" />
         </div>
       )
     }
