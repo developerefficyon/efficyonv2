@@ -198,10 +198,12 @@ async function getIntegrationForUser(user, provider = "HubSpot") {
     .maybeSingle()
 
   if (profileError || !profile?.company_id) {
+    log("error", "getIntegrationForUser", `No company found for user ${user.id}`)
     return { error: "No company associated with this user", status: 400 }
   }
 
-  const { data: integration, error: integrationError } = await supabase
+  // First try exact match
+  let { data: integration, error: integrationError } = await supabase
     .from("company_integrations")
     .select("*")
     .eq("company_id", profile.company_id)
@@ -210,10 +212,30 @@ async function getIntegrationForUser(user, provider = "HubSpot") {
     .limit(1)
     .maybeSingle()
 
+  // If not found, try case-insensitive match
+  if (!integration && !integrationError) {
+    const { data: allIntegrations } = await supabase
+      .from("company_integrations")
+      .select("*")
+      .eq("company_id", profile.company_id)
+      .order("created_at", { ascending: false })
+
+    if (allIntegrations) {
+      integration = allIntegrations.find(i =>
+        i.provider?.toLowerCase() === provider.toLowerCase()
+      )
+      if (integration) {
+        log("log", "getIntegrationForUser", `Found integration with provider "${integration.provider}" (case-insensitive match)`)
+      }
+    }
+  }
+
   if (integrationError || !integration) {
+    log("error", "getIntegrationForUser", `${provider} integration not found for company ${profile.company_id}`)
     return { error: `${provider} integration not configured for this company`, status: 400 }
   }
 
+  log("log", "getIntegrationForUser", `Found ${provider} integration, id: ${integration.id}, status: ${integration.status}`)
   return { integration, companyId: profile.company_id }
 }
 
@@ -233,14 +255,18 @@ async function startHubSpotOAuth(req, res) {
 
   const result = await getIntegrationForUser(user, "HubSpot")
   if (result.error) {
+    log("error", endpoint, `Failed to get integration: ${result.error}`)
     return res.status(result.status).json({ error: result.error })
   }
 
   const { integration, companyId } = result
+  log("log", endpoint, `Found integration for company ${companyId}, integration id: ${integration.id}`)
+
   const settings = decryptIntegrationSettings(integration?.settings || {})
   const clientId = settings.client_id || integration?.client_id
 
   if (!clientId) {
+    log("error", endpoint, "Client ID not found in integration settings")
     return res.status(400).json({
       error: "HubSpot Client ID not configured",
       details: "Please update the integration with your Client ID and Client Secret."
@@ -263,7 +289,7 @@ async function startHubSpotOAuth(req, res) {
 
   const authUrlString = authUrl.toString()
 
-  log("log", endpoint, `Redirecting to HubSpot OAuth`)
+  log("log", endpoint, `Starting HubSpot OAuth for company ${companyId}, redirect_uri: ${redirectUri}`)
 
   const acceptHeader = req.headers.accept || ""
   if (acceptHeader.includes("application/json")) {
@@ -276,7 +302,7 @@ async function startHubSpotOAuth(req, res) {
 // OAuth Callback
 async function hubspotOAuthCallback(req, res) {
   const endpoint = "GET /api/integrations/hubspot/callback"
-  log("log", endpoint, "Request received")
+  log("log", endpoint, "Request received", { query: req.query })
 
   if (!supabase) {
     return res.status(500).send("Supabase not configured on backend")
@@ -285,25 +311,35 @@ async function hubspotOAuthCallback(req, res) {
   const { code, state, error, error_description } = req.query
   const frontendUrl = process.env.FRONTEND_APP_URL || "http://localhost:3000"
 
+  log("log", endpoint, `Callback params - code: ${code ? "present" : "missing"}, state: ${state ? "present" : "missing"}, error: ${error || "none"}`)
+
   if (error) {
     log("error", endpoint, `Error from HubSpot: ${error} ${error_description || ""}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error&error=${encodeURIComponent(error)}`)
   }
 
   if (!code || !state) {
+    log("error", endpoint, `Missing params - code: ${!!code}, state: ${!!state}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_missing_code`)
   }
 
   let decodedState
   try {
     decodedState = JSON.parse(Buffer.from(state, "base64url").toString("utf8"))
+    log("log", endpoint, `Decoded state - company_id: ${decodedState.company_id}`)
   } catch (e) {
+    log("error", endpoint, `Failed to decode state: ${e.message}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_invalid_state`)
   }
 
   const companyId = decodedState.company_id
 
-  const { data: integration, error: integrationError } = await supabase
+  // Try both "HubSpot" and "hubspot" to handle case sensitivity
+  let integration = null
+  let integrationError = null
+
+  // First try exact match
+  const { data: exactMatch, error: exactError } = await supabase
     .from("company_integrations")
     .select("*")
     .eq("company_id", companyId)
@@ -312,8 +348,32 @@ async function hubspotOAuthCallback(req, res) {
     .limit(1)
     .maybeSingle()
 
+  if (exactMatch) {
+    integration = exactMatch
+    log("log", endpoint, `Found integration with provider "HubSpot", id: ${integration.id}`)
+  } else {
+    // Try case-insensitive match
+    const { data: allIntegrations, error: allError } = await supabase
+      .from("company_integrations")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+
+    if (allIntegrations) {
+      integration = allIntegrations.find(i =>
+        i.provider?.toLowerCase() === "hubspot"
+      )
+      if (integration) {
+        log("log", endpoint, `Found integration with provider "${integration.provider}" (case-insensitive), id: ${integration.id}`)
+      } else {
+        log("error", endpoint, `No HubSpot integration found. Available providers: ${allIntegrations.map(i => i.provider).join(", ")}`)
+      }
+    }
+    integrationError = exactError || allError
+  }
+
   if (integrationError || !integration) {
-    log("error", endpoint, "Integration not found")
+    log("error", endpoint, `Integration not found for company ${companyId}`, { error: integrationError?.message })
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_integration_not_found`)
   }
 
@@ -322,16 +382,21 @@ async function hubspotOAuthCallback(req, res) {
   const clientId = settings.client_id || integration.client_id
   const clientSecret = settings.client_secret || integration.client_secret
 
+  log("log", endpoint, `Credentials check - clientId: ${clientId ? "present" : "missing"}, clientSecret: ${clientSecret ? "present" : "missing"}`)
+
   if (!clientId || !clientSecret) {
-    log("error", endpoint, "Client ID or Secret missing")
+    log("error", endpoint, "Client ID or Secret missing from integration settings")
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_missing_credentials`)
   }
 
   const redirectUri = process.env.HUBSPOT_REDIRECT_URI || "http://localhost:4000/api/integrations/hubspot/callback"
+  log("log", endpoint, `Using redirect URI: ${redirectUri}`)
 
   try {
     // Exchange code for tokens
     const tokenEndpoint = "https://api.hubapi.com/oauth/v1/token"
+
+    log("log", endpoint, "Exchanging authorization code for tokens...")
 
     const tokenResponse = await fetch(tokenEndpoint, {
       method: "POST",
@@ -343,17 +408,20 @@ async function hubspotOAuthCallback(req, res) {
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: redirectUri,
-        code: code,
+        code: String(code),
       }).toString(),
     })
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      log("error", endpoint, `Token exchange failed: ${errorText}`)
-      return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_token`)
+      log("error", endpoint, `Token exchange failed (${tokenResponse.status}): ${errorText}`)
+      // Include more detail in the redirect for debugging
+      return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_token&details=${encodeURIComponent(errorText.substring(0, 100))}`)
     }
 
     const tokenData = await tokenResponse.json()
+    log("log", endpoint, `Token exchange successful - access_token: ${tokenData.access_token ? "present" : "missing"}, refresh_token: ${tokenData.refresh_token ? "present" : "missing"}`)
+
     const now = Math.floor(Date.now() / 1000)
     const expiresIn = tokenData.expires_in || 1800 // 30 minutes default
     const expiresAt = now + expiresIn
@@ -375,6 +443,7 @@ async function hubspotOAuthCallback(req, res) {
     const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
     // Update integration with new tokens
+    log("log", endpoint, `Updating integration ${integration.id} with new tokens...`)
     const { error: updateError } = await supabase
       .from("company_integrations")
       .update({ settings: updatedSettings, status: "connected" })
@@ -385,7 +454,7 @@ async function hubspotOAuthCallback(req, res) {
       return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_saving_tokens`)
     }
 
-    log("log", endpoint, "Tokens saved successfully")
+    log("log", endpoint, `HubSpot OAuth completed successfully for integration ${integration.id}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=connected`)
   } catch (e) {
     log("error", endpoint, `Unexpected error: ${e.message}`)
@@ -534,15 +603,12 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
       log("warn", endpoint, `Could not fetch account info: ${e.message}`)
     }
 
-    const data = {
-      users: usersData.results || [],
-      accountInfo,
-    }
+    const users = usersData.results || []
 
     // Run cost leak analysis
-    const analysis = analyzeHubSpotCostLeaks(data)
+    const analysis = analyzeHubSpotCostLeaks(users, accountInfo)
 
-    log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
+    log("log", endpoint, `Analysis completed, ${analysis.summary?.issuesFound || 0} findings`)
 
     return res.json(analysis)
   } catch (error) {
@@ -557,12 +623,95 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
   }
 }
 
+// Revoke HubSpot token (called when disconnecting/deleting integration)
+async function revokeHubSpotToken(refreshToken) {
+  const endpoint = "revokeHubSpotToken"
+
+  if (!refreshToken) {
+    log("warn", endpoint, "No refresh token provided for revocation")
+    return { success: false, error: "No refresh token" }
+  }
+
+  try {
+    log("log", endpoint, "Revoking HubSpot refresh token...")
+
+    // HubSpot token revocation endpoint
+    const response = await fetch(`https://api.hubapi.com/oauth/v1/refresh-tokens/${refreshToken}`, {
+      method: "DELETE",
+    })
+
+    if (response.ok || response.status === 204) {
+      log("log", endpoint, "HubSpot token revoked successfully")
+      return { success: true }
+    } else {
+      const errorText = await response.text()
+      log("warn", endpoint, `Token revocation returned ${response.status}: ${errorText}`)
+      // Don't fail the deletion if revocation fails - the token will expire eventually
+      return { success: false, error: errorText }
+    }
+  } catch (error) {
+    log("error", endpoint, `Token revocation error: ${error.message}`)
+    // Don't fail the deletion if revocation fails
+    return { success: false, error: error.message }
+  }
+}
+
+// Disconnect HubSpot integration (revoke token and update status)
+async function disconnectHubSpot(req, res) {
+  const endpoint = "DELETE /api/integrations/hubspot/disconnect"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase not configured" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  const result = await getIntegrationForUser(user, "HubSpot")
+  if (result.error) {
+    return res.status(result.status).json({ error: result.error })
+  }
+
+  const { integration } = result
+
+  // Get the refresh token to revoke
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || {})
+  const refreshToken = oauthData?.tokens?.refresh_token
+
+  // Revoke the token from HubSpot
+  if (refreshToken) {
+    await revokeHubSpotToken(refreshToken)
+  }
+
+  // Update integration status to disconnected and clear oauth data
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings, oauth_data: null }
+
+  const { error: updateError } = await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings, status: "disconnected" })
+    .eq("id", integration.id)
+
+  if (updateError) {
+    log("error", endpoint, `Failed to update integration: ${updateError.message}`)
+    return res.status(500).json({ error: "Failed to disconnect HubSpot" })
+  }
+
+  log("log", endpoint, "HubSpot disconnected successfully")
+  return res.json({ success: true, message: "HubSpot disconnected. You will need to re-authorize when reconnecting." })
+}
+
 module.exports = {
   startHubSpotOAuth,
   hubspotOAuthCallback,
   getHubSpotUsers,
   getHubSpotAccountInfo,
   analyzeHubSpotCostLeaks: analyzeHubSpotCostLeaksEndpoint,
+  disconnectHubSpot,
+  revokeHubSpotToken,
   // Export helpers for use in comparison controller
   refreshHubSpotTokenIfNeeded,
   fetchHubSpotData,

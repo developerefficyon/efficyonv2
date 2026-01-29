@@ -83,6 +83,7 @@ const {
   getHubSpotUsers,
   getHubSpotAccountInfo,
   analyzeHubSpotCostLeaks,
+  disconnectHubSpot,
 } = require("../controllers/hubspotController")
 const { requireAuth } = require("../middleware/auth")
 const {
@@ -187,6 +188,7 @@ router.get("/api/integrations/hubspot/callback", hubspotOAuthCallback)
 router.get("/api/integrations/hubspot/users", requireAuth, getHubSpotUsers)
 router.get("/api/integrations/hubspot/account", requireAuth, getHubSpotAccountInfo)
 router.get("/api/integrations/hubspot/cost-leaks", requireAuth, analyzeHubSpotCostLeaks)
+router.delete("/api/integrations/hubspot/disconnect", requireAuth, disconnectHubSpot)
 
 router.get("/api/plans", requireAuth, getPlans)
 router.post("/api/plans", requireAuth, upsertPlans)

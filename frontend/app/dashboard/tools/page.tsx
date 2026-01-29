@@ -273,8 +273,20 @@ export default function ToolsPage() {
           duration: 5000,
         })
       } else {
+        // Get additional error details if available
+        const errorDetails = params.get("details")
+        const errorParam = params.get("error")
+        let description = hubspotStatus.replace("error_", "").replace(/_/g, " ")
+        if (errorDetails) {
+          description += `: ${decodeURIComponent(errorDetails)}`
+        } else if (errorParam) {
+          description += `: ${decodeURIComponent(errorParam)}`
+        }
+
+        console.error("HubSpot OAuth error:", { status: hubspotStatus, details: errorDetails, error: errorParam })
+
         toast.error("Failed to connect HubSpot", {
-          description: hubspotStatus.replace("error_", "").replace(/_/g, " "),
+          description,
           duration: 10000,
         })
       }
@@ -891,8 +903,11 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to delete integration")
       }
 
+      const isHubSpot = integrationToDelete.tool_name?.toLowerCase() === "hubspot"
       toast.success("Integration deleted successfully", {
-        description: `${integrationToDelete.tool_name} has been removed from your account.`,
+        description: isHubSpot
+          ? `${integrationToDelete.tool_name} has been removed and disconnected. You'll need to re-authorize when reconnecting.`
+          : `${integrationToDelete.tool_name} has been removed from your account.`,
       })
 
       setIsDeleteModalOpen(false)

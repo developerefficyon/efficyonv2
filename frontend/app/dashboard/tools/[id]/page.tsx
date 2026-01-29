@@ -99,6 +99,10 @@ export default function ToolDetailPage() {
     users?: any[]
     usageReports?: any
   }>({})
+  const [hubspotInfo, setHubspotInfo] = useState<{
+    users?: any[]
+    accountInfo?: any
+  }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
@@ -171,6 +175,8 @@ export default function ToolDetailPage() {
       // Set default data tab based on integration type
       if (found.tool_name === "Microsoft365" || found.provider === "Microsoft365") {
         setActiveDataTab("licenses")
+      } else if (found.tool_name === "HubSpot" || found.provider === "HubSpot") {
+        setActiveDataTab("users")
       } else {
         setActiveDataTab("company")
       }
@@ -184,6 +190,11 @@ export default function ToolDetailPage() {
       // If it's Microsoft 365 and connected, load the information
       if (found.tool_name === "Microsoft365" && found.status === "connected") {
         void loadMicrosoft365Info(found)
+      }
+
+      // If it's HubSpot and connected, load the information
+      if (found.tool_name === "HubSpot" && found.status === "connected") {
+        void loadHubSpotInfo(found)
       }
     } catch (error) {
       console.error("Error loading integration:", error)
@@ -452,6 +463,115 @@ export default function ToolDetailPage() {
     }
   }
 
+  const loadHubSpotInfo = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setHubspotInfo({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [usersRes, accountRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/hubspot/users`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/hubspot/account`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      // Check if any response indicates token expiration
+      for (const response of [usersRes, accountRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your HubSpot integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+        try {
+          const data = await usersRes.value.json()
+          info.users = data.users || []
+        } catch (e) {
+          console.error("Error parsing HubSpot users:", e)
+        }
+      }
+
+      if (accountRes.status === "fulfilled" && accountRes.value.ok) {
+        try {
+          const data = await accountRes.value.json()
+          info.accountInfo = data
+        } catch (e) {
+          console.error("Error parsing HubSpot account info:", e)
+        }
+      }
+
+      setHubspotInfo(info)
+    } catch (error) {
+      console.error("Error loading HubSpot info:", error)
+      toast.error("Failed to load HubSpot information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const fetchHubSpotCostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/hubspot/cost-leaks`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to analyze HubSpot cost leaks")
+      }
+
+      const data = await res.json()
+      setCostLeakAnalysis(data.analysis || data)
+      toast.success("Analysis complete", {
+        description: "HubSpot cost leak analysis has been generated"
+      })
+    } catch (error) {
+      console.error("Error fetching HubSpot cost leak analysis:", error)
+      toast.error("Failed to analyze HubSpot cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred"
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
   const fetchMicrosoft365CostLeakAnalysis = async () => {
     setIsLoadingAnalysis(true)
     try {
@@ -602,6 +722,8 @@ export default function ToolDetailPage() {
 
     if (integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365") {
       fetchMicrosoft365CostLeakAnalysis()
+    } else if (integration.tool_name === "HubSpot" || integration.provider === "HubSpot") {
+      fetchHubSpotCostLeakAnalysis()
     } else {
       fetchCostLeakAnalysis()
     }
@@ -609,9 +731,10 @@ export default function ToolDetailPage() {
 
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    // Support both Fortnox (supplierInvoiceAnalysis) and Microsoft 365 (licenseAnalysis)
+    // Support Fortnox (supplierInvoiceAnalysis), Microsoft 365 (licenseAnalysis), and HubSpot (findings)
     const findings_source = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
                            costLeakAnalysis?.licenseAnalysis?.findings ||
+                           costLeakAnalysis?.findings ||
                            []
 
     if (findings_source.length === 0) return []
@@ -645,25 +768,38 @@ export default function ToolDetailPage() {
   const groupFindings = (findings: any[]) => {
     // Dynamic groups based on integration type
     const isMicrosoft365Analysis = costLeakAnalysis?.licenseAnalysis?.findings?.length > 0
+    const isHubSpotAnalysis = costLeakAnalysis?.findings?.length > 0 && costLeakAnalysis?.summary?.healthScore !== undefined
 
-    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = isMicrosoft365Analysis
-      ? {
-          orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
-          inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
-          overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
-          unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
-          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-        }
-      : {
-          duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
-          anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
-          overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
-          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-        }
+    let groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } }
+
+    if (isMicrosoft365Analysis) {
+      groups = {
+        orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
+        inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
+        overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
+        unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    } else if (isHubSpotAnalysis) {
+      groups = {
+        inactive: { title: "Inactive Seats", icon: Clock, findings: [], color: "orange" },
+        utilization: { title: "Low Utilization", icon: TrendingDown, findings: [], color: "amber" },
+        unassigned: { title: "Unassigned Roles", icon: Users, findings: [], color: "red" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    } else {
+      groups = {
+        duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
+        anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
+        overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    }
 
     // Get the original findings source for index lookup
     const findingsSource = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
                           costLeakAnalysis?.licenseAnalysis?.findings ||
+                          costLeakAnalysis?.findings ||
                           []
 
     findings.forEach((finding: any, idx: number) => {
@@ -680,6 +816,17 @@ export default function ToolDetailPage() {
           groups.overprovisioned.findings.push(findingWithIdx)
         } else if (finding.type === "unused_addon" || finding.title?.toLowerCase().includes("unused") || finding.title?.toLowerCase().includes("add-on")) {
           groups.unused.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
+      } else if (isHubSpotAnalysis) {
+        // HubSpot grouping
+        if (finding.type === "inactive_seats" || finding.title?.toLowerCase().includes("inactive")) {
+          groups.inactive.findings.push(findingWithIdx)
+        } else if (finding.type === "low_utilization" || finding.type === "moderate_utilization" || finding.title?.toLowerCase().includes("utilization")) {
+          groups.utilization.findings.push(findingWithIdx)
+        } else if (finding.type === "unassigned_roles" || finding.title?.toLowerCase().includes("role") || finding.title?.toLowerCase().includes("unassigned")) {
+          groups.unassigned.findings.push(findingWithIdx)
         } else {
           groups.other.findings.push(findingWithIdx)
         }
@@ -1227,7 +1374,8 @@ export default function ToolDetailPage() {
 
   const isFortnox = integration.tool_name === "Fortnox" || integration.provider === "Fortnox"
   const isMicrosoft365 = integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365"
-  const hasFullUI = isFortnox || isMicrosoft365
+  const isHubSpot = integration.tool_name === "HubSpot" || integration.provider === "HubSpot"
+  const hasFullUI = isFortnox || isMicrosoft365 || isHubSpot
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -2113,6 +2261,39 @@ export default function ToolDetailPage() {
                           </div>
                         )}
 
+                        {/* Data Tab Navigation - HubSpot */}
+                        {isHubSpot && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("users")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "users"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Users</span>
+                              {hubspotInfo.users && hubspotInfo.users.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {hubspotInfo.users.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("account")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "account"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Settings className="w-4 h-4" />
+                              <span className="hidden sm:inline">Account</span>
+                            </button>
+                          </div>
+                        )}
+
                         {/* Data Tab Navigation - Fortnox */}
                         {isFortnox && (
                         <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
@@ -2351,6 +2532,124 @@ export default function ToolDetailPage() {
 
                       {/* Show message if no M365 data */}
                       {isMicrosoft365 && Object.keys(microsoft365Info).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* HubSpot Users Tab */}
+                      {isHubSpot && activeDataTab === "users" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            HubSpot Users
+                            {hubspotInfo.users && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {hubspotInfo.users.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {hubspotInfo.users && hubspotInfo.users.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Email</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Role</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Last Login</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(hubspotInfo.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {user.email || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400">
+                                        {user.roleId || user.role || "N/A"}
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={user.superAdmin
+                                          ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                                          : "bg-green-500/20 text-green-400 border-green-500/30"
+                                        }>
+                                          {user.superAdmin ? "Super Admin" : "Active"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {user.lastLoginAt
+                                          ? new Date(user.lastLoginAt).toLocaleDateString()
+                                          : "Never"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {hubspotInfo.users.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {hubspotInfo.users.length} users. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No users found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* HubSpot Account Tab */}
+                      {isHubSpot && activeDataTab === "account" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Settings className="w-4 h-4 text-cyan-400" />
+                            Account Information
+                          </h3>
+                          {hubspotInfo.accountInfo ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {hubspotInfo.accountInfo.portalId && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Portal ID</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.portalId}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.accountType && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Account Type</p>
+                                  <p className="text-white font-medium capitalize">{hubspotInfo.accountInfo.accountType}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.timeZone && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Timezone</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.timeZone}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.currency && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Currency</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.currency}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.users && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Seats</p>
+                                  <p className="text-white font-medium">{hubspotInfo.users.length}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              Account information not available.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no HubSpot data */}
+                      {isHubSpot && Object.keys(hubspotInfo).length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
                         </div>
