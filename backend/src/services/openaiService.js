@@ -416,7 +416,7 @@ Be concise but thorough. Focus on actionable insights.`
  * @param {Object} metrics - Pre-calculated cross-platform metrics
  * @returns {Promise<string>} AI response with markdown and chart formatting
  */
-async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics) {
+async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null) {
   if (!OPENAI_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -424,24 +424,49 @@ async function chatWithComparisonContext(question, fortnoxData, m365Data, metric
   try {
     console.log(`[${new Date().toISOString()}] Cross-platform comparison query: ${question}`)
 
-    // Build comprehensive context from both platforms
+    // Build comprehensive context from all platforms
     const fortnoxContext = buildFortnoxContext(fortnoxData)
     const m365Context = buildM365Context(m365Data)
+    const hubspotContext = buildHubSpotContext(hubspotData)
     const metricsContext = JSON.stringify(metrics, null, 2)
 
-    const systemPrompt = `You are an expert business analyst specializing in cross-platform SaaS cost optimization. You are analyzing data from TWO integrated platforms:
+    // Determine which platforms are available
+    const platformCount = [fortnoxData, m365Data, hubspotData].filter(Boolean).length
+    const platformDescriptor = platformCount === 3 ? "THREE" : "TWO"
 
-## PLATFORM 1: FORTNOX (Financial/Accounting)
+    let platformSections = ""
+    let platformNum = 1
+
+    if (fortnoxData) {
+      platformSections += `## PLATFORM ${platformNum}: FORTNOX (Financial/Accounting)
 ${fortnoxContext}
 
-## PLATFORM 2: MICROSOFT 365 (Productivity/Usage)
+`
+      platformNum++
+    }
+
+    if (m365Data) {
+      platformSections += `## PLATFORM ${platformNum}: MICROSOFT 365 (Productivity/Usage)
 ${m365Context}
 
-## CROSS-PLATFORM METRICS (Pre-calculated)
+`
+      platformNum++
+    }
+
+    if (hubspotData) {
+      platformSections += `## PLATFORM ${platformNum}: HUBSPOT (CRM/Sales)
+${hubspotContext}
+
+`
+    }
+
+    const systemPrompt = `You are an expert business analyst specializing in cross-platform SaaS cost optimization. You are analyzing data from ${platformDescriptor} integrated platforms:
+
+${platformSections}## CROSS-PLATFORM METRICS (Pre-calculated)
 ${metricsContext}
 
 ## YOUR ANALYSIS TASK
-Find correlations and insights that span BOTH platforms to help the user optimize their software costs:
+Find correlations and insights that span ALL connected platforms to help the user optimize their software costs:
 - Where is money being spent on software that's not being used?
 - How does software spend relate to user productivity/activity?
 - What's the cost per active user across the tech stack?
@@ -682,6 +707,96 @@ function buildM365Context(m365Data) {
   }
 
   return parts.join('\n') || "No significant Microsoft 365 data."
+}
+
+/**
+ * Build HubSpot context string for AI prompt
+ */
+function buildHubSpotContext(hubspotData) {
+  if (!hubspotData) return "No HubSpot data available."
+
+  const parts = []
+
+  // Users summary
+  const users = hubspotData.users || []
+  if (users.length > 0) {
+    parts.push(`Users/Seats: ${users.length} total`)
+
+    // Calculate activity from user data
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    let activeCount = 0
+    let inactiveCount = 0
+
+    users.forEach((user) => {
+      const lastActivity = user.lastLoginAt || user.updatedAt
+      if (lastActivity && new Date(lastActivity) >= thirtyDaysAgo) {
+        activeCount++
+      } else {
+        inactiveCount++
+      }
+    })
+
+    parts.push(`- Active (30 days): ${activeCount}`)
+    parts.push(`- Inactive: ${inactiveCount}`)
+    parts.push(`- Activity Rate: ${users.length > 0 ? ((activeCount / users.length) * 100).toFixed(1) : 0}%`)
+
+    // Roles breakdown if available
+    const roleGroups = {}
+    users.forEach((user) => {
+      const role = user.roleId || 'Unknown'
+      roleGroups[role] = (roleGroups[role] || 0) + 1
+    })
+    if (Object.keys(roleGroups).length > 1) {
+      parts.push(`\nRoles Distribution:`)
+      Object.entries(roleGroups).slice(0, 5).forEach(([role, count]) => {
+        parts.push(`- ${role}: ${count} users`)
+      })
+    }
+  }
+
+  // Account info
+  const accountInfo = hubspotData.accountInfo
+  if (accountInfo) {
+    if (accountInfo.portalId) {
+      parts.push(`\nAccount: Portal ID ${accountInfo.portalId}`)
+    }
+    if (accountInfo.accountType) {
+      parts.push(`Account Type: ${accountInfo.accountType}`)
+    }
+  }
+
+  // Cost leak findings
+  const costLeaks = hubspotData.costLeaks
+  if (costLeaks) {
+    const summary = costLeaks.summary || {}
+    const findings = costLeaks.findings || []
+
+    parts.push(`\nCost Optimization Findings:`)
+    parts.push(`- Health Score: ${summary.healthScore || 'N/A'}/100`)
+    parts.push(`- Issues Found: ${summary.issuesFound || 0}`)
+    parts.push(`- Utilization Score: ${summary.utilizationScore || 'N/A'}%`)
+    parts.push(`- Potential Monthly Savings: $${summary.potentialMonthlySavings || 0}`)
+
+    // Detailed findings
+    if (findings.length > 0) {
+      parts.push(`\nTop Findings:`)
+      findings.slice(0, 5).forEach((f, i) => {
+        parts.push(`${i + 1}. [${f.severity}] ${f.title}: ${f.description}`)
+      })
+    }
+
+    // Recommendations
+    const recommendations = costLeaks.recommendations || []
+    if (recommendations.length > 0) {
+      parts.push(`\nRecommendations:`)
+      recommendations.slice(0, 3).forEach((r, i) => {
+        parts.push(`${i + 1}. ${r.action} - ${r.description}`)
+      })
+    }
+  }
+
+  return parts.join('\n') || "No significant HubSpot data."
 }
 
 module.exports = {

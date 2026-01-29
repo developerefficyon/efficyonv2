@@ -64,8 +64,15 @@ const suggestedQuestions = {
     "Analyze user activity patterns",
     "What's my license cost optimization potential?",
   ],
+  hubspot: [
+    "Show HubSpot seat utilization",
+    "Which HubSpot users are inactive?",
+    "How many unused HubSpot seats do I have?",
+    "Analyze HubSpot user activity",
+    "What's my HubSpot cost optimization potential?",
+  ],
   comparison: [
-    "Run a deep analysis across both platforms",
+    "Run a deep analysis across all platforms",
     "Show cost vs. activity gap analysis",
     "What's my cost per active user?",
     "Compare software spending with user productivity",
@@ -86,6 +93,7 @@ type ResearchCache = {
   toolData?: any
   fortnoxData?: any
   m365Data?: any
+  hubspotData?: any
   dataType?: string
 }
 
@@ -207,7 +215,12 @@ export default function ChatbotPage() {
   // Check if we have cached research data for the current chat type
   const hasCachedResearch = () => {
     if (activeTab === "comparison") {
-      return !!(researchCache.fortnoxData && researchCache.m365Data)
+      // For comparison, check if at least 2 platforms have data
+      const hasFortnox = !!researchCache.fortnoxData
+      const hasM365 = !!researchCache.m365Data
+      const hasHubSpot = !!researchCache.hubspotData
+      const cachedPlatforms = [hasFortnox, hasM365, hasHubSpot].filter(Boolean).length
+      return cachedPlatforms >= 2
     } else if (activeTab !== "general") {
       return !!researchCache.toolData
     }
@@ -288,9 +301,17 @@ export default function ChatbotPage() {
 
         data = await response.json()
       } else if (activeTab === "comparison") {
-        // Cross-platform comparison - send cached data if available
-        const cachedData = (researchCache.fortnoxData && researchCache.m365Data)
-          ? { fortnoxData: researchCache.fortnoxData, m365Data: researchCache.m365Data }
+        // Cross-platform comparison - send cached data if available (needs at least 2 platforms)
+        const hasFortnox = !!researchCache.fortnoxData
+        const hasM365 = !!researchCache.m365Data
+        const hasHubSpot = !!researchCache.hubspotData
+        const cachedPlatformCount = [hasFortnox, hasM365, hasHubSpot].filter(Boolean).length
+        const cachedData = cachedPlatformCount >= 2
+          ? {
+              fortnoxData: researchCache.fortnoxData,
+              m365Data: researchCache.m365Data,
+              hubspotData: researchCache.hubspotData,
+            }
           : undefined
 
         response = await fetch(`${apiBase}/api/chat/comparison`, {
@@ -317,6 +338,7 @@ export default function ChatbotPage() {
           setResearchCache({
             fortnoxData: data.researchData.fortnoxData,
             m365Data: data.researchData.m365Data,
+            hubspotData: data.researchData.hubspotData,
           })
         }
 
@@ -404,6 +426,10 @@ export default function ChatbotPage() {
     if (q.includes("user") || q.includes("sign in") || q.includes("login") || q.includes("inactive")) return "users"
     if (q.includes("usage") || q.includes("activity") || q.includes("teams") || q.includes("mailbox")) return "usage"
 
+    // HubSpot data types
+    if (q.includes("seat") || q.includes("hubspot user")) return "users"
+    if (q.includes("hubspot account") || q.includes("portal")) return "account"
+
     return "general"
   }
 
@@ -461,7 +487,7 @@ export default function ChatbotPage() {
       return "Ask questions about your tools, costs, and optimizations"
     }
     if (activeTab === "comparison") {
-      return "Cross-reference Fortnox and Microsoft 365 data for unified insights"
+      return "Cross-reference data from connected platforms for unified insights"
     }
     const tool = tools.find((t) => t.id === activeTab)
     if (tool) {
@@ -471,6 +497,9 @@ export default function ChatbotPage() {
       }
       if (provider === "microsoft365" || provider === "microsoft 365") {
         return "Ask about licenses, users, usage, and optimization opportunities"
+      }
+      if (provider === "hubspot") {
+        return "Ask about HubSpot seats, users, activity, and cost optimization"
       }
     }
     return "Ask questions about this tool's data and get insights"
@@ -550,7 +579,7 @@ export default function ChatbotPage() {
                       {activeTab === "general"
                         ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
                         : activeTab === "comparison"
-                        ? "I'll cross-reference your Fortnox financial data with Microsoft 365 usage data to find cost optimization opportunities, activity gaps, and prioritized recommendations."
+                        ? "I'll cross-reference data from your connected platforms to find cost optimization opportunities, activity gaps, and prioritized recommendations."
                         : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center max-w-lg">

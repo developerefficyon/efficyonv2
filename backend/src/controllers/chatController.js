@@ -433,6 +433,8 @@ async function fetchToolData(integration, dataType, req) {
     return await fetchFortnoxData(integration, dataType, req)
   } else if (provider === "microsoft365" || provider === "microsoft 365") {
     return await fetchMicrosoft365Data(integration, dataType, req)
+  } else if (provider === "hubspot") {
+    return await fetchHubSpotData(integration, dataType, req)
   }
 
   return null
@@ -509,6 +511,33 @@ async function fetchMicrosoft365Data(integration, dataType, req) {
 }
 
 /**
+ * Fetch HubSpot data
+ */
+async function fetchHubSpotData(integration, dataType, req) {
+  const hubspotController = require("./hubspotController")
+
+  const mockReq = { ...req, user: req.user }
+  let data = null
+
+  switch (dataType) {
+    case "users":
+      data = await callControllerMethod(hubspotController.getHubSpotUsers, mockReq)
+      break
+    case "cost-leaks":
+      data = await callControllerMethod(hubspotController.analyzeHubSpotCostLeaks, mockReq)
+      break
+    case "account":
+      data = await callControllerMethod(hubspotController.getHubSpotAccountInfo, mockReq)
+      break
+    default:
+      // For general queries, fetch users summary
+      data = await callControllerMethod(hubspotController.getHubSpotUsers, mockReq)
+  }
+
+  return data
+}
+
+/**
  * Helper to call controller methods and capture response data
  */
 async function callControllerMethod(method, req) {
@@ -548,6 +577,12 @@ function getDataDescription(provider, dataType) {
       usage: "Usage reports including active users, mailbox, and Teams activity",
       "cost-leaks": "License utilization analysis and optimization opportunities",
       general: "License and user summary",
+    },
+    hubspot: {
+      users: "HubSpot user accounts with roles and activity status",
+      account: "HubSpot account information and settings",
+      "cost-leaks": "Seat utilization analysis and cost optimization opportunities",
+      general: "HubSpot users and seat summary",
     },
   }
 
