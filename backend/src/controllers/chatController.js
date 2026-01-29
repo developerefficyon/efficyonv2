@@ -1,5 +1,9 @@
 const { supabase } = require("../config/supabase")
 const openaiService = require("../services/openaiService")
+const tokenService = require("../services/tokenService")
+
+// Token cost for deep research
+const DEEP_RESEARCH_TOKEN_COST = 1
 
 /**
  * Get all conversations for the current user
@@ -313,6 +317,8 @@ async function addMessage(req, res) {
 
 /**
  * Chat with tool context - fetches tool data and generates AI response
+ * If cachedResearchData is provided, uses it (free follow-up)
+ * If no cached data, fetches new data (costs 1 token for deep research)
  */
 async function chatWithTool(req, res) {
   console.log(`[${new Date().toISOString()}] POST /api/chat/tool`)
@@ -323,7 +329,7 @@ async function chatWithTool(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, toolId, dataType } = req.body
+    const { question, toolId, dataType, cachedResearchData } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
@@ -344,16 +350,51 @@ async function chatWithTool(req, res) {
       return res.status(404).json({ error: "Tool not found" })
     }
 
-    // Fetch tool data based on the question and dataType
     let toolData = null
     let dataDescription = ""
+    let tokensUsed = 0
+    let isDeepResearch = false
 
-    try {
-      toolData = await fetchToolData(integration, dataType, req)
+    // Check if we have cached research data (free follow-up)
+    if (cachedResearchData && Object.keys(cachedResearchData).length > 0) {
+      console.log(`[${new Date().toISOString()}] Using cached research data (free follow-up)`)
+      toolData = cachedResearchData
       dataDescription = getDataDescription(integration.provider, dataType)
-    } catch (fetchError) {
-      console.error(`[${new Date().toISOString()}] Error fetching tool data:`, fetchError.message)
-      // Continue without tool data - AI will respond based on question alone
+    } else {
+      // Need to fetch new data - this is a deep research request (costs 1 token)
+      isDeepResearch = true
+      console.log(`[${new Date().toISOString()}] Deep research requested - checking token balance`)
+
+      // Check token balance before fetching
+      const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, DEEP_RESEARCH_TOKEN_COST)
+      if (!hasEnough) {
+        console.log(`[${new Date().toISOString()}] Insufficient tokens: ${available} available, ${DEEP_RESEARCH_TOKEN_COST} required`)
+        return res.status(402).json({
+          error: "INSUFFICIENT_TOKENS",
+          message: `Deep research requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${available} token(s) available.`,
+          available,
+          required: DEEP_RESEARCH_TOKEN_COST,
+        })
+      }
+
+      try {
+        toolData = await fetchToolData(integration, dataType, req)
+        dataDescription = getDataDescription(integration.provider, dataType)
+
+        // Consume token after successful data fetch
+        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "tool_deep_research", {
+          integrationSources: [integration.provider.toLowerCase()],
+          description: `${integration.provider} ${dataType || "general"} deep research`,
+        })
+
+        if (consumeResult.success) {
+          tokensUsed = DEEP_RESEARCH_TOKEN_COST
+          console.log(`[${new Date().toISOString()}] Consumed ${DEEP_RESEARCH_TOKEN_COST} token for deep research. Remaining: ${consumeResult.balanceAfter}`)
+        }
+      } catch (fetchError) {
+        console.error(`[${new Date().toISOString()}] Error fetching tool data:`, fetchError.message)
+        // Continue without tool data - AI will respond based on question alone
+      }
     }
 
     // Build context for AI
@@ -371,8 +412,10 @@ async function chatWithTool(req, res) {
     return res.json({
       success: true,
       response,
-      toolData: toolData, // Include raw data for frontend charts/tables
+      toolData: toolData, // Include raw data for frontend to cache
       dataType: dataType || "general",
+      isDeepResearch,
+      tokensUsed,
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chatWithTool:`, error.message)

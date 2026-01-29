@@ -3,9 +3,13 @@ const openaiService = require("../services/openaiService")
 const comparisonAnalysisService = require("../services/comparisonAnalysisService")
 const tokenService = require("../services/tokenService")
 
+// Token cost for deep research (same for all types)
+const DEEP_RESEARCH_TOKEN_COST = 1
+
 /**
  * Chat with cross-platform comparison context
- * Fetches data from both Fortnox and Microsoft 365, calculates metrics, and generates AI response
+ * If cachedResearchData is provided, uses it (free follow-up)
+ * If no cached data, fetches from both platforms (costs 1 token for deep research)
  */
 async function chatComparison(req, res) {
   console.log(`[${new Date().toISOString()}] POST /api/chat/comparison`)
@@ -16,7 +20,7 @@ async function chatComparison(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question } = req.body
+    const { question, cachedResearchData } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
@@ -64,28 +68,61 @@ async function chatComparison(req, res) {
       })
     }
 
-    // Check token balance (comparison analysis costs 2 tokens)
-    const tokenCheck = await tokenService.checkTokenBalance(user.id, 2)
-    if (!tokenCheck.hasEnough) {
-      return res.status(402).json({
-        error: "Insufficient tokens",
-        message: `Cross-platform analysis requires 2 tokens. You have ${tokenCheck.currentBalance} tokens.`,
-        required: 2,
-        available: tokenCheck.currentBalance,
+    let fortnoxData = null
+    let m365Data = null
+    let metrics = null
+    let tokensUsed = 0
+    let isDeepResearch = false
+
+    // Check if we have cached research data (free follow-up)
+    if (cachedResearchData && cachedResearchData.fortnoxData && cachedResearchData.m365Data) {
+      console.log(`[${new Date().toISOString()}] Using cached research data (free follow-up)`)
+      fortnoxData = cachedResearchData.fortnoxData
+      m365Data = cachedResearchData.m365Data
+      // Recalculate metrics from cached data
+      metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data)
+    } else {
+      // Need to fetch new data - this is a deep research request (costs 1 token)
+      isDeepResearch = true
+      console.log(`[${new Date().toISOString()}] Deep research requested - checking token balance`)
+
+      // Check token balance before fetching
+      const tokenCheck = await tokenService.checkTokenBalance(user.id, DEEP_RESEARCH_TOKEN_COST)
+      if (!tokenCheck.hasEnough) {
+        return res.status(402).json({
+          error: "INSUFFICIENT_TOKENS",
+          message: `Cross-platform deep research requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${tokenCheck.available} token(s) available.`,
+          required: DEEP_RESEARCH_TOKEN_COST,
+          available: tokenCheck.available,
+        })
+      }
+
+      // Fetch data from both platforms in parallel
+      console.log(`[${new Date().toISOString()}] Fetching data from both platforms...`)
+
+      const results = await Promise.all([
+        fetchFortnoxComparisonData(fortnoxIntegration, req),
+        fetchM365ComparisonData(m365Integration, req),
+      ])
+      fortnoxData = results[0]
+      m365Data = results[1]
+
+      // Calculate cross-platform metrics
+      console.log(`[${new Date().toISOString()}] Calculating cross-platform metrics...`)
+      metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data)
+
+      // Consume token after successful data fetch
+      const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "comparison_deep_research", {
+        question: question.substring(0, 100),
+        fortnoxDataPoints: fortnoxData?.supplierInvoices?.length || 0,
+        m365DataPoints: m365Data?.users?.length || 0,
       })
+
+      if (consumeResult.success) {
+        tokensUsed = DEEP_RESEARCH_TOKEN_COST
+        console.log(`[${new Date().toISOString()}] Consumed ${DEEP_RESEARCH_TOKEN_COST} token for deep research. Remaining: ${consumeResult.balanceAfter}`)
+      }
     }
-
-    // Fetch data from both platforms in parallel
-    console.log(`[${new Date().toISOString()}] Fetching data from both platforms...`)
-
-    const [fortnoxData, m365Data] = await Promise.all([
-      fetchFortnoxComparisonData(fortnoxIntegration, req),
-      fetchM365ComparisonData(m365Integration, req),
-    ])
-
-    // Calculate cross-platform metrics
-    console.log(`[${new Date().toISOString()}] Calculating cross-platform metrics...`)
-    const metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data)
 
     // Generate AI response with comparison context
     console.log(`[${new Date().toISOString()}] Generating AI response...`)
@@ -96,16 +133,14 @@ async function chatComparison(req, res) {
       metrics
     )
 
-    // Consume tokens after successful analysis
-    await tokenService.consumeTokens(user.id, 2, "comparison_analysis", {
-      question: question.substring(0, 100),
-      fortnoxDataPoints: fortnoxData?.supplierInvoices?.length || 0,
-      m365DataPoints: m365Data?.users?.length || 0,
-    })
-
     return res.json({
       success: true,
       response,
+      // Return research data so frontend can cache it for follow-ups
+      researchData: {
+        fortnoxData,
+        m365Data,
+      },
       metrics: {
         costMetrics: metrics.costMetrics,
         activityMetrics: metrics.activityMetrics,
@@ -116,7 +151,8 @@ async function chatComparison(req, res) {
           combinedSavings: metrics.gapAnalysis.combinedSavings,
         },
       },
-      tokensUsed: 2,
+      isDeepResearch,
+      tokensUsed,
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chatComparison:`, error.message)
