@@ -5,7 +5,6 @@
 
 const { supabase } = require("../config/supabase")
 const { analyzeCostLeaks } = require("../services/costLeakAnalysis")
-const tokenService = require("../services/tokenService")
 const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
@@ -825,21 +824,6 @@ async function analyzeFortnoxCostLeaks(req, res) {
     return res.status(401).json({ error: "Unauthorized" })
   }
 
-  // Check token balance before analysis (single source = 1 token)
-  const tokenCost = 1
-  const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, tokenCost)
-
-  if (!hasEnough) {
-    log("warn", endpoint, `Insufficient tokens for user ${user.id}: has ${available}, needs ${tokenCost}`)
-    return res.status(402).json({
-      error: "INSUFFICIENT_TOKENS",
-      message: "You don't have enough tokens for this analysis",
-      available,
-      required: tokenCost,
-      upgradeRequired: true,
-    })
-  }
-
   const { data: profile } = await supabase
     .from("profiles")
     .select("company_id")
@@ -940,18 +924,6 @@ async function analyzeFortnoxCostLeaks(req, res) {
         log("error", endpoint, "AI enhancement failed:", aiError.message)
         analysis.aiError = aiError.message
       }
-    }
-
-    // Consume token after successful analysis
-    const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "single_source_analysis", {
-      integrationSources: ["fortnox"],
-      description: "Fortnox cost leak analysis",
-    })
-
-    if (consumeResult.success) {
-      log("log", endpoint, `Consumed ${tokenCost} token for user ${user.id}. Remaining: ${consumeResult.balanceAfter}`)
-      analysis.tokensUsed = tokenCost
-      analysis.tokensRemaining = consumeResult.balanceAfter
     }
 
     return res.json(analysis)
