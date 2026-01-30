@@ -111,6 +111,13 @@ export default function ToolDetailPage() {
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(true)
   const [findingsFilter, setFindingsFilter] = useState<"all" | "high" | "medium" | "low">("all")
   const [findingsSearch, setFindingsSearch] = useState("")
+
+  // Date range for Fortnox analysis
+  const [fortnoxStartDate, setFortnoxStartDate] = useState<string>("")
+  const [fortnoxEndDate, setFortnoxEndDate] = useState<string>("")
+
+  // Inactivity threshold for MS365 and HubSpot (in days)
+  const [inactivityDays, setInactivityDays] = useState<number>(30)
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue"]))
@@ -548,7 +555,11 @@ export default function ToolDetailPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/hubspot/cost-leaks`, {
+      // Include inactivity threshold parameter
+      const params = new URLSearchParams()
+      params.append("inactivityDays", inactivityDays.toString())
+
+      const res = await fetch(`${apiBase}/api/integrations/hubspot/cost-leaks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
@@ -587,7 +598,11 @@ export default function ToolDetailPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks`, {
+      // Include inactivity threshold parameter
+      const params = new URLSearchParams()
+      params.append("inactivityDays", inactivityDays.toString())
+
+      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
@@ -620,7 +635,7 @@ export default function ToolDetailPage() {
       setCostLeakAnalysis(data)
 
       toast.success("Analysis complete", {
-        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities (${inactivityDays} day threshold)`,
       })
     } catch (error) {
       console.error("Error analyzing Microsoft 365 cost leaks:", error)
@@ -669,7 +684,18 @@ export default function ToolDetailPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/fortnox/cost-leaks`, {
+      // Build URL with optional date range parameters
+      const params = new URLSearchParams()
+      if (fortnoxStartDate) {
+        params.append("startDate", fortnoxStartDate)
+      }
+      if (fortnoxEndDate) {
+        params.append("endDate", fortnoxEndDate)
+      }
+      const queryString = params.toString()
+      const url = `${apiBase}/api/integrations/fortnox/cost-leaks${queryString ? `?${queryString}` : ""}`
+
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
@@ -703,8 +729,19 @@ export default function ToolDetailPage() {
       const data = await res.json()
       setCostLeakAnalysis(data)
 
+      // Build description with date range info
+      let description = `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`
+      if (fortnoxStartDate || fortnoxEndDate) {
+        const dateInfo = fortnoxStartDate && fortnoxEndDate
+          ? `(${fortnoxStartDate} to ${fortnoxEndDate})`
+          : fortnoxStartDate
+            ? `(from ${fortnoxStartDate})`
+            : `(until ${fortnoxEndDate})`
+        description += ` ${dateInfo}`
+      }
+
       toast.success("Analysis complete", {
-        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+        description,
       })
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
@@ -1459,48 +1496,114 @@ export default function ToolDetailPage() {
                       AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                    {costLeakAnalysis && (
-                      <>
-                        <Button
-                          onClick={openPdfPreview}
-                          variant="outline"
-                          size="sm"
-                          className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
-                          title="Export PDF"
-                        >
-                          <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
-                          <span className="hidden sm:inline">Export PDF</span>
-                        </Button>
-                        <Button
-                          onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
-                          variant="outline"
-                          size="sm"
-                          className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
-                          title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
-                        >
-                          {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                      </>
+                </div>
+
+                {/* Analysis Parameters */}
+                <div className="px-4 sm:px-6 pb-4 border-t border-white/5 pt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 justify-between">
+                    {/* Fortnox: Date Range */}
+                    {isFortnox && (
+                      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-400">Start Date</label>
+                          <Input
+                            type="date"
+                            value={fortnoxStartDate}
+                            onChange={(e) => setFortnoxStartDate(e.target.value)}
+                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            placeholder="Start date"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-400">End Date</label>
+                          <Input
+                            type="date"
+                            value={fortnoxEndDate}
+                            onChange={(e) => setFortnoxEndDate(e.target.value)}
+                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            placeholder="End date"
+                          />
+                        </div>
+                        {(fortnoxStartDate || fortnoxEndDate) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setFortnoxStartDate("")
+                              setFortnoxEndDate("")
+                            }}
+                            className="text-gray-400 hover:text-white h-9 self-end"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
                     )}
-                    <Button
-                      onClick={handleAnalyzeCostLeaks}
-                      disabled={isLoadingAnalysis}
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
-                    >
-                      {isLoadingAnalysis ? (
+
+                    {/* MS365/HubSpot: Inactivity Threshold */}
+                    {(isMicrosoft365 || isHubSpot) && (
+                      <div className="flex flex-col gap-1 w-full sm:w-auto">
+                        <label className="text-xs text-gray-400">Inactivity Threshold</label>
+                        <select
+                          value={inactivityDays}
+                          onChange={(e) => setInactivityDays(parseInt(e.target.value))}
+                          className="h-9 px-3 rounded-md bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        >
+                          <option value={7}>7 days</option>
+                          <option value={14}>14 days</option>
+                          <option value={30}>30 days (default)</option>
+                          <option value={60}>60 days</option>
+                          <option value={90}>90 days</option>
+                        </select>
+                        <p className="text-xs text-gray-500">Users inactive for more than this period</p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end ml-auto">
+                      {costLeakAnalysis && (
                         <>
-                          <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
-                          <span className="hidden sm:inline">Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4 sm:mr-2" />
-                          <span className="hidden sm:inline">{costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}</span>
-                          <span className="sm:hidden">{costLeakAnalysis ? "Re-run" : "Analyze"}</span>
+                          <Button
+                            onClick={openPdfPreview}
+                            variant="outline"
+                            size="sm"
+                            className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
+                            title="Export PDF"
+                          >
+                            <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
+                            <span className="hidden sm:inline">Export PDF</span>
+                          </Button>
+                          <Button
+                            onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
+                            variant="outline"
+                            size="sm"
+                            className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
+                            title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
+                          >
+                            {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
                         </>
                       )}
-                    </Button>
+                      <Button
+                        onClick={handleAnalyzeCostLeaks}
+                        disabled={isLoadingAnalysis}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
+                      >
+                        {isLoadingAnalysis ? (
+                          <>
+                            <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                            <span className="hidden sm:inline">Analyzing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Search className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">{costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}</span>
+                            <span className="sm:hidden">{costLeakAnalysis ? "Re-run" : "Analyze"}</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -1602,7 +1705,26 @@ export default function ToolDetailPage() {
                         </div>
                         <div className="space-y-4 flex-1">
                           <div>
-                            <h3 className="text-white font-semibold text-lg mb-2">AI Analysis Summary</h3>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-white font-semibold text-lg">AI Analysis Summary</h3>
+                              {/* Show analysis parameters */}
+                              {costLeakAnalysis.dateRange?.filtered && (
+                                <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {costLeakAnalysis.dateRange.startDate && costLeakAnalysis.dateRange.endDate
+                                    ? `${costLeakAnalysis.dateRange.startDate} - ${costLeakAnalysis.dateRange.endDate}`
+                                    : costLeakAnalysis.dateRange.startDate
+                                      ? `From ${costLeakAnalysis.dateRange.startDate}`
+                                      : `Until ${costLeakAnalysis.dateRange.endDate}`}
+                                </Badge>
+                              )}
+                              {costLeakAnalysis.inactivityThreshold && (
+                                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
+                                  <Timer className="w-3 h-3 mr-1" />
+                                  {costLeakAnalysis.inactivityThreshold} days inactive
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-gray-300 text-sm leading-relaxed">
                               We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential cost leaks
                               that could save your company approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.

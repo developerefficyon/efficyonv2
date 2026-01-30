@@ -815,6 +815,12 @@ async function analyzeFortnoxCostLeaks(req, res) {
   const endpoint = "GET /api/integrations/fortnox/cost-leaks"
   log("log", endpoint, "Request received")
 
+  // Get date range parameters (optional)
+  const { startDate, endDate } = req.query
+  if (startDate) {
+    log("log", endpoint, `Date range filter: ${startDate} to ${endDate || 'now'}`)
+  }
+
   if (!supabase) {
     return res.status(500).json({ error: "Supabase not configured" })
   }
@@ -858,12 +864,23 @@ async function analyzeFortnoxCostLeaks(req, res) {
     const accessToken = await refreshTokenIfNeeded(integration, tokens)
     log("log", endpoint, `Using access token: ${accessToken ? accessToken.substring(0, 20) + '...' : 'NONE'}`)
 
+    // Build date filter query string for Fortnox API
+    let dateFilter = ""
+    if (startDate) {
+      dateFilter += `?fromdate=${startDate}`
+      if (endDate) {
+        dateFilter += `&todate=${endDate}`
+      }
+    } else if (endDate) {
+      dateFilter = `?todate=${endDate}`
+    }
+
     const [invoicesRes, supplierInvoicesRes] = await Promise.allSettled([
-      fetchFortnoxData("/invoices", accessToken, "invoice", "invoice").catch((err) => {
+      fetchFortnoxData(`/invoices${dateFilter}`, accessToken, "invoice", "invoice").catch((err) => {
         log("error", endpoint, `Failed to fetch invoices: ${err.message}`)
         return { Invoices: [] }
       }),
-      fetchFortnoxData("/supplierinvoices", accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
+      fetchFortnoxData(`/supplierinvoices${dateFilter}`, accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
         log("error", endpoint, `Failed to fetch supplier invoices: ${err.message}`)
         return { SupplierInvoices: [] }
       }),
@@ -884,6 +901,13 @@ async function analyzeFortnoxCostLeaks(req, res) {
     }
 
     const analysis = analyzeCostLeaks(data)
+
+    // Add date range info to the analysis
+    analysis.dateRange = {
+      startDate: startDate || null,
+      endDate: endDate || null,
+      filtered: !!(startDate || endDate),
+    }
 
     log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
 

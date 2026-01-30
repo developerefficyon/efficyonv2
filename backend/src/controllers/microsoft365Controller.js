@@ -517,6 +517,10 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
   const endpoint = "GET /api/integrations/microsoft365/cost-leaks"
   log("log", endpoint, "Request received")
 
+  // Get inactivity threshold parameter (default: 30 days)
+  const inactivityDays = parseInt(req.query.inactivityDays) || 30
+  log("log", endpoint, `Using inactivity threshold: ${inactivityDays} days`)
+
   if (!supabase) {
     return res.status(500).json({ error: "Supabase not configured" })
   }
@@ -556,7 +560,7 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
       users,
     }
 
-    const analysis = analyzeM365CostLeaks(data)
+    const analysis = analyzeM365CostLeaks(data, { inactivityDays })
 
     log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
 

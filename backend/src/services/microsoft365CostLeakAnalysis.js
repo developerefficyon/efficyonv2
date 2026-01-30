@@ -335,12 +335,17 @@ function calculateUserLicenseCost(assignedLicenses) {
 
 /**
  * Main analysis function
+ * @param {Object} data - License and user data
+ * @param {Object} options - Analysis options
+ * @param {number} options.inactivityDays - Days of inactivity to consider a user inactive (default: 30)
  */
-function analyzeM365CostLeaks(data) {
+function analyzeM365CostLeaks(data, options = {}) {
   const { licenses, users } = data
+  const { inactivityDays = 30 } = options
 
   const results = {
     timestamp: new Date().toISOString(),
+    inactivityThreshold: inactivityDays, // Include the threshold used in the response
     licenseAnalysis: {
       findings: [],
       summary: {
@@ -372,7 +377,7 @@ function analyzeM365CostLeaks(data) {
   const inactiveUsers = users.filter(u => {
     if (!u.signInActivity?.lastSignInDateTime) return true
     const daysSince = Math.floor((now - new Date(u.signInActivity.lastSignInDateTime)) / (1000 * 60 * 60 * 24))
-    return daysSince > 30
+    return daysSince > inactivityDays
   })
 
   results.licenseAnalysis.summary.usersWithLicenses = usersWithLicenses.length
@@ -387,7 +392,7 @@ function analyzeM365CostLeaks(data) {
   }
 
   // Run all analysis functions
-  const inactiveFindings = analyzeInactiveLicenses(users, 30)
+  const inactiveFindings = analyzeInactiveLicenses(users, inactivityDays)
   const orphanedFindings = analyzeOrphanedLicenses(users)
   const overProvisionedFindings = analyzeOverProvisionedLicenses(users, licenses || [])
   const unusedAddonFindings = analyzeUnusedAddons(users, licenses || [])

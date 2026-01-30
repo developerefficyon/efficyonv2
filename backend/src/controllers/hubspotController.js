@@ -567,6 +567,10 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
   const endpoint = "GET /api/integrations/hubspot/cost-leaks"
   log("log", endpoint, "Request received")
 
+  // Get inactivity threshold parameter (default: 30 days)
+  const inactivityDays = parseInt(req.query.inactivityDays) || 30
+  log("log", endpoint, `Using inactivity threshold: ${inactivityDays} days`)
+
   if (!supabase) {
     return res.status(500).json({ error: "Supabase not configured" })
   }
@@ -605,8 +609,11 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
 
     const users = usersData.results || []
 
-    // Run cost leak analysis
-    const analysis = analyzeHubSpotCostLeaks(users, accountInfo)
+    // Run cost leak analysis with inactivity threshold
+    const analysis = analyzeHubSpotCostLeaks(users, accountInfo, { inactiveDays: inactivityDays })
+
+    // Add inactivity threshold to response
+    analysis.inactivityThreshold = inactivityDays
 
     log("log", endpoint, `Analysis completed, ${analysis.summary?.issuesFound || 0} findings`)
 
