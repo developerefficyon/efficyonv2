@@ -10,10 +10,10 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Efficyon - AI-Powered Cost Optimization",
   description:
-    "Stop wasting money on hidden inefficiencies. AI-powered platform that identifies cost leaks and workflow inefficiencies across your tools and processes.",
+    "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage across your tools to reveal unused licenses, mispriced tools, and quiet inefficiencies across your software stack.",
   generator: "v0.app",
   icons: {
-    icon: "/icon.svg",
+    icon: "/favicon.ico",
   },
 }
 

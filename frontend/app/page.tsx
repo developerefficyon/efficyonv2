@@ -48,11 +48,11 @@ export default function HomePage() {
               {/* Left content */}
               <div className="flex-1 p-8 relative z-10 flex flex-col justify-center">
                 <h1 className="text-4xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-balance">
-                  Stop wasting money on hidden inefficiencies
+                  Turn SaaS sprawl into financial clarity.
                 </h1>
                 <p className="mt-4 text-neutral-300 max-w-lg">
-                  AI-powered platform that continuously identifies cost leaks and workflow inefficiencies across your
-                  tools and processes. Unlock significant savings through intelligent optimization.
+                  Efficyon compares SaaS spend with real usage across your tools to reveal unused licenses, mispriced
+                  tools, and quiet inefficiencies across your software stack.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mt-8">
@@ -90,7 +90,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Proven Results Section */}
+      {/* Feature highlights Section */}
       <section className="py-16 bg-black border-t border-white/10">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8">
@@ -98,24 +98,24 @@ export default function HomePage() {
               <div className="h-12 w-12 bg-green-900/40 rounded-full flex items-center justify-center mx-auto">
                 <TrendingUp className="h-6 w-6 text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Proven Results</h3>
+              <h3 className="text-lg font-semibold text-white">Cost meets usage</h3>
               <p className="text-gray-400 text-sm">
-                Companies typically see substantial ROI within their first quarter
+                SaaS spend shown alongside real usage data.
               </p>
             </div>
             <div className="text-center space-y-2">
               <div className="h-12 w-12 bg-blue-900/40 rounded-full flex items-center justify-center mx-auto">
                 <Brain className="h-6 w-6 text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">AI-Driven Analysis</h3>
-              <p className="text-gray-400 text-sm">Precise calculations based on your specific processes</p>
+              <h3 className="text-lg font-semibold text-white">Cross-tool visibility</h3>
+              <p className="text-gray-400 text-sm">Insights that only appear when systems are viewed together.</p>
             </div>
             <div className="text-center space-y-2">
               <div className="h-12 w-12 bg-orange-900/40 rounded-full flex items-center justify-center mx-auto">
                 <Target className="h-6 w-6 text-orange-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white">90-Day Pilot</h3>
-              <p className="text-gray-400 text-sm">Complete implementation with dedicated team</p>
+              <h3 className="text-lg font-semibold text-white">Clear, actionable insights</h3>
+              <p className="text-gray-400 text-sm">Findings you can actually act on.</p>
             </div>
           </div>
         </div>
@@ -157,23 +157,23 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">Still Overpaying for Unused Tools?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">Still paying for software you don&apos;t fully use?</h2>
               <div className="space-y-4 text-gray-300">
                 <p className="flex items-start gap-3">
                   <span className="text-red-500 mt-1">✗</span>
-                  Paying for licenses that employees rarely use
+                  Licenses that exist on paper but see little real activity
                 </p>
                 <p className="flex items-start gap-3">
                   <span className="text-red-500 mt-1">✗</span>
-                  Using multiple overlapping tools for the same tasks
+                  Multiple tools covering the same jobs across teams
                 </p>
                 <p className="flex items-start gap-3">
                   <span className="text-red-500 mt-1">✗</span>
-                  Wasting hours switching between disconnected systems
+                  Time lost moving between systems that don&apos;t talk to each other
                 </p>
                 <p className="flex items-start gap-3">
                   <span className="text-red-500 mt-1">✗</span>
-                  No visibility into actual tool usage and costs
+                  Limited visibility into how software spend relates to actual usage
                 </p>
               </div>
             </div>
