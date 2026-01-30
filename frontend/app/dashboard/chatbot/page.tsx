@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   MessageSquare,
   Send,
   Loader2,
@@ -14,8 +24,10 @@ import {
   Sparkles,
   AlertTriangle,
   RefreshCw,
+  Coins,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { useTokens } from "@/lib/token-context"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ChatSidebar, useChatConversations } from "@/components/chat-sidebar"
@@ -52,8 +64,15 @@ const suggestedQuestions = {
     "Analyze user activity patterns",
     "What's my license cost optimization potential?",
   ],
+  hubspot: [
+    "Show HubSpot seat utilization",
+    "Which HubSpot users are inactive?",
+    "How many unused HubSpot seats do I have?",
+    "Analyze HubSpot user activity",
+    "What's my HubSpot cost optimization potential?",
+  ],
   comparison: [
-    "Run a deep analysis across both platforms",
+    "Run a deep analysis across all platforms",
     "Show cost vs. activity gap analysis",
     "What's my cost per active user?",
     "Compare software spending with user productivity",
@@ -69,8 +88,18 @@ const suggestedQuestions = {
   ],
 }
 
+// Research data cache type
+type ResearchCache = {
+  toolData?: any
+  fortnoxData?: any
+  m365Data?: any
+  hubspotData?: any
+  dataType?: string
+}
+
 export default function ChatbotPage() {
   const { user } = useAuth()
+  const { tokenBalance, refreshTokenBalance } = useTokens()
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState("general")
   const [messages, setMessages] = useState<Message[]>([])
@@ -78,6 +107,10 @@ export default function ChatbotPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showTokenConfirmation, setShowTokenConfirmation] = useState(false)
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  // Cache for research data - cleared when switching conversations or tabs
+  const [researchCache, setResearchCache] = useState<ResearchCache>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -129,10 +162,16 @@ export default function ChatbotPage() {
     scrollToBottom()
   }, [messages])
 
+  // Clear research cache when switching tabs
+  useEffect(() => {
+    setResearchCache({})
+  }, [activeTab])
+
   // Load conversation messages when selecting a conversation
   const handleSelectConversation = async (id: string) => {
     setActiveConversationId(id)
     setError(null)
+    setResearchCache({}) // Clear research cache for new conversation
 
     const conversation = await loadConversation(id)
     if (conversation?.messages) {
@@ -159,6 +198,7 @@ export default function ChatbotPage() {
     if (newId) {
       setMessages([])
       setError(null)
+      setResearchCache({}) // Clear research cache for new conversation
       // Close sidebar on mobile after creating new chat
       if (isMobile) {
         setSidebarOpen(false)
@@ -166,9 +206,46 @@ export default function ChatbotPage() {
     }
   }
 
-  const sendMessage = async (messageText?: string) => {
+  // Token cost for deep research (same for all types)
+  const DEEP_RESEARCH_TOKEN_COST = 1
+
+  // Check if this chat type requires deep research (tool or comparison, not general)
+  const requiresResearch = activeTab !== "general"
+
+  // Check if we have cached research data for the current chat type
+  const hasCachedResearch = () => {
+    if (activeTab === "comparison") {
+      // For comparison, check if at least 2 platforms have data
+      const hasFortnox = !!researchCache.fortnoxData
+      const hasM365 = !!researchCache.m365Data
+      const hasHubSpot = !!researchCache.hubspotData
+      const cachedPlatforms = [hasFortnox, hasM365, hasHubSpot].filter(Boolean).length
+      return cachedPlatforms >= 2
+    } else if (activeTab !== "general") {
+      return !!researchCache.toolData
+    }
+    return true // General chat doesn't need research
+  }
+
+  const sendMessage = async (messageText?: string, skipConfirmation = false) => {
     const text = messageText || input.trim()
     if (!text || isLoading) return
+
+    // For tool/comparison chat without cached research, show confirmation for token usage
+    if (requiresResearch && !hasCachedResearch() && !skipConfirmation) {
+      // Check if user has enough tokens
+      const availableTokens = tokenBalance?.available ?? 0
+      if (availableTokens < DEEP_RESEARCH_TOKEN_COST) {
+        toast.error("Insufficient tokens", {
+          description: `Deep research requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${availableTokens} token(s) available.`,
+        })
+        return
+      }
+      // Store the message and show confirmation
+      setPendingMessage(text)
+      setShowTokenConfirmation(true)
+      return
+    }
 
     // Create conversation if none exists
     let conversationId = activeConversationId
@@ -204,7 +281,7 @@ export default function ChatbotPage() {
       let data
 
       if (activeTab === "general") {
-        // General chat - use existing endpoint
+        // General chat - use existing endpoint (always free)
         response = await fetch(`${apiBase}/api/ai/chat`, {
           method: "POST",
           headers: {
@@ -224,7 +301,19 @@ export default function ChatbotPage() {
 
         data = await response.json()
       } else if (activeTab === "comparison") {
-        // Cross-platform comparison - use comparison endpoint
+        // Cross-platform comparison - send cached data if available (needs at least 2 platforms)
+        const hasFortnox = !!researchCache.fortnoxData
+        const hasM365 = !!researchCache.m365Data
+        const hasHubSpot = !!researchCache.hubspotData
+        const cachedPlatformCount = [hasFortnox, hasM365, hasHubSpot].filter(Boolean).length
+        const cachedData = cachedPlatformCount >= 2
+          ? {
+              fortnoxData: researchCache.fortnoxData,
+              m365Data: researchCache.m365Data,
+              hubspotData: researchCache.hubspotData,
+            }
+          : undefined
+
         response = await fetch(`${apiBase}/api/chat/comparison`, {
           method: "POST",
           headers: {
@@ -233,6 +322,7 @@ export default function ChatbotPage() {
           },
           body: JSON.stringify({
             question: text,
+            cachedResearchData: cachedData,
           }),
         })
 
@@ -242,8 +332,25 @@ export default function ChatbotPage() {
         }
 
         data = await response.json()
+
+        // Cache the research data for follow-up questions
+        if (data.researchData) {
+          setResearchCache({
+            fortnoxData: data.researchData.fortnoxData,
+            m365Data: data.researchData.m365Data,
+            hubspotData: data.researchData.hubspotData,
+          })
+        }
+
+        // Refresh token balance if tokens were used
+        if (data.tokensUsed > 0) {
+          await refreshTokenBalance()
+        }
       } else {
-        // Tool-specific chat - use new endpoint
+        // Tool-specific chat - send cached data if available
+        const dataType = detectDataType(text)
+        const cachedData = researchCache.toolData ? researchCache.toolData : undefined
+
         response = await fetch(`${apiBase}/api/chat/tool`, {
           method: "POST",
           headers: {
@@ -253,7 +360,8 @@ export default function ChatbotPage() {
           body: JSON.stringify({
             question: text,
             toolId: activeTab,
-            dataType: detectDataType(text),
+            dataType: dataType,
+            cachedResearchData: cachedData,
           }),
         })
 
@@ -263,6 +371,19 @@ export default function ChatbotPage() {
         }
 
         data = await response.json()
+
+        // Cache the tool data for follow-up questions
+        if (data.toolData) {
+          setResearchCache({
+            toolData: data.toolData,
+            dataType: data.dataType,
+          })
+        }
+
+        // Refresh token balance if tokens were used
+        if (data.tokensUsed > 0) {
+          await refreshTokenBalance()
+        }
       }
 
       const assistantMessage: Message = {
@@ -305,6 +426,10 @@ export default function ChatbotPage() {
     if (q.includes("user") || q.includes("sign in") || q.includes("login") || q.includes("inactive")) return "users"
     if (q.includes("usage") || q.includes("activity") || q.includes("teams") || q.includes("mailbox")) return "usage"
 
+    // HubSpot data types
+    if (q.includes("seat") || q.includes("hubspot user")) return "users"
+    if (q.includes("hubspot account") || q.includes("portal")) return "account"
+
     return "general"
   }
 
@@ -319,6 +444,21 @@ export default function ChatbotPage() {
     setMessages([])
     setError(null)
     await handleNewConversation()
+  }
+
+  // Handle token confirmation for comparison chat
+  const handleConfirmTokenUsage = () => {
+    setShowTokenConfirmation(false)
+    if (pendingMessage) {
+      // Send with skipConfirmation flag to avoid infinite loop
+      sendMessage(pendingMessage, true)
+      setPendingMessage(null)
+    }
+  }
+
+  const handleCancelTokenUsage = () => {
+    setShowTokenConfirmation(false)
+    setPendingMessage(null)
   }
 
   // Get suggested questions for current tab
@@ -347,7 +487,7 @@ export default function ChatbotPage() {
       return "Ask questions about your tools, costs, and optimizations"
     }
     if (activeTab === "comparison") {
-      return "Cross-reference Fortnox and Microsoft 365 data for unified insights"
+      return "Cross-reference data from connected platforms for unified insights"
     }
     const tool = tools.find((t) => t.id === activeTab)
     if (tool) {
@@ -357,6 +497,9 @@ export default function ChatbotPage() {
       }
       if (provider === "microsoft365" || provider === "microsoft 365") {
         return "Ask about licenses, users, usage, and optimization opportunities"
+      }
+      if (provider === "hubspot") {
+        return "Ask about HubSpot seats, users, activity, and cost optimization"
       }
     }
     return "Ask questions about this tool's data and get insights"
@@ -436,7 +579,7 @@ export default function ChatbotPage() {
                       {activeTab === "general"
                         ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
                         : activeTab === "comparison"
-                        ? "I'll cross-reference your Fortnox financial data with Microsoft 365 usage data to find cost optimization opportunities, activity gaps, and prioritized recommendations."
+                        ? "I'll cross-reference data from your connected platforms to find cost optimization opportunities, activity gaps, and prioritized recommendations."
                         : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center max-w-lg">
@@ -564,13 +707,72 @@ export default function ChatbotPage() {
                   </Button>
                 </div>
                 <p className="text-[10px] text-gray-500 mt-2 text-center">
-                  Chat is unlimited - no credits required
+                  {activeTab === "general" ? (
+                    "Chat is unlimited - no credits required"
+                  ) : hasCachedResearch() ? (
+                    <span className="flex items-center justify-center gap-1 text-green-400">
+                      <Sparkles className="w-3 h-3" />
+                      Research data loaded - follow-up questions are free
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1">
+                      <Coins className="w-3 h-3" />
+                      First query costs {DEEP_RESEARCH_TOKEN_COST} token (deep research), follow-ups are free
+                      {tokenBalance && (
+                        <span className="text-cyan-400 ml-1">
+                          ({tokenBalance.available} available)
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Token Confirmation Dialog */}
+      <AlertDialog open={showTokenConfirmation} onOpenChange={setShowTokenConfirmation}>
+        <AlertDialogContent className="bg-gray-900 border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <Coins className="w-5 h-5 text-cyan-400" />
+              Confirm Deep Research
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              <span className="block">
+                This deep research will use <span className="text-cyan-400 font-semibold">{DEEP_RESEARCH_TOKEN_COST} token</span> to fetch and analyze your data.
+              </span>
+              <span className="block mt-2 text-green-400/80">
+                After this, follow-up questions about the research will be free!
+              </span>
+              {tokenBalance && (
+                <span className="block mt-2">
+                  Current balance: <span className="text-white font-semibold">{tokenBalance.available} tokens</span>
+                  {tokenBalance.available >= DEEP_RESEARCH_TOKEN_COST && (
+                    <span className="text-gray-500"> → {tokenBalance.available - DEEP_RESEARCH_TOKEN_COST} tokens remaining after</span>
+                  )}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleCancelTokenUsage}
+              className="bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmTokenUsage}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+            >
+              Confirm & Research
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -5,7 +5,6 @@
 
 const { supabase } = require("../config/supabase")
 const { analyzeCostLeaks } = require("../services/costLeakAnalysis")
-const tokenService = require("../services/tokenService")
 const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
@@ -816,6 +815,12 @@ async function analyzeFortnoxCostLeaks(req, res) {
   const endpoint = "GET /api/integrations/fortnox/cost-leaks"
   log("log", endpoint, "Request received")
 
+  // Get date range parameters (optional)
+  const { startDate, endDate } = req.query
+  if (startDate) {
+    log("log", endpoint, `Date range filter: ${startDate} to ${endDate || 'now'}`)
+  }
+
   if (!supabase) {
     return res.status(500).json({ error: "Supabase not configured" })
   }
@@ -823,21 +828,6 @@ async function analyzeFortnoxCostLeaks(req, res) {
   const user = req.user
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" })
-  }
-
-  // Check token balance before analysis (single source = 1 token)
-  const tokenCost = 1
-  const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, tokenCost)
-
-  if (!hasEnough) {
-    log("warn", endpoint, `Insufficient tokens for user ${user.id}: has ${available}, needs ${tokenCost}`)
-    return res.status(402).json({
-      error: "INSUFFICIENT_TOKENS",
-      message: "You don't have enough tokens for this analysis",
-      available,
-      required: tokenCost,
-      upgradeRequired: true,
-    })
   }
 
   const { data: profile } = await supabase
@@ -874,12 +864,23 @@ async function analyzeFortnoxCostLeaks(req, res) {
     const accessToken = await refreshTokenIfNeeded(integration, tokens)
     log("log", endpoint, `Using access token: ${accessToken ? accessToken.substring(0, 20) + '...' : 'NONE'}`)
 
+    // Build date filter query string for Fortnox API
+    let dateFilter = ""
+    if (startDate) {
+      dateFilter += `?fromdate=${startDate}`
+      if (endDate) {
+        dateFilter += `&todate=${endDate}`
+      }
+    } else if (endDate) {
+      dateFilter = `?todate=${endDate}`
+    }
+
     const [invoicesRes, supplierInvoicesRes] = await Promise.allSettled([
-      fetchFortnoxData("/invoices", accessToken, "invoice", "invoice").catch((err) => {
+      fetchFortnoxData(`/invoices${dateFilter}`, accessToken, "invoice", "invoice").catch((err) => {
         log("error", endpoint, `Failed to fetch invoices: ${err.message}`)
         return { Invoices: [] }
       }),
-      fetchFortnoxData("/supplierinvoices", accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
+      fetchFortnoxData(`/supplierinvoices${dateFilter}`, accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
         log("error", endpoint, `Failed to fetch supplier invoices: ${err.message}`)
         return { SupplierInvoices: [] }
       }),
@@ -900,6 +901,13 @@ async function analyzeFortnoxCostLeaks(req, res) {
     }
 
     const analysis = analyzeCostLeaks(data)
+
+    // Add date range info to the analysis
+    analysis.dateRange = {
+      startDate: startDate || null,
+      endDate: endDate || null,
+      filtered: !!(startDate || endDate),
+    }
 
     log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
 
@@ -940,18 +948,6 @@ async function analyzeFortnoxCostLeaks(req, res) {
         log("error", endpoint, "AI enhancement failed:", aiError.message)
         analysis.aiError = aiError.message
       }
-    }
-
-    // Consume token after successful analysis
-    const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "single_source_analysis", {
-      integrationSources: ["fortnox"],
-      description: "Fortnox cost leak analysis",
-    })
-
-    if (consumeResult.success) {
-      log("log", endpoint, `Consumed ${tokenCost} token for user ${user.id}. Remaining: ${consumeResult.balanceAfter}`)
-      analysis.tokensUsed = tokenCost
-      analysis.tokensRemaining = consumeResult.balanceAfter
     }
 
     return res.json(analysis)

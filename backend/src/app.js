@@ -18,7 +18,8 @@ app.use((req, res, next) => {
   if (req.path === '/api/stripe/webhook') {
     next()
   } else {
-    express.json()(req, res, next)
+    // Increase limit to 50MB to handle large analysis data
+    express.json({ limit: '50mb' })(req, res, next)
   }
 })
 

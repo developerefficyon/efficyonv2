@@ -59,7 +59,6 @@ import {
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
-import { useTokens } from "@/lib/token-context"
 import { toast } from "sonner"
 import { formatCurrencyForIntegration } from "@/lib/currency"
 
@@ -77,7 +76,6 @@ interface Integration {
 
 export default function ToolDetailPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const { refreshTokenBalance } = useTokens()
   const router = useRouter()
   const params = useParams()
   const integrationId = params.id as string
@@ -101,6 +99,10 @@ export default function ToolDetailPage() {
     users?: any[]
     usageReports?: any
   }>({})
+  const [hubspotInfo, setHubspotInfo] = useState<{
+    users?: any[]
+    accountInfo?: any
+  }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
@@ -109,6 +111,22 @@ export default function ToolDetailPage() {
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(true)
   const [findingsFilter, setFindingsFilter] = useState<"all" | "high" | "medium" | "low">("all")
   const [findingsSearch, setFindingsSearch] = useState("")
+
+  // Date range for Fortnox analysis
+  const [fortnoxStartDate, setFortnoxStartDate] = useState<string>("")
+  const [fortnoxEndDate, setFortnoxEndDate] = useState<string>("")
+
+  // Inactivity threshold for MS365 and HubSpot (in days)
+  const [inactivityDays, setInactivityDays] = useState<number>(30)
+
+  // Analysis history state
+  const [analysisHistory, setAnalysisHistory] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [selectedHistoricalAnalysis, setSelectedHistoricalAnalysis] = useState<any>(null)
+  const [isLoadingHistoricalAnalysis, setIsLoadingHistoricalAnalysis] = useState(false)
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<"current" | "history">("current")
+  const [isSavingAnalysis, setIsSavingAnalysis] = useState(false)
+
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue"]))
@@ -173,6 +191,8 @@ export default function ToolDetailPage() {
       // Set default data tab based on integration type
       if (found.tool_name === "Microsoft365" || found.provider === "Microsoft365") {
         setActiveDataTab("licenses")
+      } else if (found.tool_name === "HubSpot" || found.provider === "HubSpot") {
+        setActiveDataTab("users")
       } else {
         setActiveDataTab("company")
       }
@@ -186,6 +206,11 @@ export default function ToolDetailPage() {
       // If it's Microsoft 365 and connected, load the information
       if (found.tool_name === "Microsoft365" && found.status === "connected") {
         void loadMicrosoft365Info(found)
+      }
+
+      // If it's HubSpot and connected, load the information
+      if (found.tool_name === "HubSpot" && found.status === "connected") {
+        void loadHubSpotInfo(found)
       }
     } catch (error) {
       console.error("Error loading integration:", error)
@@ -454,6 +479,140 @@ export default function ToolDetailPage() {
     }
   }
 
+  const loadHubSpotInfo = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setHubspotInfo({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [usersRes, accountRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/hubspot/users`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/hubspot/account`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      // Check if any response indicates token expiration
+      for (const response of [usersRes, accountRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your HubSpot integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+        try {
+          const data = await usersRes.value.json()
+          info.users = data.users || []
+        } catch (e) {
+          console.error("Error parsing HubSpot users:", e)
+        }
+      }
+
+      if (accountRes.status === "fulfilled" && accountRes.value.ok) {
+        try {
+          const data = await accountRes.value.json()
+          info.accountInfo = data
+        } catch (e) {
+          console.error("Error parsing HubSpot account info:", e)
+        }
+      }
+
+      setHubspotInfo(info)
+    } catch (error) {
+      console.error("Error loading HubSpot info:", error)
+      toast.error("Failed to load HubSpot information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const fetchHubSpotCostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        return
+      }
+
+      // Include inactivity threshold parameter
+      const params = new URLSearchParams()
+      params.append("inactivityDays", inactivityDays.toString())
+
+      const res = await fetch(`${apiBase}/api/integrations/hubspot/cost-leaks?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to analyze HubSpot cost leaks")
+      }
+
+      const data = await res.json()
+      const rawAnalysis = data.analysis || data
+
+      // Normalize HubSpot data structure to match UI expectations
+      const normalizedAnalysis = {
+        ...rawAnalysis,
+        // Create overallSummary from HubSpot's summary structure
+        overallSummary: {
+          totalFindings: rawAnalysis.summary?.issuesFound || 0,
+          totalPotentialSavings: rawAnalysis.summary?.potentialMonthlySavings || 0,
+          highSeverity: rawAnalysis.summary?.highSeverityIssues || 0,
+          mediumSeverity: rawAnalysis.summary?.mediumSeverityIssues || 0,
+          lowSeverity: rawAnalysis.summary?.lowSeverityIssues || 0,
+          healthScore: rawAnalysis.summary?.healthScore,
+          utilizationScore: rawAnalysis.summary?.utilizationScore,
+        },
+        // Keep findings at root level but also create supplierInvoiceAnalysis for UI compatibility
+        supplierInvoiceAnalysis: {
+          findings: rawAnalysis.findings || [],
+        },
+      }
+
+      setCostLeakAnalysis(normalizedAnalysis)
+      toast.success("Analysis complete", {
+        description: "HubSpot cost leak analysis has been generated"
+      })
+    } catch (error) {
+      console.error("Error fetching HubSpot cost leak analysis:", error)
+      toast.error("Failed to analyze HubSpot cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred"
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
   const fetchMicrosoft365CostLeakAnalysis = async () => {
     setIsLoadingAnalysis(true)
     try {
@@ -469,7 +628,11 @@ export default function ToolDetailPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks`, {
+      // Include inactivity threshold parameter
+      const params = new URLSearchParams()
+      params.append("inactivityDays", inactivityDays.toString())
+
+      const res = await fetch(`${apiBase}/api/integrations/microsoft365/cost-leaks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
@@ -495,27 +658,14 @@ export default function ToolDetailPage() {
           return
         }
 
-        // Check if insufficient tokens
-        if (res.status === 402 || errorData.error === "INSUFFICIENT_TOKENS") {
-          toast.error("Insufficient tokens", {
-            description: `You need ${errorData.required || 1} token(s) but only have ${errorData.available || 0}. Please upgrade your plan.`,
-            duration: 10000,
-          })
-          setIsLoadingAnalysis(false)
-          return
-        }
-
         throw new Error(errorData.error || "Failed to analyze cost leaks")
       }
 
       const data = await res.json()
       setCostLeakAnalysis(data)
 
-      // Refresh token balance after successful analysis (tokens were consumed)
-      await refreshTokenBalance()
-
       toast.success("Analysis complete", {
-        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities (${inactivityDays} day threshold)`,
       })
     } catch (error) {
       console.error("Error analyzing Microsoft 365 cost leaks:", error)
@@ -564,7 +714,18 @@ export default function ToolDetailPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/fortnox/cost-leaks`, {
+      // Build URL with optional date range parameters
+      const params = new URLSearchParams()
+      if (fortnoxStartDate) {
+        params.append("startDate", fortnoxStartDate)
+      }
+      if (fortnoxEndDate) {
+        params.append("endDate", fortnoxEndDate)
+      }
+      const queryString = params.toString()
+      const url = `${apiBase}/api/integrations/fortnox/cost-leaks${queryString ? `?${queryString}` : ""}`
+
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
@@ -592,27 +753,25 @@ export default function ToolDetailPage() {
           return
         }
 
-        // Check if insufficient tokens
-        if (res.status === 402 || errorData.error === "INSUFFICIENT_TOKENS") {
-          toast.error("Insufficient tokens", {
-            description: `You need ${errorData.required || 1} token(s) but only have ${errorData.available || 0}. Please upgrade your plan.`,
-            duration: 10000,
-          })
-          setIsLoadingAnalysis(false)
-          return
-        }
-
         throw new Error(errorMessage)
       }
 
       const data = await res.json()
       setCostLeakAnalysis(data)
 
-      // Refresh token balance after successful analysis (tokens were consumed)
-      await refreshTokenBalance()
+      // Build description with date range info
+      let description = `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`
+      if (fortnoxStartDate || fortnoxEndDate) {
+        const dateInfo = fortnoxStartDate && fortnoxEndDate
+          ? `(${fortnoxStartDate} to ${fortnoxEndDate})`
+          : fortnoxStartDate
+            ? `(from ${fortnoxStartDate})`
+            : `(until ${fortnoxEndDate})`
+        description += ` ${dateInfo}`
+      }
 
       toast.success("Analysis complete", {
-        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities`,
+        description,
       })
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
@@ -630,16 +789,169 @@ export default function ToolDetailPage() {
 
     if (integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365") {
       fetchMicrosoft365CostLeakAnalysis()
+    } else if (integration.tool_name === "HubSpot" || integration.provider === "HubSpot") {
+      fetchHubSpotCostLeakAnalysis()
     } else {
       fetchCostLeakAnalysis()
     }
   }
 
+  // Fetch analysis history for this integration
+  const fetchAnalysisHistory = async () => {
+    if (!integration) return
+
+    setIsLoadingHistory(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) return
+
+      const provider = integration.tool_name || integration.provider
+      const res = await fetch(
+        `${apiBase}/api/analysis-history?integrationId=${integration.id}&provider=${provider}&limit=50`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      )
+
+      if (res.ok) {
+        const data = await res.json()
+        setAnalysisHistory(data.analyses || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch analysis history:", error)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  // Save current analysis to history
+  const saveAnalysisToHistory = async () => {
+    if (!integration || !costLeakAnalysis) return
+
+    setIsSavingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired")
+        return
+      }
+
+      const provider = integration.tool_name || integration.provider
+      const isFortnoxProvider = provider === "Fortnox"
+
+      // Build parameters based on provider
+      const parameters = isFortnoxProvider
+        ? { startDate: fortnoxStartDate || null, endDate: fortnoxEndDate || null }
+        : { inactivityDays }
+
+      const res = await fetch(`${apiBase}/api/analysis-history`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrationId: integration.id,
+          provider,
+          parameters,
+          analysisData: costLeakAnalysis,
+        }),
+      })
+
+      if (res.ok) {
+        toast.success("Analysis saved to history", {
+          description: "You can view this analysis later in the History tab",
+        })
+        // Refresh history list
+        fetchAnalysisHistory()
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to save analysis")
+      }
+    } catch (error) {
+      console.error("Failed to save analysis:", error)
+      toast.error("Failed to save analysis", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+    } finally {
+      setIsSavingAnalysis(false)
+    }
+  }
+
+  // Load a historical analysis
+  const loadHistoricalAnalysis = async (analysisId: string) => {
+    setIsLoadingHistoricalAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) return
+
+      const res = await fetch(`${apiBase}/api/analysis-history/${analysisId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setSelectedHistoricalAnalysis(data.analysis)
+      } else {
+        toast.error("Failed to load analysis")
+      }
+    } catch (error) {
+      console.error("Failed to load historical analysis:", error)
+      toast.error("Failed to load analysis")
+    } finally {
+      setIsLoadingHistoricalAnalysis(false)
+    }
+  }
+
+  // Delete a historical analysis
+  const deleteHistoricalAnalysis = async (analysisId: string) => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) return
+
+      const res = await fetch(`${apiBase}/api/analysis-history/${analysisId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (res.ok) {
+        toast.success("Analysis deleted from history")
+        // Refresh history list
+        fetchAnalysisHistory()
+        // Clear selected if it was the deleted one
+        if (selectedHistoricalAnalysis?.id === analysisId) {
+          setSelectedHistoricalAnalysis(null)
+        }
+      } else {
+        toast.error("Failed to delete analysis")
+      }
+    } catch (error) {
+      console.error("Failed to delete analysis:", error)
+      toast.error("Failed to delete analysis")
+    }
+  }
+
+  // Load history when integration changes or tab switches to history
+  useEffect(() => {
+    if (integration && activeAnalysisTab === "history") {
+      fetchAnalysisHistory()
+    }
+  }, [integration?.id, activeAnalysisTab])
+
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    // Support both Fortnox (supplierInvoiceAnalysis) and Microsoft 365 (licenseAnalysis)
+    // Support Fortnox (supplierInvoiceAnalysis), Microsoft 365 (licenseAnalysis), and HubSpot (findings)
     const findings_source = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
                            costLeakAnalysis?.licenseAnalysis?.findings ||
+                           costLeakAnalysis?.findings ||
                            []
 
     if (findings_source.length === 0) return []
@@ -673,25 +985,38 @@ export default function ToolDetailPage() {
   const groupFindings = (findings: any[]) => {
     // Dynamic groups based on integration type
     const isMicrosoft365Analysis = costLeakAnalysis?.licenseAnalysis?.findings?.length > 0
+    const isHubSpotAnalysis = costLeakAnalysis?.findings?.length > 0 && costLeakAnalysis?.summary?.healthScore !== undefined
 
-    const groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } } = isMicrosoft365Analysis
-      ? {
-          orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
-          inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
-          overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
-          unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
-          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-        }
-      : {
-          duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
-          anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
-          overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
-          other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
-        }
+    let groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } }
+
+    if (isMicrosoft365Analysis) {
+      groups = {
+        orphaned: { title: "Orphaned Licenses", icon: Users, findings: [], color: "red" },
+        inactive: { title: "Inactive Users", icon: Clock, findings: [], color: "orange" },
+        overprovisioned: { title: "Over-Provisioned Licenses", icon: TrendingDown, findings: [], color: "amber" },
+        unused: { title: "Unused Add-ons", icon: Package, findings: [], color: "slate" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    } else if (isHubSpotAnalysis) {
+      groups = {
+        inactive: { title: "Inactive Seats", icon: Clock, findings: [], color: "orange" },
+        utilization: { title: "Low Utilization", icon: TrendingDown, findings: [], color: "amber" },
+        unassigned: { title: "Unassigned Roles", icon: Users, findings: [], color: "red" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    } else {
+      groups = {
+        duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
+        anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
+        overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
+    }
 
     // Get the original findings source for index lookup
     const findingsSource = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
                           costLeakAnalysis?.licenseAnalysis?.findings ||
+                          costLeakAnalysis?.findings ||
                           []
 
     findings.forEach((finding: any, idx: number) => {
@@ -708,6 +1033,17 @@ export default function ToolDetailPage() {
           groups.overprovisioned.findings.push(findingWithIdx)
         } else if (finding.type === "unused_addon" || finding.title?.toLowerCase().includes("unused") || finding.title?.toLowerCase().includes("add-on")) {
           groups.unused.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
+      } else if (isHubSpotAnalysis) {
+        // HubSpot grouping
+        if (finding.type === "inactive_seats" || finding.title?.toLowerCase().includes("inactive")) {
+          groups.inactive.findings.push(findingWithIdx)
+        } else if (finding.type === "low_utilization" || finding.type === "moderate_utilization" || finding.title?.toLowerCase().includes("utilization")) {
+          groups.utilization.findings.push(findingWithIdx)
+        } else if (finding.type === "unassigned_roles" || finding.title?.toLowerCase().includes("role") || finding.title?.toLowerCase().includes("unassigned")) {
+          groups.unassigned.findings.push(findingWithIdx)
         } else {
           groups.other.findings.push(findingWithIdx)
         }
@@ -1255,7 +1591,8 @@ export default function ToolDetailPage() {
 
   const isFortnox = integration.tool_name === "Fortnox" || integration.provider === "Fortnox"
   const isMicrosoft365 = integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365"
-  const hasFullUI = isFortnox || isMicrosoft365
+  const isHubSpot = integration.tool_name === "HubSpot" || integration.provider === "HubSpot"
+  const hasFullUI = isFortnox || isMicrosoft365 || isHubSpot
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -1292,22 +1629,35 @@ export default function ToolDetailPage() {
       {hasFullUI && integration.status === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
-            <TabsTrigger 
-              value="analysis" 
+            <TabsTrigger
+              value="analysis"
               className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
             >
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Cost Analysis
             </TabsTrigger>
-            <TabsTrigger 
-              value="overview" 
+            <TabsTrigger
+              value="history"
+              className="data-[state=active]:bg-purple-600/30 data-[state=active]:text-purple-400 data-[state=active]:border-purple-500/50 text-gray-300 text-xs sm:text-sm"
+              onClick={() => setActiveAnalysisTab("history")}
+            >
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              History
+              {analysisHistory.length > 0 && (
+                <Badge className="ml-1 bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs px-1.5">
+                  {analysisHistory.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="overview"
               className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
             >
               <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger 
-              value="data" 
+            <TabsTrigger
+              value="data"
               className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
             >
               <Database className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -1339,48 +1689,129 @@ export default function ToolDetailPage() {
                       AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                    {costLeakAnalysis && (
-                      <>
-                        <Button
-                          onClick={openPdfPreview}
-                          variant="outline"
-                          size="sm"
-                          className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
-                          title="Export PDF"
-                        >
-                          <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
-                          <span className="hidden sm:inline">Export PDF</span>
-                        </Button>
-                        <Button
-                          onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
-                          variant="outline"
-                          size="sm"
-                          className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
-                          title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
-                        >
-                          {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                      </>
+                </div>
+
+                {/* Analysis Parameters */}
+                <div className="px-4 sm:px-6 pb-4 border-t border-white/5 pt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 justify-between">
+                    {/* Fortnox: Date Range */}
+                    {isFortnox && (
+                      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-400">Start Date</label>
+                          <Input
+                            type="date"
+                            value={fortnoxStartDate}
+                            onChange={(e) => setFortnoxStartDate(e.target.value)}
+                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            placeholder="Start date"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-400">End Date</label>
+                          <Input
+                            type="date"
+                            value={fortnoxEndDate}
+                            onChange={(e) => setFortnoxEndDate(e.target.value)}
+                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            placeholder="End date"
+                          />
+                        </div>
+                        {(fortnoxStartDate || fortnoxEndDate) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setFortnoxStartDate("")
+                              setFortnoxEndDate("")
+                            }}
+                            className="text-gray-400 hover:text-white h-9 self-end"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
                     )}
-                    <Button
-                      onClick={handleAnalyzeCostLeaks}
-                      disabled={isLoadingAnalysis}
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
-                    >
-                      {isLoadingAnalysis ? (
+
+                    {/* MS365/HubSpot: Inactivity Threshold */}
+                    {(isMicrosoft365 || isHubSpot) && (
+                      <div className="flex flex-col gap-1 w-full sm:w-auto">
+                        <label className="text-xs text-gray-400">Inactivity Threshold</label>
+                        <select
+                          value={inactivityDays}
+                          onChange={(e) => setInactivityDays(parseInt(e.target.value))}
+                          className="h-9 px-3 rounded-md bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        >
+                          <option value={7}>7 days</option>
+                          <option value={14}>14 days</option>
+                          <option value={30}>30 days (default)</option>
+                          <option value={60}>60 days</option>
+                          <option value={90}>90 days</option>
+                        </select>
+                        <p className="text-xs text-gray-500">Users inactive for more than this period</p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end ml-auto">
+                      {costLeakAnalysis && (
                         <>
-                          <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
-                          <span className="hidden sm:inline">Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4 sm:mr-2" />
-                          <span className="hidden sm:inline">{costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}</span>
-                          <span className="sm:hidden">{costLeakAnalysis ? "Re-run" : "Analyze"}</span>
+                          <Button
+                            onClick={saveAnalysisToHistory}
+                            disabled={isSavingAnalysis}
+                            variant="outline"
+                            size="sm"
+                            className="group relative border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400/50 hover:text-purple-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-purple-500/20 h-8 sm:h-9 px-2 sm:px-3"
+                            title="Save to History"
+                          >
+                            {isSavingAnalysis ? (
+                              <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                            ) : (
+                              <Clock className="w-4 h-4 sm:mr-2" />
+                            )}
+                            <span className="hidden sm:inline">{isSavingAnalysis ? "Saving..." : "Save to History"}</span>
+                          </Button>
+                          <Button
+                            onClick={openPdfPreview}
+                            variant="outline"
+                            size="sm"
+                            className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
+                            title="Export PDF"
+                          >
+                            <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
+                            <span className="hidden sm:inline">Export PDF</span>
+                          </Button>
+                          <Button
+                            onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
+                            variant="outline"
+                            size="sm"
+                            className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
+                            title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
+                          >
+                            {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
                         </>
                       )}
-                    </Button>
+                      <Button
+                        onClick={handleAnalyzeCostLeaks}
+                        disabled={isLoadingAnalysis}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
+                      >
+                        {isLoadingAnalysis ? (
+                          <>
+                            <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                            <span className="hidden sm:inline">Analyzing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Search className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">{costLeakAnalysis ? "Re-analyze" : "Analyze Cost Leaks"}</span>
+                            <span className="sm:hidden">{costLeakAnalysis ? "Re-run" : "Analyze"}</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -1482,7 +1913,26 @@ export default function ToolDetailPage() {
                         </div>
                         <div className="space-y-4 flex-1">
                           <div>
-                            <h3 className="text-white font-semibold text-lg mb-2">AI Analysis Summary</h3>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-white font-semibold text-lg">AI Analysis Summary</h3>
+                              {/* Show analysis parameters */}
+                              {costLeakAnalysis.dateRange?.filtered && (
+                                <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {costLeakAnalysis.dateRange.startDate && costLeakAnalysis.dateRange.endDate
+                                    ? `${costLeakAnalysis.dateRange.startDate} - ${costLeakAnalysis.dateRange.endDate}`
+                                    : costLeakAnalysis.dateRange.startDate
+                                      ? `From ${costLeakAnalysis.dateRange.startDate}`
+                                      : `Until ${costLeakAnalysis.dateRange.endDate}`}
+                                </Badge>
+                              )}
+                              {costLeakAnalysis.inactivityThreshold && (
+                                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
+                                  <Timer className="w-3 h-3 mr-1" />
+                                  {costLeakAnalysis.inactivityThreshold} days inactive
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-gray-300 text-sm leading-relaxed">
                               We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential cost leaks
                               that could save your company approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.
@@ -1523,14 +1973,15 @@ export default function ToolDetailPage() {
                 )}
 
                 {/* Findings Section */}
-                {costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 && (
+                {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 ||
+                  costLeakAnalysis.licenseAnalysis?.findings?.length > 0) && (
                   <Card className="bg-slate-900/80 border-slate-700/50">
                     <CardHeader className="pb-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <CardTitle className="text-white text-lg">Cost Leak Findings</CardTitle>
                           <Badge variant="outline" className="border-slate-600 text-gray-400">
-                            {activeFindings.length} of {costLeakAnalysis.supplierInvoiceAnalysis.findings.length}
+                            {activeFindings.length} of {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || costLeakAnalysis.licenseAnalysis?.findings?.length || 0)}
                           </Badge>
                         </div>
 
@@ -1813,8 +2264,9 @@ export default function ToolDetailPage() {
                 )}
 
                 {/* No Findings State */}
-                {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings ||
-                  costLeakAnalysis.supplierInvoiceAnalysis.findings.length === 0) && (
+                {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length &&
+                  !costLeakAnalysis.licenseAnalysis?.findings?.length &&
+                  !costLeakAnalysis.findings?.length) && (
                   <Card className="bg-gradient-to-br from-emerald-950/50 to-slate-900 border-emerald-800/30">
                     <CardContent className="py-16 text-center">
                       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-6">
@@ -1878,6 +2330,253 @@ export default function ToolDetailPage() {
                   <p className="text-gray-400 max-w-md mx-auto">
                     Our AI is scanning your invoices for cost optimization opportunities. This usually takes a few seconds...
                   </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="mt-0 space-y-6">
+            <Card className="bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg shadow-purple-500/25">
+                      <Clock className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white text-xl font-bold">Analysis History</CardTitle>
+                      <p className="text-gray-400 text-sm">View and compare past cost leak analyses</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={fetchAnalysisHistory}
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoadingHistory}
+                    className="border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+                  >
+                    {isLoadingHistory ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+
+              <CardContent className="relative">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                  </div>
+                ) : analysisHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-400 mb-2">No Analysis History</h3>
+                    <p className="text-gray-500 text-sm mb-4">
+                      Run a cost leak analysis and save it to start building your history.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {analysisHistory.map((analysis) => (
+                      <div
+                        key={analysis.id}
+                        className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                          selectedHistoricalAnalysis?.id === analysis.id
+                            ? "bg-purple-500/20 border-purple-500/50"
+                            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                        }`}
+                        onClick={() => loadHistoricalAnalysis(analysis.id)}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-white font-medium">
+                                {new Date(analysis.created_at).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                              <span className="text-gray-500 text-sm">
+                                {new Date(analysis.created_at).toLocaleTimeString("en-US", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {analysis.parameters?.startDate && (
+                                <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                                  {analysis.parameters.startDate} - {analysis.parameters.endDate || "now"}
+                                </Badge>
+                              )}
+                              {analysis.parameters?.inactivityDays && (
+                                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
+                                  {analysis.parameters.inactivityDays} days
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-gray-400">
+                                <Target className="w-4 h-4 inline mr-1" />
+                                {analysis.summary?.totalFindings || 0} findings
+                              </span>
+                              <span className="text-emerald-400">
+                                <DollarSign className="w-4 h-4 inline mr-1" />
+                                ${(analysis.summary?.totalPotentialSavings || 0).toLocaleString()}
+                              </span>
+                              {analysis.summary?.highSeverity > 0 && (
+                                <span className="text-red-400">
+                                  <ShieldAlert className="w-4 h-4 inline mr-1" />
+                                  {analysis.summary.highSeverity} high
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (confirm("Delete this analysis from history?")) {
+                                deleteHistoricalAnalysis(analysis.id)
+                              }
+                            }}
+                            className="text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Selected Historical Analysis Display */}
+            {selectedHistoricalAnalysis && (
+              <Card className="bg-black/80 backdrop-blur-xl border-purple-500/30">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-white flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-purple-400" />
+                        Historical Analysis Details
+                      </CardTitle>
+                      <p className="text-gray-400 text-sm mt-1">
+                        From {new Date(selectedHistoricalAnalysis.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedHistoricalAnalysis(null)}
+                      className="border-white/10 text-gray-400 hover:text-white"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingHistoricalAnalysis ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Summary */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                          <p className="text-xs text-gray-500 mb-1">Total Findings</p>
+                          <p className="text-xl font-bold text-white">{selectedHistoricalAnalysis.summary?.totalFindings || 0}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <p className="text-xs text-emerald-400/70 mb-1">Potential Savings</p>
+                          <p className="text-xl font-bold text-emerald-400">
+                            ${(selectedHistoricalAnalysis.summary?.totalPotentialSavings || 0).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <p className="text-xs text-red-400/70 mb-1">High Severity</p>
+                          <p className="text-xl font-bold text-red-400">{selectedHistoricalAnalysis.summary?.highSeverity || 0}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <p className="text-xs text-amber-400/70 mb-1">Medium Severity</p>
+                          <p className="text-xl font-bold text-amber-400">{selectedHistoricalAnalysis.summary?.mediumSeverity || 0}</p>
+                        </div>
+                      </div>
+
+                      {/* Parameters Used */}
+                      {selectedHistoricalAnalysis.parameters && Object.keys(selectedHistoricalAnalysis.parameters).length > 0 && (
+                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                          <p className="text-xs text-gray-500 mb-2">Analysis Parameters</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedHistoricalAnalysis.parameters.startDate && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                                Start: {selectedHistoricalAnalysis.parameters.startDate}
+                              </Badge>
+                            )}
+                            {selectedHistoricalAnalysis.parameters.endDate && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                                End: {selectedHistoricalAnalysis.parameters.endDate}
+                              </Badge>
+                            )}
+                            {selectedHistoricalAnalysis.parameters.inactivityDays && (
+                              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                                Inactivity: {selectedHistoricalAnalysis.parameters.inactivityDays} days
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Findings Preview */}
+                      {(() => {
+                        const findings = selectedHistoricalAnalysis.analysis_data?.supplierInvoiceAnalysis?.findings ||
+                                        selectedHistoricalAnalysis.analysis_data?.licenseAnalysis?.findings ||
+                                        selectedHistoricalAnalysis.analysis_data?.findings || []
+                        if (findings.length === 0) return null
+
+                        return (
+                          <div>
+                            <p className="text-sm text-gray-400 mb-2">Top Findings</p>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {findings.slice(0, 5).map((finding: any, idx: number) => (
+                                <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                                  <div className="flex items-start gap-2">
+                                    <Badge
+                                      className={
+                                        finding.severity === "high"
+                                          ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                          : finding.severity === "medium"
+                                            ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                                            : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                      }
+                                    >
+                                      {finding.severity}
+                                    </Badge>
+                                    <div>
+                                      <p className="text-white text-sm font-medium">{finding.title}</p>
+                                      <p className="text-gray-400 text-xs mt-1">{finding.description}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {findings.length > 5 && (
+                                <p className="text-center text-gray-500 text-sm py-2">
+                                  +{findings.length - 5} more findings
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -2141,6 +2840,39 @@ export default function ToolDetailPage() {
                           </div>
                         )}
 
+                        {/* Data Tab Navigation - HubSpot */}
+                        {isHubSpot && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("users")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "users"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Users</span>
+                              {hubspotInfo.users && hubspotInfo.users.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {hubspotInfo.users.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("account")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "account"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Settings className="w-4 h-4" />
+                              <span className="hidden sm:inline">Account</span>
+                            </button>
+                          </div>
+                        )}
+
                         {/* Data Tab Navigation - Fortnox */}
                         {isFortnox && (
                         <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
@@ -2379,6 +3111,124 @@ export default function ToolDetailPage() {
 
                       {/* Show message if no M365 data */}
                       {isMicrosoft365 && Object.keys(microsoft365Info).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* HubSpot Users Tab */}
+                      {isHubSpot && activeDataTab === "users" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            HubSpot Users
+                            {hubspotInfo.users && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {hubspotInfo.users.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {hubspotInfo.users && hubspotInfo.users.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Email</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Role</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Last Login</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(hubspotInfo.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">
+                                        {user.email || "Unknown"}
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400">
+                                        {user.roleId || user.role || "N/A"}
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={user.superAdmin
+                                          ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                                          : "bg-green-500/20 text-green-400 border-green-500/30"
+                                        }>
+                                          {user.superAdmin ? "Super Admin" : "Active"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {user.lastLoginAt
+                                          ? new Date(user.lastLoginAt).toLocaleDateString()
+                                          : "Never"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {hubspotInfo.users.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {hubspotInfo.users.length} users. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              No users found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* HubSpot Account Tab */}
+                      {isHubSpot && activeDataTab === "account" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Settings className="w-4 h-4 text-cyan-400" />
+                            Account Information
+                          </h3>
+                          {hubspotInfo.accountInfo ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {hubspotInfo.accountInfo.portalId && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Portal ID</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.portalId}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.accountType && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Account Type</p>
+                                  <p className="text-white font-medium capitalize">{hubspotInfo.accountInfo.accountType}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.timeZone && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Timezone</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.timeZone}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.accountInfo.currency && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Currency</p>
+                                  <p className="text-white font-medium">{hubspotInfo.accountInfo.currency}</p>
+                                </div>
+                              )}
+                              {hubspotInfo.users && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Seats</p>
+                                  <p className="text-white font-medium">{hubspotInfo.users.length}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              Account information not available.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no HubSpot data */}
+                      {isHubSpot && Object.keys(hubspotInfo).length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
                         </div>

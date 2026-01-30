@@ -1,17 +1,26 @@
 /**
  * Cross-Platform Comparison Analysis Service
- * Analyzes data from Fortnox (financial) and Microsoft 365 (usage) to provide unified insights
+ * Analyzes data from Fortnox (financial), Microsoft 365 (usage), and HubSpot (CRM) to provide unified insights
  */
 
 const { M365_LICENSE_COSTS } = require('./microsoft365CostLeakAnalysis')
 
+// Estimated HubSpot seat costs by tier (monthly)
+const HUBSPOT_SEAT_COSTS = {
+  free: 0,
+  starter: 25,
+  professional: 90,
+  enterprise: 150,
+}
+
 /**
- * Calculate cross-platform metrics combining Fortnox and M365 data
+ * Calculate cross-platform metrics combining Fortnox, M365, and HubSpot data
  * @param {Object} fortnoxData - Fortnox data including supplier invoices and cost leaks
  * @param {Object} m365Data - Microsoft 365 data including licenses, users, and cost leaks
+ * @param {Object} hubspotData - HubSpot data including users, account info, and cost leaks (optional)
  * @returns {Object} Cross-platform metrics and insights
  */
-function calculateCrossplatformMetrics(fortnoxData, m365Data) {
+function calculateCrossplatformMetrics(fortnoxData, m365Data, hubspotData = null) {
   const metrics = {
     timestamp: new Date().toISOString(),
     costMetrics: {},
@@ -19,7 +28,13 @@ function calculateCrossplatformMetrics(fortnoxData, m365Data) {
     efficiencyMetrics: {},
     gapAnalysis: {},
     trends: [],
+    platformsIncluded: [],
   }
+
+  // Track which platforms are included
+  if (fortnoxData) metrics.platformsIncluded.push('Fortnox')
+  if (m365Data) metrics.platformsIncluded.push('Microsoft 365')
+  if (hubspotData) metrics.platformsIncluded.push('HubSpot')
 
   // Extract relevant data
   const supplierInvoices = fortnoxData?.supplierInvoices || []
@@ -27,6 +42,8 @@ function calculateCrossplatformMetrics(fortnoxData, m365Data) {
   const m365Licenses = m365Data?.licenses || []
   const m365Users = m365Data?.users || []
   const m365CostLeaks = m365Data?.costLeaks || {}
+  const hubspotUsers = hubspotData?.users || []
+  const hubspotCostLeaks = hubspotData?.costLeaks || {}
 
   // 1. Calculate Monthly SaaS Spend from Fortnox
   const saasSpend = calculateMonthlySaaSSpend(supplierInvoices, fortnoxCostLeaks)
@@ -37,28 +54,145 @@ function calculateCrossplatformMetrics(fortnoxData, m365Data) {
   metrics.costMetrics.monthlyM365Cost = m365Costs.totalMonthlyCost
   metrics.costMetrics.licenseBreakdown = m365Costs.breakdown
 
-  // 3. Calculate Total Software Spend
-  metrics.costMetrics.totalMonthlySoftwareSpend = saasSpend.total + m365Costs.totalMonthlyCost
+  // 3. Calculate HubSpot Seat Costs
+  const hubspotCosts = calculateHubSpotSeatCosts(hubspotUsers, hubspotCostLeaks)
+  metrics.costMetrics.monthlyHubSpotCost = hubspotCosts.totalMonthlyCost
+  metrics.costMetrics.hubspotBreakdown = hubspotCosts
 
-  // 4. Calculate Activity Metrics from M365
-  const activityStats = calculateActivityMetrics(m365Users)
-  metrics.activityMetrics = activityStats
+  // 4. Calculate Total Software Spend
+  metrics.costMetrics.totalMonthlySoftwareSpend =
+    saasSpend.total + m365Costs.totalMonthlyCost + hubspotCosts.totalMonthlyCost
 
-  // 5. Calculate Efficiency Metrics
+  // 5. Calculate Activity Metrics from M365 and HubSpot
+  const m365ActivityStats = calculateActivityMetrics(m365Users)
+  const hubspotActivityStats = calculateHubSpotActivityMetrics(hubspotUsers, hubspotCostLeaks)
+
+  // Combine activity metrics
+  metrics.activityMetrics = {
+    ...m365ActivityStats,
+    hubspot: hubspotActivityStats,
+    combinedActiveUsers: m365ActivityStats.activeUsers + hubspotActivityStats.activeUsers,
+    combinedInactiveUsers: m365ActivityStats.inactiveUsers + hubspotActivityStats.inactiveUsers,
+    combinedTotalUsers: m365ActivityStats.totalUsers + hubspotActivityStats.totalUsers,
+  }
+
+  // 6. Calculate Efficiency Metrics
   metrics.efficiencyMetrics = calculateEfficiencyMetrics(
     metrics.costMetrics,
-    metrics.activityMetrics
+    metrics.activityMetrics,
+    hubspotCostLeaks
   )
 
-  // 6. Gap Analysis - Cost vs Activity
+  // 7. Gap Analysis - Cost vs Activity
   metrics.gapAnalysis = analyzeActivityGap(
     metrics.costMetrics,
     metrics.activityMetrics,
     fortnoxCostLeaks,
-    m365CostLeaks
+    m365CostLeaks,
+    hubspotCostLeaks
   )
 
   return metrics
+}
+
+/**
+ * Calculate HubSpot seat costs based on users and utilization
+ */
+function calculateHubSpotSeatCosts(users, costLeaks) {
+  const result = {
+    totalMonthlyCost: 0,
+    totalSeats: users?.length || 0,
+    activeSeats: 0,
+    inactiveSeats: 0,
+    utilizationRate: 0,
+    estimatedTier: 'professional', // Default assumption
+    wastedCost: 0,
+  }
+
+  if (!users || users.length === 0) {
+    return result
+  }
+
+  // Get utilization data from cost leaks analysis if available
+  const utilizationData = costLeaks?.details?.utilization || {}
+  result.activeSeats = utilizationData.activeUsers || 0
+  result.inactiveSeats = utilizationData.inactiveUsers || 0
+  result.utilizationRate = utilizationData.utilizationScore || 0
+
+  // If no utilization data, estimate from user count
+  if (result.activeSeats === 0 && users.length > 0) {
+    // Assume 70% active by default
+    result.activeSeats = Math.round(users.length * 0.7)
+    result.inactiveSeats = users.length - result.activeSeats
+    result.utilizationRate = 70
+  }
+
+  // Estimate tier based on user count
+  if (users.length > 50) {
+    result.estimatedTier = 'enterprise'
+  } else if (users.length > 10) {
+    result.estimatedTier = 'professional'
+  } else if (users.length > 2) {
+    result.estimatedTier = 'starter'
+  } else {
+    result.estimatedTier = 'free'
+  }
+
+  // Calculate estimated monthly cost
+  const seatCost = HUBSPOT_SEAT_COSTS[result.estimatedTier] || HUBSPOT_SEAT_COSTS.professional
+  result.totalMonthlyCost = users.length * seatCost
+
+  // Calculate wasted cost from inactive seats
+  result.wastedCost = result.inactiveSeats * seatCost
+
+  return result
+}
+
+/**
+ * Calculate HubSpot activity metrics
+ */
+function calculateHubSpotActivityMetrics(users, costLeaks) {
+  const result = {
+    totalUsers: users?.length || 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    activityRate: 0,
+    utilizationScore: 0,
+  }
+
+  if (!users || users.length === 0) {
+    return result
+  }
+
+  // Use cost leaks analysis data if available
+  const utilizationData = costLeaks?.details?.utilization || {}
+
+  if (utilizationData.activeUsers !== undefined) {
+    result.activeUsers = utilizationData.activeUsers
+    result.inactiveUsers = utilizationData.inactiveUsers
+    result.utilizationScore = utilizationData.utilizationScore
+    result.activityRate = ((result.activeUsers / result.totalUsers) * 100).toFixed(1)
+  } else {
+    // Estimate activity from user data
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+    users.forEach((user) => {
+      const lastActivity = user.lastLoginAt || user.updatedAt
+      if (lastActivity && new Date(lastActivity) >= thirtyDaysAgo) {
+        result.activeUsers++
+      } else {
+        result.inactiveUsers++
+      }
+    })
+
+    result.activityRate = result.totalUsers > 0
+      ? ((result.activeUsers / result.totalUsers) * 100).toFixed(1)
+      : 0
+    result.utilizationScore = parseFloat(result.activityRate)
+  }
+
+  return result
 }
 
 /**
@@ -251,19 +385,20 @@ function calculateActivityMetrics(users) {
 /**
  * Calculate efficiency metrics combining cost and activity data
  */
-function calculateEfficiencyMetrics(costMetrics, activityMetrics) {
+function calculateEfficiencyMetrics(costMetrics, activityMetrics, hubspotCostLeaks = {}) {
   const result = {
     costPerActiveUser: 0,
     costPerTotalUser: 0,
     licenseEfficiencyScore: 0,
     wastedSpendEstimate: 0,
     recommendations: [],
+    platformBreakdown: {},
   }
 
   const totalSoftwareSpend = costMetrics.totalMonthlySoftwareSpend || 0
-  const activeUsers = activityMetrics.activeUsers || 0
-  const totalUsers = activityMetrics.totalUsers || 0
-  const inactiveUsers = activityMetrics.inactiveUsers || 0
+  const activeUsers = activityMetrics.combinedActiveUsers || activityMetrics.activeUsers || 0
+  const totalUsers = activityMetrics.combinedTotalUsers || activityMetrics.totalUsers || 0
+  const inactiveUsers = activityMetrics.combinedInactiveUsers || activityMetrics.inactiveUsers || 0
 
   // Cost per active user
   if (activeUsers > 0) {
@@ -276,16 +411,39 @@ function calculateEfficiencyMetrics(costMetrics, activityMetrics) {
   }
 
   // License efficiency score (0-100)
-  // Based on activity rate and license utilization
-  const activityRate = parseFloat(activityMetrics.activityRate) || 0
+  // Based on activity rate and license utilization from all platforms
+  const m365ActivityRate = parseFloat(activityMetrics.activityRate) || 0
+  const hubspotActivityRate = parseFloat(activityMetrics.hubspot?.activityRate) || 0
+  const combinedActivityRate = totalUsers > 0 ? ((activeUsers / totalUsers) * 100) : 0
+
   const licenseUtil = costMetrics.licenseBreakdown?.reduce((sum, l) => sum + parseFloat(l.utilization || 0), 0) /
                       (costMetrics.licenseBreakdown?.length || 1) || 0
-  result.licenseEfficiencyScore = Math.round((activityRate * 0.6) + (licenseUtil * 0.4))
+  const hubspotUtil = costMetrics.hubspotBreakdown?.utilizationRate || 0
+
+  // Weighted efficiency score
+  const avgUtilization = (licenseUtil + hubspotUtil) / 2
+  result.licenseEfficiencyScore = Math.round((combinedActivityRate * 0.5) + (avgUtilization * 0.5))
 
   // Estimated wasted spend (inactive users * average cost per user)
-  if (inactiveUsers > 0 && totalUsers > 0) {
-    const avgCostPerUser = totalSoftwareSpend / totalUsers
-    result.wastedSpendEstimate = (inactiveUsers * avgCostPerUser).toFixed(2)
+  const m365WastedSpend = activityMetrics.inactiveUsers > 0 && activityMetrics.totalUsers > 0
+    ? (activityMetrics.inactiveUsers * (costMetrics.monthlyM365Cost || 0) / activityMetrics.totalUsers)
+    : 0
+  const hubspotWastedSpend = costMetrics.hubspotBreakdown?.wastedCost || 0
+
+  result.wastedSpendEstimate = (m365WastedSpend + hubspotWastedSpend).toFixed(2)
+
+  // Platform breakdown
+  result.platformBreakdown = {
+    microsoft365: {
+      cost: costMetrics.monthlyM365Cost || 0,
+      activeUsers: activityMetrics.activeUsers || 0,
+      activityRate: m365ActivityRate,
+    },
+    hubspot: {
+      cost: costMetrics.monthlyHubSpotCost || 0,
+      activeUsers: activityMetrics.hubspot?.activeUsers || 0,
+      activityRate: hubspotActivityRate,
+    },
   }
 
   // Generate recommendations based on metrics
@@ -293,16 +451,27 @@ function calculateEfficiencyMetrics(costMetrics, activityMetrics) {
     result.recommendations.push({
       priority: 'high',
       title: 'Low License Efficiency',
-      description: `Your license efficiency score is ${result.licenseEfficiencyScore}%. Review inactive users and unused licenses.`,
+      description: `Your license efficiency score is ${result.licenseEfficiencyScore}%. Review inactive users and unused licenses across all platforms.`,
       potentialSavings: result.wastedSpendEstimate,
     })
   }
 
-  if (activityRate < 70) {
+  if (combinedActivityRate < 70) {
     result.recommendations.push({
       priority: 'medium',
       title: 'Low User Activity Rate',
-      description: `Only ${activityRate}% of users are active. Consider license reallocation or user engagement initiatives.`,
+      description: `Only ${combinedActivityRate.toFixed(1)}% of users are active across platforms. Consider license reallocation or user engagement initiatives.`,
+    })
+  }
+
+  // HubSpot specific recommendation
+  if (hubspotActivityRate > 0 && hubspotActivityRate < 60) {
+    result.recommendations.push({
+      priority: 'medium',
+      title: 'Low HubSpot Seat Utilization',
+      description: `HubSpot seat utilization is ${hubspotActivityRate}%. Consider removing inactive HubSpot users.`,
+      potentialSavings: hubspotWastedSpend.toFixed(2),
+      platform: 'HubSpot',
     })
   }
 
@@ -312,7 +481,7 @@ function calculateEfficiencyMetrics(costMetrics, activityMetrics) {
 /**
  * Analyze the gap between cost and activity
  */
-function analyzeActivityGap(costMetrics, activityMetrics, fortnoxCostLeaks, m365CostLeaks) {
+function analyzeActivityGap(costMetrics, activityMetrics, fortnoxCostLeaks, m365CostLeaks, hubspotCostLeaks = {}) {
   const result = {
     gapScore: 0,
     gapDescription: '',
@@ -322,33 +491,39 @@ function analyzeActivityGap(costMetrics, activityMetrics, fortnoxCostLeaks, m365
     combinedSavings: {
       fortnox: 0,
       m365: 0,
+      hubspot: 0,
       total: 0,
     },
     prioritizedActions: [],
   }
 
-  // Calculate combined savings from both platforms
+  // Calculate combined savings from all platforms
   const fortnoxSavings = fortnoxCostLeaks?.overallSummary?.totalPotentialSavings || 0
   const m365Savings = m365CostLeaks?.overallSummary?.totalPotentialSavings || 0
+  const hubspotSavings = hubspotCostLeaks?.summary?.potentialMonthlySavings || 0
 
   result.combinedSavings = {
     fortnox: fortnoxSavings,
     m365: m365Savings,
-    total: fortnoxSavings + m365Savings,
+    hubspot: hubspotSavings,
+    total: fortnoxSavings + m365Savings + hubspotSavings,
   }
 
   // Calculate gap score (0-100, higher = bigger gap)
-  const activityRate = parseFloat(activityMetrics.activityRate) || 0
+  const combinedActivityRate = activityMetrics.combinedTotalUsers > 0
+    ? (activityMetrics.combinedActiveUsers / activityMetrics.combinedTotalUsers) * 100
+    : parseFloat(activityMetrics.activityRate) || 0
+
   const costEfficiency = 100 - (parseFloat(costMetrics.totalMonthlySoftwareSpend) > 0 ?
     (result.combinedSavings.total / costMetrics.totalMonthlySoftwareSpend) * 100 : 0)
 
-  result.gapScore = Math.round(Math.max(0, 100 - activityRate - Math.min(costEfficiency, 30)))
+  result.gapScore = Math.round(Math.max(0, 100 - combinedActivityRate - Math.min(costEfficiency, 30)))
 
   // Gap description
   if (result.gapScore > 70) {
     result.gapDescription = 'Critical: Significant cost-activity gap detected. Immediate action recommended.'
   } else if (result.gapScore > 40) {
-    result.gapDescription = 'Moderate: There are optimization opportunities across both platforms.'
+    result.gapDescription = 'Moderate: There are optimization opportunities across platforms.'
   } else {
     result.gapDescription = 'Good: Cost and activity are relatively well aligned.'
   }
@@ -383,7 +558,18 @@ function analyzeActivityGap(costMetrics, activityMetrics, fortnoxCostLeaks, m365
     })
   }
 
-  // Generate prioritized actions from both platforms
+  // HubSpot mismatch areas
+  const hubspotInactiveSeats = hubspotCostLeaks?.details?.inactiveSeats?.inactiveCount || 0
+  if (hubspotInactiveSeats > 0) {
+    result.mismatchAreas.push({
+      area: 'Seat Utilization',
+      issue: `${hubspotInactiveSeats} inactive HubSpot seat(s) detected`,
+      platform: 'HubSpot',
+      severity: hubspotInactiveSeats > 5 ? 'high' : 'medium',
+    })
+  }
+
+  // Generate prioritized actions from all platforms
   const allActions = []
 
   // Fortnox actions
@@ -410,6 +596,35 @@ function analyzeActivityGap(costMetrics, activityMetrics, fortnoxCostLeaks, m365
       severity: finding.severity,
       effort: finding.type === 'orphaned_license' ? 'Low' : 'Medium',
     })
+  })
+
+  // HubSpot actions
+  const hubspotFindings = hubspotCostLeaks?.findings || []
+  hubspotFindings.forEach((finding) => {
+    const estimatedSavings = finding.affectedUsers?.length * 50 || 0 // Estimate $50/seat
+    allActions.push({
+      action: finding.title,
+      description: finding.description,
+      platform: 'HubSpot',
+      savings: estimatedSavings,
+      severity: finding.severity,
+      effort: finding.type === 'inactive_seats' ? 'Low' : 'Medium',
+    })
+  })
+
+  // HubSpot recommendations
+  const hubspotRecommendations = hubspotCostLeaks?.recommendations || []
+  hubspotRecommendations.forEach((rec) => {
+    if (rec.impact === 'high' || rec.impact === 'medium') {
+      allActions.push({
+        action: rec.action,
+        description: rec.description,
+        platform: 'HubSpot',
+        savings: hubspotSavings / Math.max(hubspotRecommendations.length, 1),
+        severity: rec.impact,
+        effort: rec.effort || 'Medium',
+      })
+    }
   })
 
   // Sort by savings (highest first) and take top 10

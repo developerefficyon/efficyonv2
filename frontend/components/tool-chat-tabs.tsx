@@ -185,14 +185,16 @@ export function ToolChatTabs({ activeTab, onTabChange, className }: ToolChatTabs
             </TabsTrigger>
           ))}
 
-          {/* Comparison Tab - Only show when both Fortnox and Microsoft 365 are connected */}
+          {/* Comparison Tab - Show when any 2+ supported platforms are connected */}
           {(() => {
             const hasFortnox = tools.some(t => t.provider?.toLowerCase() === "fortnox")
             const hasMicrosoft365 = tools.some(t =>
               t.provider?.toLowerCase() === "microsoft365" ||
               t.provider?.toLowerCase() === "microsoft 365"
             )
-            const showComparison = hasFortnox && hasMicrosoft365
+            const hasHubSpot = tools.some(t => t.provider?.toLowerCase() === "hubspot")
+            const connectedPlatforms = [hasFortnox, hasMicrosoft365, hasHubSpot].filter(Boolean).length
+            const showComparison = connectedPlatforms >= 2
 
             return showComparison ? (
               <TabsTrigger
@@ -210,6 +212,9 @@ export function ToolChatTabs({ activeTab, onTabChange, className }: ToolChatTabs
                   <GitCompare className="w-3.5 h-3.5 text-white" />
                 </div>
                 <span className="text-gray-200">Comparison</span>
+                {connectedPlatforms === 3 && (
+                  <span className="text-[10px] text-purple-400 ml-1">(3)</span>
+                )}
               </TabsTrigger>
             ) : null
           })()}

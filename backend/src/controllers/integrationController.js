@@ -4,7 +4,8 @@
  */
 
 const { supabase } = require("../config/supabase")
-const { encryptIntegrationSettings, decryptIntegrationSettings } = require("../utils/encryption")
+const { encryptIntegrationSettings, decryptIntegrationSettings, decryptOAuthData } = require("../utils/encryption")
+const { revokeHubSpotToken } = require("./hubspotController")
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -397,7 +398,7 @@ async function deleteIntegration(req, res) {
 
   const { data: integration, error: fetchError } = await supabase
     .from("company_integrations")
-    .select("id, provider, company_id")
+    .select("id, provider, company_id, settings")
     .eq("id", integrationId)
     .eq("company_id", companyId)
     .maybeSingle()
@@ -410,6 +411,23 @@ async function deleteIntegration(req, res) {
   if (!integration) {
     log("warn", endpoint, "Integration not found or access denied")
     return res.status(404).json({ error: "Integration not found or you don't have permission to delete it" })
+  }
+
+  // Revoke OAuth tokens before deleting (for HubSpot)
+  if (integration.provider?.toLowerCase() === "hubspot") {
+    try {
+      const settings = decryptIntegrationSettings(integration.settings || {})
+      const oauthData = decryptOAuthData(settings.oauth_data || {})
+      const refreshToken = oauthData?.tokens?.refresh_token
+
+      if (refreshToken) {
+        log("log", endpoint, "Revoking HubSpot token before deletion...")
+        await revokeHubSpotToken(refreshToken)
+      }
+    } catch (e) {
+      log("warn", endpoint, `Could not revoke HubSpot token: ${e.message}`)
+      // Continue with deletion even if revocation fails
+    }
   }
 
   const { error: deleteError } = await supabase

@@ -75,6 +75,16 @@ const {
   getMicrosoft365UsageReports,
   analyzeMicrosoft365CostLeaks,
 } = require("../controllers/microsoft365Controller")
+
+// HubSpot Controller - HubSpot OAuth and data operations
+const {
+  startHubSpotOAuth,
+  hubspotOAuthCallback,
+  getHubSpotUsers,
+  getHubSpotAccountInfo,
+  analyzeHubSpotCostLeaks,
+  disconnectHubSpot,
+} = require("../controllers/hubspotController")
 const { requireAuth } = require("../middleware/auth")
 const {
   createPaymentIntent,
@@ -117,6 +127,14 @@ const {
   chatComparison,
   checkComparisonAvailability,
 } = require("../controllers/comparisonController")
+
+// Analysis History Controller - store and retrieve past analyses
+const {
+  saveAnalysis,
+  getAnalysisHistory,
+  getAnalysisById,
+  deleteAnalysis,
+} = require("../controllers/analysisHistoryController")
 
 const router = express.Router()
 
@@ -171,6 +189,20 @@ router.get("/api/integrations/microsoft365/licenses", requireAuth, getMicrosoft3
 router.get("/api/integrations/microsoft365/users", requireAuth, getMicrosoft365Users)
 router.get("/api/integrations/microsoft365/usage", requireAuth, getMicrosoft365UsageReports)
 router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, analyzeMicrosoft365CostLeaks)
+
+// HubSpot routes
+router.get("/api/integrations/hubspot/oauth/start", requireAuth, startHubSpotOAuth)
+router.get("/api/integrations/hubspot/callback", hubspotOAuthCallback)
+router.get("/api/integrations/hubspot/users", requireAuth, getHubSpotUsers)
+router.get("/api/integrations/hubspot/account", requireAuth, getHubSpotAccountInfo)
+router.get("/api/integrations/hubspot/cost-leaks", requireAuth, analyzeHubSpotCostLeaks)
+router.delete("/api/integrations/hubspot/disconnect", requireAuth, disconnectHubSpot)
+
+// Analysis History Routes
+router.post("/api/analysis-history", requireAuth, saveAnalysis)
+router.get("/api/analysis-history", requireAuth, getAnalysisHistory)
+router.get("/api/analysis-history/:id", requireAuth, getAnalysisById)
+router.delete("/api/analysis-history/:id", requireAuth, deleteAnalysis)
 
 router.get("/api/plans", requireAuth, getPlans)
 router.post("/api/plans", requireAuth, upsertPlans)

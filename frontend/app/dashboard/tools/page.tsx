@@ -71,7 +71,7 @@ interface Tool {
   activeSeats: number
   unusedSeats: number
   wasteLevel: "high" | "medium" | "low"
-  status: "connected" | "error" | "disconnected" | "expired"
+  status: "connected" | "error" | "disconnected" | "expired" | "pending"
   lastSync: string
   issues: string[]
 }
@@ -125,6 +125,10 @@ export default function ToolsPage() {
   })
   const [microsoft365Form, setMicrosoft365Form] = useState({
     tenantId: "",
+    clientId: "",
+    clientSecret: "",
+  })
+  const [hubspotForm, setHubspotForm] = useState({
     clientId: "",
     clientSecret: "",
   })
@@ -236,6 +240,7 @@ export default function ToolsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const microsoft365Status = params.get("microsoft365")
+    const hubspotStatus = params.get("hubspot")
 
     // Handle Microsoft 365 OAuth callback immediately (before auth check)
     if (microsoft365Status) {
@@ -251,6 +256,37 @@ export default function ToolsPage() {
       } else {
         toast.error("Failed to connect Microsoft 365", {
           description: microsoft365Status.replace("error_", "").replace(/_/g, " "),
+          duration: 10000,
+        })
+      }
+    }
+
+    // Handle HubSpot OAuth callback immediately (before auth check)
+    if (hubspotStatus) {
+      setIsConnecting(false)
+      window.history.replaceState({}, "", window.location.pathname)
+      oauthCallbackProcessedRef.current = true // Mark that we need to refresh data
+
+      if (hubspotStatus === "connected") {
+        toast.success("HubSpot connected successfully!", {
+          description: "Your HubSpot integration is now active.",
+          duration: 5000,
+        })
+      } else {
+        // Get additional error details if available
+        const errorDetails = params.get("details")
+        const errorParam = params.get("error")
+        let description = hubspotStatus.replace("error_", "").replace(/_/g, " ")
+        if (errorDetails) {
+          description += `: ${decodeURIComponent(errorDetails)}`
+        } else if (errorParam) {
+          description += `: ${decodeURIComponent(errorParam)}`
+        }
+
+        console.error("HubSpot OAuth error:", { status: hubspotStatus, details: errorDetails, error: errorParam })
+
+        toast.error("Failed to connect HubSpot", {
+          description,
           duration: 10000,
         })
       }
@@ -487,7 +523,7 @@ export default function ToolsPage() {
             {
               tool_name: "Fortnox",
               connection_type: "oauth",
-              status: "connected",
+              status: "pending",
               environment: fortnoxForm.environment,
               client_id: fortnoxForm.clientId,
               client_secret: fortnoxForm.clientSecret,
@@ -647,6 +683,146 @@ export default function ToolsPage() {
     }
   }
 
+  const startHubSpotOAuth = async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/hubspot/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start HubSpot OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to HubSpot to authorize...", {
+        description: "You'll be taken to HubSpot to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting HubSpot OAuth:", error)
+      toast.error("Failed to start HubSpot OAuth", {
+        description: error.message || "An error occurred.",
+      })
+    }
+  }
+
+  const handleConnectHubSpot = async () => {
+    if (!hubspotForm.clientId || !hubspotForm.clientSecret) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      // Save integration first
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "HubSpot",
+              connection_type: "oauth",
+              status: "pending",
+              client_id: hubspotForm.clientId,
+              client_secret: hubspotForm.clientSecret,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        // Handle integration limit error specifically
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          // Refresh limits to ensure UI is in sync
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+
+        throw new Error(errorData.error || "Failed to save HubSpot configuration")
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Start OAuth flow
+      const oauthRes = await fetch(`${apiBase}/api/integrations/hubspot/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to HubSpot to authorize...", {
+        description: "You'll be taken to HubSpot to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting HubSpot:", error)
+      toast.error("Failed to connect HubSpot", {
+        description: error.message || "An error occurred.",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
   const handleSyncNow = async (integration: Integration) => {
     setSyncingId(integration.id)
     try {
@@ -727,8 +903,11 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to delete integration")
       }
 
+      const isHubSpot = integrationToDelete.tool_name?.toLowerCase() === "hubspot"
       toast.success("Integration deleted successfully", {
-        description: `${integrationToDelete.tool_name} has been removed from your account.`,
+        description: isHubSpot
+          ? `${integrationToDelete.tool_name} has been removed and disconnected. You'll need to re-authorize when reconnecting.`
+          : `${integrationToDelete.tool_name} has been removed from your account.`,
       })
 
       setIsDeleteModalOpen(false)
@@ -783,7 +962,7 @@ export default function ToolsPage() {
     // Calculate waste level based on status
     const getWasteLevel = (status: string): "high" | "medium" | "low" => {
       if (status === "error" || status === "expired") return "high"
-      if (status === "disconnected") return "medium"
+      if (status === "disconnected" || status === "pending") return "medium"
       return "low"
     }
 
@@ -814,6 +993,8 @@ export default function ToolsPage() {
         issues.push("Token expired - please reconnect")
       } else if (status === "disconnected") {
         issues.push("Integration disconnected")
+      } else if (status === "pending") {
+        issues.push("Authorization pending - please complete OAuth flow")
       }
       return issues
     }
@@ -834,7 +1015,7 @@ export default function ToolsPage() {
       wasteLevel: getWasteLevel(isTokenExpired(integration) ? "expired" : integration.status),
       status: (integration.status === "expired" || isTokenExpired(integration))
         ? "expired"
-        : integration.status as "connected" | "error" | "disconnected" | "expired",
+        : integration.status as "connected" | "error" | "disconnected" | "expired" | "pending",
       lastSync: getLastSync(integration.updated_at),
       issues: getIssues(isTokenExpired(integration) ? "expired" : integration.status),
     }
@@ -861,6 +1042,15 @@ export default function ToolsPage() {
             {status === "expired" ? "Reconnect needed" : "Error"}
           </span>
           <XCircle className="w-4 h-4 text-red-400" />
+        </div>
+      )
+    } else if (status === "pending") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            Pending
+          </span>
+          <AlertTriangle className="w-4 h-4 text-yellow-400" />
         </div>
       )
     }
@@ -1186,6 +1376,20 @@ export default function ToolsPage() {
                                 Reconnect
                               </Button>
                             )}
+                            {integration.tool_name === "HubSpot" && (
+                              <Button
+                                size="sm"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
+                                onClick={startHubSpotOAuth}
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Reconnect
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1233,6 +1437,7 @@ export default function ToolsPage() {
             setSelectedTool("")
             setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
             setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
+            setHubspotForm({ clientId: "", clientSecret: "" })
           }
         }}
       >
@@ -1276,8 +1481,11 @@ export default function ToolsPage() {
                       <SelectItem value="microsoft365" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
                         Microsoft 365
                       </SelectItem>
+                      <SelectItem value="hubspot" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                        HubSpot
+                      </SelectItem>
                       {availableTools.length > 0 && availableTools
-                        .filter(tool => !["fortnox", "microsoft365"].includes(tool.name.toLowerCase()))
+                        .filter(tool => !["fortnox", "microsoft365", "hubspot"].includes(tool.name.toLowerCase()))
                         .map((tool) => (
                           <SelectItem
                             key={tool.id}
@@ -1402,6 +1610,46 @@ export default function ToolsPage() {
                 </p>
               </div>
             )}
+
+            {selectedTool === "hubspot" && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <Label htmlFor="hubspot-client-id" className="text-gray-300">
+                    Client ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="hubspot-client-id"
+                    type="text"
+                    placeholder="Your HubSpot App Client ID"
+                    value={hubspotForm.clientId}
+                    onChange={(e) =>
+                      setHubspotForm({ ...hubspotForm, clientId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hubspot-client-secret" className="text-gray-300">
+                    Client Secret <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="hubspot-client-secret"
+                    type="password"
+                    placeholder="Your HubSpot App Client Secret"
+                    value={hubspotForm.clientSecret}
+                    onChange={(e) =>
+                      setHubspotForm({ ...hubspotForm, clientSecret: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500">
+                  Requires a HubSpot Private App or OAuth App with settings.users.read, settings.users.write, and account-info.security.read scopes.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1412,6 +1660,7 @@ export default function ToolsPage() {
                 setSelectedTool("")
                 setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
                 setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
+                setHubspotForm({ clientId: "", clientSecret: "" })
               }}
               className="border-white/10 bg-black/50 text-white"
             >
@@ -1423,12 +1672,15 @@ export default function ToolsPage() {
                   handleConnectFortnox()
                 } else if (selectedTool === "microsoft365") {
                   handleConnectMicrosoft365()
+                } else if (selectedTool === "hubspot") {
+                  handleConnectHubSpot()
                 }
               }}
               disabled={
                 !selectedTool ||
                 (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
                 (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
+                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
                 isConnecting
               }
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"

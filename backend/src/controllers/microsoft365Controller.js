@@ -5,7 +5,6 @@
 
 const { supabase } = require("../config/supabase")
 const { analyzeM365CostLeaks } = require("../services/microsoft365CostLeakAnalysis")
-const tokenService = require("../services/tokenService")
 const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
@@ -242,6 +241,7 @@ async function startMicrosoft365OAuth(req, res) {
   authUrl.searchParams.set("response_type", "code")
   authUrl.searchParams.set("scope", scope)
   authUrl.searchParams.set("response_mode", "query")
+  authUrl.searchParams.set("prompt", "consent")
 
   const statePayload = { company_id: companyId, tenant_id: tenantId }
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url")
@@ -517,6 +517,10 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
   const endpoint = "GET /api/integrations/microsoft365/cost-leaks"
   log("log", endpoint, "Request received")
 
+  // Get inactivity threshold parameter (default: 30 days)
+  const inactivityDays = parseInt(req.query.inactivityDays) || 30
+  log("log", endpoint, `Using inactivity threshold: ${inactivityDays} days`)
+
   if (!supabase) {
     return res.status(500).json({ error: "Supabase not configured" })
   }
@@ -524,20 +528,6 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
   const user = req.user
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" })
-  }
-
-  // Check token balance before proceeding (costs 1 token for single source analysis)
-  const tokenCost = 1
-  const { hasEnough, available, required } = await tokenService.checkTokenBalance(user.id, tokenCost)
-  if (!hasEnough) {
-    log("log", endpoint, `Insufficient tokens: ${available} available, ${required} required`)
-    return res.status(402).json({
-      error: "INSUFFICIENT_TOKENS",
-      message: "Not enough tokens to perform this analysis",
-      available,
-      required,
-      upgradeRequired: true,
-    })
   }
 
   const result = await getIntegrationForUser(user, "Microsoft365")
@@ -570,7 +560,7 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
       users,
     }
 
-    const analysis = analyzeM365CostLeaks(data)
+    const analysis = analyzeM365CostLeaks(data, { inactivityDays })
 
     log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
 
@@ -608,20 +598,6 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
         log("error", endpoint, "AI enhancement failed:", aiError.message)
         analysis.aiError = aiError.message
       }
-    }
-
-    // Consume tokens after successful analysis
-    const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "single_source_analysis", {
-      integrationSources: ["microsoft365"],
-      description: "Microsoft 365 cost leak analysis",
-    })
-
-    if (consumeResult.success) {
-      analysis.tokensUsed = tokenCost
-      analysis.tokensRemaining = consumeResult.newBalance
-      log("log", endpoint, `Consumed ${tokenCost} token(s), ${consumeResult.newBalance} remaining`)
-    } else {
-      log("error", endpoint, `Failed to consume tokens: ${consumeResult.error}`)
     }
 
     return res.json(analysis)
