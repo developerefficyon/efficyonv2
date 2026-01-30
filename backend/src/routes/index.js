@@ -128,6 +128,14 @@ const {
   checkComparisonAvailability,
 } = require("../controllers/comparisonController")
 
+// Analysis History Controller - store and retrieve past analyses
+const {
+  saveAnalysis,
+  getAnalysisHistory,
+  getAnalysisById,
+  deleteAnalysis,
+} = require("../controllers/analysisHistoryController")
+
 const router = express.Router()
 
 // Health
@@ -189,6 +197,12 @@ router.get("/api/integrations/hubspot/users", requireAuth, getHubSpotUsers)
 router.get("/api/integrations/hubspot/account", requireAuth, getHubSpotAccountInfo)
 router.get("/api/integrations/hubspot/cost-leaks", requireAuth, analyzeHubSpotCostLeaks)
 router.delete("/api/integrations/hubspot/disconnect", requireAuth, disconnectHubSpot)
+
+// Analysis History Routes
+router.post("/api/analysis-history", requireAuth, saveAnalysis)
+router.get("/api/analysis-history", requireAuth, getAnalysisHistory)
+router.get("/api/analysis-history/:id", requireAuth, getAnalysisById)
+router.delete("/api/analysis-history/:id", requireAuth, deleteAnalysis)
 
 router.get("/api/plans", requireAuth, getPlans)
 router.post("/api/plans", requireAuth, upsertPlans)
