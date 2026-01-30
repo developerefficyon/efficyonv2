@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 
 const AnimatedNavLink = ({ href, children, isActive }: { href: string; children: React.ReactNode; isActive: boolean }) => {
   return (
@@ -64,13 +65,14 @@ export function Navbar() {
 
   const logoElement = (
     <div className="flex items-center gap-3">
-      <div className="relative w-8 h-8 flex items-center justify-center">
-        <div className="absolute inset-0 border border-white/20 rounded-lg opacity-80 backdrop-blur-sm"></div>
-        <div className="absolute w-2.5 h-2.5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full top-1 left-1 shadow-lg shadow-cyan-500/50"></div>
-        <div className="absolute w-1.5 h-1.5 bg-white/60 rounded-full top-1 right-1"></div>
-        <div className="absolute w-1.5 h-1.5 bg-white/60 rounded-full bottom-1 left-1"></div>
-        <div className="absolute w-2.5 h-0.5 bg-white/60 bottom-1.5 right-1 rounded"></div>
-      </div>
+      <Image
+        src="/logo.png"
+        alt="Efficyon"
+        width={48}
+        height={48}
+        className="h-12 w-auto object-contain"
+        priority
+      />
       <span className="text-white font-bold text-lg tracking-tight hidden sm:inline bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
         Efficyon
       </span>

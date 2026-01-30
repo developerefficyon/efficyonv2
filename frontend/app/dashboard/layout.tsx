@@ -41,6 +41,7 @@ import {
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
 import { LowTokenWarning } from "@/components/low-token-warning"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -399,13 +400,14 @@ export default function DashboardLayout({
           {/* Sidebar Header with Logo */}
           <SidebarHeader className="p-6 border-b border-white/10">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative w-10 h-10 flex items-center justify-center">
-                <div className="absolute inset-0 border border-cyan-500/30 rounded-lg opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute w-3 h-3 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full top-1 left-1 shadow-lg shadow-cyan-500/50"></div>
-                <div className="absolute w-1.5 h-1.5 bg-white/60 rounded-full top-1 right-1"></div>
-                <div className="absolute w-1.5 h-1.5 bg-white/60 rounded-full bottom-1 left-1"></div>
-                <div className="absolute w-3 h-0.5 bg-white/60 bottom-1.5 right-1 rounded"></div>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Efficyon"
+                width={56}
+                height={56}
+                className="h-14 w-auto object-contain"
+                priority
+              />
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg font-bold text-white bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   Efficyon
