@@ -609,6 +609,15 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
 
     const users = usersData.results || []
 
+    // Log user data structure for debugging (first user only)
+    if (users.length > 0) {
+      log("log", endpoint, `Sample user fields: ${Object.keys(users[0]).join(", ")}`)
+      // Log all users with their key fields for debugging
+      users.forEach((u, i) => {
+        log("log", endpoint, `User ${i + 1}: ${u.email} | superAdmin: ${u.superAdmin} | roleIds: ${JSON.stringify(u.roleIds)} | status: ${u.status || 'N/A'} | userProvisioningState: ${u.userProvisioningState || 'N/A'}`)
+      })
+    }
+
     // Run cost leak analysis with inactivity threshold
     const analysis = analyzeHubSpotCostLeaks(users, accountInfo, { inactiveDays: inactivityDays })
 

@@ -4,6 +4,75 @@
  */
 
 /**
+ * Check if a user has accepted their invitation (is an active user, not pending)
+ * @param {Object} user - HubSpot user object
+ * @returns {boolean} True if user has accepted invitation
+ */
+function isActiveUser(user) {
+  // Users with pending invites typically have no lastLoginAt and may have specific status fields
+  // HubSpot API may include: userProvisioningState, status, or similar fields
+
+  // Check for explicit pending/inactive status fields
+  if (user.userProvisioningState === "PENDING" || user.status === "PENDING") {
+    return false
+  }
+
+  // If user has logged in at least once, they've accepted
+  if (user.lastLoginAt) {
+    return true
+  }
+
+  // If user has updatedAt different from createdAt, they may have accepted
+  if (user.updatedAt && user.createdAt && user.updatedAt !== user.createdAt) {
+    return true
+  }
+
+  // Check if user has any activity indicators
+  // Super admins who created the account are always active
+  if (user.superAdmin === true) {
+    return true
+  }
+
+  // Default: assume user has accepted if they exist in the system
+  // HubSpot typically only returns users who have some form of access
+  return true
+}
+
+/**
+ * Check if a user has a valid role assigned
+ * @param {Object} user - HubSpot user object
+ * @returns {boolean} True if user has a role
+ */
+function hasValidRole(user) {
+  // Super Admin is a valid role
+  if (user.superAdmin === true) {
+    return true
+  }
+
+  // Check roleIds array
+  if (user.roleIds && user.roleIds.length > 0) {
+    return true
+  }
+
+  // Check alternative permission fields that HubSpot might use
+  if (user.roleId) {
+    return true
+  }
+
+  // Check for permissions array (some HubSpot versions use this)
+  if (user.permissions && user.permissions.length > 0) {
+    return true
+  }
+
+  // Check for primaryTeamId (users assigned to teams typically have roles)
+  if (user.primaryTeamId) {
+    return true
+  }
+
+  return false
+}
+
+/**
  * Analyze inactive seats - users with seats but no recent activity
  * @param {Array} users - HubSpot users array
  * @param {number} inactiveDays - Days without activity to consider inactive (default: 30)
@@ -89,8 +158,8 @@ function analyzeUnusedSeats(accountInfo, users) {
     usersByRole[role].push(user)
   })
 
-  // Check for users without proper roles assigned
-  const unassignedRoleUsers = users?.filter((u) => !u.roleId) || []
+  // Check for users without proper roles assigned (excluding super admins and users with permissions)
+  const unassignedRoleUsers = users?.filter((u) => !hasValidRole(u)) || []
 
   if (unassignedRoleUsers.length > 0) {
     findings.push({
@@ -212,10 +281,20 @@ function analyzeSeatUtilization(users) {
 function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
   const { inactiveDays = 30 } = options
 
-  // Run all analyses
-  const inactiveAnalysis = analyzeInactiveSeats(users, inactiveDays)
-  const unusedAnalysis = analyzeUnusedSeats(accountInfo, users)
-  const utilizationAnalysis = analyzeSeatUtilization(users)
+  // Filter out pending users (those who haven't accepted their invitation)
+  const activeUsers = users?.filter((user) => isActiveUser(user)) || []
+  const pendingUsers = users?.filter((user) => !isActiveUser(user)) || []
+
+  // Log for debugging
+  if (pendingUsers.length > 0) {
+    console.log(`[HubSpot Analysis] Filtered out ${pendingUsers.length} pending user(s):`,
+      pendingUsers.map(u => u.email))
+  }
+
+  // Run all analyses on active users only
+  const inactiveAnalysis = analyzeInactiveSeats(activeUsers, inactiveDays)
+  const unusedAnalysis = analyzeUnusedSeats(accountInfo, activeUsers)
+  const utilizationAnalysis = analyzeSeatUtilization(activeUsers)
 
   // Combine all findings
   const allFindings = [
@@ -244,7 +323,8 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
 
   // Generate summary
   const summary = {
-    totalUsers: users?.length || 0,
+    totalUsers: activeUsers?.length || 0,
+    pendingUsers: pendingUsers?.length || 0,
     activeUsers: utilizationAnalysis.activeUsers,
     inactiveUsers: inactiveAnalysis.inactiveCount,
     utilizationScore: utilizationAnalysis.utilizationScore,
