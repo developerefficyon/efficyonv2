@@ -603,6 +603,9 @@ export default function ToolDetailPage() {
       toast.success("Analysis complete", {
         description: "HubSpot cost leak analysis has been generated"
       })
+
+      // Auto-save to history for dashboard
+      autoSaveAnalysis(normalizedAnalysis, "HubSpot", { inactivityDays })
     } catch (error) {
       console.error("Error fetching HubSpot cost leak analysis:", error)
       toast.error("Failed to analyze HubSpot cost leaks", {
@@ -667,6 +670,9 @@ export default function ToolDetailPage() {
       toast.success("Analysis complete", {
         description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities (${inactivityDays} day threshold)`,
       })
+
+      // Auto-save to history for dashboard
+      autoSaveAnalysis(data, "Microsoft365", { inactivityDays })
     } catch (error) {
       console.error("Error analyzing Microsoft 365 cost leaks:", error)
       toast.error("Failed to analyze cost leaks", {
@@ -773,6 +779,9 @@ export default function ToolDetailPage() {
       toast.success("Analysis complete", {
         description,
       })
+
+      // Auto-save to history for dashboard
+      autoSaveAnalysis(data, "Fortnox", { startDate: fortnoxStartDate || null, endDate: fortnoxEndDate || null })
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
       toast.error("Failed to analyze cost leaks", {
@@ -826,7 +835,41 @@ export default function ToolDetailPage() {
     }
   }
 
-  // Save current analysis to history
+  // Auto-save analysis to history (called after analysis completes)
+  const autoSaveAnalysis = async (analysisData: any, provider: string, params: any) => {
+    if (!integration || !analysisData) return
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) return
+
+      const res = await fetch(`${apiBase}/api/analysis-history`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrationId: integration.id,
+          provider,
+          parameters: params,
+          analysisData,
+        }),
+      })
+
+      if (res.ok) {
+        // Silently refresh history list
+        fetchAnalysisHistory()
+      }
+    } catch (error) {
+      // Silent fail for auto-save - don't interrupt user flow
+      console.error("Auto-save failed:", error)
+    }
+  }
+
+  // Save current analysis to history (manual save button)
   const saveAnalysisToHistory = async () => {
     if (!integration || !costLeakAnalysis) return
 

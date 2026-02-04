@@ -134,6 +134,7 @@ const {
   getAnalysisHistory,
   getAnalysisById,
   deleteAnalysis,
+  getDashboardSummary,
 } = require("../controllers/analysisHistoryController")
 
 const router = express.Router()
@@ -203,6 +204,9 @@ router.post("/api/analysis-history", requireAuth, saveAnalysis)
 router.get("/api/analysis-history", requireAuth, getAnalysisHistory)
 router.get("/api/analysis-history/:id", requireAuth, getAnalysisById)
 router.delete("/api/analysis-history/:id", requireAuth, deleteAnalysis)
+
+// Dashboard Summary Route
+router.get("/api/dashboard/summary", requireAuth, getDashboardSummary)
 
 router.get("/api/plans", requireAuth, getPlans)
 router.post("/api/plans", requireAuth, upsertPlans)

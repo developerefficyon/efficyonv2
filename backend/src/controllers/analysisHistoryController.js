@@ -334,9 +334,223 @@ function extractSummary(analysisData, provider) {
   return summary
 }
 
+/**
+ * Get dashboard summary - aggregates latest analysis from each integration
+ * Returns data suitable for the main dashboard display
+ */
+async function getDashboardSummary(req, res) {
+  const endpoint = "GET /api/dashboard/summary"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase not configured" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Get user's company
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError || !profile?.company_id) {
+    return res.status(400).json({ error: "No company associated with this user" })
+  }
+
+  const companyId = profile.company_id
+
+  try {
+    // Get all connected integrations for this company
+    const { data: integrations, error: intError } = await supabase
+      .from("company_integrations")
+      .select("id, provider, status")
+      .eq("company_id", companyId)
+      .in("status", ["connected", "warning"])
+
+    if (intError) {
+      log("error", endpoint, `Failed to fetch integrations: ${intError.message}`)
+      return res.status(500).json({ error: "Failed to fetch integrations" })
+    }
+
+    const connectedTools = integrations?.length || 0
+
+    // If no integrations, return empty summary
+    if (connectedTools === 0) {
+      log("log", endpoint, "No connected integrations, returning empty summary")
+      return res.json({
+        success: true,
+        hasData: false,
+        summary: null,
+        tools: [],
+        recommendations: [],
+        lastAnalysisAt: null,
+      })
+    }
+
+    // Get the latest analysis for each integration
+    const { data: latestAnalyses, error: analysisError } = await supabase
+      .from("cost_leak_analyses")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+
+    if (analysisError) {
+      log("error", endpoint, `Failed to fetch analyses: ${analysisError.message}`)
+      return res.status(500).json({ error: "Failed to fetch analyses" })
+    }
+
+    // If no analyses, return summary with integrations but no analysis data
+    if (!latestAnalyses || latestAnalyses.length === 0) {
+      log("log", endpoint, "No analyses found, returning integrations only")
+      return res.json({
+        success: true,
+        hasData: false,
+        summary: null,
+        tools: integrations.map(i => ({
+          id: i.id,
+          name: i.provider,
+          status: i.status,
+          hasAnalysis: false,
+        })),
+        recommendations: [],
+        lastAnalysisAt: null,
+      })
+    }
+
+    // Get only the latest analysis per integration
+    const latestByIntegration = new Map()
+    for (const analysis of latestAnalyses) {
+      if (!latestByIntegration.has(analysis.integration_id)) {
+        latestByIntegration.set(analysis.integration_id, analysis)
+      }
+    }
+
+    // Aggregate summary data
+    let totalPotentialSavings = 0
+    let totalFindings = 0
+    let highSeverity = 0
+    let mediumSeverity = 0
+    let lowSeverity = 0
+    let totalHealthScore = 0
+    let healthScoreCount = 0
+    let lastAnalysisAt = null
+
+    const toolsWithAnalysis = []
+    const allRecommendations = []
+
+    for (const [integrationId, analysis] of latestByIntegration) {
+      const summary = analysis.summary || {}
+      const analysisData = analysis.analysis_data || {}
+
+      totalPotentialSavings += summary.totalPotentialSavings || 0
+      totalFindings += summary.totalFindings || 0
+      highSeverity += summary.highSeverity || 0
+      mediumSeverity += summary.mediumSeverity || 0
+      lowSeverity += summary.lowSeverity || 0
+
+      if (summary.healthScore !== null && summary.healthScore !== undefined) {
+        totalHealthScore += summary.healthScore
+        healthScoreCount++
+      }
+
+      if (!lastAnalysisAt || new Date(analysis.created_at) > new Date(lastAnalysisAt)) {
+        lastAnalysisAt = analysis.created_at
+      }
+
+      // Build tool info
+      const integration = integrations.find(i => i.id === integrationId)
+      toolsWithAnalysis.push({
+        id: integrationId,
+        name: analysis.provider,
+        status: integration?.status || "unknown",
+        hasAnalysis: true,
+        potentialSavings: summary.totalPotentialSavings || 0,
+        findings: summary.totalFindings || 0,
+        healthScore: summary.healthScore,
+        lastAnalyzed: analysis.created_at,
+        wasteLevel: summary.highSeverity > 0 ? "high" : summary.mediumSeverity > 0 ? "medium" : "low",
+      })
+
+      // Extract recommendations from analysis data
+      const recs = analysisData.recommendations || []
+      for (const rec of recs) {
+        allRecommendations.push({
+          ...rec,
+          provider: analysis.provider,
+          integrationId: integrationId,
+        })
+      }
+    }
+
+    // Add integrations without analysis
+    for (const integration of integrations) {
+      if (!latestByIntegration.has(integration.id)) {
+        toolsWithAnalysis.push({
+          id: integration.id,
+          name: integration.provider,
+          status: integration.status,
+          hasAnalysis: false,
+          potentialSavings: 0,
+          findings: 0,
+          healthScore: null,
+          lastAnalyzed: null,
+          wasteLevel: "unknown",
+        })
+      }
+    }
+
+    // Calculate average health score
+    const avgHealthScore = healthScoreCount > 0 ? Math.round(totalHealthScore / healthScoreCount) : null
+
+    // Calculate efficiency score (inverse of waste)
+    // If we have savings data, efficiency = 100 - (waste percentage based on some baseline)
+    // For now, use health score as efficiency, or default to null
+    const efficiencyScore = avgHealthScore
+
+    // Sort recommendations by priority/impact
+    allRecommendations.sort((a, b) => {
+      const priorityA = a.priority || (a.impact === "high" ? 1 : a.impact === "medium" ? 2 : 3)
+      const priorityB = b.priority || (b.impact === "high" ? 1 : b.impact === "medium" ? 2 : 3)
+      return priorityA - priorityB
+    })
+
+    const dashboardSummary = {
+      totalPotentialSavings,
+      totalFindings,
+      highSeverity,
+      mediumSeverity,
+      lowSeverity,
+      efficiencyScore,
+      avgHealthScore,
+      connectedTools,
+      analyzedTools: latestByIntegration.size,
+    }
+
+    log("log", endpoint, `Dashboard summary: ${connectedTools} tools, ${totalFindings} findings, $${totalPotentialSavings} potential savings`)
+
+    return res.json({
+      success: true,
+      hasData: true,
+      summary: dashboardSummary,
+      tools: toolsWithAnalysis,
+      recommendations: allRecommendations.slice(0, 10), // Top 10 recommendations
+      lastAnalysisAt,
+    })
+  } catch (error) {
+    log("error", endpoint, `Error: ${error.message}`)
+    return res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   saveAnalysis,
   getAnalysisHistory,
   getAnalysisById,
   deleteAnalysis,
+  getDashboardSummary,
 }
