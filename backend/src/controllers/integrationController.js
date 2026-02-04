@@ -196,6 +196,7 @@ async function upsertIntegrations(req, res) {
       client_secret: i.client_secret || null,
       tenant_id: i.tenant_id || null,
       webhook_url: i.webhook_url || null,
+      pricing: i.pricing || null,
       ...(i.settings || {}),
     }
 

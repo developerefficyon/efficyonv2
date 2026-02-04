@@ -115,6 +115,7 @@ export default function ToolsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [integrationToDelete, setIntegrationToDelete] = useState<Integration | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [reconnectingId, setReconnectingId] = useState<string | null>(null)
   const hasLoadedRef = useRef(false)
   const lastUserIdRef = useRef<string | null>(null)
   const isLoadingIntegrationsRef = useRef(false)
@@ -131,6 +132,9 @@ export default function ToolsPage() {
   const [hubspotForm, setHubspotForm] = useState({
     clientId: "",
     clientSecret: "",
+    hubType: "sales",
+    tier: "professional",
+    paidSeats: "",
   })
 
   const loadTools = useCallback(async () => {
@@ -403,7 +407,8 @@ export default function ToolsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user])
 
-  const startFortnoxOAuth = async () => {
+  const startFortnoxOAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -446,10 +451,12 @@ export default function ToolsPage() {
       toast.error("Failed to start Fortnox OAuth", {
         description: error.message || "An error occurred.",
       })
+      setReconnectingId(null)
     }
   }
 
-  const startMicrosoft365OAuth = async () => {
+  const startMicrosoft365OAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -492,6 +499,7 @@ export default function ToolsPage() {
       toast.error("Failed to start Microsoft 365 OAuth", {
         description: error.message || "An error occurred.",
       })
+      setReconnectingId(null)
     }
   }
 
@@ -683,7 +691,8 @@ export default function ToolsPage() {
     }
   }
 
-  const startHubSpotOAuth = async () => {
+  const startHubSpotOAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -726,12 +735,19 @@ export default function ToolsPage() {
       toast.error("Failed to start HubSpot OAuth", {
         description: error.message || "An error occurred.",
       })
+      setReconnectingId(null)
     }
   }
 
   const handleConnectHubSpot = async () => {
-    if (!hubspotForm.clientId || !hubspotForm.clientSecret) {
+    if (!hubspotForm.clientId || !hubspotForm.clientSecret || !hubspotForm.paidSeats) {
       toast.error("Please fill in all required fields")
+      return
+    }
+
+    const paidSeatsNum = parseInt(hubspotForm.paidSeats, 10)
+    if (isNaN(paidSeatsNum) || paidSeatsNum < 1) {
+      toast.error("Please enter a valid number of paid seats")
       return
     }
 
@@ -761,6 +777,11 @@ export default function ToolsPage() {
               status: "pending",
               client_id: hubspotForm.clientId,
               client_secret: hubspotForm.clientSecret,
+              pricing: {
+                hub_type: hubspotForm.hubType,
+                tier: hubspotForm.tier,
+                paid_seats: paidSeatsNum,
+              },
             },
           ],
         }),
@@ -1356,10 +1377,15 @@ export default function ToolsPage() {
                                     ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
                                     : "border-white/10 bg-black/50 text-white border"
                                 }`}
-                                onClick={startFortnoxOAuth}
+                                onClick={() => startFortnoxOAuth(integration.id)}
+                                disabled={reconnectingId === integration.id}
                               >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Reconnect
+                                {reconnectingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
                               </Button>
                             )}
                             {integration.tool_name === "Microsoft365" && (
@@ -1370,10 +1396,15 @@ export default function ToolsPage() {
                                     ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
                                     : "border-white/10 bg-black/50 text-white border"
                                 }`}
-                                onClick={startMicrosoft365OAuth}
+                                onClick={() => startMicrosoft365OAuth(integration.id)}
+                                disabled={reconnectingId === integration.id}
                               >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Reconnect
+                                {reconnectingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
                               </Button>
                             )}
                             {integration.tool_name === "HubSpot" && (
@@ -1384,10 +1415,15 @@ export default function ToolsPage() {
                                     ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
                                     : "border-white/10 bg-black/50 text-white border"
                                 }`}
-                                onClick={startHubSpotOAuth}
+                                onClick={() => startHubSpotOAuth(integration.id)}
+                                disabled={reconnectingId === integration.id}
                               >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Reconnect
+                                {reconnectingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
                               </Button>
                             )}
                             <Button
@@ -1437,7 +1473,7 @@ export default function ToolsPage() {
             setSelectedTool("")
             setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
             setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
-            setHubspotForm({ clientId: "", clientSecret: "" })
+            setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
           }
         }}
       >
@@ -1645,6 +1681,71 @@ export default function ToolsPage() {
                   />
                 </div>
 
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-sm text-cyan-400 mb-3">Pricing Information (for accurate cost analysis)</p>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="hubspot-hub-type" className="text-gray-300">
+                        Primary Hub <span className="text-red-400">*</span>
+                      </Label>
+                      <select
+                        id="hubspot-hub-type"
+                        value={hubspotForm.hubType}
+                        onChange={(e) =>
+                          setHubspotForm({ ...hubspotForm, hubType: e.target.value })
+                        }
+                        className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                      >
+                        <option value="starter_platform">Starter Customer Platform (All Hubs)</option>
+                        <option value="marketing">Marketing Hub</option>
+                        <option value="sales">Sales Hub</option>
+                        <option value="service">Service Hub</option>
+                        <option value="content">Content Hub</option>
+                        <option value="operations">Operations Hub</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hubspot-tier" className="text-gray-300">
+                        Plan Tier <span className="text-red-400">*</span>
+                      </Label>
+                      <select
+                        id="hubspot-tier"
+                        value={hubspotForm.tier}
+                        onChange={(e) =>
+                          setHubspotForm({ ...hubspotForm, tier: e.target.value })
+                        }
+                        className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                      >
+                        <option value="starter">Starter ($15-20/seat)</option>
+                        <option value="professional">Professional ($50-100/seat)</option>
+                        <option value="enterprise">Enterprise ($75-150/seat)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hubspot-seats" className="text-gray-300">
+                        Number of Paid Seats <span className="text-red-400">*</span>
+                      </Label>
+                      <Input
+                        id="hubspot-seats"
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 10"
+                        value={hubspotForm.paidSeats}
+                        onChange={(e) =>
+                          setHubspotForm({ ...hubspotForm, paidSeats: e.target.value })
+                        }
+                        className="bg-black/50 border-white/10 text-white"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Total paid seats in your HubSpot subscription (excludes free view-only seats)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <p className="text-xs text-gray-500">
                   Requires a HubSpot Private App or OAuth App with settings.users.read, settings.users.write, and account-info.security.read scopes.
                 </p>
@@ -1660,7 +1761,7 @@ export default function ToolsPage() {
                 setSelectedTool("")
                 setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
                 setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
-                setHubspotForm({ clientId: "", clientSecret: "" })
+                setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
               }}
               className="border-white/10 bg-black/50 text-white"
             >
@@ -1680,7 +1781,7 @@ export default function ToolsPage() {
                 !selectedTool ||
                 (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
                 (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
-                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
+                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret || !hubspotForm.paidSeats)) ||
                 isConnecting
               }
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"

@@ -586,8 +586,19 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
   }
 
   const { integration } = result
-  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
+
+  // Decrypt settings to get pricing info and OAuth data
+  const settings = decryptIntegrationSettings(integration.settings || {})
+  const oauthData = decryptOAuthData(settings.oauth_data || integration.oauth_data)
   const tokens = oauthData?.tokens
+
+  // Get pricing info from integration settings
+  const pricing = settings.pricing || null
+  if (pricing) {
+    log("log", endpoint, `Found pricing info: ${pricing.hub_type} ${pricing.tier}, ${pricing.paid_seats} seats`)
+  } else {
+    log("warn", endpoint, "No pricing info found in integration settings, will use default estimate")
+  }
 
   if (!tokens?.access_token) {
     return res.status(400).json({ error: "No access token. Please reconnect HubSpot." })
@@ -618,13 +629,16 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
       })
     }
 
-    // Run cost leak analysis with inactivity threshold
-    const analysis = analyzeHubSpotCostLeaks(users, accountInfo, { inactiveDays: inactivityDays })
+    // Run cost leak analysis with inactivity threshold and pricing info
+    const analysis = analyzeHubSpotCostLeaks(users, accountInfo, {
+      inactiveDays: inactivityDays,
+      pricing: pricing,
+    })
 
     // Add inactivity threshold to response
     analysis.inactivityThreshold = inactivityDays
 
-    log("log", endpoint, `Analysis completed, ${analysis.summary?.issuesFound || 0} findings`)
+    log("log", endpoint, `Analysis completed, ${analysis.summary?.issuesFound || 0} findings, potential savings: $${analysis.summary?.potentialMonthlySavings || 0}/month`)
 
     return res.json(analysis)
   } catch (error) {
