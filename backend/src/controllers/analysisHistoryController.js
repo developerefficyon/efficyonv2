@@ -335,6 +335,152 @@ function extractSummary(analysisData, provider) {
 }
 
 /**
+ * Generate recommendations from findings for providers that don't have explicit recommendations
+ * (Microsoft 365, Fortnox)
+ */
+function generateRecommendationsFromFindings(analysisData, provider, summary) {
+  const recommendations = []
+
+  if (provider === "Microsoft365") {
+    // Extract from licenseAnalysis findings
+    const findings = analysisData.licenseAnalysis?.findings || []
+    const totalSavings = summary.totalPotentialSavings || 0
+
+    // Group findings by type
+    const inactiveCount = findings.filter(f => f.type === "inactive_license").length
+    const orphanedCount = findings.filter(f => f.type === "orphaned_license").length
+    const overProvisionedCount = findings.filter(f => f.type === "over_provisioned").length
+
+    if (orphanedCount > 0) {
+      const orphanedSavings = findings
+        .filter(f => f.type === "orphaned_license")
+        .reduce((sum, f) => sum + (f.potentialSavings || 0), 0)
+      recommendations.push({
+        priority: 1,
+        action: "Remove Orphaned Licenses",
+        description: `Remove ${orphanedCount} license(s) from disabled accounts to save $${orphanedSavings}/month`,
+        impact: "high",
+        effort: "low",
+        savings: orphanedSavings,
+      })
+    }
+
+    if (inactiveCount > 0) {
+      const inactiveSavings = findings
+        .filter(f => f.type === "inactive_license")
+        .reduce((sum, f) => sum + (f.potentialSavings || 0), 0)
+      recommendations.push({
+        priority: 2,
+        action: "Remove Inactive User Licenses",
+        description: `Review ${inactiveCount} inactive user(s) and remove licenses to save $${inactiveSavings}/month`,
+        impact: "high",
+        effort: "medium",
+        savings: inactiveSavings,
+      })
+    }
+
+    if (overProvisionedCount > 0) {
+      const overSavings = findings
+        .filter(f => f.type === "over_provisioned")
+        .reduce((sum, f) => sum + (f.potentialSavings || 0), 0)
+      recommendations.push({
+        priority: 3,
+        action: "Review License Tiers",
+        description: `${overProvisionedCount} user(s) may have over-provisioned licenses. Downgrading could save $${overSavings}/month`,
+        impact: "medium",
+        effort: "medium",
+        savings: overSavings,
+      })
+    }
+
+    // If no specific issues but we have data, add a positive recommendation
+    if (recommendations.length === 0 && (analysisData.licenseAnalysis?.summary?.totalUsers > 0)) {
+      recommendations.push({
+        priority: 1,
+        action: "Maintain Current Setup",
+        description: "Your Microsoft 365 license allocation looks healthy. Continue monitoring usage.",
+        impact: "low",
+        effort: "low",
+        savings: 0,
+      })
+    }
+  } else if (provider === "Fortnox") {
+    // Extract from supplierInvoiceAnalysis and other analyses
+    const supplierFindings = analysisData.supplierInvoiceAnalysis?.findings || analysisData.findings || []
+    const overallSummary = analysisData.overallSummary || {}
+    const totalSavings = overallSummary.totalPotentialSavings || 0
+
+    // Group by finding type
+    const duplicates = supplierFindings.filter(f => f.type === "duplicate_payment" || f.category === "duplicates")
+    const anomalies = supplierFindings.filter(f => f.type === "pricing_anomaly" || f.category === "anomalies")
+    const overdue = supplierFindings.filter(f => f.type === "overdue_invoice" || f.category === "overdue")
+
+    if (duplicates.length > 0) {
+      const dupSavings = duplicates.reduce((sum, f) => sum + (f.potentialSavings || f.amount || 0), 0)
+      recommendations.push({
+        priority: 1,
+        action: "Review Duplicate Payments",
+        description: `Found ${duplicates.length} potential duplicate payment(s). Investigate to recover $${dupSavings.toFixed(2)}`,
+        impact: "high",
+        effort: "medium",
+        savings: dupSavings,
+      })
+    }
+
+    if (anomalies.length > 0) {
+      const anomalySavings = anomalies.reduce((sum, f) => sum + (f.potentialSavings || 0), 0)
+      recommendations.push({
+        priority: 2,
+        action: "Investigate Pricing Anomalies",
+        description: `Found ${anomalies.length} pricing anomaly(ies) that may indicate overbilling`,
+        impact: "medium",
+        effort: "medium",
+        savings: anomalySavings,
+      })
+    }
+
+    if (overdue.length > 0) {
+      recommendations.push({
+        priority: 3,
+        action: "Collect Overdue Invoices",
+        description: `${overdue.length} invoice(s) are overdue. Follow up to improve cash flow`,
+        impact: "medium",
+        effort: "low",
+        savings: 0,
+      })
+    }
+
+    // If no issues found, add positive feedback
+    if (recommendations.length === 0) {
+      recommendations.push({
+        priority: 1,
+        action: "Maintain Current Processes",
+        description: "No significant cost leaks detected in your Fortnox data. Continue monitoring.",
+        impact: "low",
+        effort: "low",
+        savings: 0,
+      })
+    }
+  }
+
+  return recommendations
+}
+
+/**
+ * Helper to derive a category from action type
+ */
+function getCategoryFromAction(action) {
+  if (!action) return "Optimization"
+  const actionLower = action.toLowerCase()
+  if (actionLower.includes("remove") || actionLower.includes("inactive")) return "License Cleanup"
+  if (actionLower.includes("audit") || actionLower.includes("review")) return "Plan Optimization"
+  if (actionLower.includes("downgrade") || actionLower.includes("upgrade")) return "Plan Optimization"
+  if (actionLower.includes("seat") || actionLower.includes("license")) return "Seat Optimization"
+  if (actionLower.includes("maintain") || actionLower.includes("monitor")) return "Monitoring"
+  return "Optimization"
+}
+
+/**
  * Get dashboard summary - aggregates latest analysis from each integration
  * Returns data suitable for the main dashboard display
  */
@@ -477,11 +623,27 @@ async function getDashboardSummary(req, res) {
       })
 
       // Extract recommendations from analysis data
-      const recs = analysisData.recommendations || []
-      for (const rec of recs) {
+      // First check for explicit recommendations array (HubSpot style)
+      let recs = analysisData.recommendations || []
+
+      // If no recommendations array, generate from findings (MS365/Fortnox style)
+      if (recs.length === 0) {
+        recs = generateRecommendationsFromFindings(analysisData, analysis.provider, summary)
+      }
+
+      for (let i = 0; i < recs.length; i++) {
+        const rec = recs[i]
         allRecommendations.push({
-          ...rec,
-          provider: analysis.provider,
+          id: `${integrationId}-${i}`,
+          type: rec.action || rec.type || "optimize",
+          category: rec.category || getCategoryFromAction(rec.action),
+          title: rec.action || rec.title || "Optimization Recommendation",
+          description: rec.description || "",
+          savings: rec.savings || 0,
+          impact: rec.impact || "medium",
+          effort: rec.effort || "medium",
+          tool: analysis.provider,
+          priority: rec.priority || 99,
           integrationId: integrationId,
         })
       }
@@ -531,7 +693,7 @@ async function getDashboardSummary(req, res) {
       analyzedTools: latestByIntegration.size,
     }
 
-    log("log", endpoint, `Dashboard summary: ${connectedTools} tools, ${totalFindings} findings, $${totalPotentialSavings} potential savings`)
+    log("log", endpoint, `Dashboard summary: ${connectedTools} tools, ${totalFindings} findings, $${totalPotentialSavings} potential savings, ${allRecommendations.length} recommendations`)
 
     return res.json({
       success: true,

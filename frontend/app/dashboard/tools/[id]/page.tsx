@@ -601,11 +601,11 @@ export default function ToolDetailPage() {
 
       setCostLeakAnalysis(normalizedAnalysis)
       toast.success("Analysis complete", {
-        description: "HubSpot cost leak analysis has been generated"
+        description: "HubSpot cost leak analysis has been generated. Saving to history..."
       })
 
-      // Auto-save to history for dashboard
-      autoSaveAnalysis(normalizedAnalysis, "HubSpot", { inactivityDays })
+      // Auto-save to history for dashboard (await to keep loading state until saved)
+      await autoSaveAnalysis(normalizedAnalysis, "HubSpot", { inactivityDays })
     } catch (error) {
       console.error("Error fetching HubSpot cost leak analysis:", error)
       toast.error("Failed to analyze HubSpot cost leaks", {
@@ -668,11 +668,11 @@ export default function ToolDetailPage() {
       setCostLeakAnalysis(data)
 
       toast.success("Analysis complete", {
-        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities (${inactivityDays} day threshold)`,
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities. Saving to history...`,
       })
 
-      // Auto-save to history for dashboard
-      autoSaveAnalysis(data, "Microsoft365", { inactivityDays })
+      // Auto-save to history for dashboard (await to keep loading state until saved)
+      await autoSaveAnalysis(data, "Microsoft365", { inactivityDays })
     } catch (error) {
       console.error("Error analyzing Microsoft 365 cost leaks:", error)
       toast.error("Failed to analyze cost leaks", {
@@ -775,13 +775,14 @@ export default function ToolDetailPage() {
             : `(until ${fortnoxEndDate})`
         description += ` ${dateInfo}`
       }
+      description += ". Saving to history..."
 
       toast.success("Analysis complete", {
         description,
       })
 
-      // Auto-save to history for dashboard
-      autoSaveAnalysis(data, "Fortnox", { startDate: fortnoxStartDate || null, endDate: fortnoxEndDate || null })
+      // Auto-save to history for dashboard (await to keep loading state until saved)
+      await autoSaveAnalysis(data, "Fortnox", { startDate: fortnoxStartDate || null, endDate: fortnoxEndDate || null })
     } catch (error: any) {
       console.error("Error fetching cost leak analysis:", error)
       toast.error("Failed to analyze cost leaks", {
@@ -836,14 +837,21 @@ export default function ToolDetailPage() {
   }
 
   // Auto-save analysis to history (called after analysis completes)
-  const autoSaveAnalysis = async (analysisData: any, provider: string, params: any) => {
-    if (!integration || !analysisData) return
+  // Returns true on success, false on failure
+  const autoSaveAnalysis = async (analysisData: any, provider: string, params: any): Promise<boolean> => {
+    if (!integration || !analysisData) return false
 
+    setIsSavingAnalysis(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
 
-      if (!accessToken) return
+      if (!accessToken) {
+        toast.error("Failed to save analysis", {
+          description: "Session expired. Please log in again."
+        })
+        return false
+      }
 
       const res = await fetch(`${apiBase}/api/analysis-history`, {
         method: "POST",
@@ -860,66 +868,24 @@ export default function ToolDetailPage() {
       })
 
       if (res.ok) {
-        // Silently refresh history list
-        fetchAnalysisHistory()
-      }
-    } catch (error) {
-      // Silent fail for auto-save - don't interrupt user flow
-      console.error("Auto-save failed:", error)
-    }
-  }
-
-  // Save current analysis to history (manual save button)
-  const saveAnalysisToHistory = async () => {
-    if (!integration || !costLeakAnalysis) return
-
-    setIsSavingAnalysis(true)
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Session expired")
-        return
-      }
-
-      const provider = integration.tool_name || integration.provider
-      const isFortnoxProvider = provider === "Fortnox"
-
-      // Build parameters based on provider
-      const parameters = isFortnoxProvider
-        ? { startDate: fortnoxStartDate || null, endDate: fortnoxEndDate || null }
-        : { inactivityDays }
-
-      const res = await fetch(`${apiBase}/api/analysis-history`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          integrationId: integration.id,
-          provider,
-          parameters,
-          analysisData: costLeakAnalysis,
-        }),
-      })
-
-      if (res.ok) {
-        toast.success("Analysis saved to history", {
-          description: "You can view this analysis later in the History tab",
+        toast.success("Analysis saved", {
+          description: "Your analysis has been saved to history and is available on the dashboard."
         })
         // Refresh history list
         fetchAnalysisHistory()
+        return true
       } else {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to save analysis")
+        toast.error("Failed to save analysis", {
+          description: "Could not save to history. Please try running the analysis again."
+        })
+        return false
       }
     } catch (error) {
-      console.error("Failed to save analysis:", error)
+      console.error("Auto-save failed:", error)
       toast.error("Failed to save analysis", {
-        description: error instanceof Error ? error.message : "An error occurred",
+        description: "An error occurred while saving. Please try again."
       })
+      return false
     } finally {
       setIsSavingAnalysis(false)
     }
@@ -1638,16 +1604,36 @@ export default function ToolDetailPage() {
   const hasFullUI = isFortnox || isMicrosoft365 || isHubSpot
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/dashboard/tools")}
-          className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors self-start"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Tools
-        </Button>
+    <>
+      {/* Full-screen loading overlay during analysis saving */}
+      {(isLoadingAnalysis || isSavingAnalysis) && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-black/90 border border-white/10 rounded-xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4">
+            <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+            <div className="text-center">
+              <p className="text-white font-medium text-lg">
+                {isSavingAnalysis ? "Saving Analysis..." : "Analyzing..."}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                {isSavingAnalysis
+                  ? "Please wait while we save your analysis to the database."
+                  : "Please wait while we analyze your data."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/dashboard/tools")}
+            className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors self-start"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Tools
+          </Button>
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 truncate">{integration.tool_name || integration.provider}</h2>
           <p className="text-sm sm:text-base text-gray-400">Integration Details</p>
@@ -1800,21 +1786,6 @@ export default function ToolDetailPage() {
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end ml-auto">
                       {costLeakAnalysis && (
                         <>
-                          <Button
-                            onClick={saveAnalysisToHistory}
-                            disabled={isSavingAnalysis}
-                            variant="outline"
-                            size="sm"
-                            className="group relative border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400/50 hover:text-purple-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-purple-500/20 h-8 sm:h-9 px-2 sm:px-3"
-                            title="Save to History"
-                          >
-                            {isSavingAnalysis ? (
-                              <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
-                            ) : (
-                              <Clock className="w-4 h-4 sm:mr-2" />
-                            )}
-                            <span className="hidden sm:inline">{isSavingAnalysis ? "Saving..." : "Save to History"}</span>
-                          </Button>
                           <Button
                             onClick={openPdfPreview}
                             variant="outline"
@@ -4734,6 +4705,7 @@ export default function ToolDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }
 
