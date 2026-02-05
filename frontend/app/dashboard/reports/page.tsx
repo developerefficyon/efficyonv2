@@ -642,7 +642,7 @@ export default function ReportsPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowExportDialog(false)}
-                  className="border-white/10 text-white hover:bg-white/10"
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
                   Cancel
                 </Button>
