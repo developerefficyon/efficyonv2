@@ -33,9 +33,17 @@ function analyzeSupplierInvoices(supplierInvoices) {
   supplierInvoices.forEach((invoice) => {
     const supplierNumber = invoice.SupplierNumber || invoice.supplierNumber
     const supplierName = invoice.SupplierName || invoice.supplierName || "Unknown"
-    
-    // Calculate total from rows if invoice Total is 0 or missing
-    let invoiceTotal = parseFloat(invoice.Total) || 0
+
+    // Try multiple fields for the invoice total (Fortnox uses different fields)
+    let invoiceTotal =
+      parseFloat(invoice.Total) ||
+      parseFloat(invoice.TotalToPay) ||
+      parseFloat(invoice.Balance) ||
+      parseFloat(invoice.InvoiceTotal) ||
+      parseFloat(invoice.GrossValue) ||
+      0
+
+    // Calculate total from rows if invoice Total is still 0 or missing
     if ((invoiceTotal === 0 || !invoice.Total || invoice.Total === "0") && invoice.SupplierInvoiceRows && Array.isArray(invoice.SupplierInvoiceRows)) {
       invoiceTotal = invoice.SupplierInvoiceRows.reduce((sum, row) => {
         // Skip the TOT row (total row) which has Code: "TOT"
@@ -43,8 +51,8 @@ function analyzeSupplierInvoices(supplierInvoices) {
           return sum
         }
         // Try Total first, then Debit, then Credit (for expense accounts, Debit is the amount)
-        const rowAmount = parseFloat(row.Total) || parseFloat(row.Debit) || parseFloat(row.Credit) || 0
-        return sum + rowAmount
+        const rowAmount = parseFloat(row.Total) || parseFloat(row.Debit) || parseFloat(row.Credit) || parseFloat(row.Price) || 0
+        return sum + Math.abs(rowAmount)
       }, 0)
     }
 
@@ -68,7 +76,8 @@ function analyzeSupplierInvoices(supplierInvoices) {
     invoicesBySupplier[supplierNumber].totalAmount += invoiceTotal
     invoicesBySupplier[supplierNumber].count += 1
 
-    // Group by amount (for duplicate detection) - only include invoices with actual amounts
+    // Group by amount (for duplicate detection) - skip $0 invoices as they can't be meaningfully compared
+    // Invoices with $0 are likely missing amount data from the API
     if (invoiceTotal > 0) {
       const amountKey = Math.round(invoiceTotal)
       if (!invoicesByAmount[amountKey]) {
@@ -242,10 +251,21 @@ function analyzeSupplierInvoices(supplierInvoices) {
       const due = new Date(dueDate)
       if (due < today && !invoice.FinalPayDate && !invoice.finalPayDate) {
         const daysOverdue = Math.floor((today - due) / (1000 * 60 * 60 * 24))
-        let invoiceTotal = parseFloat(invoice.Total) || 0
-        if (invoiceTotal === 0 && invoice.SupplierInvoiceRows) {
+
+        // Use the same parsing logic as above for consistency
+        let invoiceTotal =
+          parseFloat(invoice.Total) ||
+          parseFloat(invoice.TotalToPay) ||
+          parseFloat(invoice.Balance) ||
+          parseFloat(invoice.InvoiceTotal) ||
+          parseFloat(invoice.GrossValue) ||
+          0
+
+        if (invoiceTotal === 0 && invoice.SupplierInvoiceRows && Array.isArray(invoice.SupplierInvoiceRows)) {
           invoiceTotal = invoice.SupplierInvoiceRows.reduce((sum, row) => {
-            return sum + (parseFloat(row.Total) || parseFloat(row.Debit) || 0)
+            if (row.Code === "TOT" || row.Code === "TOT ") return sum
+            const rowAmount = parseFloat(row.Total) || parseFloat(row.Debit) || parseFloat(row.Credit) || parseFloat(row.Price) || 0
+            return sum + Math.abs(rowAmount)
           }, 0)
         }
 
