@@ -470,13 +470,16 @@ function generateRecommendationsFromFindings(analysisData, provider, summary) {
     }
 
     if (overdue.length > 0) {
+      // Calculate potential late fee savings from overdue invoices
+      const overdueSavings = overdue.reduce((sum, f) => sum + (parseFloat(f.potentialCost) || 0), 0)
+
       recommendations.push({
         priority: 3,
         action: "Collect Overdue Invoices",
         description: `${overdue.length} invoice(s) are overdue. Follow up to improve cash flow`,
         impact: "medium",
         effort: "low",
-        savings: 0,
+        savings: overdueSavings,
       })
     }
 
