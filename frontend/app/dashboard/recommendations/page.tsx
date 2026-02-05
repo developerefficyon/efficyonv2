@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
   TrendingDown,
   X,
   CheckCircle,
@@ -14,6 +21,7 @@ import {
   Loader2,
   Lightbulb,
   AlertCircle,
+  Info,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
 
@@ -34,9 +42,9 @@ interface DashboardData {
   hasData: boolean
   summary: {
     totalPotentialSavings: number
-    totalIssues: number
-    highSeverityIssues: number
-    averageHealthScore: number
+    totalFindings: number
+    highSeverity: number
+    avgHealthScore: number | null
   } | null
   tools: Array<{
     integration_type: string
@@ -53,6 +61,19 @@ export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true)
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null)
+
+  // Load applied recommendations from localStorage on mount
+  useEffect(() => {
+    const savedApplied = localStorage.getItem("appliedRecommendations")
+    if (savedApplied) {
+      try {
+        setApplied(JSON.parse(savedApplied))
+      } catch (e) {
+        console.error("Failed to parse saved applied recommendations")
+      }
+    }
+  }, [])
 
   const fetchRecommendations = async () => {
     try {
@@ -94,7 +115,16 @@ export default function RecommendationsPage() {
   }, [])
 
   const handleApply = (id: string) => {
-    setApplied([...applied, id])
+    const newApplied = [...applied, id]
+    setApplied(newApplied)
+    // Save to localStorage for persistence
+    localStorage.setItem("appliedRecommendations", JSON.stringify(newApplied))
+  }
+
+  const handleUnapply = (id: string) => {
+    const newApplied = applied.filter(a => a !== id)
+    setApplied(newApplied)
+    localStorage.setItem("appliedRecommendations", JSON.stringify(newApplied))
   }
 
   const getTypeIcon = (type: string) => {
@@ -128,11 +158,20 @@ export default function RecommendationsPage() {
   const recommendations: Recommendation[] = dashboardData?.recommendations || []
   const hasRealData = dashboardData?.hasData === true && recommendations.length > 0
 
-  const totalSavings = recommendations
-    .filter((r) => !applied.includes(r.id))
+  // Use total potential savings from summary, or calculate from recommendations
+  const totalPotentialSavings = dashboardData?.summary?.totalPotentialSavings ||
+    recommendations.reduce((sum, r) => sum + (r.savings || 0), 0)
+
+  // Calculate remaining savings after applied recommendations
+  const appliedSavings = recommendations
+    .filter((r) => applied.includes(r.id))
     .reduce((sum, r) => sum + (r.savings || 0), 0)
 
-  const appliedCount = applied.length
+  const totalSavings = totalPotentialSavings - appliedSavings
+
+  const appliedCount = applied.filter(id =>
+    recommendations.some(r => r.id === id)
+  ).length
 
   if (loading) {
     return (
@@ -324,8 +363,10 @@ export default function RecommendationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-white/10 bg-black/50 text-white"
+                    className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+                    onClick={() => setSelectedRecommendation(rec)}
                   >
+                    <Info className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
                   {!isApplied && (
@@ -340,11 +381,11 @@ export default function RecommendationsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-green-500/30 bg-green-500/10 text-green-400"
-                      disabled
+                      className="border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-500/50 hover:text-green-300"
+                      onClick={() => handleUnapply(rec.id)}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Applied
+                      Applied (Undo)
                     </Button>
                   )}
                 </div>
@@ -360,6 +401,76 @@ export default function RecommendationsPage() {
           Last analysis: {new Date(dashboardData.lastAnalysisAt).toLocaleString()}
         </div>
       )}
+
+      {/* Recommendation Details Dialog */}
+      <Dialog open={!!selectedRecommendation} onOpenChange={() => setSelectedRecommendation(null)}>
+        <DialogContent className="bg-black/95 border-white/10 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-white flex items-center gap-2">
+              {selectedRecommendation && getTypeIcon(selectedRecommendation.type || selectedRecommendation.title)}
+              {selectedRecommendation?.title}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Recommendation for {selectedRecommendation?.tool}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRecommendation && (
+            <div className="space-y-4 mt-4">
+              <div className="flex items-center gap-2">
+                <Badge className={getImpactBadge(selectedRecommendation.impact)}>
+                  {selectedRecommendation.impact} impact
+                </Badge>
+                {selectedRecommendation.effort && (
+                  <Badge className="bg-white/10 text-gray-300 border-white/20">
+                    {selectedRecommendation.effort} effort
+                  </Badge>
+                )}
+                {selectedRecommendation.category && (
+                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                    {selectedRecommendation.category}
+                  </Badge>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-400 mb-1">Description</h4>
+                <p className="text-white">{selectedRecommendation.description}</p>
+              </div>
+
+              {selectedRecommendation.savings > 0 && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-green-400 mb-1">Potential Savings</h4>
+                  <p className="text-2xl font-bold text-green-400">
+                    ${selectedRecommendation.savings}/month
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedRecommendation(null)}
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  Close
+                </Button>
+                {!applied.includes(selectedRecommendation.id) && (
+                  <Button
+                    onClick={() => {
+                      handleApply(selectedRecommendation.id)
+                      setSelectedRecommendation(null)
+                    }}
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
+                  >
+                    Apply Recommendation
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

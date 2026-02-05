@@ -68,18 +68,20 @@ function analyzeSupplierInvoices(supplierInvoices) {
     invoicesBySupplier[supplierNumber].totalAmount += invoiceTotal
     invoicesBySupplier[supplierNumber].count += 1
 
-    // Group by amount (for duplicate detection)
-    const amountKey = Math.round(invoiceTotal)
-    if (!invoicesByAmount[amountKey]) {
-      invoicesByAmount[amountKey] = []
+    // Group by amount (for duplicate detection) - only include invoices with actual amounts
+    if (invoiceTotal > 0) {
+      const amountKey = Math.round(invoiceTotal)
+      if (!invoicesByAmount[amountKey]) {
+        invoicesByAmount[amountKey] = []
+      }
+      invoicesByAmount[amountKey].push({
+        ...invoice,
+        calculatedTotal: invoiceTotal,
+        supplierNumber,
+        supplierName,
+        _originalTotal: invoice.Total, // Keep original for debugging
+      })
     }
-    invoicesByAmount[amountKey].push({
-      ...invoice,
-      calculatedTotal: invoiceTotal,
-      supplierNumber,
-      supplierName,
-      _originalTotal: invoice.Total, // Keep original for debugging
-    })
 
     // Group by date
     const dateKey = invoice.InvoiceDate || invoice.invoiceDate

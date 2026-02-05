@@ -331,6 +331,16 @@ function extractSummary(analysisData, provider) {
     summary.healthScore = summaryData.healthScore || null
   }
 
+  // Calculate health score if not already set
+  // Health score = 100 - penalty for issues (capped at 0-100)
+  if (summary.healthScore === null && summary.totalFindings > 0) {
+    const penalty = (summary.highSeverity * 10) + (summary.mediumSeverity * 5) + (summary.lowSeverity * 2)
+    summary.healthScore = Math.max(0, Math.min(100, 100 - penalty))
+  } else if (summary.healthScore === null && summary.totalFindings === 0) {
+    // No issues found = perfect health
+    summary.healthScore = 100
+  }
+
   return summary
 }
 
@@ -408,19 +418,39 @@ function generateRecommendationsFromFindings(analysisData, provider, summary) {
     // Extract from supplierInvoiceAnalysis and other analyses
     const supplierFindings = analysisData.supplierInvoiceAnalysis?.findings || analysisData.findings || []
     const overallSummary = analysisData.overallSummary || {}
-    const totalSavings = overallSummary.totalPotentialSavings || 0
+    const totalSavings = parseFloat(overallSummary.totalPotentialSavings) || 0
+
+    // Also get savings breakdown from supplierInvoiceAnalysis summary
+    const supplierSummary = analysisData.supplierInvoiceAnalysis?.summary || {}
+    const duplicatePaymentsSummary = supplierSummary.duplicatePayments || []
 
     // Group by finding type
     const duplicates = supplierFindings.filter(f => f.type === "duplicate_payment" || f.category === "duplicates")
-    const anomalies = supplierFindings.filter(f => f.type === "pricing_anomaly" || f.category === "anomalies")
+    const anomalies = supplierFindings.filter(f => f.type === "pricing_anomaly" || f.type === "unusual_amount" || f.category === "anomalies")
     const overdue = supplierFindings.filter(f => f.type === "overdue_invoice" || f.category === "overdue")
 
     if (duplicates.length > 0) {
-      const dupSavings = duplicates.reduce((sum, f) => sum + (f.potentialSavings || f.amount || 0), 0)
+      // Calculate savings from findings, ensuring values are parsed as numbers
+      let dupSavings = duplicates.reduce((sum, f) => {
+        const savings = parseFloat(f.potentialSavings) || parseFloat(f.amount) || 0
+        return sum + savings
+      }, 0)
+
+      // If individual finding amounts are 0, try to get from the summary array
+      if (dupSavings === 0 && duplicatePaymentsSummary.length > 0) {
+        dupSavings = duplicatePaymentsSummary.reduce((sum, f) => {
+          const savings = parseFloat(f.potentialSavings) || parseFloat(f.amount) || 0
+          return sum + savings
+        }, 0)
+      }
+
+      // Format the description based on whether we have savings or not
+      const savingsText = dupSavings > 0 ? `Investigate to recover $${dupSavings.toFixed(2)}` : `Review these payments for potential recovery`
+
       recommendations.push({
         priority: 1,
         action: "Review Duplicate Payments",
-        description: `Found ${duplicates.length} potential duplicate payment(s). Investigate to recover $${dupSavings.toFixed(2)}`,
+        description: `Found ${duplicates.length} potential duplicate payment(s). ${savingsText}`,
         impact: "high",
         effort: "medium",
         savings: dupSavings,
@@ -428,7 +458,7 @@ function generateRecommendationsFromFindings(analysisData, provider, summary) {
     }
 
     if (anomalies.length > 0) {
-      const anomalySavings = anomalies.reduce((sum, f) => sum + (f.potentialSavings || 0), 0)
+      const anomalySavings = anomalies.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || parseFloat(f.amount) || 0), 0)
       recommendations.push({
         priority: 2,
         action: "Investigate Pricing Anomalies",

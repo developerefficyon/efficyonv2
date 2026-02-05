@@ -142,7 +142,7 @@ export default function UserDashboard() {
         totalSpend: 0, // We don't track total spend yet, just savings
         wastedSpend: dashboardData!.summary!.totalPotentialSavings,
         potentialSavings: dashboardData!.summary!.totalPotentialSavings,
-        efficiencyScore: dashboardData!.summary!.efficiencyScore || dashboardData!.summary!.avgHealthScore || 0,
+        efficiencyScore: dashboardData!.summary!.efficiencyScore ?? dashboardData!.summary!.avgHealthScore ?? null,
         toolsAnalyzed: dashboardData!.summary!.analyzedTools,
         connectedTools: dashboardData!.summary!.connectedTools,
         totalFindings: dashboardData!.summary!.totalFindings,
@@ -326,17 +326,23 @@ export default function UserDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-cyan-400 mb-1">
-                  {costSummary.efficiencyScore > 0 ? `${costSummary.efficiencyScore}%` : "N/A"}
+                  {hasRealData && costSummary.efficiencyScore !== null ? `${costSummary.efficiencyScore}%` : "N/A"}
                 </div>
-                {costSummary.efficiencyScore > 0 && (
+                {hasRealData && costSummary.efficiencyScore !== null && (
                   <div className="w-full bg-white/5 rounded-full h-2 mt-2">
                     <div
-                      className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full"
+                      className={`h-2 rounded-full ${
+                        costSummary.efficiencyScore >= 70
+                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                          : costSummary.efficiencyScore >= 40
+                          ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+                          : "bg-gradient-to-r from-red-500 to-orange-500"
+                      }`}
                       style={{ width: `${costSummary.efficiencyScore}%` }}
                     />
                   </div>
                 )}
-                {costSummary.efficiencyScore === 0 && (
+                {(!hasRealData || costSummary.efficiencyScore === null) && (
                   <p className="text-xs text-gray-500">Run analysis to see score</p>
                 )}
               </CardContent>
@@ -391,7 +397,7 @@ export default function UserDashboard() {
                 </h3>
                 {hasRealData && (
                   <Link href="/dashboard/recommendations">
-                    <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 w-full sm:w-auto">
+                    <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-white hover:bg-cyan-500/20 w-full sm:w-auto">
                       View All
                       <ExternalLink className="w-4 h-4 ml-1" />
                     </Button>
@@ -466,7 +472,7 @@ export default function UserDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <h3 className="text-lg sm:text-xl font-semibold text-white">Tools Overview</h3>
               <Link href="/dashboard/tools">
-                <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-cyan-300 w-full sm:w-auto">
+                <Button variant="ghost" size="sm" className="text-cyan-400 hover:text-white hover:bg-cyan-500/20 w-full sm:w-auto">
                   Manage Tools
                   <ExternalLink className="w-4 h-4 ml-1" />
                 </Button>
