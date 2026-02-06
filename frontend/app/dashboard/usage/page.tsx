@@ -546,35 +546,6 @@ export default function UsagePage() {
         </Card>
       )}
 
-      {/* Usage Tips */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-lg bg-cyan-500/10">
-              <Sparkles className="w-6 h-6 text-cyan-400" />
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-white mb-2">
-                Maximize Your Token Value
-              </h4>
-              <ul className="space-y-1 text-sm text-gray-300">
-                <li>
-                  <span className="text-cyan-400">1 token</span> = Single tool analysis
-                </li>
-                <li>
-                  <span className="text-cyan-400">2 tokens</span> = Dual tool comparison
-                </li>
-                <li>
-                  <span className="text-cyan-400">3 tokens</span> = Multi-tool comprehensive analysis
-                </li>
-              </ul>
-              <p className="text-sm text-gray-400 mt-3">
-                Tokens reset at the start of each billing period.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

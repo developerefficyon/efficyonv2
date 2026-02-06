@@ -19,7 +19,10 @@ function getDecryptedCredentials(integration) {
   const settings = decryptIntegrationSettings(integration.settings || {})
 
   // Get OAuth data from settings (new location) or integration root (legacy)
-  const oauthData = settings.oauth_data || decryptOAuthData(integration.oauth_data || {})
+  // oauth_data inside settings is still encrypted, so decrypt it
+  const oauthData = settings.oauth_data
+    ? decryptOAuthData(settings.oauth_data)
+    : decryptOAuthData(integration.oauth_data || {})
   const tokens = oauthData?.tokens
 
   // Get client credentials from settings (new location) or integration root (legacy)
@@ -38,8 +41,12 @@ async function refreshTokenIfNeeded(integration, tokens, clientId, clientSecret)
   const now = Math.floor(Date.now() / 1000)
   let accessToken = tokens.access_token
 
+  console.log(`   Token expires_at: ${expiresAt} (${new Date(expiresAt * 1000).toISOString()})`)
+  console.log(`   Current time: ${now} (${new Date(now * 1000).toISOString()})`)
+  console.log(`   Token valid for: ${expiresAt - now} seconds (${Math.round((expiresAt - now) / 60)} minutes)`)
+
   if (expiresAt && now >= (expiresAt - 300)) {
-    console.log("🔄 Token expired, refreshing...")
+    console.log("🔄 Token expired or expiring soon, refreshing...")
 
     const credentials = Buffer.from(`${clientId}:${clientSecret || ""}`).toString("base64")
 
@@ -56,7 +63,10 @@ async function refreshTokenIfNeeded(integration, tokens, clientId, clientSecret)
     })
 
     if (!refreshResponse.ok) {
-      throw new Error("Token refresh failed")
+      const errorText = await refreshResponse.text()
+      console.error("❌ Token refresh error response:", errorText)
+      console.error("   Status:", refreshResponse.status)
+      throw new Error(`Token refresh failed: ${refreshResponse.status} - ${errorText}`)
     }
 
     const refreshData = await refreshResponse.json()
@@ -190,12 +200,11 @@ async function seedAccounts() {
     const profile = profiles[0]
     console.log(`✅ Found user: ${profile.email} (Company ID: ${profile.company_id})`)
 
-    // Get Fortnox integration
+    // Get Fortnox integration (newest one, regardless of company)
     console.log("\n2️⃣ Fetching Fortnox integration...")
     const { data: integrations, error: integrationError } = await supabase
       .from("company_integrations")
       .select("*")
-      .eq("company_id", profile.company_id)
       .eq("provider", "Fortnox")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -207,6 +216,8 @@ async function seedAccounts() {
 
     const integration = integrations[0]
     console.log("✅ Found Fortnox integration")
+    console.log(`   Integration ID: ${integration.id}`)
+    console.log(`   Created at: ${integration.created_at}`)
 
     // Get decrypted credentials
     const { tokens, clientId, clientSecret } = getDecryptedCredentials(integration)

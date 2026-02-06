@@ -19,7 +19,10 @@ function getDecryptedCredentials(integration) {
   const settings = decryptIntegrationSettings(integration.settings || {})
 
   // Get OAuth data from settings (new location) or integration root (legacy)
-  const oauthData = settings.oauth_data || decryptOAuthData(integration.oauth_data || {})
+  // oauth_data inside settings is still encrypted, so decrypt it
+  const oauthData = settings.oauth_data
+    ? decryptOAuthData(settings.oauth_data)
+    : decryptOAuthData(integration.oauth_data || {})
   const tokens = oauthData?.tokens
 
   // Get client credentials from settings (new location) or integration root (legacy)
@@ -437,12 +440,11 @@ async function seedSupplierInvoices() {
     const profile = profiles[0]
     console.log(`✅ Found user: ${profile.email} (Company ID: ${profile.company_id})`)
 
-    // Get Fortnox integration
+    // Get Fortnox integration (newest one, regardless of company)
     console.log("\n2️⃣ Fetching Fortnox integration...")
     const { data: integrations, error: integrationError } = await supabase
       .from("company_integrations")
       .select("*")
-      .eq("company_id", profile.company_id)
       .eq("provider", "Fortnox")
       .order("created_at", { ascending: false })
       .limit(1)

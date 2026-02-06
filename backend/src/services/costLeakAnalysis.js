@@ -193,35 +193,58 @@ function analyzeSupplierInvoices(supplierInvoices) {
   }
 
   // 3. Detect recurring subscriptions (same supplier, similar amount, regular intervals)
+  // Group by amount clusters within each supplier to find subscription patterns
   Object.values(invoicesBySupplier).forEach((supplier) => {
     if (supplier.count >= 3) {
-      const invoices = supplier.invoices.sort((a, b) => {
-        const dateA = new Date(a.InvoiceDate || a.invoiceDate)
-        const dateB = new Date(b.InvoiceDate || b.invoiceDate)
-        return dateA - dateB
-      })
+      const invoices = supplier.invoices
+        .filter((inv) => inv.calculatedTotal > 0)
+        .sort((a, b) => {
+          const dateA = new Date(a.InvoiceDate || a.invoiceDate)
+          const dateB = new Date(b.InvoiceDate || b.invoiceDate)
+          return dateA - dateB
+        })
 
-      // Check if amounts are similar (within 10%)
-      const amounts = invoices.map((inv) => inv.calculatedTotal)
-      const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length
-      const allSimilar = amounts.every((amt) => Math.abs(amt - avgAmount) / avgAmount <= 0.1)
+      // Cluster invoices by similar amounts (within 10% of each other)
+      const clusters = []
+      const assigned = new Set()
 
-      if (allSimilar) {
-        // Check date intervals
+      for (let i = 0; i < invoices.length; i++) {
+        if (assigned.has(i)) continue
+        const cluster = [invoices[i]]
+        assigned.add(i)
+
+        for (let j = i + 1; j < invoices.length; j++) {
+          if (assigned.has(j)) continue
+          const refAmount = cluster[0].calculatedTotal
+          if (Math.abs(invoices[j].calculatedTotal - refAmount) / refAmount <= 0.1) {
+            cluster.push(invoices[j])
+            assigned.add(j)
+          }
+        }
+
+        if (cluster.length >= 3) {
+          clusters.push(cluster)
+        }
+      }
+
+      // Check each cluster for regular intervals
+      clusters.forEach((cluster) => {
+        const clusterAmounts = cluster.map((inv) => inv.calculatedTotal)
+        const avgAmount = clusterAmounts.reduce((a, b) => a + b, 0) / clusterAmounts.length
+
         const intervals = []
-        for (let i = 0; i < invoices.length - 1; i++) {
-          const date1 = new Date(invoices[i].InvoiceDate || invoices[i].invoiceDate)
-          const date2 = new Date(invoices[i + 1].InvoiceDate || invoices[i + 1].invoiceDate)
+        for (let i = 0; i < cluster.length - 1; i++) {
+          const date1 = new Date(cluster[i].InvoiceDate || cluster[i].invoiceDate)
+          const date2 = new Date(cluster[i + 1].InvoiceDate || cluster[i + 1].invoiceDate)
           const days = Math.abs((date2 - date1) / (1000 * 60 * 60 * 24))
           intervals.push(days)
         }
 
-        // Check if intervals are regular (within 5 days of each other)
         if (intervals.length > 0) {
           const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
           const isRegular = intervals.every((interval) => Math.abs(interval - avgInterval) <= 5)
 
-          if (isRegular) {
+          if (isRegular && avgInterval > 0) {
             summary.recurringSubscriptions.push({
               type: "recurring_subscription",
               severity: "low",
@@ -231,25 +254,36 @@ function analyzeSupplierInvoices(supplierInvoices) {
                 number: supplier.supplierNumber,
                 name: supplier.supplierName,
               },
-              invoices: invoices,
+              invoices: cluster,
               averageAmount: avgAmount,
               frequency: Math.round(avgInterval) + " days",
-              totalAmount: supplier.totalAmount,
-              potentialSavings: avgAmount, // Could save by canceling
+              totalAmount: cluster.reduce((sum, inv) => sum + inv.calculatedTotal, 0),
+              potentialSavings: avgAmount,
             })
           }
         }
-      }
+      })
     }
   })
 
   // 4. Detect overdue invoices
+  // Check Balance, FinalPayDate, and Booked status to determine if unpaid
   const today = new Date()
   supplierInvoices.forEach((invoice) => {
     const dueDate = invoice.DueDate || invoice.dueDate
-    if (dueDate) {
+    const balance = parseFloat(invoice.Balance) || 0
+    const hasFinalPayDate = invoice.FinalPayDate || invoice.finalPayDate
+    const isBooked = invoice.Booked === true || invoice.Booked === "true"
+
+    // Invoice is unpaid if:
+    // - Balance > 0 (clearly has outstanding amount)
+    // - OR not booked and no FinalPayDate (unbooked invoices may have Balance=0 but aren't paid)
+    // - OR no FinalPayDate and Balance is not explicitly set to 0
+    const isUnpaid = balance > 0 || (!hasFinalPayDate && !isBooked) || (!hasFinalPayDate && invoice.Balance !== "0" && invoice.Balance !== 0)
+
+    if (dueDate && isUnpaid) {
       const due = new Date(dueDate)
-      if (due < today && !invoice.FinalPayDate && !invoice.finalPayDate) {
+      if (due < today) {
         const daysOverdue = Math.floor((today - due) / (1000 * 60 * 60 * 24))
 
         // Use the same parsing logic as above for consistency
@@ -341,15 +375,19 @@ function analyzeSupplierInvoices(supplierInvoices) {
  * @returns {Object} Analysis results
  */
 function analyzeCustomerInvoices(invoices) {
+  const findings = []
   const summary = {
     totalInvoices: invoices.length,
     totalRevenue: 0,
     unpaidInvoices: [],
+    totalUnpaidAmount: 0,
   }
 
   if (!invoices || invoices.length === 0) {
-    return { summary }
+    return { findings, summary }
   }
+
+  const today = new Date()
 
   invoices.forEach((invoice) => {
     const total = parseFloat(invoice.Total) || 0
@@ -357,15 +395,38 @@ function analyzeCustomerInvoices(invoices) {
     summary.totalRevenue += total
 
     if (balance > 0) {
+      const dueDate = invoice.DueDate
+      const daysOverdue = dueDate ? Math.floor((today - new Date(dueDate)) / (1000 * 60 * 60 * 24)) : 0
+
       summary.unpaidInvoices.push({
         invoice,
         amount: balance,
-        daysOverdue: invoice.DueDate ? Math.floor((new Date() - new Date(invoice.DueDate)) / (1000 * 60 * 60 * 24)) : 0,
+        daysOverdue,
       })
+      summary.totalUnpaidAmount += balance
+
+      // Generate findings for overdue customer invoices
+      if (daysOverdue > 0) {
+        const customerName = invoice.CustomerName || "Unknown Customer"
+        const docNumber = invoice.DocumentNumber || "N/A"
+        const severity = daysOverdue > 60 ? "high" : daysOverdue > 30 ? "medium" : "low"
+
+        findings.push({
+          type: "overdue_customer_invoice",
+          severity,
+          title: "Overdue Customer Invoice",
+          description: `Invoice #${docNumber} from ${customerName} is ${daysOverdue} days overdue with ${formatCurrencyForIntegration(balance, 'fortnox')} outstanding`,
+          invoice,
+          amount: balance,
+          daysOverdue,
+          customerName,
+          revenueAtRisk: balance,
+        })
+      }
     }
   })
 
-  return { summary }
+  return { findings, summary }
 }
 
 /**
@@ -401,9 +462,22 @@ function analyzeCostLeaks(data) {
     })
   }
 
-  // Analyze customer invoices (for comparison)
+  // Analyze customer invoices (for comparison and overdue detection)
   if (data.invoices && data.invoices.length > 0) {
     results.customerInvoiceAnalysis = analyzeCustomerInvoices(data.invoices)
+    results.overallSummary.totalFindings += results.customerInvoiceAnalysis.findings.length
+    // Customer invoice overdue amounts are "revenue at risk", not "potential savings"
+    // so we track them separately, not in totalPotentialSavings
+    results.overallSummary.totalRevenueAtRisk = results.customerInvoiceAnalysis.findings.reduce(
+      (sum, f) => sum + (f.revenueAtRisk || 0), 0
+    )
+
+    // Count by severity
+    results.customerInvoiceAnalysis.findings.forEach((finding) => {
+      if (finding.severity === "high") results.overallSummary.highSeverity++
+      else if (finding.severity === "medium") results.overallSummary.mediumSeverity++
+      else if (finding.severity === "low") results.overallSummary.lowSeverity++
+    })
   }
 
   // Subscription analysis is now skipped - only analyzing invoices

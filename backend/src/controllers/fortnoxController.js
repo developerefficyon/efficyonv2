@@ -240,6 +240,35 @@ async function fetchFortnoxData(endpoint, accessToken, requiredScope, scopeName)
   return await response.json()
 }
 
+// Helper function to fetch individual supplier invoice details (to get amounts)
+async function fetchSupplierInvoiceDetails(invoiceNumbers, accessToken) {
+  const details = []
+  const batchSize = 10 // Process 10 at a time to avoid rate limits
+
+  for (let i = 0; i < invoiceNumbers.length; i += batchSize) {
+    const batch = invoiceNumbers.slice(i, i + batchSize)
+    const batchPromises = batch.map(async (num) => {
+      try {
+        const data = await fetchFortnoxData(`/supplierinvoices/${num}`, accessToken, "supplierinvoice", "supplier invoice")
+        return data.SupplierInvoice
+      } catch (err) {
+        log("warn", "fetchSupplierInvoiceDetails", `Failed to fetch invoice ${num}: ${err.message}`)
+        return null
+      }
+    })
+
+    const batchResults = await Promise.all(batchPromises)
+    details.push(...batchResults.filter(Boolean))
+
+    // Small delay between batches to respect rate limits
+    if (i + batchSize < invoiceNumbers.length) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+  }
+
+  return details
+}
+
 // Generic endpoint handler factory
 function createFortnoxDataHandler(endpoint, requiredScope, scopeName, dataKey) {
   return async (req, res) => {
@@ -887,9 +916,27 @@ async function analyzeFortnoxCostLeaks(req, res) {
     ])
 
     const invoices = invoicesRes.status === "fulfilled" ? (invoicesRes.value.Invoices || []) : []
-    const supplierInvoices = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value.SupplierInvoices || []) : []
+    const supplierInvoicesList = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value.SupplierInvoices || []) : []
 
-    log("log", endpoint, `Fetched ${invoices.length} invoices, ${supplierInvoices.length} supplier invoices`)
+    log("log", endpoint, `Fetched ${invoices.length} invoices, ${supplierInvoicesList.length} supplier invoices from list`)
+
+    // Fetch detailed supplier invoice data (list endpoint doesn't include row-level amounts)
+    // Limit to 100 invoices to avoid timeouts and rate limits
+    // Use GivenNumber as the primary identifier, falling back to InvoiceNumber
+    const invoiceNumbers = supplierInvoicesList
+      .slice(0, 100)
+      .map(inv => inv.GivenNumber || inv.InvoiceNumber)
+      .filter(num => num != null && num !== '' && num !== 'undefined')
+    let supplierInvoices = supplierInvoicesList
+
+    if (invoiceNumbers.length > 0) {
+      log("log", endpoint, `Fetching details for ${invoiceNumbers.length} supplier invoices...`)
+      const detailedInvoices = await fetchSupplierInvoiceDetails(invoiceNumbers, accessToken)
+      if (detailedInvoices.length > 0) {
+        supplierInvoices = detailedInvoices
+        log("log", endpoint, `Got detailed data for ${detailedInvoices.length} supplier invoices`)
+      }
+    }
 
     const data = {
       invoices,
@@ -909,7 +956,9 @@ async function analyzeFortnoxCostLeaks(req, res) {
       filtered: !!(startDate || endDate),
     }
 
-    log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
+    log("log", endpoint, `Analysis completed: ${analysis.overallSummary?.totalFindings || 0} total findings (supplier: ${analysis.supplierInvoiceAnalysis?.findings?.length || 0}, customer: ${analysis.customerInvoiceAnalysis?.findings?.length || 0})`)
+    log("log", endpoint, `Supplier invoices analyzed: ${analysis.supplierInvoiceAnalysis?.summary?.totalInvoices || 0}, total amount: ${analysis.supplierInvoiceAnalysis?.summary?.totalAmount || 0}`)
+    log("log", endpoint, `Customer invoices analyzed: ${analysis.customerInvoiceAnalysis?.summary?.totalInvoices || 0}, unpaid: ${analysis.customerInvoiceAnalysis?.summary?.unpaidInvoices?.length || 0}`)
 
     // Enhance with AI if available
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY
