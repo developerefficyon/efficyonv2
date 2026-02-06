@@ -1889,9 +1889,9 @@ export default function ToolDetailPage() {
                           <div>
                             <p className="text-xs text-emerald-400/70 uppercase tracking-wider mb-1">Potential Savings</p>
                             <p className="text-2xl sm:text-3xl font-bold text-emerald-400">
-                              {formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalPotentialSavings || 0, integration?.connection_type || 'fortnox')}
+                              ${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"}
                             </p>
-                            <p className="text-xs text-emerald-400/50 mt-1">{(integration?.connection_type || '').toLowerCase().includes('fortnox') ? 'SEK' : 'USD'} annually</p>
+                            <p className="text-xs text-emerald-400/50 mt-1">USD annually</p>
                           </div>
                           <div className="p-2 bg-emerald-500/10 rounded-lg">
                             <DollarSign className="w-5 h-5 text-emerald-400" />
@@ -1972,7 +1972,7 @@ export default function ToolDetailPage() {
                             </div>
                             <p className="text-gray-300 text-sm leading-relaxed">
                               We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential issues
-                              with approximately <span className="text-emerald-400 font-semibold">{formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalPotentialSavings || 0, integration?.connection_type || 'fortnox')}</span> in potential savings and revenue at risk.
+                              with approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0"} USD</span> in potential savings and revenue at risk.
                             </p>
                           </div>
 
@@ -2000,7 +2000,7 @@ export default function ToolDetailPage() {
                                 <DollarSign className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
                                 <div>
                                   <p className="text-orange-400 font-medium text-sm">Revenue at Risk</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">{formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalRevenueAtRisk, integration?.connection_type || 'fortnox')} in overdue customer invoices</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">${costLeakAnalysis.overallSummary.totalRevenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"} in overdue customer invoices</p>
                                 </div>
                               </div>
                             )}
@@ -2175,7 +2175,7 @@ export default function ToolDetailPage() {
                                             <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
                                               <DollarSign className="w-3 h-3" />
                                               <span className="text-xs font-medium">
-                                                Save {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
+                                                Save ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                               </span>
                                             </div>
                                           )}
@@ -2183,7 +2183,7 @@ export default function ToolDetailPage() {
                                             <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-2 py-1 rounded-md">
                                               <AlertTriangle className="w-3 h-3" />
                                               <span className="text-xs font-medium">
-                                                {formatCurrencyForIntegration(finding.revenueAtRisk, integration?.connection_type || 'fortnox')} at risk
+                                                ${finding.revenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} at risk
                                               </span>
                                             </div>
                                           )}
@@ -4434,7 +4434,7 @@ export default function ToolDetailPage() {
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs text-gray-400">Potential Savings:</span>
                                 <span className="text-sm font-semibold text-green-400">
-                                  {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
+                                  ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </span>
                               </div>
                             )}
@@ -4442,7 +4442,7 @@ export default function ToolDetailPage() {
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs text-gray-400">Revenue at Risk:</span>
                                 <span className="text-sm font-semibold text-amber-400">
-                                  {formatCurrencyForIntegration(finding.revenueAtRisk, integration?.connection_type || 'fortnox')}
+                                  ${finding.revenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </span>
                               </div>
                             )}

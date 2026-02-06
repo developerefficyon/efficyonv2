@@ -4,6 +4,13 @@
  */
 const { formatCurrencyForIntegration } = require("../utils/currency")
 
+// Convert SEK to USD for display (Fortnox uses SEK natively)
+const SEK_TO_USD = 0.095 // ~1 USD = 10.5 SEK
+function formatSekAsUsd(amount) {
+  const usdAmount = Math.round((amount || 0) * SEK_TO_USD)
+  return `$${usdAmount.toLocaleString('en-US')}`
+}
+
 /**
  * Analyze supplier invoices for cost leaks
  * @param {Array} supplierInvoices - Array of supplier invoices
@@ -140,7 +147,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
                 type: "duplicate_payment",
                 severity: "high",
                 title: "Potential Duplicate Payment",
-                description: `Same supplier (${inv1.supplierName || inv1.SupplierName}), same amount (${formatCurrencyForIntegration(inv1.calculatedTotal, 'fortnox')}), within ${Math.round(daysDiff)} days`,
+                description: `Same supplier (${inv1.supplierName || inv1.SupplierName}), same amount (${formatSekAsUsd(inv1.calculatedTotal)}), within ${Math.round(daysDiff)} days`,
                 invoices: [inv1, inv2],
                 amount: inv1.calculatedTotal,
                 potentialSavings: inv1.calculatedTotal,
@@ -182,7 +189,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
           type: "unusual_amount",
           severity: "medium",
           title: "Unusually High Invoice Amount",
-          description: `Invoice amount (${formatCurrencyForIntegration(invoiceTotal, 'fortnox')}) is significantly higher than average (${formatCurrencyForIntegration(mean, 'fortnox')})`,
+          description: `Invoice amount (${formatSekAsUsd(invoiceTotal)}) is significantly higher than average (${formatSekAsUsd(mean)})`,
           invoice,
           amount: invoiceTotal,
           averageAmount: mean,
@@ -249,7 +256,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
               type: "recurring_subscription",
               severity: "low",
               title: "Recurring Subscription Detected",
-              description: `Regular payments to ${supplier.supplierName} (~${formatCurrencyForIntegration(avgAmount, 'fortnox')} every ${Math.round(avgInterval)} days)`,
+              description: `Regular payments to ${supplier.supplierName} (~${formatSekAsUsd(avgAmount)} every ${Math.round(avgInterval)} days)`,
               supplier: {
                 number: supplier.supplierNumber,
                 name: supplier.supplierName,
@@ -415,7 +422,7 @@ function analyzeCustomerInvoices(invoices) {
           type: "overdue_customer_invoice",
           severity,
           title: "Overdue Customer Invoice",
-          description: `Invoice #${docNumber} from ${customerName} is ${daysOverdue} days overdue with ${formatCurrencyForIntegration(balance, 'fortnox')} outstanding`,
+          description: `Invoice #${docNumber} from ${customerName} is ${daysOverdue} days overdue with ${formatSekAsUsd(balance)} outstanding`,
           invoice,
           amount: balance,
           daysOverdue,
