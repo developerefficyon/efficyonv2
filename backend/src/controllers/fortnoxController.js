@@ -949,6 +949,48 @@ async function analyzeFortnoxCostLeaks(req, res) {
 
     const analysis = analyzeCostLeaks(data)
 
+    // Convert SEK amounts to USD for display (Fortnox uses SEK natively)
+    const SEK_TO_USD = 0.095 // ~1 USD = 10.5 SEK
+    function convertSekToUsd(amount) {
+      return Math.round((amount || 0) * SEK_TO_USD * 100) / 100
+    }
+
+    // Convert overall summary
+    if (analysis.overallSummary) {
+      analysis.overallSummary.totalPotentialSavings = convertSekToUsd(analysis.overallSummary.totalPotentialSavings)
+      analysis.overallSummary.totalRevenueAtRisk = convertSekToUsd(analysis.overallSummary.totalRevenueAtRisk)
+    }
+
+    // Convert supplier invoice findings
+    if (analysis.supplierInvoiceAnalysis?.findings) {
+      analysis.supplierInvoiceAnalysis.findings = analysis.supplierInvoiceAnalysis.findings.map(f => ({
+        ...f,
+        amount: convertSekToUsd(f.amount),
+        potentialSavings: convertSekToUsd(f.potentialSavings),
+        potentialCost: convertSekToUsd(f.potentialCost),
+        averageAmount: convertSekToUsd(f.averageAmount),
+        amountIncrease: convertSekToUsd(f.amountIncrease),
+        totalAmount: convertSekToUsd(f.totalAmount),
+      }))
+      analysis.supplierInvoiceAnalysis.summary.totalAmount = convertSekToUsd(analysis.supplierInvoiceAnalysis.summary.totalAmount)
+      analysis.supplierInvoiceAnalysis.summary.totalPotentialSavings = convertSekToUsd(analysis.supplierInvoiceAnalysis.summary.totalPotentialSavings)
+    }
+
+    // Convert customer invoice findings
+    if (analysis.customerInvoiceAnalysis?.findings) {
+      analysis.customerInvoiceAnalysis.findings = analysis.customerInvoiceAnalysis.findings.map(f => ({
+        ...f,
+        amount: convertSekToUsd(f.amount),
+        revenueAtRisk: convertSekToUsd(f.revenueAtRisk),
+      }))
+      analysis.customerInvoiceAnalysis.summary.totalRevenue = convertSekToUsd(analysis.customerInvoiceAnalysis.summary.totalRevenue)
+      analysis.customerInvoiceAnalysis.summary.totalUnpaidAmount = convertSekToUsd(analysis.customerInvoiceAnalysis.summary.totalUnpaidAmount)
+    }
+
+    analysis.currency = "USD"
+    analysis.convertedFrom = "SEK"
+    analysis.exchangeRate = SEK_TO_USD
+
     // Add date range info to the analysis
     analysis.dateRange = {
       startDate: startDate || null,
@@ -957,7 +999,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
     }
 
     log("log", endpoint, `Analysis completed: ${analysis.overallSummary?.totalFindings || 0} total findings (supplier: ${analysis.supplierInvoiceAnalysis?.findings?.length || 0}, customer: ${analysis.customerInvoiceAnalysis?.findings?.length || 0})`)
-    log("log", endpoint, `Supplier invoices analyzed: ${analysis.supplierInvoiceAnalysis?.summary?.totalInvoices || 0}, total amount: ${analysis.supplierInvoiceAnalysis?.summary?.totalAmount || 0}`)
+    log("log", endpoint, `Supplier invoices analyzed: ${analysis.supplierInvoiceAnalysis?.summary?.totalInvoices || 0}, total amount: $${analysis.supplierInvoiceAnalysis?.summary?.totalAmount || 0}`)
     log("log", endpoint, `Customer invoices analyzed: ${analysis.customerInvoiceAnalysis?.summary?.totalInvoices || 0}, unpaid: ${analysis.customerInvoiceAnalysis?.summary?.unpaidInvoices?.length || 0}`)
 
     // Enhance with AI if available
