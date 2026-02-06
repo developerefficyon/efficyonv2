@@ -1,5 +1,6 @@
 require("dotenv").config()
 const { createClient } = require("@supabase/supabase-js")
+const { decryptOAuthData, decryptIntegrationSettings, encryptOAuthData } = require("../src/utils/encryption")
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL
@@ -12,8 +13,24 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// Helper function to get decrypted tokens and settings from integration
+function getDecryptedCredentials(integration) {
+  // Decrypt settings (contains client_id, client_secret, and oauth_data)
+  const settings = decryptIntegrationSettings(integration.settings || {})
+
+  // Get OAuth data from settings (new location) or integration root (legacy)
+  const oauthData = settings.oauth_data || decryptOAuthData(integration.oauth_data || {})
+  const tokens = oauthData?.tokens
+
+  // Get client credentials from settings (new location) or integration root (legacy)
+  const clientId = settings.client_id || integration.client_id
+  const clientSecret = settings.client_secret || integration.client_secret
+
+  return { settings, oauthData, tokens, clientId, clientSecret }
+}
+
 // Helper function to refresh token if needed
-async function refreshTokenIfNeeded(integration, tokens) {
+async function refreshTokenIfNeeded(integration, tokens, clientId, clientSecret) {
   let expiresAt = tokens.expires_at
   if (typeof expiresAt === 'string') {
     expiresAt = Math.floor(new Date(expiresAt).getTime() / 1000)
@@ -23,9 +40,9 @@ async function refreshTokenIfNeeded(integration, tokens) {
 
   if (expiresAt && now >= (expiresAt - 300)) {
     console.log("🔄 Token expired, refreshing...")
-    
-    const credentials = Buffer.from(`${integration.client_id}:${integration.client_secret || ""}`).toString("base64")
-    
+
+    const credentials = Buffer.from(`${clientId}:${clientSecret || ""}`).toString("base64")
+
     const refreshResponse = await fetch("https://apps.fortnox.se/oauth-v1/token", {
       method: "POST",
       headers: {
@@ -46,8 +63,12 @@ async function refreshTokenIfNeeded(integration, tokens) {
     const expiresIn = refreshData.expires_in || 3600
     const newExpiresAt = now + expiresIn
 
+    // Build updated oauth data
+    const currentSettings = integration.settings || {}
+    const currentOauthData = decryptOAuthData(currentSettings.oauth_data || integration.oauth_data || {})
+
     const updatedOauthData = {
-      ...(integration.oauth_data || {}),
+      ...currentOauthData,
       tokens: {
         ...tokens,
         access_token: refreshData.access_token,
@@ -58,9 +79,13 @@ async function refreshTokenIfNeeded(integration, tokens) {
       },
     }
 
+    // Encrypt and save to settings.oauth_data
+    const encryptedOauthData = encryptOAuthData(updatedOauthData)
+    const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
+
     await supabase
       .from("company_integrations")
-      .update({ oauth_data: updatedOauthData })
+      .update({ settings: updatedSettings })
       .eq("id", integration.id)
 
     accessToken = refreshData.access_token
@@ -248,7 +273,7 @@ async function seedSupplierInvoices() {
       .from("company_integrations")
       .select("*")
       .eq("company_id", profile.company_id)
-      .eq("tool_name", "Fortnox")
+      .eq("provider", "Fortnox")
       .order("created_at", { ascending: false })
       .limit(1)
 
@@ -260,15 +285,16 @@ async function seedSupplierInvoices() {
     const integration = integrations[0]
     console.log("✅ Found Fortnox integration")
 
-    // Get access token
-    const tokens = integration.oauth_data?.tokens
+    // Get decrypted credentials
+    const { tokens, clientId, clientSecret } = getDecryptedCredentials(integration)
     if (!tokens?.access_token) {
       console.error("❌ No access token found. Please reconnect Fortnox integration.")
+      console.error("   (Make sure to complete the OAuth flow in the dashboard)")
       process.exit(1)
     }
 
     console.log("\n3️⃣ Refreshing token if needed...")
-    const accessToken = await refreshTokenIfNeeded(integration, tokens)
+    const accessToken = await refreshTokenIfNeeded(integration, tokens, clientId, clientSecret)
     console.log("✅ Access token ready")
 
     // Get supplier

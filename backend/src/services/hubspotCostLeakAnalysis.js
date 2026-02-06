@@ -3,6 +3,8 @@
  * Analyzes HubSpot seat usage, inactive users, and cost optimization opportunities
  */
 
+const { getPerSeatCost, calculatePotentialSavings, getPricingDisplayInfo } = require("../utils/hubspotPricing")
+
 /**
  * Check if a user has accepted their invitation (is an active user, not pending)
  * @param {Object} user - HubSpot user object
@@ -275,11 +277,11 @@ function analyzeSeatUtilization(users) {
  * Main analysis function - combines all HubSpot cost leak checks
  * @param {Array} users - HubSpot users array
  * @param {Object} accountInfo - HubSpot account info (optional)
- * @param {Object} options - Analysis options
+ * @param {Object} options - Analysis options including pricing info
  * @returns {Object} Complete cost leak analysis
  */
 function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
-  const { inactiveDays = 30 } = options
+  const { inactiveDays = 30, pricing = null } = options
 
   // Filter out pending users (those who haven't accepted their invitation)
   const activeUsers = users?.filter((user) => isActiveUser(user)) || []
@@ -316,10 +318,22 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
   })
   healthScore = Math.max(0, healthScore)
 
-  // Calculate potential savings estimate
-  // Assuming average HubSpot seat cost of ~$50/month
-  const estimatedSeatCost = 50
+  // Calculate potential savings using actual pricing if available
+  let estimatedSeatCost = 50 // Default fallback
+  let pricingSource = "estimated"
+
+  if (pricing && pricing.hub_type && pricing.tier) {
+    estimatedSeatCost = getPerSeatCost(pricing.hub_type, pricing.tier)
+    pricingSource = "user_provided"
+    console.log(`[HubSpot Analysis] Using user-provided pricing: $${estimatedSeatCost}/seat (${pricing.hub_type} ${pricing.tier})`)
+  } else {
+    console.log(`[HubSpot Analysis] No pricing info provided, using default estimate: $${estimatedSeatCost}/seat`)
+  }
+
   const potentialSavings = inactiveAnalysis.inactiveCount * estimatedSeatCost
+
+  // Get pricing display info
+  const pricingInfo = pricing ? getPricingDisplayInfo(pricing) : null
 
   // Generate summary
   const summary = {
@@ -334,6 +348,9 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
     mediumSeverityIssues: allFindings.filter((f) => f.severity === "medium").length,
     lowSeverityIssues: allFindings.filter((f) => f.severity === "low").length,
     potentialMonthlySavings: potentialSavings,
+    perSeatCost: estimatedSeatCost,
+    pricingSource,
+    paidSeats: pricing?.paid_seats || null,
   }
 
   return {
@@ -344,6 +361,7 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
       unusedSeats: unusedAnalysis,
       utilization: utilizationAnalysis,
     },
+    pricing: pricingInfo,
     recommendations: generateRecommendations(summary, allFindings),
   }
 }
@@ -356,14 +374,19 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
  */
 function generateRecommendations(summary, findings) {
   const recommendations = []
+  const perSeatCost = summary.perSeatCost || 50
+  const pricingNote = summary.pricingSource === "user_provided"
+    ? ""
+    : " (based on estimated pricing)"
 
   if (summary.inactiveUsers > 0) {
     recommendations.push({
       priority: 1,
       action: "Remove Inactive Seats",
-      description: `Remove ${summary.inactiveUsers} inactive user${summary.inactiveUsers > 1 ? "s" : ""} to save approximately $${summary.potentialMonthlySavings}/month`,
+      description: `Remove ${summary.inactiveUsers} inactive user${summary.inactiveUsers > 1 ? "s" : ""} to save $${summary.potentialMonthlySavings}/month at $${perSeatCost}/seat${pricingNote}`,
       impact: "high",
       effort: "low",
+      savings: summary.potentialMonthlySavings,
     })
   }
 
