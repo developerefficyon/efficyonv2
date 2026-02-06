@@ -957,11 +957,19 @@ export default function ToolDetailPage() {
 
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    // Support Fortnox (supplierInvoiceAnalysis), Microsoft 365 (licenseAnalysis), and HubSpot (findings)
-    const findings_source = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
-                           costLeakAnalysis?.licenseAnalysis?.findings ||
-                           costLeakAnalysis?.findings ||
-                           []
+    // Support Fortnox (supplierInvoiceAnalysis + customerInvoiceAnalysis), Microsoft 365 (licenseAnalysis), and HubSpot (findings)
+    let findings_source: any[] = []
+    if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
+      // Fortnox: merge supplier + customer invoice findings
+      findings_source = [
+        ...(costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []),
+        ...(costLeakAnalysis?.customerInvoiceAnalysis?.findings || []),
+      ]
+    } else if (costLeakAnalysis?.licenseAnalysis?.findings) {
+      findings_source = costLeakAnalysis.licenseAnalysis.findings
+    } else if (costLeakAnalysis?.findings) {
+      findings_source = costLeakAnalysis.findings
+    }
 
     if (findings_source.length === 0) return []
 
@@ -1018,15 +1026,23 @@ export default function ToolDetailPage() {
         duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
         anomalies: { title: "Price Anomalies", icon: TrendingDown, findings: [], color: "amber" },
         overdue: { title: "Overdue & Payment Issues", icon: Clock, findings: [], color: "orange" },
+        unpaid: { title: "Unpaid Customer Invoices", icon: AlertTriangle, findings: [], color: "red" },
         other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
       }
     }
 
     // Get the original findings source for index lookup
-    const findingsSource = costLeakAnalysis?.supplierInvoiceAnalysis?.findings ||
-                          costLeakAnalysis?.licenseAnalysis?.findings ||
-                          costLeakAnalysis?.findings ||
-                          []
+    let findingsSource: any[] = []
+    if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
+      findingsSource = [
+        ...(costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []),
+        ...(costLeakAnalysis?.customerInvoiceAnalysis?.findings || []),
+      ]
+    } else if (costLeakAnalysis?.licenseAnalysis?.findings) {
+      findingsSource = costLeakAnalysis.licenseAnalysis.findings
+    } else if (costLeakAnalysis?.findings) {
+      findingsSource = costLeakAnalysis.findings
+    }
 
     findings.forEach((finding: any, idx: number) => {
       const originalIdx = findingsSource.indexOf(finding) ?? idx
@@ -1062,6 +1078,8 @@ export default function ToolDetailPage() {
           groups.duplicates.findings.push(findingWithIdx)
         } else if (finding.title?.toLowerCase().includes("price") || finding.title?.toLowerCase().includes("anomal")) {
           groups.anomalies.findings.push(findingWithIdx)
+        } else if (finding.type === "overdue_customer_invoice" || finding.type === "unpaid_customer_invoice") {
+          groups.unpaid.findings.push(findingWithIdx)
         } else if (finding.title?.toLowerCase().includes("overdue") || finding.title?.toLowerCase().includes("payment")) {
           groups.overdue.findings.push(findingWithIdx)
         } else {
@@ -1222,8 +1240,13 @@ export default function ToolDetailPage() {
     yPosition = 45
 
     const summary = costLeakAnalysis.overallSummary || { totalFindings: 0, totalPotentialSavings: 0, highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 }
-    // Get findings from either Fortnox (supplierInvoiceAnalysis) or Microsoft 365 (licenseAnalysis)
-    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || costLeakAnalysis.licenseAnalysis?.findings || []
+    // Get findings from Fortnox (supplier + customer), Microsoft 365 (licenseAnalysis), or HubSpot
+    const findings = costLeakAnalysis.supplierInvoiceAnalysis?.findings || costLeakAnalysis.customerInvoiceAnalysis?.findings
+      ? [
+          ...(costLeakAnalysis.supplierInvoiceAnalysis?.findings || []),
+          ...(costLeakAnalysis.customerInvoiceAnalysis?.findings || []),
+        ]
+      : costLeakAnalysis.licenseAnalysis?.findings || []
 
     // ===== KEY METRICS ROW =====
     const metricCardWidth = (pageWidth - margin * 2 - 12) / 4
@@ -1866,9 +1889,9 @@ export default function ToolDetailPage() {
                           <div>
                             <p className="text-xs text-emerald-400/70 uppercase tracking-wider mb-1">Potential Savings</p>
                             <p className="text-2xl sm:text-3xl font-bold text-emerald-400">
-                              ${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"}
+                              {formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalPotentialSavings || 0, integration?.connection_type || 'fortnox')}
                             </p>
-                            <p className="text-xs text-emerald-400/50 mt-1">USD annually</p>
+                            <p className="text-xs text-emerald-400/50 mt-1">{(integration?.connection_type || '').toLowerCase().includes('fortnox') ? 'SEK' : 'USD'} annually</p>
                           </div>
                           <div className="p-2 bg-emerald-500/10 rounded-lg">
                             <DollarSign className="w-5 h-5 text-emerald-400" />
@@ -1948,8 +1971,8 @@ export default function ToolDetailPage() {
                               )}
                             </div>
                             <p className="text-gray-300 text-sm leading-relaxed">
-                              We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential cost leaks
-                              that could save your company approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>.
+                              We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential issues
+                              with approximately <span className="text-emerald-400 font-semibold">{formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalPotentialSavings || 0, integration?.connection_type || 'fortnox')}</span> in potential savings and revenue at risk.
                             </p>
                           </div>
 
@@ -1972,13 +1995,24 @@ export default function ToolDetailPage() {
                                 </div>
                               </div>
                             )}
-                            <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
-                              <Zap className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-cyan-400 font-medium text-sm">Quick Win</p>
-                                <p className="text-gray-400 text-xs mt-0.5">Start with duplicate payments for immediate savings</p>
+                            {costLeakAnalysis.overallSummary.totalRevenueAtRisk > 0 && (
+                              <div className="flex items-start gap-3 bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
+                                <DollarSign className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-orange-400 font-medium text-sm">Revenue at Risk</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">{formatCurrencyForIntegration(costLeakAnalysis.overallSummary.totalRevenueAtRisk, integration?.connection_type || 'fortnox')} in overdue customer invoices</p>
+                                </div>
                               </div>
-                            </div>
+                            )}
+                            {costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 && (
+                              <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
+                                <Zap className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-cyan-400 font-medium text-sm">Quick Win</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">Start with duplicate payments for immediate savings</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1988,6 +2022,7 @@ export default function ToolDetailPage() {
 
                 {/* Findings Section */}
                 {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 ||
+                  costLeakAnalysis.customerInvoiceAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.licenseAnalysis?.findings?.length > 0) && (
                   <Card className="bg-slate-900/80 border-slate-700/50">
                     <CardHeader className="pb-4">
@@ -1995,7 +2030,11 @@ export default function ToolDetailPage() {
                         <div className="flex items-center gap-3">
                           <CardTitle className="text-white text-lg">Cost Leak Findings</CardTitle>
                           <Badge variant="outline" className="border-slate-600 text-gray-400">
-                            {activeFindings.length} of {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || costLeakAnalysis.licenseAnalysis?.findings?.length || 0)}
+                            {activeFindings.length} of {(
+                              (costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || 0) +
+                              (costLeakAnalysis.customerInvoiceAnalysis?.findings?.length || 0) ||
+                              costLeakAnalysis.licenseAnalysis?.findings?.length || 0
+                            )}
                           </Badge>
                         </div>
 
@@ -2140,6 +2179,14 @@ export default function ToolDetailPage() {
                                               </span>
                                             </div>
                                           )}
+                                          {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
+                                            <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-2 py-1 rounded-md">
+                                              <AlertTriangle className="w-3 h-3" />
+                                              <span className="text-xs font-medium">
+                                                {formatCurrencyForIntegration(finding.revenueAtRisk, integration?.connection_type || 'fortnox')} at risk
+                                              </span>
+                                            </div>
+                                          )}
 
                                           {/* Invoice Details */}
                                           {finding.invoices?.length > 0 && (
@@ -2279,6 +2326,7 @@ export default function ToolDetailPage() {
 
                 {/* No Findings State */}
                 {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length &&
+                  !costLeakAnalysis.customerInvoiceAnalysis?.findings?.length &&
                   !costLeakAnalysis.licenseAnalysis?.findings?.length &&
                   !costLeakAnalysis.findings?.length) && (
                   <Card className="bg-gradient-to-br from-emerald-950/50 to-slate-900 border-emerald-800/30">
@@ -2290,7 +2338,7 @@ export default function ToolDetailPage() {
                       <p className="text-gray-400 max-w-md mx-auto">
                         {isMicrosoft365
                           ? "Your Microsoft 365 licenses appear well-optimized with no inactive users, orphaned licenses, or over-provisioning detected."
-                          : "Your supplier invoices appear well-managed with no duplicate payments, unusual amounts, or concerning patterns."}
+                          : "Your invoices appear well-managed with no duplicate payments, unusual amounts, overdue invoices, or concerning patterns."}
                       </p>
                     </CardContent>
                   </Card>
@@ -4336,8 +4384,12 @@ export default function ToolDetailPage() {
               )}
 
               {/* Findings List */}
-              {costLeakAnalysis.supplierInvoiceAnalysis?.findings && 
-               costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 0 && (
+              {(((costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || 0) + (costLeakAnalysis.customerInvoiceAnalysis?.findings?.length || 0)) > 0) && (() => {
+                const allFindings = [
+                  ...(costLeakAnalysis.supplierInvoiceAnalysis?.findings || []),
+                  ...(costLeakAnalysis.customerInvoiceAnalysis?.findings || []),
+                ];
+                return (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -4345,11 +4397,11 @@ export default function ToolDetailPage() {
                       Cost Leak Findings
                     </h3>
                     <Badge variant="outline" className="border-white/20 text-gray-300">
-                      {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} issue{costLeakAnalysis.supplierInvoiceAnalysis.findings.length !== 1 ? 's' : ''}
+                      {allFindings.length} issue{allFindings.length !== 1 ? 's' : ''}
                     </Badge>
                   </div>
                   <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                    {costLeakAnalysis.supplierInvoiceAnalysis.findings.slice(0, 20).map((finding: any, idx: number) => (
+                    {allFindings.slice(0, 20).map((finding: any, idx: number) => (
                       <div
                         key={idx}
                         className={`bg-black/40 rounded-lg p-4 border transition-all hover:shadow-lg ${
@@ -4383,6 +4435,14 @@ export default function ToolDetailPage() {
                                 <span className="text-xs text-gray-400">Potential Savings:</span>
                                 <span className="text-sm font-semibold text-green-400">
                                   {formatCurrencyForIntegration(finding.potentialSavings, integration?.connection_type || 'fortnox')}
+                                </span>
+                              </div>
+                            )}
+                            {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-xs text-gray-400">Revenue at Risk:</span>
+                                <span className="text-sm font-semibold text-amber-400">
+                                  {formatCurrencyForIntegration(finding.revenueAtRisk, integration?.connection_type || 'fortnox')}
                                 </span>
                               </div>
                             )}
@@ -4424,19 +4484,19 @@ export default function ToolDetailPage() {
                       </div>
                     ))}
                   </div>
-                  {costLeakAnalysis.supplierInvoiceAnalysis.findings.length > 20 && (
+                  {allFindings.length > 20 && (
                     <div className="text-center pt-2">
                       <p className="text-xs text-gray-500">
-                        Showing 20 of {costLeakAnalysis.supplierInvoiceAnalysis.findings.length} findings
+                        Showing 20 of {allFindings.length} findings
                       </p>
                     </div>
                   )}
                 </div>
-              )}
+                );
+              })()}
 
               {/* No Findings */}
-              {(!costLeakAnalysis.supplierInvoiceAnalysis?.findings || 
-                costLeakAnalysis.supplierInvoiceAnalysis.findings.length === 0) && (
+              {(((costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || 0) + (costLeakAnalysis.customerInvoiceAnalysis?.findings?.length || 0)) === 0) && (
                 <div className="text-center py-12">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
                     <CheckCircle className="w-8 h-8 text-green-400" />
