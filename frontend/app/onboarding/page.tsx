@@ -561,7 +561,7 @@ function OnboardingPageContent() {
       description: "For companies with 1-10 employees",
       features: [
         "5 integrations",
-        "10 monthly credits",
+        "10 monthly tokens",
         "Email support",
         "Basic analytics",
         "Up to 3 team members",
@@ -576,7 +576,7 @@ function OnboardingPageContent() {
       description: "For companies with 11-50 employees",
       features: [
         "15 integrations",
-        "50 monthly credits",
+        "50 monthly tokens",
         "Priority support",
         "Advanced analytics",
         "Up to 10 team members",
@@ -593,7 +593,7 @@ function OnboardingPageContent() {
       description: "For companies with 50+ employees",
       features: [
         "Unlimited integrations",
-        "200 monthly credits",
+        "200 monthly tokens",
         "Dedicated support",
         "Custom analytics",
         "Unlimited team members",
