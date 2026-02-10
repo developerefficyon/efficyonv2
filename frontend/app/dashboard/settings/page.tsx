@@ -287,7 +287,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
+            <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto flex-wrap sm:flex-nowrap">
               <TabsTrigger 
                 value="profile" 
                 className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"

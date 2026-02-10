@@ -54,6 +54,8 @@ export function TokenUsageHistory() {
       dual_source_analysis: "Dual Source Analysis",
       triple_source_analysis: "Multi-Source Analysis",
       advanced_ai_deep_dive: "AI Deep Dive",
+      tool_deep_research: "AI Deep Dive",
+      comparison_deep_research: "Comparison Analysis",
       token_refund: "Token Refund",
       admin_adjustment: "Admin Adjustment",
       monthly_reset: "Monthly Reset",

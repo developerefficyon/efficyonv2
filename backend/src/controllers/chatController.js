@@ -382,7 +382,7 @@ async function chatWithTool(req, res) {
         dataDescription = getDataDescription(integration.provider, dataType)
 
         // Consume token after successful data fetch
-        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "tool_deep_research", {
+        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "advanced_ai_deep_dive", {
           integrationSources: [integration.provider.toLowerCase()],
           description: `${integration.provider} ${dataType || "general"} deep research`,
         })
