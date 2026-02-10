@@ -198,21 +198,42 @@ function SidebarNavigation({
   const handleNavClick = useCloseSidebarOnMobile()
   const { canManageTeam, isViewer, isLoading: isRoleLoading } = useTeamRole()
 
-  // Filter menu items based on role
-  // While role is loading, hide role-restricted items to prevent flash
-  // (items appearing after load is less jarring than items disappearing)
+  // Filter menu items based on role (skip filtering for admin sidebar)
   const filteredItems = isAdmin
     ? menuItems
     : menuItems.filter((item) => {
-        if (isRoleLoading) {
-          // Hide items that may be removed once role is known
-          if (item.title === "Team" || item.title === "Tools") return false
-          return true
-        }
         if (item.title === "Team" && !canManageTeam) return false
         if (item.title === "Tools" && isViewer) return false
         return true
       })
+
+  // Show skeleton placeholders while role is loading (non-admin only)
+  if (isRoleLoading && !isAdmin) {
+    return (
+      <SidebarContent className="px-3 py-4">
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+            Navigation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SidebarMenuItem key={i}>
+                  <div className="flex items-center gap-3 h-11 px-3">
+                    <div className="w-7 h-7 rounded-md bg-white/5 animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+                      <div className="h-2 w-28 bg-white/[0.03] rounded animate-pulse" />
+                    </div>
+                  </div>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    )
+  }
 
   return (
     <SidebarContent className="px-3 py-4">
