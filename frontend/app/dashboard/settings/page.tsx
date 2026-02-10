@@ -36,6 +36,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { useTeamRole } from "@/lib/team-role-context"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
@@ -101,11 +102,13 @@ const plans: Plan[] = [
 
 export default function SettingsPage() {
   const { user } = useAuth()
+  const { isOwner } = useTeamRole()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
+
   const [notifications, setNotifications] = useState({
     emailAlerts: true,
     weeklyReports: true,
@@ -295,13 +298,15 @@ export default function SettingsPage() {
                 <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 Profile
               </TabsTrigger>
-              <TabsTrigger 
-                value="billing"
-                className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
-              >
-                <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                Billing
-              </TabsTrigger>
+              {isOwner && (
+                <TabsTrigger
+                  value="billing"
+                  className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+                >
+                  <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Billing
+                </TabsTrigger>
+              )}
               <TabsTrigger 
                 value="notifications"
                 className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
@@ -369,7 +374,7 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="billing" className="mt-0">
+            {isOwner && <TabsContent value="billing" className="mt-0">
               <Card className="bg-black/80 backdrop-blur-xl border-white/10">
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -468,7 +473,7 @@ export default function SettingsPage() {
                 <TokenBalanceDisplay variant="card" showUpgrade={true} />
                 <TokenUsageHistory />
               </div>
-            </TabsContent>
+            </TabsContent>}
 
             <TabsContent value="notifications" className="mt-0">
               <Card className="bg-black/80 backdrop-blur-xl border-white/10">

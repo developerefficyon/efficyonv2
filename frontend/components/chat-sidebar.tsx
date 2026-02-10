@@ -59,6 +59,7 @@ interface ChatSidebarProps {
   onToggle: () => void
   isLoading?: boolean
   toolName?: string
+  readOnly?: boolean
 }
 
 export function ChatSidebar({
@@ -72,6 +73,7 @@ export function ChatSidebar({
   onToggle,
   isLoading = false,
   toolName,
+  readOnly = false,
 }: ChatSidebarProps) {
   const isMobile = useIsMobile()
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -116,15 +118,17 @@ export function ChatSidebar({
       </div>
 
       {/* New Chat Button */}
-      <div className="p-3">
-        <Button
-          onClick={onNewConversation}
-          className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Chat
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="p-3">
+          <Button
+            onClick={onNewConversation}
+            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Chat
+          </Button>
+        </div>
+      )}
 
       {/* Conversations List */}
       <ScrollArea className="flex-1 px-3">
@@ -199,39 +203,41 @@ export function ChatSidebar({
                         {new Date(conv.updated_at).toLocaleDateString()}
                       </p>
                     </button>
-                    <div className="shrink-0 pr-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border hover:border-cyan-500/30 transition-opacity"
+                    {!readOnly && (
+                      <div className="shrink-0 pr-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border hover:border-cyan-500/30 transition-opacity"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            sideOffset={5}
+                            className="bg-black/95 border-white/10 z-[100]"
                           >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          sideOffset={5}
-                          className="bg-black/95 border-white/10 z-[100]"
-                        >
-                          <DropdownMenuItem
-                            onClick={() => handleStartEdit(conv)}
-                            className="text-gray-300 focus:text-white focus:bg-white/10"
-                          >
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onDeleteConversation(conv.id)}
-                            className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                            <DropdownMenuItem
+                              onClick={() => handleStartEdit(conv)}
+                              className="text-gray-300 focus:text-white focus:bg-white/10"
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDeleteConversation(conv.id)}
+                              className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

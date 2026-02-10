@@ -2,6 +2,7 @@
 
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { TokenProvider } from "@/lib/token-context"
+import { TeamRoleProvider, useTeamRole } from "@/lib/team-role-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { TrialExpiredModal } from "@/components/trial-expired-modal"
@@ -195,6 +196,16 @@ function SidebarNavigation({
   isAdmin: boolean
 }) {
   const handleNavClick = useCloseSidebarOnMobile()
+  const { canManageTeam, isViewer } = useTeamRole()
+
+  // Filter menu items based on role
+  const filteredItems = isAdmin
+    ? menuItems
+    : menuItems.filter((item) => {
+        if (item.title === "Team" && !canManageTeam) return false
+        if (item.title === "Tools" && isViewer) return false
+        return true
+      })
 
   return (
     <SidebarContent className="px-3 py-4">
@@ -204,7 +215,7 @@ function SidebarNavigation({
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu className="space-y-1">
-            {menuItems.map((item) => {
+            {filteredItems.map((item) => {
               const Icon = item.icon
               // Use exact match for main dashboard routes, startsWith for others (to match sub-routes)
               const isDashboardRoot = item.href === "/dashboard" || item.href === "/dashboard/admin"
@@ -393,6 +404,7 @@ export default function DashboardLayout({
   }
 
   return (
+    <TeamRoleProvider>
     <TokenProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
@@ -533,6 +545,7 @@ export default function DashboardLayout({
       )}
     </SidebarProvider>
     </TokenProvider>
+    </TeamRoleProvider>
   )
 }
 

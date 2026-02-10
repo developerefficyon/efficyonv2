@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { useTeamRole } from "@/lib/team-role-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -93,6 +94,7 @@ const defaultRecommendations = [
 
 export default function UserDashboard() {
   const { user } = useAuth()
+  const { canWrite } = useTeamRole()
   const [isLoading, setIsLoading] = useState(true)
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -268,14 +270,18 @@ export default function UserDashboard() {
               <BarChart3 className="w-16 h-16 mx-auto mb-4 text-cyan-400 opacity-50" />
               <h3 className="text-xl font-semibold text-white mb-2">No tools connected yet</h3>
               <p className="text-gray-400 mb-6">
-                Connect your first integration to start analyzing costs and finding savings opportunities.
+                {canWrite
+                  ? "Connect your first integration to start analyzing costs and finding savings opportunities."
+                  : "Ask your team owner to connect tools to start analyzing costs."}
               </p>
-              <Link href="/dashboard/tools">
-                <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Connect Your First Tool
-                </Button>
-              </Link>
+              {canWrite && (
+                <Link href="/dashboard/tools">
+                  <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Connect Your First Tool
+                  </Button>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>

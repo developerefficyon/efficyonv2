@@ -86,6 +86,7 @@ const {
   disconnectHubSpot,
 } = require("../controllers/hubspotController")
 const { requireAuth } = require("../middleware/auth")
+const { requireRole } = require("../middleware/requireRole")
 const {
   createPaymentIntent,
   createTrialSetupSession,
@@ -128,6 +129,17 @@ const {
   checkComparisonAvailability,
 } = require("../controllers/comparisonController")
 
+// Team Controller - team member management and invitations
+const {
+  getTeamMembers,
+  inviteTeamMember,
+  acceptInvitation,
+  updateMemberRole,
+  removeMember,
+  revokeInvitation,
+  resendInvitation,
+} = require("../controllers/teamController")
+
 // Analysis History Controller - store and retrieve past analyses
 const {
   saveAnalysis,
@@ -160,69 +172,69 @@ router.get("/api/admin/customers/:id", requireAuth, getCustomerDetailsAdmin)
 router.post("/api/admin/profiles/approve", requireAuth, approveProfile)
 
 // SaaS core routes (company + settings)
-router.get("/api/company", requireAuth, getCompany)
-router.post("/api/company", requireAuth, upsertCompany)
+router.get("/api/company", requireAuth, requireRole("owner", "editor", "viewer"), getCompany)
+router.post("/api/company", requireAuth, requireRole("owner"), upsertCompany)
 
-router.get("/api/tools", requireAuth, getTools)
-router.get("/api/integrations", requireAuth, getIntegrations)
-router.post("/api/integrations", requireAuth, upsertIntegrations)
-router.delete("/api/integrations/:id", requireAuth, deleteIntegration)
-router.get("/api/integrations/fortnox/oauth/start", requireAuth, startFortnoxOAuth)
+router.get("/api/tools", requireAuth, requireRole("owner", "editor", "viewer"), getTools)
+router.get("/api/integrations", requireAuth, requireRole("owner", "editor", "viewer"), getIntegrations)
+router.post("/api/integrations", requireAuth, requireRole("owner", "editor"), upsertIntegrations)
+router.delete("/api/integrations/:id", requireAuth, requireRole("owner", "editor"), deleteIntegration)
+router.get("/api/integrations/fortnox/oauth/start", requireAuth, requireRole("owner", "editor"), startFortnoxOAuth)
 router.get("/api/integrations/fortnox/callback", fortnoxOAuthCallback)
-router.get("/api/integrations/fortnox/customers", requireAuth, getFortnoxCustomers)
-router.get("/api/integrations/fortnox/company", requireAuth, getFortnoxCompanyInfo)
-router.get("/api/integrations/fortnox/settings", requireAuth, getFortnoxSettings)
-router.get("/api/integrations/fortnox/profile", requireAuth, getFortnoxProfile)
-router.get("/api/integrations/fortnox/invoices", requireAuth, getFortnoxInvoices)
-router.get("/api/integrations/fortnox/supplier-invoices", requireAuth, getFortnoxSupplierInvoices)
-router.get("/api/integrations/fortnox/expenses", requireAuth, getFortnoxExpenses)
-router.get("/api/integrations/fortnox/vouchers", requireAuth, getFortnoxVouchers)
-router.get("/api/integrations/fortnox/accounts", requireAuth, getFortnoxAccounts)
-router.get("/api/integrations/fortnox/articles", requireAuth, getFortnoxArticles)
-router.get("/api/integrations/fortnox/suppliers", requireAuth, getFortnoxSuppliers)
-router.get("/api/integrations/fortnox/cost-leaks", requireAuth, analyzeFortnoxCostLeaks)
-router.post("/api/integrations/fortnox/sync-customers", requireAuth, syncFortnoxCustomers)
+router.get("/api/integrations/fortnox/customers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxCustomers)
+router.get("/api/integrations/fortnox/company", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxCompanyInfo)
+router.get("/api/integrations/fortnox/settings", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSettings)
+router.get("/api/integrations/fortnox/profile", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxProfile)
+router.get("/api/integrations/fortnox/invoices", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxInvoices)
+router.get("/api/integrations/fortnox/supplier-invoices", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSupplierInvoices)
+router.get("/api/integrations/fortnox/expenses", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxExpenses)
+router.get("/api/integrations/fortnox/vouchers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxVouchers)
+router.get("/api/integrations/fortnox/accounts", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxAccounts)
+router.get("/api/integrations/fortnox/articles", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxArticles)
+router.get("/api/integrations/fortnox/suppliers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSuppliers)
+router.get("/api/integrations/fortnox/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeFortnoxCostLeaks)
+router.post("/api/integrations/fortnox/sync-customers", requireAuth, requireRole("owner", "editor"), syncFortnoxCustomers)
 
 // Microsoft 365 routes
-router.get("/api/integrations/microsoft365/oauth/start", requireAuth, startMicrosoft365OAuth)
+router.get("/api/integrations/microsoft365/oauth/start", requireAuth, requireRole("owner", "editor"), startMicrosoft365OAuth)
 router.get("/api/integrations/microsoft365/callback", microsoft365OAuthCallback)
-router.get("/api/integrations/microsoft365/licenses", requireAuth, getMicrosoft365Licenses)
-router.get("/api/integrations/microsoft365/users", requireAuth, getMicrosoft365Users)
-router.get("/api/integrations/microsoft365/usage", requireAuth, getMicrosoft365UsageReports)
-router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, analyzeMicrosoft365CostLeaks)
+router.get("/api/integrations/microsoft365/licenses", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365Licenses)
+router.get("/api/integrations/microsoft365/users", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365Users)
+router.get("/api/integrations/microsoft365/usage", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365UsageReports)
+router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeMicrosoft365CostLeaks)
 
 // HubSpot routes
-router.get("/api/integrations/hubspot/oauth/start", requireAuth, startHubSpotOAuth)
+router.get("/api/integrations/hubspot/oauth/start", requireAuth, requireRole("owner", "editor"), startHubSpotOAuth)
 router.get("/api/integrations/hubspot/callback", hubspotOAuthCallback)
-router.get("/api/integrations/hubspot/users", requireAuth, getHubSpotUsers)
-router.get("/api/integrations/hubspot/account", requireAuth, getHubSpotAccountInfo)
-router.get("/api/integrations/hubspot/cost-leaks", requireAuth, analyzeHubSpotCostLeaks)
-router.delete("/api/integrations/hubspot/disconnect", requireAuth, disconnectHubSpot)
+router.get("/api/integrations/hubspot/users", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotUsers)
+router.get("/api/integrations/hubspot/account", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotAccountInfo)
+router.get("/api/integrations/hubspot/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeHubSpotCostLeaks)
+router.delete("/api/integrations/hubspot/disconnect", requireAuth, requireRole("owner", "editor"), disconnectHubSpot)
 
 // Analysis History Routes
-router.post("/api/analysis-history", requireAuth, saveAnalysis)
-router.get("/api/analysis-history", requireAuth, getAnalysisHistory)
-router.get("/api/analysis-history/:id", requireAuth, getAnalysisById)
-router.delete("/api/analysis-history/:id", requireAuth, deleteAnalysis)
+router.post("/api/analysis-history", requireAuth, requireRole("owner", "editor"), saveAnalysis)
+router.get("/api/analysis-history", requireAuth, requireRole("owner", "editor", "viewer"), getAnalysisHistory)
+router.get("/api/analysis-history/:id", requireAuth, requireRole("owner", "editor", "viewer"), getAnalysisById)
+router.delete("/api/analysis-history/:id", requireAuth, requireRole("owner", "editor"), deleteAnalysis)
 
 // Dashboard Summary Route
-router.get("/api/dashboard/summary", requireAuth, getDashboardSummary)
+router.get("/api/dashboard/summary", requireAuth, requireRole("owner", "editor", "viewer"), getDashboardSummary)
 
-router.get("/api/plans", requireAuth, getPlans)
-router.post("/api/plans", requireAuth, upsertPlans)
+router.get("/api/plans", requireAuth, requireRole("owner", "editor", "viewer"), getPlans)
+router.post("/api/plans", requireAuth, requireRole("owner"), upsertPlans)
 
-router.get("/api/alerts", requireAuth, getAlerts)
-router.post("/api/alerts", requireAuth, upsertAlerts)
+router.get("/api/alerts", requireAuth, requireRole("owner", "editor", "viewer"), getAlerts)
+router.post("/api/alerts", requireAuth, requireRole("owner"), upsertAlerts)
 
 // Stripe Payment Routes
-router.post("/api/stripe/create-payment-intent", requireAuth, createPaymentIntent)
-router.post("/api/stripe/create-trial-setup", requireAuth, createTrialSetupSession)
-router.post("/api/stripe/confirm-payment", requireAuth, confirmPaymentIntent)
-router.get("/api/stripe/subscription", requireAuth, getUserSubscription)
+router.post("/api/stripe/create-payment-intent", requireAuth, requireRole("owner"), createPaymentIntent)
+router.post("/api/stripe/create-trial-setup", requireAuth, requireRole("owner"), createTrialSetupSession)
+router.post("/api/stripe/confirm-payment", requireAuth, requireRole("owner"), confirmPaymentIntent)
+router.get("/api/stripe/subscription", requireAuth, requireRole("owner", "editor", "viewer"), getUserSubscription)
 router.get("/api/stripe/plans", getPlansDetails)
-router.post("/api/stripe/use-tokens", requireAuth, useTokens)
-router.get("/api/stripe/token-history", requireAuth, getTokenHistory)
-router.get("/api/stripe/token-balance", requireAuth, getTokenBalance)
+router.post("/api/stripe/use-tokens", requireAuth, requireRole("owner"), useTokens)
+router.get("/api/stripe/token-history", requireAuth, requireRole("owner", "editor", "viewer"), getTokenHistory)
+router.get("/api/stripe/token-balance", requireAuth, requireRole("owner", "editor", "viewer"), getTokenBalance)
 
 // Stripe Webhook (requires raw body, no JSON parsing)
 router.post("/api/stripe/webhook", express.raw({type: 'application/json'}), handleStripeWebhook)
@@ -232,12 +244,21 @@ router.get("/api/admin/tokens/usage", requireAuth, adminGetTokenUsage)
 router.post("/api/admin/tokens/adjust", requireAuth, adminAdjustTokens)
 router.post("/api/admin/subscription/change-plan", requireAuth, adminChangePlan)
 
+// Team Management Routes
+router.get("/api/team/members", requireAuth, requireRole("owner", "editor", "viewer"), getTeamMembers)
+router.post("/api/team/invite", requireAuth, inviteTeamMember)
+router.post("/api/team/accept-invitation", requireAuth, acceptInvitation)
+router.patch("/api/team/members/:memberId", requireAuth, updateMemberRole)
+router.delete("/api/team/members/:memberId", requireAuth, removeMember)
+router.delete("/api/team/invitations/:invitationId", requireAuth, revokeInvitation)
+router.post("/api/team/invitations/:invitationId/resend", requireAuth, resendInvitation)
+
 // AI/OpenAI Routes
-router.post("/api/ai/analyze", requireAuth, analyzeWithAI)
-router.post("/api/ai/chat", requireAuth, chatAboutAnalysis)
-router.post("/api/ai/recommendations", requireAuth, getRecommendations)
-router.post("/api/ai/estimate-savings", requireAuth, estimateSavings)
-router.post("/api/ai/summary", requireAuth, getAnalysisSummary)
+router.post("/api/ai/analyze", requireAuth, requireRole("owner", "editor"), analyzeWithAI)
+router.post("/api/ai/chat", requireAuth, requireRole("owner", "editor"), chatAboutAnalysis)
+router.post("/api/ai/recommendations", requireAuth, requireRole("owner", "editor"), getRecommendations)
+router.post("/api/ai/estimate-savings", requireAuth, requireRole("owner", "editor"), estimateSavings)
+router.post("/api/ai/summary", requireAuth, requireRole("owner", "editor"), getAnalysisSummary)
 
 // Auth Routes (public - registration and login)
 router.post("/api/auth/register", registerUserHandler)
@@ -248,17 +269,17 @@ router.post("/api/email/send-verification", sendVerificationEmailHandler)
 router.post("/api/email/send-password-reset", sendPasswordResetEmailHandler)
 
 // Chat Conversation Routes
-router.get("/api/chat/conversations", requireAuth, getConversations)
-router.get("/api/chat/conversations/:id", requireAuth, getConversation)
-router.post("/api/chat/conversations", requireAuth, createConversation)
-router.put("/api/chat/conversations/:id", requireAuth, updateConversation)
-router.delete("/api/chat/conversations/:id", requireAuth, deleteConversation)
-router.post("/api/chat/conversations/:id/messages", requireAuth, addMessage)
-router.post("/api/chat/tool", requireAuth, chatWithTool)
+router.get("/api/chat/conversations", requireAuth, requireRole("owner", "editor", "viewer"), getConversations)
+router.get("/api/chat/conversations/:id", requireAuth, requireRole("owner", "editor", "viewer"), getConversation)
+router.post("/api/chat/conversations", requireAuth, requireRole("owner", "editor"), createConversation)
+router.put("/api/chat/conversations/:id", requireAuth, requireRole("owner", "editor"), updateConversation)
+router.delete("/api/chat/conversations/:id", requireAuth, requireRole("owner", "editor"), deleteConversation)
+router.post("/api/chat/conversations/:id/messages", requireAuth, requireRole("owner", "editor"), addMessage)
+router.post("/api/chat/tool", requireAuth, requireRole("owner", "editor"), chatWithTool)
 
 // Cross-Platform Comparison Routes
-router.post("/api/chat/comparison", requireAuth, chatComparison)
-router.get("/api/chat/comparison/availability", requireAuth, checkComparisonAvailability)
+router.post("/api/chat/comparison", requireAuth, requireRole("owner", "editor"), chatComparison)
+router.get("/api/chat/comparison/availability", requireAuth, requireRole("owner", "editor", "viewer"), checkComparisonAvailability)
 
 module.exports = router
 

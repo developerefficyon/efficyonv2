@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTokens } from "@/lib/token-context"
+import { useTeamRole } from "@/lib/team-role-context"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ChatSidebar, useChatConversations } from "@/components/chat-sidebar"
@@ -100,6 +101,7 @@ type ResearchCache = {
 export default function ChatbotPage() {
   const { user } = useAuth()
   const { tokenBalance, refreshTokenBalance } = useTokens()
+  const { isViewer } = useTeamRole()
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState("general")
   const [messages, setMessages] = useState<Message[]>([])
@@ -519,6 +521,7 @@ export default function ChatbotPage() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         isLoading={conversationsLoading}
         toolName={currentTool ? getToolDisplayName(currentTool.provider) : undefined}
+        readOnly={isViewer}
       />
 
       {/* Main Chat Area */}
@@ -550,7 +553,7 @@ export default function ChatbotPage() {
                     </CardDescription>
                   </div>
                 </div>
-                {messages.length > 0 && (
+                {messages.length > 0 && !isViewer && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -576,25 +579,29 @@ export default function ChatbotPage() {
                       How can I help you today?
                     </h3>
                     <p className="text-sm text-gray-400 mb-6 max-w-md">
-                      {activeTab === "general"
+                      {isViewer
+                        ? "You can view conversation history. Select a conversation from the sidebar to review past analyses."
+                        : activeTab === "general"
                         ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
                         : activeTab === "comparison"
                         ? "I'll cross-reference data from your connected platforms to find cost optimization opportunities, activity gaps, and prioritized recommendations."
                         : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
                     </p>
-                    <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                      {getSuggestedQuestions().map((question, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => sendMessage(question)}
-                          className="border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-cyan-500/20 hover:border-cyan-500/30 text-xs"
-                        >
-                          {question}
-                        </Button>
-                      ))}
-                    </div>
+                    {!isViewer && (
+                      <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                        {getSuggestedQuestions().map((question, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendMessage(question)}
+                            className="border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-cyan-500/20 hover:border-cyan-500/30 text-xs"
+                          >
+                            {question}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -678,54 +685,62 @@ export default function ChatbotPage() {
 
               {/* Input Area - Fixed at bottom */}
               <div className="p-4 border-t border-white/10 shrink-0 bg-black/40">
-                <div className="flex gap-2">
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      activeTab === "general"
-                        ? "Type your message..."
-                        : activeTab === "comparison"
-                        ? "Ask about cross-platform insights..."
-                        : `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
-                    }
-                    disabled={isLoading}
-                    className="flex-1 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50"
-                  />
-                  <Button
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || isLoading}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-[10px] text-gray-500 mt-2 text-center">
-                  {activeTab === "general" ? (
-                    "Chat is unlimited - no credits required"
-                  ) : hasCachedResearch() ? (
-                    <span className="flex items-center justify-center gap-1 text-green-400">
-                      <Sparkles className="w-3 h-3" />
-                      Research data loaded - follow-up questions are free
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-1">
-                      <Coins className="w-3 h-3" />
-                      First query costs {DEEP_RESEARCH_TOKEN_COST} token (deep research), follow-ups are free
-                      {tokenBalance && (
-                        <span className="text-cyan-400 ml-1">
-                          ({tokenBalance.available} available)
+                {isViewer ? (
+                  <p className="text-sm text-gray-500 text-center py-1">
+                    View-only access — select a conversation from the sidebar to review past analyses
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        ref={inputRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={
+                          activeTab === "general"
+                            ? "Type your message..."
+                            : activeTab === "comparison"
+                            ? "Ask about cross-platform insights..."
+                            : `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
+                        }
+                        disabled={isLoading}
+                        className="flex-1 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50"
+                      />
+                      <Button
+                        onClick={() => sendMessage()}
+                        disabled={!input.trim() || isLoading}
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-2 text-center">
+                      {activeTab === "general" ? (
+                        "Chat is unlimited - no credits required"
+                      ) : hasCachedResearch() ? (
+                        <span className="flex items-center justify-center gap-1 text-green-400">
+                          <Sparkles className="w-3 h-3" />
+                          Research data loaded - follow-up questions are free
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1">
+                          <Coins className="w-3 h-3" />
+                          First query costs {DEEP_RESEARCH_TOKEN_COST} token (deep research), follow-ups are free
+                          {tokenBalance && (
+                            <span className="text-cyan-400 ml-1">
+                              ({tokenBalance.available} available)
+                            </span>
+                          )}
                         </span>
                       )}
-                    </span>
-                  )}
-                </p>
+                    </p>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

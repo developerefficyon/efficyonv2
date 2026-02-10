@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,15 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirect = searchParams.get("redirect")
+
+  // Persist redirect in localStorage so it survives the email verification detour
+  useEffect(() => {
+    if (redirect) {
+      localStorage.setItem("invite_redirect", redirect)
+    }
+  }, [redirect])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,8 +73,9 @@ export default function RegisterPage() {
         description: `We sent a verification link to ${email}. Please verify your email before logging in.`,
       })
 
-      // Redirect to login after successful registration
-      router.push("/login")
+      // Redirect to login after successful registration (preserve redirect param for invite flow)
+      const loginUrl = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"
+      router.push(loginUrl)
     } catch (err: any) {
       setIsLoading(false)
       setError(err.message || "An error occurred. Please try again.")
@@ -196,7 +206,7 @@ export default function RegisterPage() {
               </form>
               <div className="mt-6 text-center text-sm text-gray-400">
                 Already have an account?{" "}
-                <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                <Link href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"} className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
                   Sign in
                 </Link>
               </div>

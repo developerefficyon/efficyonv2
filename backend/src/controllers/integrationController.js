@@ -40,7 +40,16 @@ async function getIntegrationLimits(userId) {
     }
   }
 
-  // Get user's subscription with plan details
+  // Resolve to company owner for subscription lookup (team members share owner's plan)
+  const { data: company } = await supabase
+    .from("companies")
+    .select("user_id")
+    .eq("id", profile.company_id)
+    .maybeSingle()
+
+  const billingUserId = company?.user_id || userId
+
+  // Get subscription with plan details
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select(`
@@ -51,8 +60,10 @@ async function getIntegrationLimits(userId) {
         max_integrations
       )
     `)
-    .eq("user_id", userId)
-    .eq("status", "active")
+    .eq("user_id", billingUserId)
+    .in("status", ["active", "trialing", "trial_expired"])
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   // Default to free tier limits if no subscription
