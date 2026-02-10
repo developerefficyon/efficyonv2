@@ -122,9 +122,17 @@ export default function TeamPage() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [newRole, setNewRole] = useState<string>("")
 
+  // Role change loading
+  const [isSavingRole, setIsSavingRole] = useState(false)
+
   // Remove confirmation
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  // Per-invitation loading states
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTeamData()
@@ -207,6 +215,7 @@ export default function TeamPage() {
   async function handleRoleChange() {
     if (!selectedMember || !newRole) return
 
+    setIsSavingRole(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
@@ -229,12 +238,15 @@ export default function TeamPage() {
       }
     } catch {
       toast.error("An error occurred")
+    } finally {
+      setIsSavingRole(false)
     }
   }
 
   async function handleRemoveMember() {
     if (!memberToRemove) return
 
+    setIsRemoving(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
@@ -255,10 +267,13 @@ export default function TeamPage() {
       }
     } catch {
       toast.error("An error occurred")
+    } finally {
+      setIsRemoving(false)
     }
   }
 
   async function handleRevokeInvitation(invitationId: string) {
+    setRevokingId(invitationId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
@@ -277,10 +292,13 @@ export default function TeamPage() {
       }
     } catch {
       toast.error("An error occurred")
+    } finally {
+      setRevokingId(null)
     }
   }
 
   async function handleResendInvitation(invitationId: string) {
+    setResendingId(invitationId)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
@@ -298,6 +316,8 @@ export default function TeamPage() {
       }
     } catch {
       toast.error("An error occurred")
+    } finally {
+      setResendingId(null)
     }
   }
 
@@ -556,18 +576,28 @@ export default function TeamPage() {
                       size="sm"
                       className="text-gray-400 hover:text-white hover:bg-white/5 text-xs"
                       onClick={() => handleResendInvitation(inv.id)}
+                      disabled={resendingId === inv.id || revokingId === inv.id}
                     >
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      Resend
+                      {resendingId === inv.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                      )}
+                      {resendingId === inv.id ? "Resending..." : "Resend"}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
                       onClick={() => handleRevokeInvitation(inv.id)}
+                      disabled={revokingId === inv.id || resendingId === inv.id}
                     >
-                      <X className="w-3 h-3 mr-1" />
-                      Revoke
+                      {revokingId === inv.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <X className="w-3 h-3 mr-1" />
+                      )}
+                      {revokingId === inv.id ? "Revoking..." : "Revoke"}
                     </Button>
                   </div>
                 </div>
@@ -684,15 +714,24 @@ export default function TeamPage() {
             <Button
               variant="outline"
               onClick={() => setIsRoleModalOpen(false)}
+              disabled={isSavingRole}
               className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRoleChange}
+              disabled={isSavingRole}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
             >
-              Save
+              {isSavingRole ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -712,14 +751,25 @@ export default function TeamPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white">
+            <AlertDialogCancel
+              disabled={isRemoving}
+              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemoveMember}
+              disabled={isRemoving}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Remove
+              {isRemoving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -196,12 +196,19 @@ function SidebarNavigation({
   isAdmin: boolean
 }) {
   const handleNavClick = useCloseSidebarOnMobile()
-  const { canManageTeam, isViewer } = useTeamRole()
+  const { canManageTeam, isViewer, isLoading: isRoleLoading } = useTeamRole()
 
   // Filter menu items based on role
+  // While role is loading, hide role-restricted items to prevent flash
+  // (items appearing after load is less jarring than items disappearing)
   const filteredItems = isAdmin
     ? menuItems
     : menuItems.filter((item) => {
+        if (isRoleLoading) {
+          // Hide items that may be removed once role is known
+          if (item.title === "Team" || item.title === "Tools") return false
+          return true
+        }
         if (item.title === "Team" && !canManageTeam) return false
         if (item.title === "Tools" && isViewer) return false
         return true
