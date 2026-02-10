@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache, invalidateCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 
 export type Conversation = {
@@ -308,48 +309,28 @@ export function ChatSidebar({
   )
 }
 
-// Cache for conversations by tool
-type ConversationsCache = {
-  [toolId: string]: {
-    conversations: Conversation[]
-    loadedAt: number
-  }
-}
-
-// Cache for loaded conversation messages
-type MessagesCache = {
-  [conversationId: string]: {
-    messages: ConversationMessage[]
-    loadedAt: number
-  }
-}
-
 // Hook to manage chat conversations with tool support and caching
 export function useChatConversations(chatType: "general" | "comparison" | "tool" = "general", toolId: string | null = null) {
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Cache refs to persist across re-renders
-  const conversationsCacheRef = useRef<ConversationsCache>({})
-  const messagesCacheRef = useRef<MessagesCache>({})
-
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-  const cacheKey = chatType === "tool" && toolId ? `tool-${toolId}` : chatType
-  const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+  const cacheKey = chatType === "tool" && toolId ? `chat-convs:tool-${toolId}` : `chat-convs:${chatType}`
+
+  const cachedConvs = getCache<Conversation[]>(cacheKey)
+  const [conversations, setConversations] = useState<Conversation[]>(cachedConvs || [])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(!cachedConvs)
 
   const fetchConversations = useCallback(async (forceRefresh = false) => {
-    // Check cache first
-    const cached = conversationsCacheRef.current[cacheKey]
-    const now = Date.now()
-
-    if (!forceRefresh && cached && (now - cached.loadedAt) < CACHE_TTL) {
-      setConversations(cached.conversations)
-      setIsLoading(false)
-      return
+    // Check module-level cache first (for non-forced refreshes)
+    if (!forceRefresh) {
+      const cached = getCache<Conversation[]>(cacheKey)
+      if (cached && conversations.length > 0) {
+        // Already showing cached data, silently revalidate
+        setIsLoading(false)
+      } else if (!cached) {
+        setIsLoading(true)
+      }
     }
 
-    setIsLoading(true)
     try {
       const accessToken = await getBackendToken()
       if (!accessToken) return
@@ -370,12 +351,8 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
         const data = await response.json()
         const convs = data.conversations || []
 
-        // Update cache
-        conversationsCacheRef.current[cacheKey] = {
-          conversations: convs,
-          loadedAt: now,
-        }
-
+        // Update module-level cache
+        setCache(cacheKey, convs)
         setConversations(convs)
       }
     } catch (error) {
@@ -383,7 +360,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
     } finally {
       setIsLoading(false)
     }
-  }, [apiBase, chatType, toolId, cacheKey])
+  }, [apiBase, chatType, toolId, cacheKey, conversations.length])
 
   const createConversation = useCallback(async (): Promise<string | null> => {
     try {
@@ -410,12 +387,10 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
         const data = await response.json()
         const newConv = data.conversation
 
-        // Update state and cache
-        setConversations((prev) => [newConv, ...prev])
-        conversationsCacheRef.current[cacheKey] = {
-          conversations: [newConv, ...conversations],
-          loadedAt: Date.now(),
-        }
+        // Update state and module-level cache
+        const updated = [newConv, ...conversations]
+        setConversations(updated)
+        setCache(cacheKey, updated)
 
         setActiveConversationId(newConv.id)
         return newConv.id
@@ -441,16 +416,13 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
       })
 
       if (response.ok) {
-        // Update state and cache
+        // Update state and module-level cache
         const updatedConvs = conversations.filter((c) => c.id !== id)
         setConversations(updatedConvs)
-        conversationsCacheRef.current[cacheKey] = {
-          conversations: updatedConvs,
-          loadedAt: Date.now(),
-        }
+        setCache(cacheKey, updatedConvs)
 
         // Clear message cache for this conversation
-        delete messagesCacheRef.current[id]
+        invalidateMsgCache(id)
 
         if (activeConversationId === id) {
           setActiveConversationId(null)
@@ -478,15 +450,12 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
       })
 
       if (response.ok) {
-        // Update state and cache
+        // Update state and module-level cache
         const updatedConvs = conversations.map((c) =>
           c.id === id ? { ...c, title } : c
         )
         setConversations(updatedConvs)
-        conversationsCacheRef.current[cacheKey] = {
-          conversations: updatedConvs,
-          loadedAt: Date.now(),
-        }
+        setCache(cacheKey, updatedConvs)
       }
     } catch (error) {
       console.error("Failed to rename conversation:", error)
@@ -513,7 +482,7 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
       })
 
       // Invalidate message cache for this conversation
-      delete messagesCacheRef.current[conversationId]
+      invalidateMsgCache(conversationId)
 
       // Refresh conversations to get updated title/timestamp
       fetchConversations(true)
@@ -523,12 +492,10 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
   }, [apiBase, fetchConversations])
 
   const loadConversation = useCallback(async (id: string) => {
-    // Check message cache first
-    const cached = messagesCacheRef.current[id]
-    const now = Date.now()
-
-    if (cached && (now - cached.loadedAt) < CACHE_TTL) {
-      return { messages: cached.messages }
+    // Check module-level message cache first
+    const cached = getCache<ConversationMessage[]>(`chat-msgs:${id}`)
+    if (cached) {
+      return { messages: cached }
     }
 
     try {
@@ -545,11 +512,8 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
         const data = await response.json()
         const messages = data.conversation?.messages || []
 
-        // Cache messages
-        messagesCacheRef.current[id] = {
-          messages,
-          loadedAt: now,
-        }
+        // Cache messages in module-level cache
+        setCache(`chat-msgs:${id}`, messages)
 
         return data.conversation
       }
@@ -560,15 +524,33 @@ export function useChatConversations(chatType: "general" | "comparison" | "tool"
     }
   }, [apiBase])
 
-  // Clear caches when toolId changes
-  const clearCache = useCallback(() => {
-    conversationsCacheRef.current = {}
-    messagesCacheRef.current = {}
+  // Helper to invalidate a specific message cache entry
+  const invalidateMsgCache = useCallback((conversationId: string) => {
+    invalidateCache(`chat-msgs:${conversationId}`)
   }, [])
+
+  // Clear conversation caches (when switching tool context)
+  const clearCache = useCallback(() => {
+    // Invalidate all chat-related keys from module-level cache
+    // We can't iterate the Map from here, so just invalidate the current key
+    invalidateCache(cacheKey)
+  }, [cacheKey])
 
   // Fetch conversations when hook mounts or chatType/toolId changes
   useEffect(() => {
     setActiveConversationId(null) // Reset active conversation when chat type changes
+
+    // Immediately swap to cached data for the new tab (prevents flash of old tab's data)
+    const newCacheKey = chatType === "tool" && toolId ? `chat-convs:tool-${toolId}` : `chat-convs:${chatType}`
+    const cached = getCache<Conversation[]>(newCacheKey)
+    if (cached) {
+      setConversations(cached)
+      setIsLoading(false)
+    } else {
+      setConversations([])
+      setIsLoading(true)
+    }
+
     fetchConversations()
   }, [chatType, toolId]) // eslint-disable-line react-hooks/exhaustive-deps
 

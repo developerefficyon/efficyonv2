@@ -62,6 +62,7 @@ import {
   Shield,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -104,10 +105,11 @@ const ROLE_CONFIG = {
 
 export default function TeamPage() {
   const { user } = useAuth()
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([])
-  const [limits, setLimits] = useState<TeamLimits | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedTeam = getCache<{ members: TeamMember[]; invitations: PendingInvitation[]; limits: TeamLimits | null }>("team-data")
+  const [members, setMembers] = useState<TeamMember[]>(cachedTeam?.members || [])
+  const [invitations, setInvitations] = useState<PendingInvitation[]>(cachedTeam?.invitations || [])
+  const [limits, setLimits] = useState<TeamLimits | null>(cachedTeam?.limits || null)
+  const [isLoading, setIsLoading] = useState(!cachedTeam)
   const [currentUserRole, setCurrentUserRole] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -134,12 +136,23 @@ export default function TeamPage() {
   const [resendingId, setResendingId] = useState<string | null>(null)
   const [revokingId, setRevokingId] = useState<string | null>(null)
 
+  // Set currentUserRole from cache on initial render if available
+  useEffect(() => {
+    if (cachedTeam?.members && user?.id) {
+      const me = cachedTeam.members.find((m) => m.user?.id === user.id)
+      if (me) setCurrentUserRole(me.role)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     fetchTeamData()
   }, [user])
 
   async function fetchTeamData() {
-    setIsLoading(true)
+    // Only show loading spinner if no cached data
+    if (!getCache("team-data")) {
+      setIsLoading(true)
+    }
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
@@ -151,11 +164,18 @@ export default function TeamPage() {
 
       if (res.ok) {
         const data = await res.json()
-        setMembers(data.members || [])
-        setInvitations(data.pendingInvitations || [])
-        setLimits(data.limits || null)
+        const fetchedMembers = data.members || []
+        const fetchedInvitations = data.pendingInvitations || []
+        const fetchedLimits = data.limits || null
 
-        const me = (data.members || []).find((m: TeamMember) => m.user?.id === user?.id)
+        setMembers(fetchedMembers)
+        setInvitations(fetchedInvitations)
+        setLimits(fetchedLimits)
+
+        // Save to module-level cache
+        setCache("team-data", { members: fetchedMembers, invitations: fetchedInvitations, limits: fetchedLimits })
+
+        const me = fetchedMembers.find((m: TeamMember) => m.user?.id === user?.id)
         setCurrentUserRole(me?.role || "")
       }
     } catch (error) {

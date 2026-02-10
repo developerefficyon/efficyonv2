@@ -196,7 +196,10 @@ export default function ToolsPage() {
 
     isLoadingIntegrationsRef.current = true
     try {
-      setIsLoading(true)
+      // Only show loading spinner if no cached data exists
+      if (!getCache("integrations-data")) {
+        setIsLoading(true)
+      }
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
 
