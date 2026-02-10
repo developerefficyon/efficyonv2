@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,7 @@ import {
   Info,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { useApiCache } from "@/lib/use-api-cache"
 
 interface Recommendation {
   id: string
@@ -58,9 +59,6 @@ interface DashboardData {
 
 export default function RecommendationsPage() {
   const [applied, setApplied] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null)
 
   // Load applied recommendations from localStorage on mount
@@ -75,44 +73,31 @@ export default function RecommendationsPage() {
     }
   }, [])
 
-  const fetchRecommendations = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const fetchRecommendations = useCallback(async () => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const accessToken = await getBackendToken()
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        setDashboardData(null)
-        setLoading(false)
-        return
-      }
-
-      const response = await fetch(`${apiBase}/api/dashboard/summary`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch recommendations")
-      }
-
-      const data = await response.json()
-      setDashboardData(data)
-    } catch (err) {
-      console.error("Error fetching recommendations:", err)
-      setError("Failed to load recommendations")
-      setDashboardData(null)
-    } finally {
-      setLoading(false)
+    if (!accessToken) {
+      return null
     }
-  }
 
-  useEffect(() => {
-    fetchRecommendations()
+    const response = await fetch(`${apiBase}/api/dashboard/summary`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch recommendations")
+    }
+
+    return response.json()
   }, [])
+
+  const { data: dashboardData, isLoading: loading, error } = useApiCache<DashboardData>(
+    "dashboard-summary",
+    fetchRecommendations
+  )
 
   const handleApply = (id: string) => {
     const newApplied = [...applied, id]

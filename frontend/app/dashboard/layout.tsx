@@ -3,6 +3,7 @@
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { TokenProvider } from "@/lib/token-context"
 import { TeamRoleProvider, useTeamRole } from "@/lib/team-role-context"
+import { clearAllCache } from "@/lib/use-api-cache"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { TrialExpiredModal } from "@/components/trial-expired-modal"
@@ -498,9 +499,11 @@ export default function DashboardLayout({
                 e.preventDefault()
                 e.stopPropagation()
                 try {
+                  clearAllCache()
                   await logout()
                 } catch (error) {
                   console.error("Logout error:", error)
+                  clearAllCache()
                   // Force redirect even if logout fails
                   router.push("/login")
                 }

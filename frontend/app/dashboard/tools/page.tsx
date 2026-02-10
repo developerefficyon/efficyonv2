@@ -42,6 +42,7 @@ import {
 import Link from "next/link"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 
 interface Integration {
@@ -99,16 +100,20 @@ export default function ToolsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [availableTools, setAvailableTools] = useState<AvailableTool[]>([])
-  const [integrationLimits, setIntegrationLimits] = useState<IntegrationLimits>({
-    current: 0,
-    max: 5,
-    canAddMore: true,
-    planTier: "startup",
-    planName: "Startup",
-  })
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedIntegrations = getCache<{ integrations: Integration[]; limits: IntegrationLimits }>("integrations-data")
+  const cachedTools = getCache<{ tools: AvailableTool[] }>("available-tools-data")
+  const [integrations, setIntegrations] = useState<Integration[]>(cachedIntegrations?.integrations || [])
+  const [availableTools, setAvailableTools] = useState<AvailableTool[]>(cachedTools?.tools || [])
+  const [integrationLimits, setIntegrationLimits] = useState<IntegrationLimits>(
+    cachedIntegrations?.limits || {
+      current: 0,
+      max: 5,
+      canAddMore: true,
+      planTier: "startup",
+      planName: "Startup",
+    }
+  )
+  const [isLoading, setIsLoading] = useState(!cachedIntegrations)
   const [isLoadingTools, setIsLoadingTools] = useState(false)
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -170,7 +175,9 @@ export default function ToolsPage() {
       }
 
       const data = await res.json()
-      setAvailableTools(data.tools || [])
+      const tools = data.tools || []
+      setAvailableTools(tools)
+      setCache("available-tools-data", { tools })
     } catch (error) {
       console.error("Error loading tools:", error)
       // Silently fail - tools list is optional
@@ -215,18 +222,24 @@ export default function ToolsPage() {
 
       const data = await res.json()
       console.log("Integrations loaded:", data.integrations?.length || 0)
-      setIntegrations(data.integrations || [])
+      const loadedIntegrations = data.integrations || []
+      setIntegrations(loadedIntegrations)
 
       // Update integration limits from response
+      const limits = data.limits ? {
+        current: data.limits.current || 0,
+        max: data.limits.max || 5,
+        canAddMore: data.limits.canAddMore ?? true,
+        planTier: data.limits.planTier || "startup",
+        planName: data.limits.planName || "Startup",
+      } : integrationLimits
+
       if (data.limits) {
-        setIntegrationLimits({
-          current: data.limits.current || 0,
-          max: data.limits.max || 5,
-          canAddMore: data.limits.canAddMore ?? true,
-          planTier: data.limits.planTier || "startup",
-          planName: data.limits.planName || "Startup",
-        })
+        setIntegrationLimits(limits)
       }
+
+      // Save to cache for instant loading on revisit
+      setCache("integrations-data", { integrations: loadedIntegrations, limits })
     } catch (error) {
       console.error("Error loading integrations:", error)
       toast.error("Failed to load integrations", {

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback } from "react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
+import { useApiCache } from "@/lib/use-api-cache"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -95,46 +96,30 @@ const defaultRecommendations = [
 export default function UserDashboard() {
   const { user } = useAuth()
   const { canWrite } = useTeamRole()
-  const [isLoading, setIsLoading] = useState(true)
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  const fetchDashboardData = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
+  const fetchDashboardData = useCallback(async () => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const accessToken = await getBackendToken()
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        setDashboardData(null)
-        setIsLoading(false)
-        return
-      }
-
-      const res = await fetch(`${apiBase}/api/dashboard/summary`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch dashboard data")
-      }
-
-      const data = await res.json()
-      setDashboardData(data)
-    } catch (err) {
-      console.error("Error fetching dashboard:", err)
-      setError(err instanceof Error ? err.message : "An error occurred")
-      setDashboardData(null)
-    } finally {
-      setIsLoading(false)
+    if (!accessToken) {
+      return null
     }
-  }
 
-  useEffect(() => {
-    fetchDashboardData()
+    const res = await fetch(`${apiBase}/api/dashboard/summary`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch dashboard data")
+    }
+
+    return res.json()
   }, [])
+
+  const { data: dashboardData, isLoading, error, refresh } = useApiCache<DashboardData>(
+    "dashboard-summary",
+    fetchDashboardData
+  )
 
   // Determine what to display
   const hasRealData = dashboardData?.hasData === true && dashboardData?.summary !== null
@@ -217,7 +202,7 @@ export default function UserDashboard() {
         <Button
           variant="outline"
           size="sm"
-          onClick={fetchDashboardData}
+          onClick={refresh}
           disabled={isLoading}
           className="border-white/10 bg-black/50 text-white w-fit"
         >
@@ -252,7 +237,7 @@ export default function UserDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchDashboardData}
+                onClick={refresh}
                 className="ml-auto border-red-500/30 text-red-400"
               >
                 Retry

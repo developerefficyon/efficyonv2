@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ import {
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
+import { useApiCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
@@ -123,50 +124,36 @@ export default function SettingsPage() {
     paymentMethod: "•••• •••• •••• 4242",
   })
 
-  // Trial status state
-  const [trialStatus, setTrialStatus] = useState<{
-    isTrialActive: boolean
-    isTrialExpired: boolean
-    trialEndsAt: string | null
-    daysRemaining: number
-  } | null>(null)
-
   // Fetch subscription and trial status
-  useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const accessToken = await getBackendToken()
-
-        if (!accessToken) return
-
-        const response = await fetch(`${apiBase}/api/stripe/subscription`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setTrialStatus(data.trialStatus)
-
-          // Update billing info from subscription
-          if (data.subscription) {
-            const planName = data.subscription.plan_catalog?.name || data.subscription.plan_tier
-            setBilling(prev => ({
-              ...prev,
-              plan: planName || prev.plan,
-              nextBilling: data.subscription.current_period_end
-                ? new Date(data.subscription.current_period_end).toLocaleDateString()
-                : prev.nextBilling,
-            }))
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching subscription:", error)
-      }
-    }
-
-    fetchSubscriptionStatus()
+  const fetchSubscriptionStatus = useCallback(async () => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const accessToken = await getBackendToken()
+    if (!accessToken) return null
+    const response = await fetch(`${apiBase}/api/stripe/subscription`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) throw new Error("Failed to fetch subscription")
+    return response.json()
   }, [])
+
+  const { data: subscriptionData } = useApiCache<any>("subscription", fetchSubscriptionStatus)
+
+  // Derive trial status and billing from cached subscription data
+  const trialStatus = subscriptionData?.trialStatus ?? null
+
+  useEffect(() => {
+    if (subscriptionData?.subscription) {
+      const sub = subscriptionData.subscription
+      const planName = sub.plan_catalog?.name || sub.plan_tier
+      setBilling(prev => ({
+        ...prev,
+        plan: planName || prev.plan,
+        nextBilling: sub.current_period_end
+          ? new Date(sub.current_period_end).toLocaleDateString()
+          : prev.nextBilling,
+      }))
+    }
+  }, [subscriptionData])
 
   // Check for payment success/cancel from Stripe redirect
   useEffect(() => {
