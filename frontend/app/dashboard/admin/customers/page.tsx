@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,7 +73,24 @@ export default function AdminCustomersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [planFilter, setPlanFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
+  type CustomerData = {
+    id: string
+    name: string
+    email: string
+    plan: string
+    planTier: string
+    employees: number
+    status: string
+    joined: string
+    monthlyRevenue: number
+    totalSavings: number
+    avatar: string
+    emailVerified: boolean
+    adminApproved: boolean
+    subscription?: any
+  }
+  const cachedCustomers = getCache<CustomerData[]>("admin-customers")
+  const [isLoading, setIsLoading] = useState(!cachedCustomers)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<(typeof customers)[number] | null>(null)
   const [customerDetails, setCustomerDetails] = useState<any | null>(null)
@@ -81,29 +99,14 @@ export default function AdminCustomersPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>("")
   const [resetTokens, setResetTokens] = useState(true)
   const [isChangingPlan, setIsChangingPlan] = useState(false)
-  const [customers, setCustomers] = useState<
-    {
-      id: string
-      name: string // company name
-      email: string
-      plan: string
-      planTier: string
-      employees: number
-      status: string
-      joined: string
-      monthlyRevenue: number
-      totalSavings: number
-      avatar: string
-      emailVerified: boolean
-      adminApproved: boolean
-      subscription?: any
-    }[]
-  >([])
+  const [customers, setCustomers] = useState<CustomerData[]>(cachedCustomers || [])
   const itemsPerPage = 10
 
   const loadCustomers = async () => {
     try {
-      setIsLoading(true)
+      if (!getCache("admin-customers")) {
+        setIsLoading(true)
+      }
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
 
@@ -168,6 +171,7 @@ export default function AdminCustomersPage() {
           }
         }) ?? []
       setCustomers(mapped)
+      setCache("admin-customers", mapped)
     } catch (error: any) {
       console.error("Error loading customers:", error)
       toast.error("Failed to load customers", {

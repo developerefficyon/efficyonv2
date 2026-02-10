@@ -145,14 +145,7 @@ const adminMenuItems = [
     badge: null,
     description: "Customer token usage",
   },
-  {
-    title: "Integrations Health",
-    icon: Zap,
-    href: "/dashboard/admin/integrations-health",
-    badge: null,
-    description: "API monitoring",
-  },
-  {
+{
     title: "Analytics",
     icon: BarChart3,
     href: "/dashboard/admin/analytics",
