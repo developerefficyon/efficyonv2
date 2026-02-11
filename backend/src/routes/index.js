@@ -38,6 +38,7 @@ const {
   approveProfile,
   getCustomerDetailsAdmin,
   getAdminDashboardSummary,
+  getAdminAnalytics,
 } = require("../controllers/adminController")
 
 // Integration Controller - generic integration CRUD
@@ -167,6 +168,7 @@ router.post("/api/profiles/create", requireAuth, createProfile)
 router.post("/api/profiles/update-email-verified", requireAuth, updateEmailVerified)
 router.post("/api/profile/onboarding-complete", requireAuth, completeOnboarding)
 router.get("/api/admin/dashboard/summary", requireAuth, getAdminDashboardSummary)
+router.get("/api/admin/analytics", requireAuth, getAdminAnalytics)
 router.get("/api/admin/employees", requireAuth, getEmployees)
 router.get("/api/admin/customers", requireAuth, getCustomers)
 router.get("/api/admin/subscriptions", requireAuth, getAllSubscriptions)
