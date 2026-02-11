@@ -871,6 +871,129 @@ async function getAdminAnalytics(req, res) {
   }
 }
 
+async function getAdminReports(req, res) {
+  const endpoint = "GET /api/admin/reports"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Check admin role
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError || !profile || profile.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden: Admin access required" })
+  }
+
+  try {
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    // Run all queries in parallel
+    const [
+      recentAnalysesResult,
+      totalCountResult,
+      monthCountResult,
+    ] = await Promise.all([
+      // Recent 20 analyses with company_id
+      supabase
+        .from("cost_leak_analyses")
+        .select("id, company_id, integration_id, provider, summary, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20),
+
+      // Total count
+      supabase
+        .from("cost_leak_analyses")
+        .select("id", { count: "exact", head: true }),
+
+      // This month count
+      supabase
+        .from("cost_leak_analyses")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", startOfMonth.toISOString()),
+    ])
+
+    if (recentAnalysesResult.error) {
+      log("error", endpoint, "Error fetching analyses:", recentAnalysesResult.error.message)
+      return res.status(500).json({ error: "Failed to fetch analyses" })
+    }
+
+    const analyses = recentAnalysesResult.data || []
+
+    // Enrich with company names
+    const companyIds = [...new Set(analyses.map(a => a.company_id).filter(Boolean))]
+    let companiesMap = new Map()
+
+    if (companyIds.length > 0) {
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds)
+
+      if (companies) {
+        companies.forEach(c => companiesMap.set(c.id, c.name))
+      }
+    }
+
+    // Compute aggregated stats
+    let totalSavingsIdentified = 0
+    const byProvider = {}
+
+    analyses.forEach(a => {
+      const summary = a.summary || {}
+      totalSavingsIdentified += (summary.totalPotentialSavings || 0)
+
+      const provider = a.provider || "Unknown"
+      byProvider[provider] = (byProvider[provider] || 0) + 1
+    })
+
+    // Format recent analyses
+    const recentAnalyses = analyses.map(a => {
+      const summary = a.summary || {}
+      return {
+        id: a.id,
+        provider: a.provider,
+        company_name: companiesMap.get(a.company_id) || "Unknown",
+        totalFindings: summary.totalFindings || 0,
+        totalPotentialSavings: summary.totalPotentialSavings || 0,
+        highSeverity: summary.highSeverity || 0,
+        mediumSeverity: summary.mediumSeverity || 0,
+        lowSeverity: summary.lowSeverity || 0,
+        created_at: a.created_at,
+      }
+    })
+
+    const response = {
+      stats: {
+        totalAnalyses: totalCountResult.count || 0,
+        analysesThisMonth: monthCountResult.count || 0,
+        totalSavingsIdentified,
+        byProvider,
+      },
+      recentAnalyses,
+    }
+
+    log("log", endpoint, `Success: ${response.stats.totalAnalyses} total analyses, ${recentAnalyses.length} recent`)
+    return res.json(response)
+  } catch (error) {
+    log("error", endpoint, "Unexpected error:", error)
+    return res.status(500).json({ error: "Internal server error", details: error.message })
+  }
+}
+
 module.exports = {
   getEmployees,
   getCustomers,
@@ -879,4 +1002,5 @@ module.exports = {
   getCustomerDetailsAdmin,
   getAdminDashboardSummary,
   getAdminAnalytics,
+  getAdminReports,
 }
