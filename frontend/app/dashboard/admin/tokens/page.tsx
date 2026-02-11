@@ -237,7 +237,7 @@ export default function AdminTokensPage() {
         <Button
           onClick={fetchTokenUsage}
           variant="outline"
-          className="border-white/10 text-white hover:bg-white/5"
+          className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
@@ -432,7 +432,7 @@ export default function AdminTokensPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/10 text-white hover:bg-white/5"
+                          className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
                           onClick={() => {
                             setSelectedCustomer(customer)
                             setIsAdjustModalOpen(true)
@@ -484,7 +484,7 @@ export default function AdminTokensPage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="border-white/10 text-white hover:bg-red-500/20 hover:border-red-500/30"
+                    className="bg-transparent border-white/10 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white"
                     onClick={() => setAdjustmentAmount((prev) => prev - 10)}
                   >
                     <Minus className="w-4 h-4" />
@@ -499,7 +499,7 @@ export default function AdminTokensPage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="border-white/10 text-white hover:bg-green-500/20 hover:border-green-500/30"
+                    className="bg-transparent border-white/10 text-white hover:bg-green-500/20 hover:border-green-500/30 hover:text-white"
                     onClick={() => setAdjustmentAmount((prev) => prev + 10)}
                   >
                     <Plus className="w-4 h-4" />
@@ -543,14 +543,14 @@ export default function AdminTokensPage() {
                 setAdjustmentAmount(0)
                 setAdjustmentReason("")
               }}
-              className="border-white/10 text-white"
+              className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAdjustTokens}
               disabled={adjustmentAmount === 0 || isAdjusting}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
             >
               {isAdjusting ? (
                 <>
