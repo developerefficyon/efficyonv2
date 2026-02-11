@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,28 @@ import { Loader2, CheckCircle, XCircle, Users, LogIn, UserPlus, AlertTriangle } 
 import Link from "next/link"
 
 export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="bg-black/80 backdrop-blur-xl border-white/10 w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-cyan-400 mb-1">Efficyon</h1>
+            </div>
+            <div className="space-y-4">
+              <Loader2 className="w-12 h-12 text-cyan-400 mx-auto animate-spin" />
+              <h2 className="text-xl font-semibold text-white">Loading...</h2>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AcceptInviteContent />
+    </Suspense>
+  )
+}
+
+function AcceptInviteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
