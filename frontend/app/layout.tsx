@@ -6,12 +6,27 @@ import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
 import "./globals.css"
 
-// <CHANGE> Updated metadata for Efficyon
+const siteUrl = "https://www.efficyon.com"
+
 export const metadata: Metadata = {
-  title: "Efficyon - AI-Powered Cost Optimization",
+  title: {
+    default: "Efficyon - AI-Powered SaaS Cost Optimization",
+    template: "%s | Efficyon",
+  },
   description:
-    "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage across your tools to reveal unused licenses, mispriced tools, and quiet inefficiencies across your software stack.",
-  generator: "v0.app",
+    "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+  metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    title: "Efficyon - AI-Powered SaaS Cost Optimization",
+    description:
+      "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+    siteName: "Efficyon",
+  },
   icons: {
     icon: "/favicon.ico",
   },

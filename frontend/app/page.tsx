@@ -33,8 +33,27 @@ import {
 } from "lucide-react"
 
 export default function HomePage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Efficyon",
+    url: "https://www.efficyon.com",
+    logo: "https://www.efficyon.com/favicon.ico",
+    description:
+      "AI-powered SaaS cost optimization platform that helps businesses identify unused licenses, overlapping tools, and hidden savings.",
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "info@efficyon.com",
+      contactType: "customer service",
+    },
+  }
+
   return (
     <div className="min-h-screen bg-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Navigation Component */}
       <Navbar />
 

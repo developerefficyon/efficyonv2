@@ -431,10 +431,182 @@ async function getCustomerDetailsAdmin(req, res) {
   })
 }
 
+async function getAdminDashboardSummary(req, res) {
+  const endpoint = "GET /api/admin/dashboard/summary"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  try {
+    // Run all queries in parallel for performance
+    const [
+      employeesResult,
+      customersResult,
+      subscriptionsResult,
+      tokenBalancesResult,
+      recentEmployeesResult,
+      recentCustomersResult,
+    ] = await Promise.all([
+      // 1. Total employees count (admin users)
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "admin"),
+
+      // 2. Total customers count
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .in("role", ["user", "customer"]),
+
+      // 3. All subscriptions (for MRR, active count, plan distribution)
+      supabase
+        .from("subscriptions")
+        .select("plan_tier, status, amount_cents"),
+
+      // 4. All token balances (for token stats)
+      supabase
+        .from("token_balances")
+        .select("total_tokens, used_tokens"),
+
+      // 5. Recent 5 employees
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, role, created_at")
+        .eq("role", "admin")
+        .order("created_at", { ascending: false })
+        .limit(5),
+
+      // 6. Recent 5 customers with company info
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, role, company_id, created_at")
+        .in("role", ["user", "customer"])
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ])
+
+    // Check for critical errors
+    if (employeesResult.error) {
+      log("error", endpoint, "Error counting employees:", employeesResult.error.message)
+    }
+    if (customersResult.error) {
+      log("error", endpoint, "Error counting customers:", customersResult.error.message)
+    }
+
+    // Compute subscription stats
+    const subscriptions = subscriptionsResult.data || []
+    const activeSubs = subscriptions.filter(s => s.status === "active" || s.status === "trialing")
+    const mrr = activeSubs.reduce((sum, s) => sum + (s.amount_cents || 0), 0) / 100
+
+    // Plan distribution
+    const planDistribution = { free: 0, startup: 0, growth: 0, custom: 0 }
+    for (const sub of subscriptions) {
+      const tier = sub.plan_tier || "free"
+      if (tier in planDistribution) {
+        planDistribution[tier]++
+      } else {
+        planDistribution.free++
+      }
+    }
+
+    // Token stats
+    const tokenBalances = tokenBalancesResult.data || []
+    const totalAllocated = tokenBalances.reduce((sum, tb) => sum + (tb.total_tokens || 0), 0)
+    const totalUsed = tokenBalances.reduce((sum, tb) => sum + (tb.used_tokens || 0), 0)
+    const usagePercent = totalAllocated > 0 ? Math.round((totalUsed / totalAllocated) * 100) : 0
+
+    // Enrich recent customers with company names
+    const recentCustomers = recentCustomersResult.data || []
+    let enrichedCustomers = recentCustomers
+
+    const companyIds = [...new Set(recentCustomers.map(c => c.company_id).filter(Boolean))]
+    if (companyIds.length > 0) {
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds)
+
+      const companiesMap = new Map()
+      if (companies) {
+        companies.forEach(c => companiesMap.set(c.id, c.name))
+      }
+
+      // Also get subscription plan_tier for each customer
+      const customerIds = recentCustomers.map(c => c.id)
+      const { data: customerSubs } = await supabase
+        .from("subscriptions")
+        .select("user_id, plan_tier")
+        .in("user_id", customerIds)
+        .order("created_at", { ascending: false })
+
+      const subsMap = new Map()
+      if (customerSubs) {
+        customerSubs.forEach(s => {
+          if (!subsMap.has(s.user_id)) {
+            subsMap.set(s.user_id, s.plan_tier)
+          }
+        })
+      }
+
+      enrichedCustomers = recentCustomers.map(c => ({
+        id: c.id,
+        email: c.email,
+        full_name: c.full_name,
+        company_name: c.company_id ? companiesMap.get(c.company_id) || null : null,
+        plan_tier: subsMap.get(c.id) || "free",
+        created_at: c.created_at,
+      }))
+    } else {
+      enrichedCustomers = recentCustomers.map(c => ({
+        id: c.id,
+        email: c.email,
+        full_name: c.full_name,
+        company_name: null,
+        plan_tier: "free",
+        created_at: c.created_at,
+      }))
+    }
+
+    const response = {
+      stats: {
+        totalEmployees: employeesResult.count || 0,
+        totalCustomers: customersResult.count || 0,
+        activeSubscriptions: activeSubs.length,
+        mrr,
+        planDistribution,
+        tokenStats: {
+          totalAllocated,
+          totalUsed,
+          usagePercent,
+        },
+      },
+      recentEmployees: (recentEmployeesResult.data || []).map(e => ({
+        id: e.id,
+        email: e.email,
+        full_name: e.full_name,
+        role: e.role,
+        created_at: e.created_at,
+      })),
+      recentCustomers: enrichedCustomers,
+    }
+
+    log("log", endpoint, `Success: ${response.stats.totalEmployees} employees, ${response.stats.totalCustomers} customers, $${mrr} MRR`)
+    return res.json(response)
+  } catch (error) {
+    log("error", endpoint, "Unexpected error:", error)
+    return res.status(500).json({ error: "Internal server error", details: error.message })
+  }
+}
+
 module.exports = {
   getEmployees,
   getCustomers,
   getAllSubscriptions,
   approveProfile,
   getCustomerDetailsAdmin,
+  getAdminDashboardSummary,
 }
