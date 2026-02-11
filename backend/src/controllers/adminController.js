@@ -200,7 +200,7 @@ async function getAllSubscriptions(req, res) {
   try {
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from("subscriptions")
-      .select("id, user_id, company_id, plan_tier, status, amount_cents, currency, current_period_start, current_period_end, created_at, updated_at")
+      .select("id, user_id, company_id, plan_tier, status, amount_cents, currency, current_period_start, current_period_end, trial_started_at, trial_ends_at, cancel_at, canceled_at, created_at, updated_at")
       .order("created_at", { ascending: false })
 
     if (subscriptionsError) {
@@ -282,13 +282,56 @@ async function getAllSubscriptions(req, res) {
         currency: sub.currency || "usd",
         current_period_start: sub.current_period_start,
         current_period_end: sub.current_period_end,
+        trial_started_at: sub.trial_started_at,
+        trial_ends_at: sub.trial_ends_at,
+        cancel_at: sub.cancel_at,
+        canceled_at: sub.canceled_at,
         created_at: sub.created_at,
         updated_at: sub.updated_at,
       }
     })
 
-    log("log", endpoint, `Success: Found ${subscriptionsWithDetails.length} subscriptions`)
-    return res.json({ subscriptions: subscriptionsWithDetails })
+    // Query payments table for failed/problem payments (last 90 days)
+    let failedPaymentsData = []
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
+    const { data: payments, error: paymentsError } = await supabase
+      .from("payments")
+      .select("id, subscription_id, company_id, user_id, amount_cents, currency, status, description, raw_response, created_at")
+      .in("status", ["requires_payment_method", "requires_action", "canceled"])
+      .gte("created_at", ninetyDaysAgo)
+      .order("created_at", { ascending: false })
+
+    if (paymentsError) {
+      log("warn", endpoint, "Error fetching failed payments (non-fatal):", paymentsError.message)
+    } else if (payments && payments.length > 0) {
+      failedPaymentsData = payments.map(p => {
+        const profile = usersMap.get(p.user_id)
+        const company = p.company_id ? companiesMap.get(p.company_id) : null
+
+        // Extract error reason from Stripe raw_response if available
+        const rawResponse = p.raw_response || {}
+        const errorMessage = rawResponse.last_payment_error?.message
+          || rawResponse.last_payment_error?.decline_code
+          || p.description
+          || "Payment failed"
+
+        return {
+          id: p.id,
+          subscription_id: p.subscription_id,
+          company_name: company?.name || profile?.email || "Unknown",
+          user_email: profile?.email || "Unknown",
+          amount_cents: p.amount_cents || 0,
+          currency: p.currency || "usd",
+          status: p.status,
+          reason: errorMessage,
+          created_at: p.created_at,
+        }
+      })
+    }
+
+    log("log", endpoint, `Success: Found ${subscriptionsWithDetails.length} subscriptions, ${failedPaymentsData.length} failed payments`)
+    return res.json({ subscriptions: subscriptionsWithDetails, failedPayments: failedPaymentsData })
   } catch (error) {
     log("error", endpoint, "Unexpected error:", error)
     return res.status(500).json({
