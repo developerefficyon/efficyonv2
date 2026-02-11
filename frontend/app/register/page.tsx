@@ -1,17 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
+  )
+}
+
+function RegisterContent() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -21,6 +33,15 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirect = searchParams.get("redirect")
+
+  // Persist redirect in localStorage so it survives the email verification detour
+  useEffect(() => {
+    if (redirect) {
+      localStorage.setItem("invite_redirect", redirect)
+    }
+  }, [redirect])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,8 +85,9 @@ export default function RegisterPage() {
         description: `We sent a verification link to ${email}. Please verify your email before logging in.`,
       })
 
-      // Redirect to login after successful registration
-      router.push("/login")
+      // Redirect to login after successful registration (preserve redirect param for invite flow)
+      const loginUrl = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"
+      router.push(loginUrl)
     } catch (err: any) {
       setIsLoading(false)
       setError(err.message || "An error occurred. Please try again.")
@@ -196,7 +218,7 @@ export default function RegisterPage() {
               </form>
               <div className="mt-6 text-center text-sm text-gray-400">
                 Already have an account?{" "}
-                <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                <Link href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"} className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
                   Sign in
                 </Link>
               </div>

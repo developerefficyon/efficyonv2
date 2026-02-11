@@ -41,6 +41,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { useTeamRole } from "@/lib/team-role-context"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 
 interface Integration {
@@ -93,20 +95,25 @@ interface IntegrationLimits {
 
 export default function ToolsPage() {
   const { user, isLoading: authLoading } = useAuth()
+  const { canWrite } = useTeamRole()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [availableTools, setAvailableTools] = useState<AvailableTool[]>([])
-  const [integrationLimits, setIntegrationLimits] = useState<IntegrationLimits>({
-    current: 0,
-    max: 5,
-    canAddMore: true,
-    planTier: "startup",
-    planName: "Startup",
-  })
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedIntegrations = getCache<{ integrations: Integration[]; limits: IntegrationLimits }>("integrations-data")
+  const cachedTools = getCache<{ tools: AvailableTool[] }>("available-tools-data")
+  const [integrations, setIntegrations] = useState<Integration[]>(cachedIntegrations?.integrations || [])
+  const [availableTools, setAvailableTools] = useState<AvailableTool[]>(cachedTools?.tools || [])
+  const [integrationLimits, setIntegrationLimits] = useState<IntegrationLimits>(
+    cachedIntegrations?.limits || {
+      current: 0,
+      max: 5,
+      canAddMore: true,
+      planTier: "startup",
+      planName: "Startup",
+    }
+  )
+  const [isLoading, setIsLoading] = useState(!cachedIntegrations)
   const [isLoadingTools, setIsLoadingTools] = useState(false)
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -168,7 +175,9 @@ export default function ToolsPage() {
       }
 
       const data = await res.json()
-      setAvailableTools(data.tools || [])
+      const tools = data.tools || []
+      setAvailableTools(tools)
+      setCache("available-tools-data", { tools })
     } catch (error) {
       console.error("Error loading tools:", error)
       // Silently fail - tools list is optional
@@ -187,7 +196,10 @@ export default function ToolsPage() {
 
     isLoadingIntegrationsRef.current = true
     try {
-      setIsLoading(true)
+      // Only show loading spinner if no cached data exists
+      if (!getCache("integrations-data")) {
+        setIsLoading(true)
+      }
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
 
@@ -213,18 +225,24 @@ export default function ToolsPage() {
 
       const data = await res.json()
       console.log("Integrations loaded:", data.integrations?.length || 0)
-      setIntegrations(data.integrations || [])
+      const loadedIntegrations = data.integrations || []
+      setIntegrations(loadedIntegrations)
 
       // Update integration limits from response
+      const limits = data.limits ? {
+        current: data.limits.current || 0,
+        max: data.limits.max || 5,
+        canAddMore: data.limits.canAddMore ?? true,
+        planTier: data.limits.planTier || "startup",
+        planName: data.limits.planName || "Startup",
+      } : integrationLimits
+
       if (data.limits) {
-        setIntegrationLimits({
-          current: data.limits.current || 0,
-          max: data.limits.max || 5,
-          canAddMore: data.limits.canAddMore ?? true,
-          planTier: data.limits.planTier || "startup",
-          planName: data.limits.planName || "Startup",
-        })
+        setIntegrationLimits(limits)
       }
+
+      // Save to cache for instant loading on revisit
+      setCache("integrations-data", { integrations: loadedIntegrations, limits })
     } catch (error) {
       console.error("Error loading integrations:", error)
       toast.error("Failed to load integrations", {
@@ -1097,35 +1115,37 @@ export default function ToolsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Tools & Integrations</h2>
           <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            disabled={isLoading}
-            className={`w-full sm:w-auto ${
-              isLoading || integrationLimits.canAddMore
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
-                : "bg-gray-600 text-gray-300 cursor-not-allowed"
-            }`}
-            onClick={() => {
-              if (!integrationLimits.canAddMore) {
-                toast.error("Integration limit reached", {
-                  description: `Your ${integrationLimits.planName} plan allows up to ${integrationLimits.max} integrations. Upgrade your plan to connect more tools.`,
-                })
-                return
-              }
-              setIsConnectModalOpen(true)
-            }}
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <ExternalLink className="w-4 h-4 mr-2" />
+        {canWrite && (
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              disabled={isLoading}
+              className={`w-full sm:w-auto ${
+                isLoading || integrationLimits.canAddMore
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
+                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
+              }`}
+              onClick={() => {
+                if (!integrationLimits.canAddMore) {
+                  toast.error("Integration limit reached", {
+                    description: `Your ${integrationLimits.planName} plan allows up to ${integrationLimits.max} integrations. Upgrade your plan to connect more tools.`,
+                  })
+                  return
+                }
+                setIsConnectModalOpen(true)
+              }}
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4 mr-2" />
+              )}
+              Connect New Tool
+            </Button>
+            {!isLoading && !integrationLimits.canAddMore && (
+              <p className="text-xs text-orange-400">Limit reached - upgrade to add more</p>
             )}
-            Connect New Tool
-          </Button>
-          {!isLoading && !integrationLimits.canAddMore && (
-            <p className="text-xs text-orange-400">Limit reached - upgrade to add more</p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Summary Stats */}
@@ -1258,11 +1278,13 @@ export default function ToolsPage() {
             <div className="text-center">
               <Search className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
               <p className="text-gray-400 mb-4">
-                {integrations.length === 0 
-                  ? "No tools connected yet. Connect your first tool to get started."
+                {integrations.length === 0
+                  ? canWrite
+                    ? "No tools connected yet. Connect your first tool to get started."
+                    : "No tools connected yet. Ask your team owner to connect tools."
                   : "No tools found matching your filters"}
               </p>
-              {integrations.length === 0 && (
+              {integrations.length === 0 && canWrite && (
                 <Button
                   onClick={() => setIsConnectModalOpen(true)}
                   className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white mt-4"
@@ -1364,6 +1386,7 @@ export default function ToolsPage() {
                     </Badge>
                     <div className="flex gap-2 flex-wrap">
                       {(() => {
+                        if (!canWrite) return null
                         const integration = integrations.find(i => i.id === tool.id)
                         if (!integration) return null
 

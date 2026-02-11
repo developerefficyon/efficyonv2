@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Loader2, MessageSquare, Zap, GitCompare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 
 // Tool icon mapping
 const toolIcons: Record<string, string> = {
@@ -30,25 +31,22 @@ interface ToolChatTabsProps {
   className?: string
 }
 
-// Hook to fetch connected tools with caching
+// Hook to fetch connected tools with module-level caching
 export function useConnectedTools() {
-  const [tools, setTools] = useState<ConnectedTool[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const cacheRef = useRef<{ tools: ConnectedTool[]; loadedAt: number } | null>(null)
-  const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+  const cachedTools = getCache<ConnectedTool[]>("chat-connected-tools")
+  const [tools, setTools] = useState<ConnectedTool[]>(cachedTools || [])
+  const [isLoading, setIsLoading] = useState(!cachedTools)
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
   const fetchTools = useCallback(async (forceRefresh = false) => {
-    // Check cache first
-    const now = Date.now()
-    if (!forceRefresh && cacheRef.current && (now - cacheRef.current.loadedAt) < CACHE_TTL) {
-      setTools(cacheRef.current.tools)
+    // If not forced and we have cached data, just silently revalidate
+    if (!forceRefresh && tools.length > 0) {
       setIsLoading(false)
-      return
+    } else if (!getCache("chat-connected-tools")) {
+      setIsLoading(true)
     }
 
-    setIsLoading(true)
     try {
       const accessToken = await getBackendToken()
       if (!accessToken) return
@@ -66,12 +64,8 @@ export function useConnectedTools() {
           (tool: ConnectedTool) => tool.status === "connected"
         )
 
-        // Update cache
-        cacheRef.current = {
-          tools: connectedTools,
-          loadedAt: now,
-        }
-
+        // Update module-level cache
+        setCache("chat-connected-tools", connectedTools)
         setTools(connectedTools)
       }
     } catch (error) {
@@ -79,7 +73,7 @@ export function useConnectedTools() {
     } finally {
       setIsLoading(false)
     }
-  }, [apiBase])
+  }, [apiBase, tools.length])
 
   useEffect(() => {
     fetchTools()

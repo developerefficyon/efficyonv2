@@ -18,6 +18,7 @@ import {
   Search,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 
 interface Subscription {
@@ -39,20 +40,25 @@ interface Subscription {
 type TabType = "trials" | "failed" | "active"
 
 export default function AdminBillingPage() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [billingStats, setBillingStats] = useState({
-    mrr: 0,
-    activeCount: 0,
-    churnRate: 0,
-    avgRevenue: 0,
-  })
+  const cachedBilling = getCache<{ subscriptions: Subscription[]; billingStats: { mrr: number; activeCount: number; churnRate: number; avgRevenue: number } }>("admin-billing")
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(cachedBilling?.subscriptions || [])
+  const [isLoading, setIsLoading] = useState(!cachedBilling)
+  const [billingStats, setBillingStats] = useState(
+    cachedBilling?.billingStats || {
+      mrr: 0,
+      activeCount: 0,
+      churnRate: 0,
+      avgRevenue: 0,
+    }
+  )
   const [activeTab, setActiveTab] = useState<TabType>("trials")
   const [searchQuery, setSearchQuery] = useState("")
   useEffect(() => {
     const fetchSubscriptions = async () => {
       try {
-        setIsLoading(true)
+        if (!getCache("admin-billing")) {
+          setIsLoading(true)
+        }
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
         const accessToken = await getBackendToken()
 
@@ -91,12 +97,14 @@ export default function AdminBillingPage() {
         const mrr = totalCents / 100 // Convert cents to dollars
         const avgRevenue = activeSubs.length > 0 ? mrr / activeSubs.length : 0
 
-        setBillingStats({
+        const newStats = {
           mrr,
           activeCount: activeSubs.length,
           churnRate: 0, // TODO: Calculate from historical data
           avgRevenue,
-        })
+        }
+        setBillingStats(newStats)
+        setCache("admin-billing", { subscriptions: data.subscriptions || [], billingStats: newStats })
       } catch (error) {
         console.error("Error fetching subscriptions:", error)
         toast.error("Failed to load subscriptions", {

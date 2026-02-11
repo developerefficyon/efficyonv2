@@ -2,6 +2,8 @@
 
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { TokenProvider } from "@/lib/token-context"
+import { TeamRoleProvider, useTeamRole } from "@/lib/team-role-context"
+import { clearAllCache } from "@/lib/use-api-cache"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { TrialExpiredModal } from "@/components/trial-expired-modal"
@@ -143,14 +145,7 @@ const adminMenuItems = [
     badge: null,
     description: "Customer token usage",
   },
-  {
-    title: "Integrations Health",
-    icon: Zap,
-    href: "/dashboard/admin/integrations-health",
-    badge: null,
-    description: "API monitoring",
-  },
-  {
+{
     title: "Analytics",
     icon: BarChart3,
     href: "/dashboard/admin/analytics",
@@ -195,6 +190,44 @@ function SidebarNavigation({
   isAdmin: boolean
 }) {
   const handleNavClick = useCloseSidebarOnMobile()
+  const { canManageTeam, isViewer, isLoading: isRoleLoading } = useTeamRole()
+
+  // Filter menu items based on role (skip filtering for admin sidebar)
+  const filteredItems = isAdmin
+    ? menuItems
+    : menuItems.filter((item) => {
+        if (item.title === "Team" && !canManageTeam) return false
+        if (item.title === "Tools" && isViewer) return false
+        return true
+      })
+
+  // Show skeleton placeholders while role is loading (non-admin only)
+  if (isRoleLoading && !isAdmin) {
+    return (
+      <SidebarContent className="px-3 py-4">
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+            Navigation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SidebarMenuItem key={i}>
+                  <div className="flex items-center gap-3 h-11 px-3">
+                    <div className="w-7 h-7 rounded-md bg-white/5 animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+                      <div className="h-2 w-28 bg-white/[0.03] rounded animate-pulse" />
+                    </div>
+                  </div>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    )
+  }
 
   return (
     <SidebarContent className="px-3 py-4">
@@ -204,7 +237,7 @@ function SidebarNavigation({
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu className="space-y-1">
-            {menuItems.map((item) => {
+            {filteredItems.map((item) => {
               const Icon = item.icon
               // Use exact match for main dashboard routes, startsWith for others (to match sub-routes)
               const isDashboardRoot = item.href === "/dashboard" || item.href === "/dashboard/admin"
@@ -393,6 +426,7 @@ export default function DashboardLayout({
   }
 
   return (
+    <TeamRoleProvider>
     <TokenProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
@@ -458,9 +492,11 @@ export default function DashboardLayout({
                 e.preventDefault()
                 e.stopPropagation()
                 try {
+                  clearAllCache()
                   await logout()
                 } catch (error) {
                   console.error("Logout error:", error)
+                  clearAllCache()
                   // Force redirect even if logout fails
                   router.push("/login")
                 }
@@ -533,6 +569,7 @@ export default function DashboardLayout({
       )}
     </SidebarProvider>
     </TokenProvider>
+    </TeamRoleProvider>
   )
 }
 

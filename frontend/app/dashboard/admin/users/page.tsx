@@ -42,13 +42,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedEmployees = getCache<{
+    id: string
+    name: string
+    email: string
+    role: string
+    department: string
+    status: string
+    joined: string
+    avatar: string
+    emailVerified: boolean
+  }[]>("admin-employees")
+  const [isLoading, setIsLoading] = useState(!cachedEmployees)
   const [employees, setEmployees] = useState<
     {
       id: string
@@ -61,7 +73,7 @@ export default function AdminUsersPage() {
       avatar: string
       emailVerified: boolean
     }[]
-  >([])
+  >(cachedEmployees || [])
   const itemsPerPage = 10
 
   // Helper function to get a fresh access token
@@ -71,7 +83,9 @@ export default function AdminUsersPage() {
 
   const loadEmployees = async () => {
     try {
-      setIsLoading(true)
+      if (!getCache("admin-employees")) {
+        setIsLoading(true)
+      }
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getAccessToken()
 
@@ -123,6 +137,7 @@ export default function AdminUsersPage() {
               }
             }) ?? []
           setEmployees(mapped)
+          setCache("admin-employees", mapped)
           return
         }
         throw new Error("Failed to load employees")
@@ -152,6 +167,7 @@ export default function AdminUsersPage() {
           }
         }) ?? []
       setEmployees(mapped)
+      setCache("admin-employees", mapped)
     } catch (error) {
       console.error("Error loading employees:", error)
       // keep existing employees list on error so data doesn't disappear

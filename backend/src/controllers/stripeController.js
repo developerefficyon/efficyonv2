@@ -3,6 +3,28 @@ const { supabase } = require("../config/supabase")
 const tokenService = require("../services/tokenService")
 
 /**
+ * Resolve the billing user ID (company owner) for a given user.
+ * Team members share the owner's subscription/tokens.
+ */
+async function getBillingUserId(userId) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (!profile?.company_id) return userId
+
+  const { data: company } = await supabase
+    .from("companies")
+    .select("user_id")
+    .eq("id", profile.company_id)
+    .maybeSingle()
+
+  return company?.user_id || userId
+}
+
+/**
  * Get plan details from database
  */
 async function getPlanDetails(planTier) {
@@ -441,6 +463,9 @@ async function getUserSubscription(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
+    // Resolve to company owner for team members
+    const billingUserId = await getBillingUserId(user.id)
+
     // Get subscription with plan details
     // Include both active and trialing subscriptions
     const requesterRole = user?.user_metadata?.role
@@ -460,7 +485,7 @@ async function getUserSubscription(req, res) {
           features
         )
       `)
-      .eq("user_id", user.id)
+      .eq("user_id", billingUserId)
 
     // If admin, get most recent subscription (any status)
     // Otherwise get active or trialing subscriptions
@@ -480,7 +505,7 @@ async function getUserSubscription(req, res) {
     const { data: tokenBalance } = await supabase
       .from("token_balances")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", billingUserId)
       .maybeSingle()
 
     // Calculate trial status
@@ -1029,7 +1054,9 @@ async function getTokenHistory(req, res) {
 
     const { limit = 20, offset = 0 } = req.query
 
-    const result = await tokenService.getTokenHistory(user.id, parseInt(limit), parseInt(offset))
+    // Resolve to company owner for team members
+    const billingUserId = await getBillingUserId(user.id)
+    const result = await tokenService.getTokenHistory(billingUserId, parseInt(limit), parseInt(offset))
 
     if (result.error) {
       return res.status(500).json({ error: result.error })
@@ -1058,7 +1085,9 @@ async function getTokenBalance(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const result = await tokenService.checkTokenBalance(user.id, 0)
+    // Resolve to company owner for team members
+    const billingUserId = await getBillingUserId(user.id)
+    const result = await tokenService.checkTokenBalance(billingUserId, 0)
 
     return res.json({
       success: true,

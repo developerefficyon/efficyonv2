@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,18 @@ import { SparklesCore } from "@/components/ui/sparkles"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -21,6 +33,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectParam = searchParams.get("redirect")
+  // Fall back to localStorage (set during register → email verify flow)
+  const redirect = redirectParam || (typeof window !== "undefined" ? localStorage.getItem("invite_redirect") : null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +49,10 @@ export default function LoginPage() {
         setIsRedirecting(true)
         if (loggedInUser.role === "admin") {
           router.push("/dashboard/admin")
+        } else if (redirect) {
+          // Honor redirect param (e.g., invite accept flow)
+          localStorage.removeItem("invite_redirect")
+          router.push(redirect)
         } else {
           if (loggedInUser.onboardingCompleted) {
             router.push("/dashboard")
@@ -230,7 +250,7 @@ export default function LoginPage() {
               </form>
               <div className="mt-6 text-center text-sm text-gray-400">
                 Don't have an account?{" "}
-                <Link href="/register" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                <Link href={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register"} className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
                   Sign up
                 </Link>
               </div>

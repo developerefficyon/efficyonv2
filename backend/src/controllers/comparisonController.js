@@ -156,7 +156,7 @@ async function chatComparison(req, res) {
       metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data, hubspotData)
 
       // Consume token after successful data fetch
-      const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "comparison_deep_research", {
+      const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "advanced_ai_deep_dive", {
         question: question.substring(0, 100),
         platformsAnalyzed: connectedPlatforms.length,
         fortnoxDataPoints: fortnoxData?.supplierInvoices?.length || 0,

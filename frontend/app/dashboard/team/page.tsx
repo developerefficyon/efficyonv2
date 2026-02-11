@@ -1,8 +1,10 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -13,128 +15,429 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  Search,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Users,
   UserPlus,
   Mail,
-  Briefcase,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
+  Clock,
+  Crown,
+  Pencil,
+  Eye,
+  MoreHorizontal,
+  Trash2,
+  RefreshCw,
+  Loader2,
+  Send,
+  X,
+  Shield,
 } from "lucide-react"
+import { useAuth, getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+
+interface TeamMember {
+  id: string
+  role: "owner" | "editor" | "viewer"
+  status: string
+  joined_at: string
+  created_at: string
+  user: {
+    id: string
+    email: string
+    full_name: string | null
+  }
+}
+
+interface PendingInvitation {
+  id: string
+  email: string
+  role: string
+  status: string
+  created_at: string
+  expires_at: string
+}
+
+interface TeamLimits {
+  current: number
+  max: number
+  canAddMore: boolean
+  planTier: string
+  planName: string
+  pendingInvitations: number
+}
+
+const ROLE_CONFIG = {
+  owner: { label: "Owner", icon: Crown, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  editor: { label: "Editor", icon: Pencil, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+  viewer: { label: "View Only", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+}
 
 export default function TeamPage() {
-  const teamMembers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@company.com",
-      role: "Developer",
-      department: "Engineering",
-      status: "active",
-      tools: ["Slack", "Jira", "GitHub"],
-      licenses: 3,
-      lastActive: "2 hours ago",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@company.com",
-      role: "Product Manager",
-      department: "Product",
-      status: "active",
-      tools: ["Slack", "Notion", "Figma"],
-      licenses: 3,
-      lastActive: "1 hour ago",
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@company.com",
-      role: "Sales Rep",
-      department: "Sales",
-      status: "inactive",
-      tools: ["Slack", "HubSpot"],
-      licenses: 2,
-      lastActive: "45 days ago",
-    },
-    {
-      id: 4,
-      name: "Sarah Williams",
-      email: "sarah@company.com",
-      role: "Designer",
-      department: "Design",
-      status: "active",
-      tools: ["Slack", "Figma", "Notion"],
-      licenses: 3,
-      lastActive: "30 minutes ago",
-    },
-    {
-      id: 5,
-      name: "David Brown",
-      email: "david@company.com",
-      role: "Marketing Manager",
-      department: "Marketing",
-      status: "active",
-      tools: ["Slack", "HubSpot", "Mailchimp"],
-      licenses: 3,
-      lastActive: "5 hours ago",
-    },
-    {
-      id: 6,
-      name: "Emily Davis",
-      email: "emily@company.com",
-      role: "Analyst",
-      department: "Operations",
-      status: "inactive",
-      tools: ["Slack", "Google Workspace"],
-      licenses: 2,
-      lastActive: "60 days ago",
-    },
-  ]
+  const { user } = useAuth()
+  const cachedTeam = getCache<{ members: TeamMember[]; invitations: PendingInvitation[]; limits: TeamLimits | null }>("team-data")
+  const [members, setMembers] = useState<TeamMember[]>(cachedTeam?.members || [])
+  const [invitations, setInvitations] = useState<PendingInvitation[]>(cachedTeam?.invitations || [])
+  const [limits, setLimits] = useState<TeamLimits | null>(cachedTeam?.limits || null)
+  const [isLoading, setIsLoading] = useState(!cachedTeam)
+  const [currentUserRole, setCurrentUserRole] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const inactiveMembers = teamMembers.filter((m) => m.status === "inactive")
-  const activeMembers = teamMembers.filter((m) => m.status === "active")
+  // Invite modal
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState("")
+  const [inviteRole, setInviteRole] = useState<string>("viewer")
+  const [isSending, setIsSending] = useState(false)
+
+  // Role change modal
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [newRole, setNewRole] = useState<string>("")
+
+  // Role change loading
+  const [isSavingRole, setIsSavingRole] = useState(false)
+
+  // Remove confirmation
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  // Per-invitation loading states
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
+
+  // Set currentUserRole from cache on initial render if available
+  useEffect(() => {
+    if (cachedTeam?.members && user?.id) {
+      const me = cachedTeam.members.find((m) => m.user?.id === user.id)
+      if (me) setCurrentUserRole(me.role)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchTeamData()
+  }, [user])
+
+  async function fetchTeamData() {
+    // Only show loading spinner if no cached data
+    if (!getCache("team-data")) {
+      setIsLoading(true)
+    }
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) return
+
+      const res = await fetch(`${apiBase}/api/team/members`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const fetchedMembers = data.members || []
+        const fetchedInvitations = data.pendingInvitations || []
+        const fetchedLimits = data.limits || null
+
+        setMembers(fetchedMembers)
+        setInvitations(fetchedInvitations)
+        setLimits(fetchedLimits)
+
+        // Save to module-level cache
+        setCache("team-data", { members: fetchedMembers, invitations: fetchedInvitations, limits: fetchedLimits })
+
+        const me = fetchedMembers.find((m: TeamMember) => m.user?.id === user?.id)
+        setCurrentUserRole(me?.role || "")
+      }
+    } catch (error) {
+      console.error("Error fetching team data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const isOwner = currentUserRole === "owner"
+  const seatsRemaining = limits ? limits.max - limits.current - limits.pendingInvitations : 0
+
+  const filteredMembers = members.filter((m) => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      (m.user?.full_name || "").toLowerCase().includes(q) ||
+      (m.user?.email || "").toLowerCase().includes(q) ||
+      m.role.toLowerCase().includes(q)
+    )
+  })
+
+  async function handleInvite() {
+    if (!inviteEmail) {
+      toast.error("Email is required")
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+
+      const res = await fetch(`${apiBase}/api/team/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      })
+
+      if (res.ok) {
+        toast.success("Invitation sent successfully")
+        setIsInviteModalOpen(false)
+        setInviteEmail("")
+        setInviteRole("viewer")
+        fetchTeamData()
+      } else {
+        const data = await res.json()
+        toast.error(data.message || data.error || "Failed to send invitation")
+      }
+    } catch {
+      toast.error("An error occurred")
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  async function handleRoleChange() {
+    if (!selectedMember || !newRole) return
+
+    setIsSavingRole(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+
+      const res = await fetch(`${apiBase}/api/team/members/${selectedMember.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: newRole }),
+      })
+
+      if (res.ok) {
+        toast.success("Role updated successfully")
+        setIsRoleModalOpen(false)
+        setSelectedMember(null)
+        setNewRole("")
+        fetchTeamData()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to update role")
+      }
+    } catch {
+      toast.error("An error occurred")
+    } finally {
+      setIsSavingRole(false)
+    }
+  }
+
+  async function handleRemoveMember() {
+    if (!memberToRemove) return
+
+    setIsRemoving(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+
+      const res = await fetch(`${apiBase}/api/team/members/${memberToRemove.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        toast.success("Team member removed")
+        setIsRemoveDialogOpen(false)
+        setMemberToRemove(null)
+        fetchTeamData()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to remove member")
+      }
+    } catch {
+      toast.error("An error occurred")
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  async function handleRevokeInvitation(invitationId: string) {
+    setRevokingId(invitationId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+
+      const res = await fetch(`${apiBase}/api/team/invitations/${invitationId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        toast.success("Invitation revoked")
+        fetchTeamData()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to revoke invitation")
+      }
+    } catch {
+      toast.error("An error occurred")
+    } finally {
+      setRevokingId(null)
+    }
+  }
+
+  async function handleResendInvitation(invitationId: string) {
+    setResendingId(invitationId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+
+      const res = await fetch(`${apiBase}/api/team/invitations/${invitationId}/resend`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        toast.success("Invitation resent")
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Failed to resend invitation")
+      }
+    } catch {
+      toast.error("An error occurred")
+    } finally {
+      setResendingId(null)
+    }
+  }
+
+  function formatDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Team Management</h2>
+          <p className="text-sm sm:text-base text-gray-400">Manage team members and permissions</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse bg-white/5 rounded-xl h-24 border border-white/10" />
+          ))}
+        </div>
+        <div className="animate-pulse bg-white/5 rounded-xl h-64 border border-white/10" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Team Management</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage team members and their tool access</p>
+          <p className="text-sm sm:text-base text-gray-400">Manage team members and permissions</p>
         </div>
-        <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white w-full sm:w-auto">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add Team Member
-        </Button>
+        {isOwner && (
+          <Button
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white w-full sm:w-auto"
+            onClick={() => setIsInviteModalOpen(true)}
+            disabled={!limits?.canAddMore}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite Team Member
+          </Button>
+        )}
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-black/80 backdrop-blur-xl border-white/10">
           <CardContent className="p-4">
-            <p className="text-sm text-gray-400 mb-1">Total Members</p>
-            <p className="text-2xl font-bold text-white">{teamMembers.length}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
+                <Users className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Total Members</p>
+                <p className="text-2xl font-bold text-white">{members.length}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
         <Card className="bg-black/80 backdrop-blur-xl border-white/10">
           <CardContent className="p-4">
-            <p className="text-sm text-gray-400 mb-1">Active</p>
-            <p className="text-2xl font-bold text-green-400">{activeMembers.length}</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30">
+                <Clock className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Pending Invitations</p>
+                <p className="text-2xl font-bold text-amber-400">{invitations.length}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
         <Card className="bg-black/80 backdrop-blur-xl border-white/10">
           <CardContent className="p-4">
-            <p className="text-sm text-gray-400 mb-1">Inactive</p>
-            <p className="text-2xl font-bold text-red-400">{inactiveMembers.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <p className="text-sm text-gray-400 mb-1">Total Licenses</p>
-            <p className="text-2xl font-bold text-cyan-400">
-              {teamMembers.reduce((sum, m) => sum + m.licenses, 0)}
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
+                <Shield className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Seats Used</p>
+                <p className="text-2xl font-bold text-white">
+                  {limits ? `${limits.current}` : "0"}
+                  <span className="text-sm font-normal text-gray-400"> / {limits?.max || 0}</span>
+                </p>
+              </div>
+            </div>
+            {limits && limits.max < 999 && (
+              <div className="mt-2">
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-cyan-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (limits.current / limits.max) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -143,149 +446,354 @@ export default function TeamPage() {
       <Card className="bg-black/80 backdrop-blur-xl border-white/10">
         <CardContent className="p-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Search team members..."
               className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Inactive Members Alert */}
-      {inactiveMembers.length > 0 && (
+      {/* Team Members Table */}
+      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white">Team Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredMembers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">No team members found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-gray-400 font-medium">Member</TableHead>
+                    <TableHead className="text-gray-400 font-medium">Role</TableHead>
+                    <TableHead className="text-gray-400 font-medium hidden md:table-cell">Joined</TableHead>
+                    {isOwner && (
+                      <TableHead className="text-gray-400 font-medium text-right">Actions</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMembers.map((member) => {
+                    const roleConfig = ROLE_CONFIG[member.role]
+                    const RoleIcon = roleConfig.icon
+                    return (
+                      <TableRow key={member.id} className="border-white/10 hover:bg-white/5">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-sm font-bold">
+                                {(member.user?.full_name || member.user?.email || "?").charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white truncate">
+                                {member.user?.full_name || "Unknown"}
+                                {member.user?.id === user?.id && (
+                                  <span className="text-xs text-gray-500 ml-1">(you)</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">{member.user?.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn("gap-1", roleConfig.color)}>
+                            <RoleIcon className="w-3 h-3" />
+                            {roleConfig.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <span className="text-sm text-gray-400">{formatDate(member.joined_at)}</span>
+                        </TableCell>
+                        {isOwner && (
+                          <TableCell className="text-right">
+                            {member.role !== "owner" && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-white/5">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-black border-white/10">
+                                  <DropdownMenuItem
+                                    className="text-gray-300 hover:text-white focus:text-white focus:bg-white/10"
+                                    onClick={() => {
+                                      setSelectedMember(member)
+                                      setNewRole(member.role)
+                                      setIsRoleModalOpen(true)
+                                    }}
+                                  >
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Change Role
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-500/10"
+                                    onClick={() => {
+                                      setMemberToRemove(member)
+                                      setIsRemoveDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Invitations */}
+      {isOwner && invitations.length > 0 && (
         <Card className="bg-black/80 backdrop-blur-xl border-white/10">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-400" />
-              <CardTitle className="text-white">Inactive Members Detected</CardTitle>
+              <Mail className="w-5 h-5 text-amber-400" />
+              <CardTitle className="text-white">Pending Invitations</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-300 mb-3">
-              {inactiveMembers.length} team member(s) haven't been active in 30+ days. Consider
-              removing their licenses to save costs.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
-            >
-              Review Inactive Members
-            </Button>
+            <div className="space-y-3">
+              {invitations.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{inv.email}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <Badge className={cn("text-[10px]", ROLE_CONFIG[inv.role as keyof typeof ROLE_CONFIG]?.color || "bg-gray-500/20 text-gray-400")}>
+                          {ROLE_CONFIG[inv.role as keyof typeof ROLE_CONFIG]?.label || inv.role}
+                        </Badge>
+                        <span>Expires {formatDate(inv.expires_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 hover:text-white hover:bg-white/5 text-xs"
+                      onClick={() => handleResendInvitation(inv.id)}
+                      disabled={resendingId === inv.id || revokingId === inv.id}
+                    >
+                      {resendingId === inv.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                      )}
+                      {resendingId === inv.id ? "Resending..." : "Resend"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                      onClick={() => handleRevokeInvitation(inv.id)}
+                      disabled={revokingId === inv.id || resendingId === inv.id}
+                    >
+                      {revokingId === inv.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <X className="w-3 h-3 mr-1" />
+                      )}
+                      {revokingId === inv.id ? "Revoking..." : "Revoke"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Team Members Table */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white">All Team Members</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap">Member</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap hidden md:table-cell">Email</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap">Role</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap hidden lg:table-cell">Department</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap">Status</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap hidden lg:table-cell">Tools</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap hidden md:table-cell">Licenses</TableHead>
-                  <TableHead className="text-gray-400 font-medium whitespace-nowrap hidden lg:table-cell">Last Active</TableHead>
-                  <TableHead className="text-gray-400 font-medium text-right whitespace-nowrap">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-            <TableBody>
-              {teamMembers.map((member) => (
-                <TableRow
-                  key={member.id}
-                  className="border-white/10 hover:bg-white/5"
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-xs sm:text-sm font-bold">
-                          {member.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs sm:text-sm font-medium text-white block truncate">
-                          {member.name}
-                        </span>
-                        <span className="text-xs text-gray-400 md:hidden block truncate">
-                          {member.email}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex items-center gap-1 text-sm text-gray-300">
-                      <Mail className="w-3 h-3 text-gray-400" />
-                      <span className="truncate max-w-[150px]">{member.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-300">
-                      <Briefcase className="w-3 h-3 text-gray-400 hidden sm:inline" />
-                      {member.role}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm text-gray-300">{member.department}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {member.status === "active" ? (
-                        <>
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
-                          <span className="text-xs sm:text-sm text-green-400 hidden sm:inline">Active</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
-                          <span className="text-xs sm:text-sm text-red-400 hidden sm:inline">Inactive</span>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {member.tools.map((tool, idx) => (
-                        <Badge
-                          key={idx}
-                          className="bg-cyan-600/30 text-cyan-400 border-cyan-500/30 text-[10px]"
-                        >
-                          {tool}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <span className="text-sm text-gray-300">{member.licenses}</span>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm text-gray-400">{member.lastActive}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm"
-                    >
-                      Manage
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      {/* Invite Modal */}
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <DialogContent className="bg-black border-white/10 sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Invite Team Member</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Send an invitation email. They'll need to accept to join your team.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-gray-300">Email Address</Label>
+              <Input
+                type="email"
+                placeholder="colleague@company.com"
+                className="bg-black/50 border-white/10 text-white"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-gray-300">Role</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger className="bg-black/50 border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-black border-white/10 z-[200]">
+                  <SelectItem value="editor" className="text-gray-300 focus:text-white focus:bg-white/10">
+                    Editor — Can run analyses & manage integrations
+                  </SelectItem>
+                  <SelectItem value="viewer" className="text-gray-300 focus:text-white focus:bg-white/10">
+                    View Only — Can view dashboards & reports
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {limits && (
+              <p className="text-xs text-gray-500">
+                {seatsRemaining > 0
+                  ? `${seatsRemaining} seat(s) remaining on your ${limits.planName} plan`
+                  : `No seats remaining. Upgrade your plan to invite more members.`}
+              </p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInviteModalOpen(false)}
+              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleInvite}
+              disabled={isSending || !inviteEmail || seatsRemaining <= 0}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Change Modal */}
+      <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+        <DialogContent className="bg-black border-white/10 sm:max-w-sm" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Change Role</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Update the role for {selectedMember?.user?.full_name || selectedMember?.user?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <Select value={newRole} onValueChange={setNewRole}>
+              <SelectTrigger className="bg-black/50 border-white/10 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-black border-white/10 z-[200]">
+                <SelectItem value="editor" className="text-gray-300 focus:text-white focus:bg-white/10">
+                  Editor
+                </SelectItem>
+                <SelectItem value="viewer" className="text-gray-300 focus:text-white focus:bg-white/10">
+                  View Only
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRoleModalOpen(false)}
+              disabled={isSavingRole}
+              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRoleChange}
+              disabled={isSavingRole}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+            >
+              {isSavingRole ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation */}
+      <AlertDialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
+        <AlertDialogContent className="bg-black border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to remove{" "}
+              <span className="text-white font-medium">
+                {memberToRemove?.user?.full_name || memberToRemove?.user?.email}
+              </span>{" "}
+              from the team? They will lose access to the company workspace.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isRemoving}
+              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              disabled={isRemoving}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {isRemoving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
-

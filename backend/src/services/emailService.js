@@ -125,6 +125,27 @@ async function sendEmailChangeConfirmationEmail(email, newEmail, confirmationUrl
   })
 }
 
+async function sendTeamInviteEmail({ email, inviterName, companyName, role, inviteUrl }) {
+  let template = loadTemplate("team-invite")
+  if (!template) {
+    return { error: "Email template not found" }
+  }
+
+  const roleLabels = { editor: "an Editor", viewer: "a Viewer" }
+  const html = replaceTemplateVariables(template, {
+    InviterName: inviterName,
+    CompanyName: companyName,
+    RoleLabel: roleLabels[role] || "a team member",
+    InviteURL: inviteUrl,
+  })
+
+  return await sendEmail({
+    to: email,
+    subject: `You've been invited to join ${companyName} on Efficyon`,
+    html,
+  })
+}
+
 function generateSecureToken() {
   return crypto.randomBytes(32).toString("hex")
 }
@@ -135,6 +156,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendMagicLinkEmail,
   sendEmailChangeConfirmationEmail,
+  sendTeamInviteEmail,
   generateSecureToken,
   APP_URL,
 }

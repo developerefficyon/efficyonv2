@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +34,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { useApiCache } from "@/lib/use-api-cache"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { toast } from "sonner"
@@ -67,57 +68,40 @@ interface DashboardSummary {
 }
 
 export default function ReportsPage() {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [analyses, setAnalyses] = useState<AnalysisReport[]>([])
-  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null)
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisReport | null>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [exportFormat, setExportFormat] = useState("pdf")
 
-  const fetchReportData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
+  const fetchAnalyses = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return []
+    const res = await fetch(`${apiBase}/api/analysis-history?limit=20`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch analysis history")
+    const data = await res.json()
+    return (data.analyses || []) as AnalysisReport[]
+  }, [apiBase])
 
-      if (!accessToken) {
-        setLoading(false)
-        return
-      }
+  const fetchDashboardSummary = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return null
+    const res = await fetch(`${apiBase}/api/dashboard/summary`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch dashboard summary")
+    return res.json() as Promise<DashboardSummary>
+  }, [apiBase])
 
-      const [analysisRes, dashboardRes] = await Promise.all([
-        fetch(`${apiBase}/api/analysis-history?limit=20`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/dashboard/summary`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
+  const { data: analysesData, isLoading: loadingAnalyses, error: errorAnalyses, refresh: refreshAnalyses } = useApiCache<AnalysisReport[]>("analysis-history:20", fetchAnalyses)
+  const { data: dashboardSummary, isLoading: loadingSummary } = useApiCache<DashboardSummary | null>("dashboard-summary", fetchDashboardSummary)
 
-      if (analysisRes.ok) {
-        const data = await analysisRes.json()
-        setAnalyses(data.analyses || [])
-      }
-
-      if (dashboardRes.ok) {
-        const data = await dashboardRes.json()
-        setDashboardSummary(data)
-      }
-    } catch (err) {
-      console.error("Error fetching report data:", err)
-      setError("Failed to load report data")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchReportData()
-  }, [])
+  const analyses = analysesData || []
+  const loading = loadingAnalyses || loadingSummary
+  const error = errorAnalyses
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -412,7 +396,7 @@ export default function ReportsPage() {
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <p className="text-red-400 mb-2">{error}</p>
             <Button
-              onClick={fetchReportData}
+              onClick={refreshAnalyses}
               className="mt-4 bg-gradient-to-r from-cyan-500 to-blue-600"
             >
               Retry

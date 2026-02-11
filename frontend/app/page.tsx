@@ -33,8 +33,27 @@ import {
 } from "lucide-react"
 
 export default function HomePage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Efficyon",
+    url: "https://www.efficyon.com",
+    logo: "https://www.efficyon.com/favicon.ico",
+    description:
+      "AI-powered SaaS cost optimization platform that helps businesses identify unused licenses, overlapping tools, and hidden savings.",
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "info@efficyon.com",
+      contactType: "customer service",
+    },
+  }
+
   return (
     <div className="min-h-screen bg-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Navigation Component */}
       <Navbar />
 
@@ -280,6 +299,9 @@ export default function HomePage() {
                 "Email support",
                 "Basic integrations",
                 "ROI tracking",
+                "5 integrations",
+                "10 monthly tokens",
+                "Up to 3 team members",
               ],
               description: "For companies with 1-10 employees",
               buttonText: "Try Free",
@@ -298,6 +320,9 @@ export default function HomePage() {
                 "Priority support",
                 "API integrations",
                 "Team training included",
+                "15 integrations",
+                "50 monthly tokens",
+                "Up to 10 team members",
               ],
               description: "For companies with 11-50 employees",
               buttonText: "Try Free",
@@ -316,6 +341,9 @@ export default function HomePage() {
                 "On-premise deployment",
                 "SLA guarantee",
                 "Quarterly strategy review",
+                "Unlimited integrations",
+                "200 monthly credits",
+                "Unlimited team members",
               ],
               description: "For companies with 50+ employees",
               buttonText: "Contact Us",

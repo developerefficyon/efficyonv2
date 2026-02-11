@@ -6,6 +6,49 @@ const tokenService = require("../services/tokenService")
 const DEEP_RESEARCH_TOKEN_COST = 1
 
 /**
+ * Get all user IDs that belong to the same team/company.
+ * Solo users (no company) return just their own ID.
+ */
+async function getTeamUserIds(userId) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (!profile?.company_id) {
+    return [userId]
+  }
+
+  // Get all active team members + company owner
+  const { data: members } = await supabase
+    .from("team_members")
+    .select("user_id")
+    .eq("company_id", profile.company_id)
+    .eq("status", "active")
+
+  const memberIds = (members || []).map((m) => m.user_id)
+
+  // Also include company owner (may not be in team_members yet)
+  const { data: company } = await supabase
+    .from("companies")
+    .select("user_id")
+    .eq("id", profile.company_id)
+    .maybeSingle()
+
+  if (company?.user_id && !memberIds.includes(company.user_id)) {
+    memberIds.push(company.user_id)
+  }
+
+  // Ensure the requesting user is included
+  if (!memberIds.includes(userId)) {
+    memberIds.push(userId)
+  }
+
+  return memberIds
+}
+
+/**
  * Get all conversations for the current user
  * Supports filtering by toolId and chatType
  */
@@ -20,10 +63,13 @@ async function getConversations(req, res) {
 
     const { toolId, chatType } = req.query
 
+    // Get all team member user IDs so conversations are shared
+    const teamUserIds = await getTeamUserIds(user.id)
+
     let query = supabase
       .from("chat_conversations")
       .select("id, title, tool_id, chat_type, created_at, updated_at")
-      .eq("user_id", user.id)
+      .in("user_id", teamUserIds)
       .order("updated_at", { ascending: false })
 
     // Filter by chat_type if provided (general, comparison, tool)
@@ -73,12 +119,15 @@ async function getConversation(req, res) {
 
     const { id } = req.params
 
-    // Get conversation
+    // Get all team member user IDs so conversations are shared
+    const teamUserIds = await getTeamUserIds(user.id)
+
+    // Get conversation (accessible by any team member)
     const { data: conversation, error: convError } = await supabase
       .from("chat_conversations")
       .select("*")
       .eq("id", id)
-      .eq("user_id", user.id)
+      .in("user_id", teamUserIds)
       .single()
 
     if (convError || !conversation) {
@@ -173,11 +222,14 @@ async function updateConversation(req, res) {
     const { id } = req.params
     const { title } = req.body
 
+    // Get all team member user IDs so team members can update shared conversations
+    const teamUserIds = await getTeamUserIds(user.id)
+
     const { data, error } = await supabase
       .from("chat_conversations")
       .update({ title, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", user.id)
+      .in("user_id", teamUserIds)
       .select()
       .single()
 
@@ -210,18 +262,21 @@ async function deleteConversation(req, res) {
 
     const { id } = req.params
 
+    // Get all team member user IDs so team members can delete shared conversations
+    const teamUserIds = await getTeamUserIds(user.id)
+
     // Delete messages first (due to foreign key)
     await supabase
       .from("chat_messages")
       .delete()
       .eq("conversation_id", id)
 
-    // Delete conversation
+    // Delete conversation (accessible by any team member)
     const { error } = await supabase
       .from("chat_conversations")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id)
+      .in("user_id", teamUserIds)
 
     if (error) {
       console.error(`[${new Date().toISOString()}] Error deleting conversation:`, error.message)
@@ -257,12 +312,13 @@ async function addMessage(req, res) {
       return res.status(400).json({ error: "role and content are required" })
     }
 
-    // Verify conversation belongs to user
+    // Verify conversation belongs to user's team
+    const teamUserIds = await getTeamUserIds(user.id)
     const { data: conversation } = await supabase
       .from("chat_conversations")
       .select("id")
       .eq("id", id)
-      .eq("user_id", user.id)
+      .in("user_id", teamUserIds)
       .single()
 
     if (!conversation) {
@@ -382,7 +438,7 @@ async function chatWithTool(req, res) {
         dataDescription = getDataDescription(integration.provider, dataType)
 
         // Consume token after successful data fetch
-        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "tool_deep_research", {
+        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "advanced_ai_deep_dive", {
           integrationSources: [integration.provider.toLowerCase()],
           description: `${integration.provider} ${dataType || "general"} deep research`,
         })

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { getCache, setCache } from "@/lib/use-api-cache"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,8 +62,9 @@ interface CustomerTokenData {
 export default function AdminTokensPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [planFilter, setPlanFilter] = useState<string>("all")
-  const [customers, setCustomers] = useState<CustomerTokenData[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedTokenData = getCache<CustomerTokenData[]>("admin-token-usage")
+  const [customers, setCustomers] = useState<CustomerTokenData[]>(cachedTokenData || [])
+  const [isLoading, setIsLoading] = useState(!cachedTokenData)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerTokenData | null>(null)
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
   const [adjustmentAmount, setAdjustmentAmount] = useState<number>(0)
@@ -71,7 +73,9 @@ export default function AdminTokensPage() {
 
   // Fetch token usage data
   const fetchTokenUsage = async () => {
-    setIsLoading(true)
+    if (!getCache("admin-token-usage")) {
+      setIsLoading(true)
+    }
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -87,7 +91,9 @@ export default function AdminTokensPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setCustomers(data.customers || [])
+        const tokenCustomers = data.customers || []
+        setCustomers(tokenCustomers)
+        setCache("admin-token-usage", tokenCustomers)
       } else {
         const error = await response.json()
         toast.error("Failed to fetch token usage", { description: error.error })

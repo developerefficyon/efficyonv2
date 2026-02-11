@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
+import { useApiCache } from "@/lib/use-api-cache"
 
 interface TokenBalance {
   total: number
@@ -70,12 +71,6 @@ interface DashboardSummary {
 }
 
 export default function UsagePage() {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null)
-  const [tokenHistory, setTokenHistory] = useState<TokenHistoryItem[]>([])
-  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>([])
-  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null)
   const [appliedCount, setAppliedCount] = useState(0)
 
   useEffect(() => {
@@ -91,65 +86,60 @@ export default function UsagePage() {
     }
   }, [])
 
-  const fetchUsageData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
+  const fetchTokenBalance = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return null
+    const res = await fetch(`${apiBase}/api/stripe/token-balance`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch token balance")
+    const data = await res.json()
+    return data.tokenBalance as TokenBalance
+  }, [apiBase])
 
-      if (!accessToken) {
-        setLoading(false)
-        return
-      }
+  const fetchTokenHistory = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return []
+    const res = await fetch(`${apiBase}/api/stripe/token-history?limit=10`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch token history")
+    const data = await res.json()
+    return (data.history || []) as TokenHistoryItem[]
+  }, [apiBase])
 
-      // Fetch all data in parallel
-      const [tokenBalanceRes, tokenHistoryRes, analysisHistoryRes, dashboardRes] = await Promise.all([
-        fetch(`${apiBase}/api/stripe/token-balance`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/stripe/token-history?limit=10`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/analysis-history?limit=10`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/dashboard/summary`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
+  const fetchAnalysisHistory = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return []
+    const res = await fetch(`${apiBase}/api/analysis-history?limit=10`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch analysis history")
+    const data = await res.json()
+    return (data.analyses || []) as AnalysisHistoryItem[]
+  }, [apiBase])
 
-      if (tokenBalanceRes.ok) {
-        const data = await tokenBalanceRes.json()
-        setTokenBalance(data.tokenBalance)
-      }
+  const fetchDashboardSummary = useCallback(async () => {
+    const accessToken = await getBackendToken()
+    if (!accessToken) return null
+    const res = await fetch(`${apiBase}/api/dashboard/summary`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error("Failed to fetch dashboard summary")
+    return res.json() as Promise<DashboardSummary>
+  }, [apiBase])
 
-      if (tokenHistoryRes.ok) {
-        const data = await tokenHistoryRes.json()
-        setTokenHistory(data.history || [])
-      }
+  const { data: tokenBalance, isLoading: loadingBalance, error: errorBalance } = useApiCache<TokenBalance | null>("token-balance", fetchTokenBalance)
+  const { data: tokenHistoryData, isLoading: loadingHistory } = useApiCache<TokenHistoryItem[]>("token-history", fetchTokenHistory)
+  const { data: analysisHistoryData, isLoading: loadingAnalysis } = useApiCache<AnalysisHistoryItem[]>("analysis-history:10", fetchAnalysisHistory)
+  const { data: dashboardSummary, isLoading: loadingSummary } = useApiCache<DashboardSummary | null>("dashboard-summary", fetchDashboardSummary)
 
-      if (analysisHistoryRes.ok) {
-        const data = await analysisHistoryRes.json()
-        setAnalysisHistory(data.analyses || [])
-      }
-
-      if (dashboardRes.ok) {
-        const data = await dashboardRes.json()
-        setDashboardSummary(data)
-      }
-    } catch (err) {
-      console.error("Error fetching usage data:", err)
-      setError("Failed to load usage data")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchUsageData()
-  }, [])
+  const tokenHistory = tokenHistoryData || []
+  const analysisHistory = analysisHistoryData || []
+  const loading = loadingBalance || loadingHistory || loadingAnalysis || loadingSummary
+  const error = errorBalance
 
   const getActionTypeLabel = (actionType: string) => {
     const labels: Record<string, string> = {
@@ -238,7 +228,7 @@ export default function UsagePage() {
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <p className="text-red-400 mb-2">{error}</p>
             <Button
-              onClick={fetchUsageData}
+              onClick={() => window.location.reload()}
               className="mt-4 bg-gradient-to-r from-cyan-500 to-blue-600"
             >
               Retry
