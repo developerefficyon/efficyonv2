@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  CreditCard,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -33,17 +31,45 @@ interface Subscription {
   currency: string
   current_period_start: string | null
   current_period_end: string | null
-  cancel_at_period_end: boolean
+  trial_started_at: string | null
+  trial_ends_at: string | null
+  cancel_at: string | null
+  canceled_at: string | null
   created_at: string
+}
+
+interface FailedPayment {
+  id: string
+  company_name: string
+  user_email: string
+  amount_cents: number
+  currency: string
+  status: string
+  reason: string
+  created_at: string
+}
+
+interface BillingStats {
+  mrr: number
+  activeCount: number
+  churnRate: number
+  avgRevenue: number
+}
+
+interface CachedBillingData {
+  subscriptions: Subscription[]
+  failedPayments: FailedPayment[]
+  billingStats: BillingStats
 }
 
 type TabType = "trials" | "failed" | "active"
 
 export default function AdminBillingPage() {
-  const cachedBilling = getCache<{ subscriptions: Subscription[]; billingStats: { mrr: number; activeCount: number; churnRate: number; avgRevenue: number } }>("admin-billing")
+  const cachedBilling = getCache<CachedBillingData>("admin-billing")
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(cachedBilling?.subscriptions || [])
+  const [failedPaymentsData, setFailedPaymentsData] = useState<FailedPayment[]>(cachedBilling?.failedPayments || [])
   const [isLoading, setIsLoading] = useState(!cachedBilling)
-  const [billingStats, setBillingStats] = useState(
+  const [billingStats, setBillingStats] = useState<BillingStats>(
     cachedBilling?.billingStats || {
       mrr: 0,
       activeCount: 0,
@@ -51,8 +77,9 @@ export default function AdminBillingPage() {
       avgRevenue: 0,
     }
   )
-  const [activeTab, setActiveTab] = useState<TabType>("trials")
+  const [activeTab, setActiveTab] = useState<TabType>("active")
   const [searchQuery, setSearchQuery] = useState("")
+
   useEffect(() => {
     const fetchSubscriptions = async () => {
       try {
@@ -82,29 +109,44 @@ export default function AdminBillingPage() {
               errorMessage += ` - ${errorData.details}`
             }
           } catch {
-            // If response is not JSON, use status text
             errorMessage = `Failed to fetch subscriptions: ${res.status} ${res.statusText}`
           }
           throw new Error(errorMessage)
         }
 
         const data = await res.json()
-        setSubscriptions(data.subscriptions || [])
+        const allSubs: Subscription[] = data.subscriptions || []
+        setSubscriptions(allSubs)
+        setFailedPaymentsData(data.failedPayments || [])
 
         // Calculate stats
-        const activeSubs = data.subscriptions?.filter((s: Subscription) => s.status === "active") || []
-        const totalCents = activeSubs.reduce((sum: number, s: Subscription) => sum + (s.amount_cents || 0), 0)
-        const mrr = totalCents / 100 // Convert cents to dollars
+        const activeSubs = allSubs.filter((s) => s.status === "active")
+        const totalCents = activeSubs.reduce((sum, s) => sum + (s.amount_cents || 0), 0)
+        const mrr = totalCents / 100
         const avgRevenue = activeSubs.length > 0 ? mrr / activeSubs.length : 0
 
-        const newStats = {
+        // Calculate churn rate: canceled in last 30 days / (active + recently canceled)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        const recentlyCanceled = allSubs.filter(
+          (s) => s.canceled_at && new Date(s.canceled_at) >= thirtyDaysAgo
+        )
+        const activeAtPeriodStart = activeSubs.length + recentlyCanceled.length
+        const churnRate = activeAtPeriodStart > 0
+          ? (recentlyCanceled.length / activeAtPeriodStart) * 100
+          : 0
+
+        const newStats: BillingStats = {
           mrr,
           activeCount: activeSubs.length,
-          churnRate: 0, // TODO: Calculate from historical data
+          churnRate,
           avgRevenue,
         }
         setBillingStats(newStats)
-        setCache("admin-billing", { subscriptions: data.subscriptions || [], billingStats: newStats })
+        setCache("admin-billing", {
+          subscriptions: allSubs,
+          failedPayments: data.failedPayments || [],
+          billingStats: newStats,
+        })
       } catch (error) {
         console.error("Error fetching subscriptions:", error)
         toast.error("Failed to load subscriptions", {
@@ -118,41 +160,40 @@ export default function AdminBillingPage() {
     fetchSubscriptions()
   }, [])
 
+  // Format MRR display
+  const formatMrr = (mrr: number) => {
+    if (mrr >= 1000) return `$${(mrr / 1000).toFixed(1)}K`
+    return `$${mrr.toFixed(0)}`
+  }
+
   const displayStats = [
     {
       title: "Monthly Recurring Revenue",
-      value: `$${(billingStats.mrr / 1000).toFixed(1)}K`,
-      change: "+12.5%",
-      trend: "up" as const,
+      value: formatMrr(billingStats.mrr),
       icon: DollarSign,
       color: "text-cyan-400",
     },
     {
       title: "Churn Rate",
       value: `${billingStats.churnRate.toFixed(1)}%`,
-      change: "-0.8%",
-      trend: "down" as const,
       icon: TrendingDown,
-      color: "text-green-400",
+      color: billingStats.churnRate > 5 ? "text-red-400" : "text-green-400",
     },
     {
       title: "Active Subscriptions",
       value: billingStats.activeCount.toString(),
-      change: "+8.2%",
-      trend: "up" as const,
       icon: Users,
       color: "text-cyan-400",
     },
     {
       title: "Avg Revenue per Customer",
       value: `$${billingStats.avgRevenue.toFixed(0)}`,
-      change: "+5.1%",
-      trend: "up" as const,
       icon: TrendingUp,
       color: "text-cyan-400",
     },
   ]
 
+  // Derive active subscriptions for the Active tab
   const activeSubscriptions = subscriptions
     .filter((s) => s.status === "active" || s.status === "trialing")
     .map((s) => ({
@@ -166,30 +207,52 @@ export default function AdminBillingPage() {
       customerSince: s.created_at ? new Date(s.created_at).toISOString().slice(0, 10) : "N/A",
     }))
 
-  const trials = [
-    {
-      company: "Innovate Labs",
-      plan: "Growth",
-      daysLeft: 5,
-      email: "admin@innovatelabs.com",
-    },
-    {
-      company: "Digital Dynamics",
-      plan: "Startup",
-      daysLeft: 12,
-      email: "contact@digitaldynamics.com",
-    },
-  ]
+  // Derive trials from subscriptions with status "trialing"
+  const trials = subscriptions
+    .filter((s) => s.status === "trialing" && s.trial_ends_at)
+    .map((s) => {
+      const trialEnd = new Date(s.trial_ends_at!)
+      const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      return {
+        company: s.company_name,
+        plan: s.plan_name,
+        daysLeft,
+        email: s.user_email,
+      }
+    })
+    .sort((a, b) => a.daysLeft - b.daysLeft)
 
-  const failedPayments = [
-    {
-      company: "Future Systems",
-      amount: 2000,
-      failedDate: "2 days ago",
-      reason: "Card declined",
-      attempts: 2,
-    },
-  ]
+  // Derive failed payments from API data + past_due subscriptions
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days === 0) return "Today"
+    if (days === 1) return "1 day ago"
+    return `${days} days ago`
+  }
+
+  const paymentIssues = failedPaymentsData.map((p) => ({
+    company: p.company_name,
+    email: p.user_email,
+    amount: p.amount_cents / 100,
+    failedDate: timeAgo(p.created_at),
+    reason: p.reason,
+  }))
+
+  // Also include past_due subscriptions as payment issues
+  const pastDueIssues = subscriptions
+    .filter((s) => s.status === "past_due")
+    .map((s) => ({
+      company: s.company_name,
+      email: s.user_email,
+      amount: s.amount_cents / 100,
+      failedDate: s.current_period_end
+        ? `Due ${new Date(s.current_period_end).toISOString().slice(0, 10)}`
+        : "Unknown",
+      reason: "Payment past due",
+    }))
+
+  const allFailedPayments = [...paymentIssues, ...pastDueIssues]
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
@@ -200,36 +263,38 @@ export default function AdminBillingPage() {
 
       {/* Billing Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {displayStats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Card
-              key={stat.title}
-              className="bg-black/95 backdrop-blur-xl border-white/10"
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400">
-                  {stat.title}
-                </CardTitle>
-                <Icon className={`w-4 h-4 ${stat.color}`} />
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="bg-black/95 backdrop-blur-xl border-white/10">
+              <CardHeader className="pb-2">
+                <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="flex items-center gap-1 text-xs mt-2">
-                  {stat.trend === "up" ? (
-                    <TrendingUp className="w-3 h-3 text-cyan-400" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3 text-green-400" />
-                  )}
-                  <span className={stat.trend === "up" ? "text-cyan-400" : "text-green-400"}>
-                    {stat.change}
-                  </span>
-                  <span className="text-gray-500">vs last month</span>
-                </div>
+                <div className="h-8 w-20 bg-white/10 rounded animate-pulse" />
               </CardContent>
             </Card>
-          )
-        })}
+          ))
+        ) : (
+          displayStats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <Card
+                key={stat.title}
+                className="bg-black/95 backdrop-blur-xl border-white/10"
+              >
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-400">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className={`w-4 h-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white">{stat.value}</div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
       </div>
 
       {/* Tabbed Content Section */}
@@ -249,6 +314,24 @@ export default function AdminBillingPage() {
 
             {/* Tab Navigation */}
             <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+              <button
+                onClick={() => setActiveTab("active")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "active"
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Active Subscriptions</span>
+                <span className="sm:hidden">Active</span>
+                <Badge className="h-5 px-1.5 text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                  {activeSubscriptions.filter(s =>
+                    s.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length}
+                </Badge>
+              </button>
               <button
                 onClick={() => setActiveTab("trials")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
@@ -277,30 +360,13 @@ export default function AdminBillingPage() {
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                <span className="hidden sm:inline">Failed Payments</span>
-                <span className="sm:hidden">Failed</span>
+                <span className="hidden sm:inline">Payment Issues</span>
+                <span className="sm:hidden">Issues</span>
                 <Badge className="h-5 px-1.5 text-[10px] bg-red-500/20 text-red-400 border-red-500/30">
-                  {failedPayments.filter(p =>
+                  {allFailedPayments.filter(p =>
                     p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    p.reason.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length}
-                </Badge>
-              </button>
-              <button
-                onClick={() => setActiveTab("active")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "active"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Active Subscriptions</span>
-                <span className="sm:hidden">Active</span>
-                <Badge className="h-5 px-1.5 text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                  {activeSubscriptions.filter(s =>
-                    s.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    s.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                    p.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.email.toLowerCase().includes(searchQuery.toLowerCase())
                   ).length}
                 </Badge>
               </button>
@@ -308,97 +374,6 @@ export default function AdminBillingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Trials Ending Soon Tab */}
-          {activeTab === "trials" && (
-            <div className="space-y-3">
-              {(() => {
-                const filteredTrials = trials.filter(t =>
-                  t.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  t.plan.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                if (filteredTrials.length === 0) {
-                  return (
-                    <div className="text-center py-8">
-                      <Clock className="w-8 h-8 text-yellow-400/50 mx-auto mb-3" />
-                      <p className="text-gray-400">
-                        {searchQuery ? "No trials match your search" : "No trials ending soon"}
-                      </p>
-                    </div>
-                  )
-                }
-                return filteredTrials.map((trial, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-yellow-500/20 hover:bg-yellow-500/5 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{trial.company}</p>
-                      <p className="text-xs text-gray-400 truncate">{trial.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">{trial.plan} Plan</p>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <p className="text-sm font-semibold text-yellow-400">
-                        {trial.daysLeft} days left
-                      </p>
-                      <Button
-                        size="sm"
-                        className="mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white w-full sm:w-auto"
-                      >
-                        Contact
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              })()}
-            </div>
-          )}
-
-          {/* Failed Payments Tab */}
-          {activeTab === "failed" && (
-            <div className="space-y-3">
-              {(() => {
-                const filteredPayments = failedPayments.filter(p =>
-                  p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.reason.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                if (filteredPayments.length === 0) {
-                  return (
-                    <div className="text-center py-8">
-                      <AlertTriangle className="w-8 h-8 text-red-400/50 mx-auto mb-3" />
-                      <p className="text-gray-400">
-                        {searchQuery ? "No failed payments match your search" : "No failed payments"}
-                      </p>
-                    </div>
-                  )
-                }
-                return filteredPayments.map((payment, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-red-500/20 hover:bg-red-500/5 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{payment.company}</p>
-                      <p className="text-xs text-gray-400">
-                        {payment.reason} • {payment.attempts} attempts
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">${payment.amount}/mo</p>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <p className="text-xs text-gray-400">{payment.failedDate}</p>
-                      <Button
-                        size="sm"
-                        className="mt-2 bg-gradient-to-r from-red-500 to-orange-600 text-white w-full sm:w-auto"
-                      >
-                        Resolve
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              })()}
-            </div>
-          )}
-
           {/* Active Subscriptions Tab */}
           {activeTab === "active" && (
             <div className="space-y-3">
@@ -442,21 +417,104 @@ export default function AdminBillingPage() {
                       </div>
                       <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
                         <span>{sub.plan} Plan</span>
-                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline">&bull;</span>
                         <span>Next billing: {sub.nextBilling}</span>
-                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline">&bull;</span>
                         <span>Since: {sub.customerSince}</span>
                       </div>
                     </div>
                     <div className="text-left sm:text-right flex-shrink-0">
                       <p className="text-lg font-bold text-white">${sub.amount}/mo</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 text-gray-400 hover:text-white hover:bg-white/5 w-full sm:w-auto"
-                      >
-                        View Details
-                      </Button>
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
+          {/* Trials Ending Soon Tab */}
+          {activeTab === "trials" && (
+            <div className="space-y-3">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                  <span className="ml-3 text-gray-400">Loading trials...</span>
+                </div>
+              ) : (() => {
+                const filteredTrials = trials.filter(t =>
+                  t.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  t.plan.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                if (filteredTrials.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="w-8 h-8 text-yellow-400/50 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        {searchQuery ? "No trials match your search" : "No trials ending soon"}
+                      </p>
+                    </div>
+                  )
+                }
+                return filteredTrials.map((trial, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-yellow-500/20 hover:bg-yellow-500/5 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{trial.company}</p>
+                      <p className="text-xs text-gray-400 truncate">{trial.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">{trial.plan} Plan</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className={`text-sm font-semibold ${trial.daysLeft <= 3 ? "text-red-400" : "text-yellow-400"}`}>
+                        {trial.daysLeft} {trial.daysLeft === 1 ? "day" : "days"} left
+                      </p>
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
+          {/* Payment Issues Tab */}
+          {activeTab === "failed" && (
+            <div className="space-y-3">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                  <span className="ml-3 text-gray-400">Loading payment data...</span>
+                </div>
+              ) : (() => {
+                const filteredPayments = allFailedPayments.filter(p =>
+                  p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.email.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                if (filteredPayments.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <CheckCircle className="w-8 h-8 text-green-400/50 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        {searchQuery ? "No payment issues match your search" : "No payment issues"}
+                      </p>
+                    </div>
+                  )
+                }
+                return filteredPayments.map((payment, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-red-500/20 hover:bg-red-500/5 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{payment.company}</p>
+                      <p className="text-xs text-gray-400 truncate">{payment.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {payment.reason} &bull; ${payment.amount}/mo
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="text-xs text-gray-400">{payment.failedDate}</p>
                     </div>
                   </div>
                 ))
@@ -468,4 +526,3 @@ export default function AdminBillingPage() {
     </div>
   )
 }
-

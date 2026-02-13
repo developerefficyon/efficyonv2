@@ -200,7 +200,7 @@ async function getAllSubscriptions(req, res) {
   try {
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from("subscriptions")
-      .select("id, user_id, company_id, plan_tier, status, amount_cents, currency, current_period_start, current_period_end, created_at, updated_at")
+      .select("id, user_id, company_id, plan_tier, status, amount_cents, currency, current_period_start, current_period_end, trial_started_at, trial_ends_at, cancel_at, canceled_at, created_at, updated_at")
       .order("created_at", { ascending: false })
 
     if (subscriptionsError) {
@@ -282,13 +282,56 @@ async function getAllSubscriptions(req, res) {
         currency: sub.currency || "usd",
         current_period_start: sub.current_period_start,
         current_period_end: sub.current_period_end,
+        trial_started_at: sub.trial_started_at,
+        trial_ends_at: sub.trial_ends_at,
+        cancel_at: sub.cancel_at,
+        canceled_at: sub.canceled_at,
         created_at: sub.created_at,
         updated_at: sub.updated_at,
       }
     })
 
-    log("log", endpoint, `Success: Found ${subscriptionsWithDetails.length} subscriptions`)
-    return res.json({ subscriptions: subscriptionsWithDetails })
+    // Query payments table for failed/problem payments (last 90 days)
+    let failedPaymentsData = []
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
+    const { data: payments, error: paymentsError } = await supabase
+      .from("payments")
+      .select("id, subscription_id, company_id, user_id, amount_cents, currency, status, description, raw_response, created_at")
+      .in("status", ["requires_payment_method", "requires_action", "canceled"])
+      .gte("created_at", ninetyDaysAgo)
+      .order("created_at", { ascending: false })
+
+    if (paymentsError) {
+      log("warn", endpoint, "Error fetching failed payments (non-fatal):", paymentsError.message)
+    } else if (payments && payments.length > 0) {
+      failedPaymentsData = payments.map(p => {
+        const profile = usersMap.get(p.user_id)
+        const company = p.company_id ? companiesMap.get(p.company_id) : null
+
+        // Extract error reason from Stripe raw_response if available
+        const rawResponse = p.raw_response || {}
+        const errorMessage = rawResponse.last_payment_error?.message
+          || rawResponse.last_payment_error?.decline_code
+          || p.description
+          || "Payment failed"
+
+        return {
+          id: p.id,
+          subscription_id: p.subscription_id,
+          company_name: company?.name || profile?.email || "Unknown",
+          user_email: profile?.email || "Unknown",
+          amount_cents: p.amount_cents || 0,
+          currency: p.currency || "usd",
+          status: p.status,
+          reason: errorMessage,
+          created_at: p.created_at,
+        }
+      })
+    }
+
+    log("log", endpoint, `Success: Found ${subscriptionsWithDetails.length} subscriptions, ${failedPaymentsData.length} failed payments`)
+    return res.json({ subscriptions: subscriptionsWithDetails, failedPayments: failedPaymentsData })
   } catch (error) {
     log("error", endpoint, "Unexpected error:", error)
     return res.status(500).json({
@@ -602,6 +645,355 @@ async function getAdminDashboardSummary(req, res) {
   }
 }
 
+async function getAdminAnalytics(req, res) {
+  const endpoint = "GET /api/admin/analytics"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Check admin role
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError || !profile || profile.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden: Admin access required" })
+  }
+
+  try {
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    sixMonthsAgo.setDate(1)
+    sixMonthsAgo.setHours(0, 0, 0, 0)
+
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+    // Run all queries in parallel
+    const [
+      subscriptionsResult,
+      planCatalogResult,
+      customerProfilesResult,
+      tokenBalancesResult,
+    ] = await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("id, user_id, company_id, plan_tier, status, amount_cents, canceled_at, created_at"),
+      supabase
+        .from("plan_catalog")
+        .select("tier, name"),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, company_id, created_at")
+        .in("role", ["user", "customer"])
+        .gte("created_at", sixMonthsAgo.toISOString()),
+      supabase
+        .from("token_balances")
+        .select("total_tokens, used_tokens"),
+    ])
+
+    const subscriptions = subscriptionsResult.data || []
+    const planCatalog = planCatalogResult.data || []
+    const customerProfiles = customerProfilesResult.data || []
+    const tokenBalances = tokenBalancesResult.data || []
+
+    // Build plan name map
+    const planNameMap = new Map()
+    planCatalog.forEach(p => planNameMap.set(p.tier, p.name))
+
+    // --- Overview Stats ---
+    const activeSubs = subscriptions.filter(s => s.status === "active" || s.status === "trialing")
+    const totalMrrCents = activeSubs.reduce((sum, s) => sum + (s.amount_cents || 0), 0)
+    const mrr = totalMrrCents / 100
+    const activeCustomers = activeSubs.length
+    const avgCustomerValue = activeCustomers > 0 ? mrr / activeCustomers : 0
+
+    // Churn rate: canceled in last 30 days / (active + recently canceled)
+    const recentlyCanceled = subscriptions.filter(
+      s => s.canceled_at && new Date(s.canceled_at) >= thirtyDaysAgo
+    )
+    const activeAtPeriodStart = activeCustomers + recentlyCanceled.length
+    const churnRate = activeAtPeriodStart > 0
+      ? (recentlyCanceled.length / activeAtPeriodStart) * 100
+      : 0
+    const retentionRate = 100 - churnRate
+
+    // --- Revenue by Plan ---
+    const planStats = {}
+    activeSubs.forEach(s => {
+      const tier = s.plan_tier || "free"
+      if (!planStats[tier]) {
+        planStats[tier] = { customers: 0, revenueCents: 0 }
+      }
+      planStats[tier].customers++
+      planStats[tier].revenueCents += (s.amount_cents || 0)
+    })
+
+    const totalRevenueCents = Object.values(planStats).reduce((sum, p) => sum + p.revenueCents, 0)
+    const revenueByPlan = Object.entries(planStats)
+      .map(([tier, data]) => ({
+        plan_tier: tier,
+        plan_name: planNameMap.get(tier) || tier,
+        customers: data.customers,
+        revenue: data.revenueCents / 100,
+        percentage: totalRevenueCents > 0
+          ? Math.round((data.revenueCents / totalRevenueCents) * 100)
+          : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+
+    // --- Growth Trend (last 6 months) ---
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const growthTrend = []
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      const year = d.getFullYear()
+      const month = d.getMonth()
+
+      const monthStart = new Date(year, month, 1)
+      const monthEnd = new Date(year, month + 1, 1)
+
+      // Count new customers in this month
+      const newCustomers = customerProfiles.filter(p => {
+        const created = new Date(p.created_at)
+        return created >= monthStart && created < monthEnd
+      }).length
+
+      // Count subscriptions revenue created in/before this month that are still active
+      const monthRevenueCents = subscriptions
+        .filter(s => {
+          const created = new Date(s.created_at)
+          return created < monthEnd && (s.status === "active" || s.status === "trialing")
+        })
+        .reduce((sum, s) => sum + (s.amount_cents || 0), 0)
+
+      growthTrend.push({
+        month: monthNames[month],
+        customers: newCustomers,
+        revenue: monthRevenueCents / 100,
+      })
+    }
+
+    // --- Top Customers by Revenue ---
+    const customerRevenue = {}
+    activeSubs.forEach(s => {
+      const key = s.user_id
+      if (!customerRevenue[key]) {
+        customerRevenue[key] = { user_id: s.user_id, company_id: s.company_id, plan_tier: s.plan_tier, totalCents: 0 }
+      }
+      customerRevenue[key].totalCents += (s.amount_cents || 0)
+    })
+
+    const topCustomerEntries = Object.values(customerRevenue)
+      .sort((a, b) => b.totalCents - a.totalCents)
+      .slice(0, 5)
+
+    // Enrich with profile and company names
+    const topUserIds = topCustomerEntries.map(c => c.user_id).filter(Boolean)
+    const topCompanyIds = topCustomerEntries.map(c => c.company_id).filter(Boolean)
+
+    let topUsersMap = new Map()
+    let topCompaniesMap = new Map()
+
+    if (topUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", topUserIds)
+      if (profiles) profiles.forEach(p => topUsersMap.set(p.id, p))
+    }
+
+    if (topCompanyIds.length > 0) {
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", topCompanyIds)
+      if (companies) companies.forEach(c => topCompaniesMap.set(c.id, c))
+    }
+
+    const topCustomers = topCustomerEntries.map(c => {
+      const profile = topUsersMap.get(c.user_id)
+      const company = c.company_id ? topCompaniesMap.get(c.company_id) : null
+      return {
+        name: company?.name || profile?.full_name || profile?.email || "Unknown",
+        email: profile?.email || "Unknown",
+        plan: planNameMap.get(c.plan_tier) || c.plan_tier || "Free",
+        revenue: c.totalCents / 100,
+      }
+    })
+
+    // --- Metrics ---
+    const newCustomersThisMonth = customerProfiles.filter(p => {
+      return new Date(p.created_at) >= startOfMonth
+    }).length
+
+    const totalTokens = tokenBalances.reduce((sum, t) => sum + (t.total_tokens || 0), 0)
+    const usedTokens = tokenBalances.reduce((sum, t) => sum + (t.used_tokens || 0), 0)
+    const tokenUsageRate = totalTokens > 0 ? Math.round((usedTokens / totalTokens) * 100) : 0
+
+    const response = {
+      overview: {
+        mrr,
+        activeCustomers,
+        avgCustomerValue: Math.round(avgCustomerValue * 100) / 100,
+        churnRate: Math.round(churnRate * 10) / 10,
+        retentionRate: Math.round(retentionRate * 10) / 10,
+      },
+      revenueByPlan,
+      growthTrend,
+      topCustomers,
+      metrics: {
+        newCustomersThisMonth,
+        tokenUsageRate,
+      },
+    }
+
+    log("log", endpoint, `Success: MRR=$${mrr}, ${activeCustomers} active customers, ${topCustomers.length} top customers`)
+    return res.json(response)
+  } catch (error) {
+    log("error", endpoint, "Unexpected error:", error)
+    return res.status(500).json({ error: "Internal server error", details: error.message })
+  }
+}
+
+async function getAdminReports(req, res) {
+  const endpoint = "GET /api/admin/reports"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Supabase not configured on backend" })
+  }
+
+  const user = req.user
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" })
+  }
+
+  // Check admin role
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileError || !profile || profile.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden: Admin access required" })
+  }
+
+  try {
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    // Run all queries in parallel
+    const [
+      recentAnalysesResult,
+      totalCountResult,
+      monthCountResult,
+    ] = await Promise.all([
+      // Recent 20 analyses with company_id
+      supabase
+        .from("cost_leak_analyses")
+        .select("id, company_id, integration_id, provider, summary, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20),
+
+      // Total count
+      supabase
+        .from("cost_leak_analyses")
+        .select("id", { count: "exact", head: true }),
+
+      // This month count
+      supabase
+        .from("cost_leak_analyses")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", startOfMonth.toISOString()),
+    ])
+
+    if (recentAnalysesResult.error) {
+      log("error", endpoint, "Error fetching analyses:", recentAnalysesResult.error.message)
+      return res.status(500).json({ error: "Failed to fetch analyses" })
+    }
+
+    const analyses = recentAnalysesResult.data || []
+
+    // Enrich with company names
+    const companyIds = [...new Set(analyses.map(a => a.company_id).filter(Boolean))]
+    let companiesMap = new Map()
+
+    if (companyIds.length > 0) {
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds)
+
+      if (companies) {
+        companies.forEach(c => companiesMap.set(c.id, c.name))
+      }
+    }
+
+    // Compute aggregated stats
+    let totalSavingsIdentified = 0
+    const byProvider = {}
+
+    analyses.forEach(a => {
+      const summary = a.summary || {}
+      totalSavingsIdentified += (summary.totalPotentialSavings || 0)
+
+      const provider = a.provider || "Unknown"
+      byProvider[provider] = (byProvider[provider] || 0) + 1
+    })
+
+    // Format recent analyses
+    const recentAnalyses = analyses.map(a => {
+      const summary = a.summary || {}
+      return {
+        id: a.id,
+        provider: a.provider,
+        company_name: companiesMap.get(a.company_id) || "Unknown",
+        totalFindings: summary.totalFindings || 0,
+        totalPotentialSavings: summary.totalPotentialSavings || 0,
+        highSeverity: summary.highSeverity || 0,
+        mediumSeverity: summary.mediumSeverity || 0,
+        lowSeverity: summary.lowSeverity || 0,
+        created_at: a.created_at,
+      }
+    })
+
+    const response = {
+      stats: {
+        totalAnalyses: totalCountResult.count || 0,
+        analysesThisMonth: monthCountResult.count || 0,
+        totalSavingsIdentified,
+        byProvider,
+      },
+      recentAnalyses,
+    }
+
+    log("log", endpoint, `Success: ${response.stats.totalAnalyses} total analyses, ${recentAnalyses.length} recent`)
+    return res.json(response)
+  } catch (error) {
+    log("error", endpoint, "Unexpected error:", error)
+    return res.status(500).json({ error: "Internal server error", details: error.message })
+  }
+}
+
 module.exports = {
   getEmployees,
   getCustomers,
@@ -609,4 +1001,6 @@ module.exports = {
   approveProfile,
   getCustomerDetailsAdmin,
   getAdminDashboardSummary,
+  getAdminAnalytics,
+  getAdminReports,
 }
