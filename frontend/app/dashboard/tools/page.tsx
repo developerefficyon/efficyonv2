@@ -38,6 +38,7 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  BookOpen,
 } from "lucide-react"
 import Link from "next/link"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
@@ -1113,7 +1114,16 @@ export default function ToolsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Tools & Integrations</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
+            <Link
+              href="/dashboard/tools/guide"
+              className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors whitespace-nowrap"
+            >
+              <BookOpen className="w-4 h-4" />
+              Setup Guide
+            </Link>
+          </div>
         </div>
         {canWrite && (
           <div className="flex flex-col items-end gap-1">
@@ -1611,6 +1621,24 @@ export default function ToolsPage() {
                     <option value="production">Production</option>
                   </select>
                 </div>
+
+                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Log into developer.fortnox.se and create an app</li>
+                    <li>Set the redirect URI provided during onboarding</li>
+                    <li>Copy the Client ID and Client Secret here</li>
+                  </ol>
+                  <p className="text-xs text-gray-500 mt-2">Scopes: companyinformation, customer, invoice</p>
+                  <Link
+                    href="/dashboard/tools/guide#fortnox"
+                    onClick={() => setIsConnectModalOpen(false)}
+                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    Full setup guide
+                  </Link>
+                </div>
               </div>
             )}
 
@@ -1664,9 +1692,23 @@ export default function ToolsPage() {
                   />
                 </div>
 
-                <p className="text-xs text-gray-500">
-                  Requires Azure AD app with admin consent for User.Read.All, Directory.Read.All, Reports.Read.All permissions.
-                </p>
+                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Go to Azure Portal &gt; App registrations, create a new app</li>
+                    <li>Add API permissions: User.Read.All, Directory.Read.All, AuditLog.Read.All, Reports.Read.All</li>
+                    <li>Grant admin consent, then create a Client Secret</li>
+                  </ol>
+                  <p className="text-xs text-gray-500 mt-2">Requires admin consent for all permissions</p>
+                  <Link
+                    href="/dashboard/tools/guide#microsoft365"
+                    onClick={() => setIsConnectModalOpen(false)}
+                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    Full setup guide
+                  </Link>
+                </div>
               </div>
             )}
 
@@ -1769,9 +1811,23 @@ export default function ToolsPage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500">
-                  Requires a HubSpot Private App or OAuth App with settings.users.read, settings.users.write, and account-info.security.read scopes.
-                </p>
+                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Go to HubSpot &gt; Settings &gt; Integrations &gt; Private Apps</li>
+                    <li>Create app with scopes: settings.users.read, settings.users.write, account-info.security.read</li>
+                    <li>Copy the Client ID and Client Secret here</li>
+                  </ol>
+                  <p className="text-xs text-gray-500 mt-2">Scopes: settings.users.read, settings.users.write, account-info.security.read</p>
+                  <Link
+                    href="/dashboard/tools/guide#hubspot"
+                    onClick={() => setIsConnectModalOpen(false)}
+                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    Full setup guide
+                  </Link>
+                </div>
               </div>
             )}
           </div>
