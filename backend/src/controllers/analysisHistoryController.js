@@ -65,6 +65,47 @@ async function saveAnalysis(req, res) {
     return res.status(404).json({ error: "Integration not found" })
   }
 
+  // Check for duplicate analysis with the same integration and parameters
+  try {
+    const params = parameters || {}
+
+    let duplicateQuery = supabase
+      .from("cost_leak_analyses")
+      .select("id, created_at")
+      .eq("company_id", companyId)
+      .eq("integration_id", integrationId)
+      .eq("provider", provider)
+
+    // Match based on provider-specific parameters
+    if (provider === "Fortnox") {
+      duplicateQuery = duplicateQuery
+        .eq("parameters->>startDate", params.startDate || null)
+        .eq("parameters->>endDate", params.endDate || null)
+    } else if (provider === "Microsoft365" || provider === "HubSpot") {
+      duplicateQuery = duplicateQuery
+        .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+    }
+
+    const { data: existingAnalyses, error: dupCheckError } = await duplicateQuery
+      .order("created_at", { ascending: false })
+      .limit(1)
+
+    if (dupCheckError) {
+      log("warn", endpoint, `Duplicate check failed, proceeding with save: ${dupCheckError.message}`)
+    } else if (existingAnalyses && existingAnalyses.length > 0) {
+      const existing = existingAnalyses[0]
+      log("log", endpoint, `Duplicate analysis found, id: ${existing.id}, created_at: ${existing.created_at}`)
+      return res.status(409).json({
+        error: "Duplicate analysis",
+        message: "An analysis with the same parameters already exists.",
+        existingId: existing.id,
+        existingCreatedAt: existing.created_at,
+      })
+    }
+  } catch (dupError) {
+    log("warn", endpoint, `Duplicate check error, proceeding with save: ${dupError.message}`)
+  }
+
   // Extract summary from analysis data
   const summary = extractSummary(analysisData, provider)
 

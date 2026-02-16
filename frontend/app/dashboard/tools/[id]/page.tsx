@@ -874,6 +874,12 @@ export default function ToolDetailPage() {
         // Refresh history list
         fetchAnalysisHistory()
         return true
+      } else if (res.status === 409) {
+        toast.info("Analysis already exists", {
+          description: "An analysis with the same parameters was already saved. Check your history."
+        })
+        fetchAnalysisHistory()
+        return false
       } else {
         toast.error("Failed to save analysis", {
           description: "Could not save to history. Please try running the analysis again."

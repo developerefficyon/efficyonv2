@@ -1629,7 +1629,7 @@ export default function ToolsPage() {
                     <li>Set the redirect URI provided during onboarding</li>
                     <li>Copy the Client ID and Client Secret here</li>
                   </ol>
-                  <p className="text-xs text-gray-500 mt-2">Scopes: companyinformation, customer, invoice</p>
+                  <p className="text-xs text-gray-500 mt-2">Scopes: companyinformation, customer, invoice, supplierinvoice, bookkeeping, salary, article, supplier</p>
                   <Link
                     href="/dashboard/tools/guide#fortnox"
                     onClick={() => setIsConnectModalOpen(false)}
@@ -1815,10 +1815,10 @@ export default function ToolsPage() {
                   <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Go to HubSpot &gt; Settings &gt; Integrations &gt; Private Apps</li>
-                    <li>Create app with scopes: settings.users.read, settings.users.write, account-info.security.read</li>
+                    <li>Create app with scopes: settings.users.read, settings.users.write, account-info.security.read, crm.objects.contacts.read</li>
                     <li>Copy the Client ID and Client Secret here</li>
                   </ol>
-                  <p className="text-xs text-gray-500 mt-2">Scopes: settings.users.read, settings.users.write, account-info.security.read</p>
+                  <p className="text-xs text-gray-500 mt-2">Scopes: settings.users.read, settings.users.write, account-info.security.read, crm.objects.contacts.read</p>
                   <Link
                     href="/dashboard/tools/guide#hubspot"
                     onClick={() => setIsConnectModalOpen(false)}

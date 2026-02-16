@@ -115,8 +115,13 @@ export default function SetupGuidePage() {
             <ScopeBadge>companyinformation</ScopeBadge>
             <ScopeBadge>customer</ScopeBadge>
             <ScopeBadge>invoice</ScopeBadge>
+            <ScopeBadge>supplierinvoice</ScopeBadge>
+            <ScopeBadge>bookkeeping</ScopeBadge>
+            <ScopeBadge>salary</ScopeBadge>
             <ScopeBadge>article</ScopeBadge>
+            <ScopeBadge>supplier</ScopeBadge>
             <ScopeBadge>settings</ScopeBadge>
+            <ScopeBadge>profile</ScopeBadge>
           </div>
 
           <div className="flex items-start gap-3">
@@ -229,19 +234,23 @@ export default function SetupGuidePage() {
               <tbody>
                 <tr className="border-b border-white/5">
                   <td className="px-3 py-1.5 font-mono">User.Read.All</td>
-                  <td className="px-3 py-1.5">Read all users&apos; profiles</td>
+                  <td className="px-3 py-1.5">Read all users&apos; profiles and license assignments</td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="px-3 py-1.5 font-mono">Directory.Read.All</td>
-                  <td className="px-3 py-1.5">Read directory data (licenses, groups)</td>
+                  <td className="px-3 py-1.5">Read subscribed licenses/SKUs and directory data</td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="px-3 py-1.5 font-mono">AuditLog.Read.All</td>
                   <td className="px-3 py-1.5">Read sign-in activity logs</td>
                 </tr>
-                <tr>
+                <tr className="border-b border-white/5">
                   <td className="px-3 py-1.5 font-mono">Reports.Read.All</td>
-                  <td className="px-3 py-1.5">Read usage reports</td>
+                  <td className="px-3 py-1.5">Read Office 365, mailbox, and Teams usage reports</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-1.5 font-mono">offline_access</td>
+                  <td className="px-3 py-1.5">Maintain access via refresh tokens</td>
                 </tr>
               </tbody>
             </table>
@@ -335,6 +344,7 @@ export default function SetupGuidePage() {
             <ScopeBadge>settings.users.read</ScopeBadge>
             <ScopeBadge>settings.users.write</ScopeBadge>
             <ScopeBadge>account-info.security.read</ScopeBadge>
+            <ScopeBadge>crm.objects.contacts.read</ScopeBadge>
           </div>
 
           <div className="flex items-start gap-3">
