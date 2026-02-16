@@ -424,7 +424,7 @@ export default function UserDashboard() {
                           {rec.savings > 0 ? (
                             <>
                               <p className="text-xl sm:text-2xl font-bold text-green-400">
-                                ${rec.savings}/mo
+                                ${rec.savings.toFixed(2)}/mo
                               </p>
                               <p className="text-xs text-gray-500">Potential savings</p>
                             </>
