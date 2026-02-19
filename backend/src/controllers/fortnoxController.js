@@ -240,29 +240,72 @@ async function fetchFortnoxData(endpoint, accessToken, requiredScope, scopeName)
   return await response.json()
 }
 
+// Helper function to fetch all pages of a Fortnox list endpoint
+async function fetchAllFortnoxPages(basePath, dateFilter, accessToken, requiredScope, scopeName, dataKey, maxPages = 20) {
+  const allItems = []
+  let currentPage = 1
+
+  while (currentPage <= maxPages) {
+    // Build URL with pagination and date filter
+    const pageParam = `${dateFilter ? dateFilter + "&" : "?"}limit=100&page=${currentPage}`
+    const url = `${basePath}${pageParam}`
+
+    const data = await fetchFortnoxData(url, accessToken, requiredScope, scopeName)
+    const items = data[dataKey] || []
+    allItems.push(...items)
+
+    // Check if there are more pages via MetaInformation
+    const meta = data.MetaInformation
+    if (!meta || currentPage >= (meta["@TotalPages"] || 1)) {
+      break
+    }
+
+    currentPage++
+    // Small delay between pages to respect rate limits
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+
+  return allItems
+}
+
+// Helper function to fetch a single supplier invoice with retry on rate limit
+async function fetchSingleInvoiceWithRetry(num, accessToken, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const data = await fetchFortnoxData(`/supplierinvoices/${num}`, accessToken, "supplierinvoice", "supplier invoice")
+      return data.SupplierInvoice
+    } catch (err) {
+      const isRateLimit = err.message.includes("Rate limit") || err.message.includes("429")
+      if (isRateLimit && attempt < maxRetries) {
+        // Wait for rate limit window to reset (5 seconds) + small buffer
+        const waitMs = 5000 + (attempt * 500)
+        log("warn", "fetchSupplierInvoiceDetails", `Rate limited on invoice ${num}, waiting ${waitMs}ms (attempt ${attempt}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, waitMs))
+        continue
+      }
+      log("warn", "fetchSupplierInvoiceDetails", `Failed to fetch invoice ${num} after ${attempt} attempt(s): ${err.message}`)
+      return null
+    }
+  }
+  return null
+}
+
 // Helper function to fetch individual supplier invoice details (to get amounts)
 async function fetchSupplierInvoiceDetails(invoiceNumbers, accessToken) {
   const details = []
-  const batchSize = 10 // Process 10 at a time to avoid rate limits
+  // Process 5 at a time to stay well within 25 req/5sec rate limit
+  const batchSize = 5
 
   for (let i = 0; i < invoiceNumbers.length; i += batchSize) {
     const batch = invoiceNumbers.slice(i, i + batchSize)
-    const batchPromises = batch.map(async (num) => {
-      try {
-        const data = await fetchFortnoxData(`/supplierinvoices/${num}`, accessToken, "supplierinvoice", "supplier invoice")
-        return data.SupplierInvoice
-      } catch (err) {
-        log("warn", "fetchSupplierInvoiceDetails", `Failed to fetch invoice ${num}: ${err.message}`)
-        return null
-      }
-    })
+    const batchPromises = batch.map((num) => fetchSingleInvoiceWithRetry(num, accessToken))
 
     const batchResults = await Promise.all(batchPromises)
     details.push(...batchResults.filter(Boolean))
 
-    // Small delay between batches to respect rate limits
+    // Wait 1 second between batches to stay safely under the 25 req/5sec limit
     if (i + batchSize < invoiceNumbers.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
@@ -904,27 +947,26 @@ async function analyzeFortnoxCostLeaks(req, res) {
       dateFilter = `?todate=${endDate}`
     }
 
+    // Fetch all pages of invoices and supplier invoices
     const [invoicesRes, supplierInvoicesRes] = await Promise.allSettled([
-      fetchFortnoxData(`/invoices${dateFilter}`, accessToken, "invoice", "invoice").catch((err) => {
+      fetchAllFortnoxPages(`/invoices`, dateFilter, accessToken, "invoice", "invoice", "Invoices").catch((err) => {
         log("error", endpoint, `Failed to fetch invoices: ${err.message}`)
-        return { Invoices: [] }
+        return []
       }),
-      fetchFortnoxData(`/supplierinvoices${dateFilter}`, accessToken, "supplierinvoice", "supplier invoice").catch((err) => {
+      fetchAllFortnoxPages(`/supplierinvoices`, dateFilter, accessToken, "supplierinvoice", "supplier invoice", "SupplierInvoices").catch((err) => {
         log("error", endpoint, `Failed to fetch supplier invoices: ${err.message}`)
-        return { SupplierInvoices: [] }
+        return []
       }),
     ])
 
-    const invoices = invoicesRes.status === "fulfilled" ? (invoicesRes.value.Invoices || []) : []
-    const supplierInvoicesList = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value.SupplierInvoices || []) : []
+    const invoices = invoicesRes.status === "fulfilled" ? (invoicesRes.value || []) : []
+    const supplierInvoicesList = supplierInvoicesRes.status === "fulfilled" ? (supplierInvoicesRes.value || []) : []
 
-    log("log", endpoint, `Fetched ${invoices.length} invoices, ${supplierInvoicesList.length} supplier invoices from list`)
+    log("log", endpoint, `Fetched ${invoices.length} invoices, ${supplierInvoicesList.length} supplier invoices (all pages)`)
 
     // Fetch detailed supplier invoice data (list endpoint doesn't include row-level amounts)
-    // Limit to 100 invoices to avoid timeouts and rate limits
     // Use GivenNumber as the primary identifier, falling back to InvoiceNumber
     const invoiceNumbers = supplierInvoicesList
-      .slice(0, 100)
       .map(inv => inv.GivenNumber || inv.InvoiceNumber)
       .filter(num => num != null && num !== '' && num !== 'undefined')
     let supplierInvoices = supplierInvoicesList
@@ -934,7 +976,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
       const detailedInvoices = await fetchSupplierInvoiceDetails(invoiceNumbers, accessToken)
       if (detailedInvoices.length > 0) {
         supplierInvoices = detailedInvoices
-        log("log", endpoint, `Got detailed data for ${detailedInvoices.length} supplier invoices`)
+        log("log", endpoint, `Got detailed data for ${detailedInvoices.length}/${invoiceNumbers.length} supplier invoices`)
       }
     }
 
