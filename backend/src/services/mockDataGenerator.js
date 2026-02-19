@@ -529,10 +529,58 @@ function generateM365Data(config, anomalyConfig = {}) {
     capabilityStatus: "Enabled",
   }))
 
+  // ── Generate usage reports ──
+  const usage_reports = generateM365UsageReports(users)
+
   return {
     licenses,
     users,
+    usage_reports,
   }
+}
+
+// ─── Microsoft 365 Usage Reports Generator ──────────────────────────
+
+function generateM365UsageReports(users) {
+  const now = new Date()
+  const reportRefreshDate = formatDate(addDays(now, -1))
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
+
+  return users
+    .filter((u) => u.accountEnabled)
+    .map((user) => {
+      const lastSignIn = user.signInActivity?.lastSignInDateTime
+        ? new Date(user.signInActivity.lastSignInDateTime)
+        : null
+      const isActive = lastSignIn && (now - lastSignIn) < thirtyDaysMs
+
+      return {
+        userPrincipalName: user.userPrincipalName,
+        lastActivityDate: isActive
+          ? formatDate(daysAgo(randInt(0, 7)))
+          : lastSignIn
+          ? formatDate(lastSignIn)
+          : null,
+        reportRefreshDate,
+        exchangeLastActivityDate: isActive
+          ? formatDate(daysAgo(randInt(0, 14)))
+          : null,
+        teamsLastActivityDate: isActive
+          ? formatDate(daysAgo(randInt(0, 10)))
+          : null,
+        oneDriveLastActivityDate: isActive
+          ? formatDate(daysAgo(randInt(0, 21)))
+          : null,
+        sharePointLastActivityDate: isActive
+          ? formatDate(daysAgo(randInt(0, 30)))
+          : null,
+        assignedProducts: user.assignedLicenses.map((l) => l.skuId).join(";"),
+        hasExchangeLicense: true,
+        hasTeamsLicense: true,
+        hasOneDriveLicense: isActive,
+        hasSharePointLicense: isActive,
+      }
+    })
 }
 
 // ─── HubSpot Data Generator ─────────────────────────────────────────

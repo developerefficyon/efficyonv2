@@ -14,6 +14,10 @@ import {
   AlertCircle,
   MinusCircle,
   Star,
+  Brain,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -51,6 +55,9 @@ export function AnalysisScoringPanel({
 }: AnalysisScoringPanelProps) {
   const [autoScoring, setAutoScoring] = useState(false)
   const [savingQuality, setSavingQuality] = useState(false)
+  const [aiEvaluating, setAiEvaluating] = useState(false)
+  const [showImprovements, setShowImprovements] = useState(false)
+  const [showDiagnoses, setShowDiagnoses] = useState(false)
 
   const [clarity, setClarity] = useState(scoring?.quality?.clarity ?? 3)
   const [precision, setPrecision] = useState(scoring?.quality?.precision ?? 3)
@@ -60,6 +67,7 @@ export function AnalysisScoringPanel({
   const detection = scoring?.detection
   const details = scoring?.details as any[] | undefined
   const quality = scoring?.quality
+  const aiEvaluation = scoring?.aiEvaluation
 
   async function handleAutoScore() {
     setAutoScoring(true)
@@ -89,6 +97,36 @@ export function AnalysisScoringPanel({
       toast.error("Network error during auto-scoring")
     } finally {
       setAutoScoring(false)
+    }
+  }
+
+  async function handleAiEvaluate() {
+    setAiEvaluating(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) return
+
+      const res = await fetch(`${apiBase}/api/test/analyses/${analysisId}/ai-evaluate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        onScoringUpdate({ ...scoring, aiEvaluation: data.aiEvaluation })
+        toast.success("AI evaluation complete")
+      } else {
+        const err = await res.json()
+        toast.error(err.error || "AI evaluation failed")
+      }
+    } catch {
+      toast.error("Network error during AI evaluation")
+    } finally {
+      setAiEvaluating(false)
     }
   }
 
@@ -279,6 +317,154 @@ export function AnalysisScoringPanel({
             )}
             {savingQuality ? "Saving..." : "Save Quality Scores"}
           </Button>
+        </div>
+
+        {/* Section D: AI Evaluation (Claude) */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-blue-400" />
+              AI Evaluation
+              {aiEvaluation && (
+                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 ml-2">
+                  Score: {aiEvaluation.quality?.overallScore ?? "N/A"}/5
+                </Badge>
+              )}
+            </h3>
+            <Button
+              onClick={handleAiEvaluate}
+              disabled={aiEvaluating}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {aiEvaluating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Brain className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              {aiEvaluating ? "Evaluating..." : aiEvaluation ? "Re-Evaluate" : "Run AI Evaluation"}
+            </Button>
+          </div>
+
+          {aiEvaluation ? (
+            <div className="space-y-4">
+              {/* AI Quality Scores */}
+              {aiEvaluation.quality && (
+                <div className="grid grid-cols-4 gap-2">
+                  {["clarity", "precision", "realism", "actionability"].map((dim) => {
+                    const val = aiEvaluation.quality[dim]
+                    const score = typeof val === "object" ? val.score : val
+                    return (
+                      <div key={dim} className="bg-black/30 rounded-lg p-2 border border-blue-500/10 text-center">
+                        <p className="text-[10px] text-gray-500 capitalize">{dim}</p>
+                        <p className={`text-lg font-bold ${score >= 4 ? "text-green-400" : score >= 3 ? "text-amber-400" : "text-red-400"}`}>
+                          {score}/5
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Strengths & Weaknesses */}
+              {(aiEvaluation.quality?.topStrengths || aiEvaluation.quality?.topWeaknesses) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {aiEvaluation.quality.topStrengths?.length > 0 && (
+                    <div className="bg-green-500/5 rounded-lg p-3 border border-green-500/10">
+                      <p className="text-xs text-green-400 font-medium mb-1">Strengths</p>
+                      {aiEvaluation.quality.topStrengths.map((s: string, i: number) => (
+                        <p key={i} className="text-xs text-gray-300">• {s}</p>
+                      ))}
+                    </div>
+                  )}
+                  {aiEvaluation.quality.topWeaknesses?.length > 0 && (
+                    <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
+                      <p className="text-xs text-red-400 font-medium mb-1">Weaknesses</p>
+                      {aiEvaluation.quality.topWeaknesses.map((w: string, i: number) => (
+                        <p key={i} className="text-xs text-gray-300">• {w}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Improvement Suggestions */}
+              {aiEvaluation.improvements?.improvements?.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowImprovements(!showImprovements)}
+                    className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    {aiEvaluation.improvements.improvements.length} Improvement Suggestions
+                    {showImprovements ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                  {showImprovements && (
+                    <div className="mt-2 space-y-2">
+                      {aiEvaluation.improvements.improvements.map((imp: any, i: number) => (
+                        <div key={i} className="bg-black/30 rounded-lg p-3 border border-amber-500/10">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400">
+                              {imp.category}
+                            </Badge>
+                            <Badge variant="outline" className={`text-[10px] ${imp.priority === "high" ? "border-red-500/30 text-red-400" : imp.priority === "medium" ? "border-amber-500/30 text-amber-400" : "border-gray-500/30 text-gray-400"}`}>
+                              {imp.priority}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-300">{imp.description}</p>
+                          {imp.suggestedChange && (
+                            <p className="text-xs text-gray-500 mt-1 font-mono bg-black/30 rounded px-2 py-1">
+                              {imp.suggestedChange}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Missed Anomaly Diagnoses */}
+              {aiEvaluation.missedDiagnosis?.diagnoses?.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowDiagnoses(!showDiagnoses)}
+                    className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    {aiEvaluation.missedDiagnosis.diagnoses.length} Missed Anomaly Diagnoses
+                    {showDiagnoses ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                  {showDiagnoses && (
+                    <div className="mt-2 space-y-2">
+                      {aiEvaluation.missedDiagnosis.diagnoses.map((d: any, i: number) => (
+                        <div key={i} className="bg-black/30 rounded-lg p-3 border border-red-500/10">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-gray-400 font-mono">{d.anomalyType}</span>
+                            <Badge variant="outline" className={`text-[10px] ${d.confidence === "high" ? "border-red-500/30 text-red-400" : "border-gray-500/30 text-gray-400"}`}>
+                              {d.confidence} confidence
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-300">{d.likelyReason}</p>
+                          {d.suggestedFix && (
+                            <p className="text-xs text-green-400/70 mt-1">Fix: {d.suggestedFix}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <p className="text-[10px] text-gray-600">
+                Evaluated by {aiEvaluation.model} at {new Date(aiEvaluation.evaluatedAt).toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Click &quot;Run AI Evaluation&quot; to get Claude&apos;s assessment of analysis quality, improvement suggestions, and missed anomaly diagnoses.
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

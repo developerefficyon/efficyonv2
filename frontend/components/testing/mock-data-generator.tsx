@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Sparkles, CheckCircle, Info, ChevronDown, ChevronRight } from "lucide-react"
+import { Loader2, Sparkles, CheckCircle, Info, ChevronDown, ChevronRight, Zap } from "lucide-react"
 import { toast } from "sonner"
 
 interface Props {
@@ -39,6 +39,16 @@ const ANOMALY_OPTIONS: Record<string, { key: string; label: string; description:
   ],
 }
 
+const STRESS_SCENARIOS = [
+  { key: "extreme_values", label: "Extreme Values", description: "Negative amounts, huge numbers, zero totals" },
+  { key: "large_datasets", label: "Large Datasets", description: "1000-5000 records for performance testing" },
+  { key: "partial_data", label: "Partial Data", description: "Missing required fields at 40% rate" },
+  { key: "empty_arrays", label: "Empty Arrays", description: "Valid structure but zero records" },
+  { key: "type_mismatches", label: "Type Mismatches", description: "Numbers as strings, wrong field types" },
+  { key: "duplicate_heavy", label: "Duplicate Heavy", description: "50%+ exact duplicated records" },
+  { key: "boundary_dates", label: "Boundary Dates", description: "Far future, epoch 0, invalid formats" },
+]
+
 // Initialize all anomalies as ON by default
 function getDefaultAnomalyConfig() {
   const config: Record<string, Record<string, boolean>> = {}
@@ -59,6 +69,8 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
   const [result, setResult] = useState<any>(null)
   const [showAnomalies, setShowAnomalies] = useState(false)
   const [showGuide, setShowGuide] = useState(true)
+  const [stressMode, setStressMode] = useState(false)
+  const [selectedStressScenarios, setSelectedStressScenarios] = useState<string[]>([])
 
   function toggleIntegration(key: string) {
     setSelectedIntegrations((prev) =>
@@ -77,8 +89,18 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
     }))
   }
 
+  function toggleStressScenario(key: string) {
+    setSelectedStressScenarios((prev) =>
+      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+    )
+  }
+
   async function handleGenerate() {
     if (selectedIntegrations.length === 0) return
+    if (stressMode && selectedStressScenarios.length === 0) {
+      toast.error("Select at least one stress scenario")
+      return
+    }
     setGenerating(true)
     setResult(null)
 
@@ -87,22 +109,27 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
       const token = await getBackendToken()
       if (!token) return
 
-      const res = await fetch(`${apiBase}/api/test/workspaces/${workspaceId}/generate`, {
+      const endpoint = stressMode
+        ? `${apiBase}/api/test/workspaces/${workspaceId}/stress-test`
+        : `${apiBase}/api/test/workspaces/${workspaceId}/generate`
+
+      const body = stressMode
+        ? { integrations: selectedIntegrations, scenarios: selectedStressScenarios }
+        : { integrations: selectedIntegrations, anomaly_config: anomalyConfig }
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          integrations: selectedIntegrations,
-          anomaly_config: anomalyConfig,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (res.ok) {
         const data = await res.json()
         setResult(data)
-        toast.success(`Generated ${data.uploads.length} mock data uploads`)
+        toast.success(`Generated ${data.uploads.length} ${stressMode ? "stress test" : "mock data"} uploads`)
         onGenerateComplete()
       } else {
         const err = await res.json()
@@ -211,8 +238,78 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
           )}
         </div>
 
-        {/* Anomaly Toggles — only show when integrations are selected */}
+        {/* Mode Toggle — Normal vs Stress Test */}
         {selectedIntegrations.length > 0 && (
+          <div className="flex items-center gap-3">
+            <button
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !stressMode
+                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                  : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+              }`}
+              onClick={() => setStressMode(false)}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Normal Mode
+            </button>
+            <button
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                stressMode
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                  : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+              }`}
+              onClick={() => setStressMode(true)}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Stress Test
+            </button>
+          </div>
+        )}
+
+        {/* Stress Scenario Selection — only show in stress mode */}
+        {selectedIntegrations.length > 0 && stressMode && (
+          <div>
+            <label className="text-sm text-gray-400 block mb-2">Select Stress Scenarios</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {STRESS_SCENARIOS.map(({ key, label, description }) => {
+                const selected = selectedStressScenarios.includes(key)
+                return (
+                  <button
+                    key={key}
+                    className={`text-left p-2.5 rounded-lg border transition-colors ${
+                      selected
+                        ? "border-amber-500/30 bg-amber-500/10"
+                        : "border-white/10 bg-white/[0.02] hover:bg-white/5"
+                    }`}
+                    onClick={() => toggleStressScenario(key)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-medium ${selected ? "text-amber-400" : "text-gray-300"}`}>
+                        {label}
+                      </span>
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                        selected ? "border-amber-500 bg-amber-500" : "border-gray-600 bg-transparent"
+                      }`}>
+                        {selected && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+                  </button>
+                )
+              })}
+            </div>
+            {selectedStressScenarios.length === 0 && (
+              <p className="text-xs text-amber-400/80 mt-2">Select at least one stress scenario</p>
+            )}
+          </div>
+        )}
+
+        {/* Anomaly Toggles — only show in normal mode when integrations are selected */}
+        {selectedIntegrations.length > 0 && !stressMode && (
           <div>
             <button
               className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
@@ -280,15 +377,22 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
         {/* Generate Button */}
         <Button
           onClick={handleGenerate}
-          disabled={generating || selectedIntegrations.length === 0}
-          className="bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={generating || selectedIntegrations.length === 0 || (stressMode && selectedStressScenarios.length === 0)}
+          className={`${stressMode ? "bg-amber-600 hover:bg-amber-700" : "bg-cyan-600 hover:bg-cyan-700"} text-white disabled:opacity-40 disabled:cursor-not-allowed`}
         >
           {generating ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : stressMode ? (
+            <Zap className="w-4 h-4 mr-2" />
           ) : (
             <Sparkles className="w-4 h-4 mr-2" />
           )}
-          {generating ? "Generating..." : `Generate Mock Data${selectedIntegrations.length > 0 ? ` (${selectedIntegrations.length} integration${selectedIntegrations.length > 1 ? "s" : ""})` : ""}`}
+          {generating
+            ? "Generating..."
+            : stressMode
+              ? `Run Stress Test${selectedIntegrations.length > 0 ? ` (${selectedStressScenarios.length} scenario${selectedStressScenarios.length !== 1 ? "s" : ""})` : ""}`
+              : `Generate Mock Data${selectedIntegrations.length > 0 ? ` (${selectedIntegrations.length} integration${selectedIntegrations.length > 1 ? "s" : ""})` : ""}`
+          }
         </Button>
 
         {/* Result Summary */}

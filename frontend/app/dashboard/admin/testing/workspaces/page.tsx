@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -61,6 +63,8 @@ export default function WorkspacesPage() {
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [newScenario, setNewScenario] = useState("custom")
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) {
@@ -133,19 +137,31 @@ export default function WorkspacesPage() {
   }
 
   async function archiveWorkspace(id: string) {
+    setDeleting(true)
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const token = await getBackendToken()
       if (!token) return
 
-      await fetch(`${apiBase}/api/test/workspaces/${id}`, {
+      const res = await fetch(`${apiBase}/api/test/workspaces/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      setWorkspaces((prev) => prev.filter((w) => w.id !== id))
+      if (res.ok) {
+        const deletedName = workspaces.find((w) => w.id === id)?.name || "Workspace"
+        setWorkspaces((prev) => prev.filter((w) => w.id !== id))
+        setConfirmDeleteId(null)
+        toast.success(`"${deletedName}" has been deleted`)
+      } else {
+        const err = await res.json()
+        toast.error(`Failed to delete: ${err.error}`)
+      }
     } catch (err) {
       console.error("Failed to archive workspace:", err)
+      toast.error("Network error while deleting workspace")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -299,7 +315,7 @@ export default function WorkspacesPage() {
                     <Button
                       size="sm"
                       className="bg-transparent text-gray-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 p-0"
-                      onClick={() => archiveWorkspace(ws.id)}
+                      onClick={() => setConfirmDeleteId(ws.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -310,6 +326,43 @@ export default function WorkspacesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={confirmDeleteId !== null} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null) }}>
+        <DialogContent className="bg-gray-900 border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Delete Workspace</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete{" "}
+              <span className="text-white font-medium">
+                {workspaces.find((w) => w.id === confirmDeleteId)?.name}
+              </span>
+              ? This will remove all uploads, analyses, and logs associated with this workspace. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              className="bg-transparent border border-white/10 text-white hover:bg-white/10"
+              onClick={() => setConfirmDeleteId(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => confirmDeleteId && archiveWorkspace(confirmDeleteId)}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              {deleting ? "Deleting..." : "Delete Workspace"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

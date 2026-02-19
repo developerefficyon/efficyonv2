@@ -7,6 +7,8 @@
 const { supabase } = require("../config/supabase")
 const { runTestAnalysis, logTestRun } = require("../services/testAnalysisRunner")
 const { computeDetectionScore, buildScoringPayload } = require("../services/analysisScoringService")
+const claudeService = require("../services/claudeService")
+const { runImprovementCycle } = require("../services/continuousImprovementService")
 
 /**
  * Trigger an analysis on a workspace
@@ -299,6 +301,135 @@ async function getWorkspaceLogs(req, res) {
   }
 }
 
+/**
+ * AI-evaluate an analysis using Claude
+ * POST /api/test/analyses/:analysisId/ai-evaluate
+ */
+async function aiEvaluateAnalysis(req, res) {
+  try {
+    const { analysisId } = req.params
+
+    // Fetch full analysis
+    const { data: analysis, error: fetchError } = await supabase
+      .from("test_analyses")
+      .select("*")
+      .eq("id", analysisId)
+      .single()
+
+    if (fetchError || !analysis) {
+      return res.status(404).json({ error: "Analysis not found" })
+    }
+
+    if (analysis.status !== "completed") {
+      return res.status(400).json({ error: "Can only evaluate completed analyses" })
+    }
+
+    // Fetch workspace for anomaly config
+    const { data: workspace, error: wsError } = await supabase
+      .from("test_workspaces")
+      .select("id, metadata")
+      .eq("id", analysis.workspace_id)
+      .single()
+
+    if (wsError || !workspace) {
+      return res.status(404).json({ error: "Workspace not found" })
+    }
+
+    const anomalyConfig = workspace.metadata?.last_mock_generation?.anomaly_config || {}
+
+    // Fetch template if one was used
+    let template = null
+    if (analysis.template_id) {
+      const { data: tmpl } = await supabase
+        .from("analysis_templates")
+        .select("*")
+        .eq("id", analysis.template_id)
+        .single()
+      template = tmpl
+    }
+
+    // Run full Claude evaluation
+    const evaluation = await claudeService.generateFullEvaluation(
+      analysis.analysis_result,
+      anomalyConfig,
+      analysis.scoring || {},
+      template
+    )
+
+    if (!evaluation) {
+      return res.status(503).json({ error: "Claude API not configured or evaluation failed" })
+    }
+
+    // Merge into existing scoring JSONB
+    const updatedScoring = {
+      ...(analysis.scoring || {}),
+      aiEvaluation: evaluation,
+    }
+
+    const { error: updateError } = await supabase
+      .from("test_analyses")
+      .update({ scoring: updatedScoring })
+      .eq("id", analysisId)
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message })
+    }
+
+    await logTestRun(analysis.workspace_id, analysisId, "info", "AI evaluation completed", {
+      model: evaluation.model,
+      qualityScore: evaluation.quality?.overallScore,
+      improvementCount: evaluation.improvements?.improvements?.length || 0,
+    })
+
+    res.json({ analysis_id: analysisId, aiEvaluation: evaluation })
+  } catch (err) {
+    console.error("aiEvaluateAnalysis error:", err)
+    res.status(500).json({ error: "Internal server error" })
+  }
+}
+
+/**
+ * Run a full improvement cycle
+ * POST /api/test/workspaces/:id/improvement-cycle
+ */
+async function runImprovementCycleEndpoint(req, res) {
+  try {
+    const { id: workspaceId } = req.params
+    const { integrations, anomaly_config, template_id, auto_apply_tweaks, max_iterations } = req.body
+
+    if (!integrations || integrations.length === 0) {
+      return res.status(400).json({ error: "integrations is required" })
+    }
+
+    // Verify workspace
+    const { data: workspace, error: wsError } = await supabase
+      .from("test_workspaces")
+      .select("id, scenario_profile")
+      .eq("id", workspaceId)
+      .single()
+
+    if (wsError || !workspace) {
+      return res.status(404).json({ error: "Workspace not found" })
+    }
+
+    const report = await runImprovementCycle({
+      workspaceId,
+      scenarioProfile: workspace.scenario_profile || "startup_60",
+      integrations,
+      anomalyConfig: anomaly_config || {},
+      templateId: template_id || null,
+      userId: req.user.id,
+      autoApplyTweaks: auto_apply_tweaks || false,
+      maxIterations: max_iterations || 1,
+    })
+
+    res.status(201).json({ report })
+  } catch (err) {
+    console.error("runImprovementCycle error:", err)
+    res.status(500).json({ error: err.message || "Improvement cycle failed" })
+  }
+}
+
 module.exports = {
   triggerAnalysis,
   listAnalyses,
@@ -306,4 +437,6 @@ module.exports = {
   scoreAnalysis,
   autoScoreAnalysis,
   getWorkspaceLogs,
+  aiEvaluateAnalysis,
+  runImprovementCycleEndpoint,
 }

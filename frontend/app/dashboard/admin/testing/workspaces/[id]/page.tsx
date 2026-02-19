@@ -26,6 +26,8 @@ import {
   CheckCircle,
   XCircle,
   ScrollText,
+  BarChart3,
+  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -46,6 +48,16 @@ const AnalysisResultViewer = dynamic(
 
 const LogViewer = dynamic(
   () => import("@/components/testing/log-viewer").then((m) => m.LogViewer),
+  { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+)
+
+const ComparisonPanel = dynamic(
+  () => import("@/components/testing/comparison-panel").then((m) => m.ComparisonPanel),
+  { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+)
+
+const ImprovementCyclePanel = dynamic(
+  () => import("@/components/testing/improvement-cycle-panel").then((m) => m.ImprovementCyclePanel),
   { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
 )
 
@@ -276,6 +288,14 @@ export default function WorkspaceDetailPage() {
           <TabsTrigger value="results" className="text-gray-400 data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400">
             <FileBarChart className="w-4 h-4 mr-2" />
             Results ({analyses.length})
+          </TabsTrigger>
+          <TabsTrigger value="compare" className="text-gray-400 data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Compare
+          </TabsTrigger>
+          <TabsTrigger value="improve" className="text-gray-400 data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Improve
           </TabsTrigger>
           <TabsTrigger value="logs" className="text-gray-400 data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400">
             <ScrollText className="w-4 h-4 mr-2" />
@@ -522,6 +542,21 @@ export default function WorkspaceDetailPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Compare Tab */}
+        <TabsContent value="compare">
+          <ComparisonPanel
+            workspaceId={workspaceId}
+            analyses={analyses}
+          />
+        </TabsContent>
+
+        {/* Improve Tab */}
+        <TabsContent value="improve">
+          <ImprovementCyclePanel
+            workspaceId={workspaceId}
+          />
         </TabsContent>
 
         {/* Logs Tab */}

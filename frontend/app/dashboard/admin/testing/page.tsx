@@ -15,12 +15,14 @@ import {
   Loader2,
   Plus,
   ArrowRight,
+  Clock,
 } from "lucide-react"
 
 interface TestingStats {
   workspaceCount: number
   analysisCount: number
   templateCount: number
+  scheduleCount: number
   recentAnalyses: {
     id: string
     analysis_type: string
@@ -50,17 +52,21 @@ export default function TestingDashboard() {
         const token = await getBackendToken()
         if (!token) return
 
-        const [wsRes, tmplRes] = await Promise.all([
+        const [wsRes, tmplRes, schedRes] = await Promise.all([
           fetch(`${apiBase}/api/test/workspaces`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${apiBase}/api/test/templates`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          fetch(`${apiBase}/api/test/schedules`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ])
 
         const wsData = wsRes.ok ? await wsRes.json() : { workspaces: [] }
         const tmplData = tmplRes.ok ? await tmplRes.json() : { templates: [] }
+        const schedData = schedRes.ok ? await schedRes.json() : { schedules: [] }
 
         const totalAnalyses = wsData.workspaces.reduce(
           (sum: number, w: any) => sum + (w.analysis_count || 0),
@@ -71,6 +77,7 @@ export default function TestingDashboard() {
           workspaceCount: wsData.workspaces.length,
           analysisCount: totalAnalyses,
           templateCount: tmplData.templates.length,
+          scheduleCount: schedData.schedules.length,
           recentAnalyses: [],
         })
       } catch (err) {
@@ -115,7 +122,7 @@ export default function TestingDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link href="/dashboard/admin/testing/workspaces">
           <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
             <CardContent className="p-6">
@@ -161,10 +168,26 @@ export default function TestingDashboard() {
             </CardContent>
           </Card>
         </Link>
+
+        <Link href="/dashboard/admin/testing/schedules">
+          <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Schedules</p>
+                  <p className="text-3xl font-bold text-white mt-1">
+                    {loading ? "—" : stats?.scheduleCount || 0}
+                  </p>
+                </div>
+                <Clock className="w-10 h-10 text-amber-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-white/5 border-white/10">
           <CardHeader>
             <CardTitle className="text-white text-lg">Workspaces</CardTitle>
@@ -193,6 +216,23 @@ export default function TestingDashboard() {
             <Link href="/dashboard/admin/testing/templates">
               <Button className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md text-sm font-medium">
                 Manage Templates
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader>
+            <CardTitle className="text-white text-lg">Agent Schedules</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-400">
+              Schedule automated improvement cycles, analyses, and stress tests to run on a cron schedule.
+            </p>
+            <Link href="/dashboard/admin/testing/schedules">
+              <Button className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md text-sm font-medium">
+                Manage Schedules
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
