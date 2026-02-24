@@ -1,43 +1,48 @@
 /**
  * Claude AI Service for Testing System
- * Uses Anthropic Claude SDK to evaluate analysis quality, suggest improvements,
+ * Uses OpenRouter to evaluate analysis quality, suggest improvements,
  * and diagnose detection gaps. Internal testing use only.
  */
 
-const Anthropic = require("@anthropic-ai/sdk")
+const axios = require("axios")
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514"
-
-let client = null
-if (ANTHROPIC_API_KEY) {
-  client = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
-}
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "anthropic/claude-sonnet-4-5"
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 // ─── Helper ─────────────────────────────────────────────────────────
 
 async function callClaude(systemPrompt, userMessage, maxTokens = 2000) {
-  if (!client) {
-    console.warn("[Claude] API key not configured, skipping evaluation")
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[Claude] OpenRouter API key not configured, skipping evaluation")
     return null
   }
 
   try {
-    const response = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
-    })
+    const response = await axios.post(
+      OPENROUTER_API_URL,
+      {
+        model: CLAUDE_MODEL,
+        max_tokens: maxTokens,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
+        },
+      }
+    )
 
-    const text = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("")
+    const text = response.data.choices[0].message.content
 
     // Log token usage
     console.log(
-      `[Claude] Tokens — input: ${response.usage.input_tokens}, output: ${response.usage.output_tokens}`
+      `[Claude] Tokens — input: ${response.data.usage.prompt_tokens}, output: ${response.data.usage.completion_tokens}`
     )
 
     // Parse JSON response (strip markdown fences if present)
@@ -222,8 +227,8 @@ Diagnose why each missed anomaly was not detected.`
  * @returns {Object|null} Complete evaluation report or null
  */
 async function generateFullEvaluation(analysisResult, anomalyConfig, scoringData, template) {
-  if (!client) {
-    console.warn("[Claude] API key not configured, skipping full evaluation")
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[Claude] OpenRouter API key not configured, skipping full evaluation")
     return null
   }
 

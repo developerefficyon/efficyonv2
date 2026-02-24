@@ -354,14 +354,6 @@ export default function RecommendationsPage() {
                     <Info className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
-                  {!isApplied && (
-                    <Button
-                      onClick={() => handleApply(rec.id)}
-                      className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
-                    >
-                      Apply Recommendation
-                    </Button>
-                  )}
                   {isApplied && (
                     <Button
                       variant="outline"
@@ -440,17 +432,6 @@ export default function RecommendationsPage() {
                 >
                   Close
                 </Button>
-                {!applied.includes(selectedRecommendation.id) && (
-                  <Button
-                    onClick={() => {
-                      handleApply(selectedRecommendation.id)
-                      setSelectedRecommendation(null)
-                    }}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
-                  >
-                    Apply Recommendation
-                  </Button>
-                )}
               </div>
             </div>
           )}
