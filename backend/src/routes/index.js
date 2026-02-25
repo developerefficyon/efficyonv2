@@ -287,6 +287,136 @@ router.post("/api/chat/tool", requireAuth, requireRole("owner", "editor"), chatW
 router.post("/api/chat/comparison", requireAuth, requireRole("owner", "editor"), chatComparison)
 router.get("/api/chat/comparison/availability", requireAuth, requireRole("owner", "editor", "viewer"), checkComparisonAvailability)
 
+// ============================================================================
+// Internal Testing System Routes (admin-only)
+// ============================================================================
+const { requireAdmin } = require("../middleware/requireAdmin")
+
+// Test Workspace Controller
+const {
+  createWorkspace,
+  listWorkspaces,
+  getWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+} = require("../controllers/testWorkspaceController")
+
+// Test Upload Controller
+const {
+  uploadData,
+  listUploads,
+  getUpload,
+  deleteUpload,
+  revalidateUpload,
+  getSchemaInfo,
+} = require("../controllers/testUploadController")
+
+// Test Analysis Controller
+const {
+  triggerAnalysis,
+  listAnalyses,
+  getAnalysis,
+  scoreAnalysis,
+  autoScoreAnalysis,
+  getWorkspaceLogs,
+  aiEvaluateAnalysis,
+  runImprovementCycleEndpoint,
+} = require("../controllers/testAnalysisController")
+
+// Mock Data Generator Controller
+const { generateMockData } = require("../controllers/mockDataController")
+
+// Test Template Controller
+const {
+  listTemplates,
+  getTemplate,
+  createTemplate,
+  updateTemplate,
+  getTemplateVersions,
+} = require("../controllers/testTemplateController")
+
+// Stress Test Controller
+const { generateStressTestData, listStressScenarios } = require("../controllers/stressTestController")
+
+// Comparison Controller
+const {
+  createComparison,
+  getComparison,
+  listComparisons,
+  getTemplateMetricTrends,
+} = require("../controllers/testComparisonController")
+
+// Agent Schedule Controller
+const {
+  listSchedules,
+  createSchedule,
+  getScheduleStatus,
+  updateSchedule,
+  deleteSchedule,
+  toggleSchedule,
+  triggerScheduleNow,
+} = require("../controllers/agentScheduleController")
+
+// Workspaces
+router.post("/api/test/workspaces", requireAuth, requireAdmin, createWorkspace)
+router.get("/api/test/workspaces", requireAuth, requireAdmin, listWorkspaces)
+router.get("/api/test/workspaces/:id", requireAuth, requireAdmin, getWorkspace)
+router.patch("/api/test/workspaces/:id", requireAuth, requireAdmin, updateWorkspace)
+router.delete("/api/test/workspaces/:id", requireAuth, requireAdmin, deleteWorkspace)
+router.post("/api/test/workspaces/:id/generate", requireAuth, requireAdmin, generateMockData)
+
+// Uploads
+router.post("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, uploadData)
+router.get("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, listUploads)
+router.get("/api/test/uploads/:uploadId", requireAuth, requireAdmin, getUpload)
+router.delete("/api/test/uploads/:uploadId", requireAuth, requireAdmin, deleteUpload)
+router.post("/api/test/uploads/:uploadId/validate", requireAuth, requireAdmin, revalidateUpload)
+
+// Analyses
+router.post("/api/test/workspaces/:id/analyze", requireAuth, requireAdmin, triggerAnalysis)
+router.get("/api/test/workspaces/:id/analyses", requireAuth, requireAdmin, listAnalyses)
+router.get("/api/test/analyses/:analysisId", requireAuth, requireAdmin, getAnalysis)
+router.post("/api/test/analyses/:analysisId/score", requireAuth, requireAdmin, scoreAnalysis)
+router.post("/api/test/analyses/:analysisId/auto-score", requireAuth, requireAdmin, autoScoreAnalysis)
+
+// Templates
+router.get("/api/test/templates", requireAuth, requireAdmin, listTemplates)
+router.post("/api/test/templates", requireAuth, requireAdmin, createTemplate)
+router.get("/api/test/templates/:id", requireAuth, requireAdmin, getTemplate)
+router.patch("/api/test/templates/:id", requireAuth, requireAdmin, updateTemplate)
+router.get("/api/test/templates/:slug/versions", requireAuth, requireAdmin, getTemplateVersions)
+
+// Logs
+router.get("/api/test/workspaces/:id/logs", requireAuth, requireAdmin, getWorkspaceLogs)
+
+// AI Evaluation
+router.post("/api/test/analyses/:analysisId/ai-evaluate", requireAuth, requireAdmin, aiEvaluateAnalysis)
+
+// Improvement Cycle
+router.post("/api/test/workspaces/:id/improvement-cycle", requireAuth, requireAdmin, runImprovementCycleEndpoint)
+
+// Stress Testing
+router.post("/api/test/workspaces/:id/stress-test", requireAuth, requireAdmin, generateStressTestData)
+router.get("/api/test/stress-scenarios", requireAuth, requireAdmin, listStressScenarios)
+
+// Comparisons
+router.post("/api/test/comparisons", requireAuth, requireAdmin, createComparison)
+router.get("/api/test/comparisons/:comparisonId", requireAuth, requireAdmin, getComparison)
+router.get("/api/test/workspaces/:id/comparisons", requireAuth, requireAdmin, listComparisons)
+router.get("/api/test/templates/:slug/trends", requireAuth, requireAdmin, getTemplateMetricTrends)
+
+// Schedules
+router.get("/api/test/schedules", requireAuth, requireAdmin, listSchedules)
+router.post("/api/test/schedules", requireAuth, requireAdmin, createSchedule)
+router.get("/api/test/schedules/:scheduleId", requireAuth, requireAdmin, getScheduleStatus)
+router.patch("/api/test/schedules/:scheduleId", requireAuth, requireAdmin, updateSchedule)
+router.delete("/api/test/schedules/:scheduleId", requireAuth, requireAdmin, deleteSchedule)
+router.post("/api/test/schedules/:scheduleId/toggle", requireAuth, requireAdmin, toggleSchedule)
+router.post("/api/test/schedules/:scheduleId/run-now", requireAuth, requireAdmin, triggerScheduleNow)
+
+// Schema reference
+router.get("/api/test/schemas/:integration", requireAuth, requireAdmin, getSchemaInfo)
+
 module.exports = router
 
 

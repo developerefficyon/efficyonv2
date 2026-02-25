@@ -1,9 +1,9 @@
 const axios = require("axios")
 const { formatCurrencyForIntegration, getCurrencyForIntegration } = require("../utils/currency")
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "openai/gpt-4o-mini"
+const OPENAI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 /**
  * Generate AI-powered analysis summary
@@ -11,7 +11,7 @@ const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
  * @returns {Promise<string>} AI-generated summary
  */
 async function generateAnalysisSummary(analysisData) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping summary generation")
     return null
   }
@@ -41,8 +41,9 @@ async function generateAnalysisSummary(analysisData) {
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )
@@ -63,7 +64,7 @@ async function generateAnalysisSummary(analysisData) {
  * @returns {Promise<string>} AI-generated recommendations
  */
 async function generateRecommendations(finding) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping recommendations")
     return null
   }
@@ -95,8 +96,9 @@ async function generateRecommendations(finding) {
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )
@@ -117,7 +119,7 @@ async function generateRecommendations(finding) {
  * @returns {Promise<number>} Estimated savings amount
  */
 async function estimatePotentialSavings(finding) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping savings estimation")
     return finding.potentialSavings || 0
   }
@@ -156,8 +158,9 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )
@@ -183,7 +186,7 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
  * @returns {Promise<string>} AI response
  */
 async function chatAboutAnalysis(question, analysisData) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
 
@@ -216,8 +219,9 @@ Help the user understand their cost leaks and provide actionable insights. Be fr
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )
@@ -282,7 +286,7 @@ Provide 2-3 specific actions the company can take.
  * @returns {Promise<Array>} Findings with AI enhancements
  */
 async function enhanceFindingsWithAI(findings) {
-  if (!OPENAI_API_KEY || !findings || findings.length === 0) {
+  if (!OPENROUTER_API_KEY || !findings || findings.length === 0) {
     return findings
   }
 
@@ -323,7 +327,7 @@ async function enhanceFindingsWithAI(findings) {
  * @returns {Promise<string>} AI response with markdown formatting
  */
 async function chatWithToolContext(question, toolContext) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
 
@@ -391,8 +395,9 @@ Be concise but thorough. Focus on actionable insights.`
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )
@@ -417,7 +422,7 @@ Be concise but thorough. Focus on actionable insights.`
  * @returns {Promise<string>} AI response with markdown and chart formatting
  */
 async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
 
@@ -562,8 +567,9 @@ Be specific with numbers. Reference actual data from the context. Focus on actio
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
         },
       }
     )

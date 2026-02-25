@@ -449,7 +449,22 @@ async function chatWithTool(req, res) {
         }
       } catch (fetchError) {
         console.error(`[${new Date().toISOString()}] Error fetching tool data:`, fetchError.message)
-        // Continue without tool data - AI will respond based on question alone
+
+        // Token expiry — surface as 401 so the frontend can prompt the user to reconnect
+        const isTokenExpiry = fetchError.message.toLowerCase().includes("expired") ||
+          fetchError.message.toLowerCase().includes("reconnect") ||
+          fetchError.message.toLowerCase().includes("token refresh failed")
+        if (isTokenExpiry) {
+          return res.status(401).json({
+            error: "TOKEN_EXPIRED",
+            message: fetchError.message,
+            action: "reconnect",
+            provider: integration.provider,
+          })
+        }
+
+        // For other errors (rate limit, network blip), continue without tool data
+        // AI will respond based on the question alone
       }
     }
 

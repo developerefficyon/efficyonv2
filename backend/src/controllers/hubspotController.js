@@ -26,6 +26,10 @@ function checkRateLimit(accessToken) {
   const limit = hubspotRateLimit.get(accessToken)
 
   if (!limit || now > limit.resetTime) {
+    // Clean up expired entries to prevent unbounded Map growth across token refreshes
+    for (const [token, entry] of hubspotRateLimit) {
+      if (now > entry.resetTime) hubspotRateLimit.delete(token)
+    }
     hubspotRateLimit.set(accessToken, { count: 1, resetTime: now + 10000 }) // 10 seconds
     return { allowed: true, remaining: 99 }
   }
@@ -44,110 +48,150 @@ function checkRateLimit(accessToken) {
   return { allowed: true, remaining: 100 - limit.count }
 }
 
-// Token refresh lock to prevent race conditions
-const tokenRefreshLock = new Map()
+// Token refresh locks — Promise-based to block concurrent refreshes per integration
+const tokenRefreshLocks = new Map()
 
-// Helper function to refresh token if needed
+// Helper function to perform the actual HubSpot token refresh
+async function doHubSpotTokenRefresh(integration, tokens) {
+  const now = Math.floor(Date.now() / 1000)
+
+  log("log", "Token refresh", "Performing HubSpot token refresh")
+
+  const settings = decryptIntegrationSettings(integration.settings || {})
+  const clientId = settings.client_id || integration.client_id
+  const clientSecret = settings.client_secret || integration.client_secret || ""
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Client ID or Client Secret not found in integration settings")
+  }
+
+  const tokenEndpoint = "https://api.hubapi.com/oauth/v1/token"
+
+  const refreshResponse = await fetch(tokenEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: tokens.refresh_token,
+    }).toString(),
+  })
+
+  if (!refreshResponse.ok) {
+    const errorText = await refreshResponse.text()
+    log("error", "Token refresh", `Failed: ${errorText}`)
+
+    let errorData = {}
+    try { errorData = JSON.parse(errorText) } catch (e) { /* Not JSON */ }
+
+    if (errorData.status === "BAD_AUTH" || errorData.error === "invalid_grant") {
+      await supabase
+        .from("company_integrations")
+        .update({ status: "expired" })
+        .eq("id", integration.id)
+
+      const error = new Error("Token expired. Please reconnect your HubSpot integration.")
+      error.code = "TOKEN_EXPIRED"
+      error.requiresReconnect = true
+      throw error
+    }
+
+    throw new Error("Token refresh failed. Please reconnect HubSpot.")
+  }
+
+  const refreshData = await refreshResponse.json()
+  const expiresIn = refreshData.expires_in || 1800
+  const newExpiresAt = now + expiresIn
+
+  const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
+  const currentTokens = currentOauthData.tokens || {}
+  const updatedOauthData = {
+    ...currentOauthData,
+    tokens: {
+      ...currentTokens,
+      access_token: refreshData.access_token,
+      refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
+      expires_in: expiresIn,
+      expires_at: newExpiresAt,
+    },
+  }
+
+  const encryptedOauthData = encryptOAuthData(updatedOauthData)
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
+
+  const { error: updateError } = await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings, status: "connected" })
+    .eq("id", integration.id)
+
+  if (updateError) {
+    log("error", "Token refresh", `Failed to persist new token: ${updateError.message}`)
+    // Continue — new token is still valid in memory for this request
+  }
+
+  log("log", "Token refresh", "Token refreshed successfully")
+  return refreshData.access_token
+}
+
+// Helper function to refresh token if needed (Promise-based lock prevents concurrent refreshes)
 async function refreshHubSpotTokenIfNeeded(integration, tokens) {
+  const integrationId = integration.id
+
+  // If integration is already marked expired, fail fast without hitting the API
+  if (integration.status === "expired") {
+    const error = new Error("Token expired. Please reconnect your HubSpot integration.")
+    error.code = "TOKEN_EXPIRED"
+    error.requiresReconnect = true
+    throw error
+  }
+
+  // If a refresh is already in progress, await that same Promise
+  if (tokenRefreshLocks.has(integrationId)) {
+    log("log", "Token refresh", "Waiting for existing refresh to complete")
+    try {
+      return await tokenRefreshLocks.get(integrationId)
+    } catch (error) {
+      // Existing refresh failed — re-fetch integration to get any tokens that may have been saved
+      const { data: freshIntegration } = await supabase
+        .from("company_integrations")
+        .select("*")
+        .eq("id", integrationId)
+        .maybeSingle()
+
+      if (freshIntegration) {
+        const freshOauthData = decryptOAuthData(freshIntegration.settings?.oauth_data || {})
+        const freshTokens = freshOauthData?.tokens
+        if (freshTokens?.access_token) return freshTokens.access_token
+      }
+      throw error
+    }
+  }
+
+  // Check if token actually needs refresh (5 minute buffer)
   let expiresAt = tokens.expires_at
   if (typeof expiresAt === 'string') {
     expiresAt = Math.floor(new Date(expiresAt).getTime() / 1000)
   }
   const now = Math.floor(Date.now() / 1000)
-  let accessToken = tokens.access_token
 
-  // HubSpot tokens expire in 30 minutes - refresh if token expires within 5 minutes
-  if (expiresAt && now >= (expiresAt - 300)) {
-    const lockKey = integration.id
-
-    // Check if another request is already refreshing
-    if (tokenRefreshLock.get(lockKey)) {
-      log("log", "Token refresh", "Another request is refreshing token, waiting...")
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      // Re-fetch integration to get updated tokens
-      const { data: updatedIntegration } = await supabase
-        .from("company_integrations")
-        .select("*")
-        .eq("id", integration.id)
-        .single()
-      if (updatedIntegration) {
-        const updatedOauthData = decryptOAuthData(updatedIntegration.settings?.oauth_data || {})
-        return updatedOauthData.tokens?.access_token || accessToken
-      }
-      return accessToken
-    }
-
-    tokenRefreshLock.set(lockKey, true)
-
-    try {
-      log("log", "Token refresh", "HubSpot token refresh needed")
-
-      // Decrypt settings to get client credentials
-      const settings = decryptIntegrationSettings(integration.settings || {})
-      const clientId = settings.client_id || integration.client_id
-      const clientSecret = settings.client_secret || integration.client_secret || ""
-
-      if (!clientId || !clientSecret) {
-        throw new Error("Client ID or Client Secret not found in integration settings")
-      }
-
-      const tokenEndpoint = "https://api.hubapi.com/oauth/v1/token"
-
-      const refreshResponse = await fetch(tokenEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: tokens.refresh_token,
-        }).toString(),
-      })
-
-      if (!refreshResponse.ok) {
-        const errorText = await refreshResponse.text()
-        log("error", "Token refresh", `Failed: ${errorText}`)
-        throw new Error("Token refresh failed. Please reconnect HubSpot.")
-      }
-
-      const refreshData = await refreshResponse.json()
-      const expiresIn = refreshData.expires_in || 1800 // 30 minutes default
-      const newExpiresAt = now + expiresIn
-
-      // Decrypt current OAuth data to get existing values
-      const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
-      const currentTokens = currentOauthData.tokens || {}
-      const updatedOauthData = {
-        ...currentOauthData,
-        tokens: {
-          ...currentTokens,
-          access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
-          expires_in: expiresIn,
-          expires_at: newExpiresAt,
-        },
-      }
-
-      // Encrypt before saving
-      const encryptedOauthData = encryptOAuthData(updatedOauthData)
-      const currentSettings = integration.settings || {}
-      const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
-
-      await supabase
-        .from("company_integrations")
-        .update({ settings: updatedSettings, status: "connected" })
-        .eq("id", integration.id)
-
-      accessToken = refreshData.access_token
-      log("log", "Token refresh", "Token refreshed successfully")
-    } finally {
-      tokenRefreshLock.delete(lockKey)
-    }
+  if (!expiresAt || now < (expiresAt - 300)) {
+    return tokens.access_token
   }
 
-  return accessToken
+  // Token needs refresh — acquire lock so concurrent requests share this refresh
+  log("log", "Token refresh", "HubSpot token refresh needed, acquiring lock")
+  const refreshPromise = doHubSpotTokenRefresh(integration, tokens)
+  tokenRefreshLocks.set(integrationId, refreshPromise)
+
+  try {
+    return await refreshPromise
+  } finally {
+    tokenRefreshLocks.delete(integrationId)
+  }
 }
 
 // Helper function to fetch HubSpot API data

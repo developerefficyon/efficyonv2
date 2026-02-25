@@ -39,6 +39,7 @@ import {
   ChevronRight,
   Coins,
   MessageSquare,
+  FlaskConical,
 } from "lucide-react"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
 import { LowTokenWarning } from "@/components/low-token-warning"
@@ -158,6 +159,13 @@ const adminMenuItems = [
     href: "/dashboard/admin/reports",
     badge: null,
     description: "System reports",
+  },
+  {
+    title: "Testing",
+    icon: FlaskConical,
+    href: "/dashboard/admin/testing",
+    badge: "New",
+    description: "AI agent testing",
   },
   {
     title: "Settings",
