@@ -117,7 +117,7 @@ export default function ChatbotPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Get connected tools
-  const { tools } = useConnectedTools()
+  const { tools, refreshTools } = useConnectedTools()
 
   // Get current tool info and chat type
   // Determine chatType based on activeTab
@@ -330,6 +330,10 @@ export default function ChatbotPage() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
+          if (errorData.error === "TOKEN_EXPIRED") {
+            refreshTools()
+            throw new Error(`A connected tool's token has expired. Please reconnect it in the Tools page.`)
+          }
           throw new Error(errorData.error || "Failed to get response from AI")
         }
 
@@ -369,6 +373,11 @@ export default function ChatbotPage() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
+          if (errorData.error === "TOKEN_EXPIRED") {
+            const provider = errorData.provider || "tool"
+            refreshTools()
+            throw new Error(`Your ${provider} connection has expired. Please reconnect it in the Tools page.`)
+          }
           throw new Error(errorData.error || "Failed to get response from AI")
         }
 
@@ -401,10 +410,17 @@ export default function ChatbotPage() {
       addMessageToConversation(conversationId, "assistant", assistantMessage.content)
     } catch (err) {
       console.error("Chat error:", err)
-      setError(err instanceof Error ? err.message : "An error occurred")
-      toast.error("Failed to send message", {
-        description: err instanceof Error ? err.message : "Please try again",
-      })
+      const errMsg = err instanceof Error ? err.message : "An error occurred"
+      setError(errMsg)
+      if (errMsg.includes("expired") && errMsg.includes("Tools page")) {
+        toast.error("Connection expired", {
+          description: errMsg,
+        })
+      } else {
+        toast.error("Failed to send message", {
+          description: errMsg,
+        })
+      }
     } finally {
       setIsLoading(false)
       inputRef.current?.focus()

@@ -18,6 +18,33 @@ const log = (level, endpoint, message, data = null) => {
   }
 }
 
+// Dynamic SEK → USD exchange rate (cached, refreshed every 24 hours)
+const SEK_USD_CACHE = { rate: 0.092, fetchedAt: 0 }
+const SEK_USD_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
+async function getSekToUsdRate() {
+  const now = Date.now()
+  if (now - SEK_USD_CACHE.fetchedAt < SEK_USD_CACHE_TTL) {
+    return SEK_USD_CACHE.rate
+  }
+  try {
+    const res = await fetch("https://api.frankfurter.app/latest?from=SEK&to=USD")
+    if (res.ok) {
+      const data = await res.json()
+      const rate = data?.rates?.USD
+      if (rate && typeof rate === "number") {
+        SEK_USD_CACHE.rate = rate
+        SEK_USD_CACHE.fetchedAt = now
+        log("log", "Exchange rate", `Updated SEK/USD rate: ${rate}`)
+        return rate
+      }
+    }
+  } catch (e) {
+    log("warn", "Exchange rate", `Failed to fetch live rate, using cached: ${SEK_USD_CACHE.rate}`)
+  }
+  return SEK_USD_CACHE.rate
+}
+
 // Rate limiting for Fortnox API calls (25 requests per 5 seconds per access token)
 const fortnoxRateLimit = new Map()
 
@@ -29,6 +56,10 @@ function checkRateLimit(accessToken) {
   const limit = fortnoxRateLimit.get(accessToken)
 
   if (!limit || now > limit.resetTime) {
+    // Clean up expired entries to prevent unbounded Map growth across token refreshes
+    for (const [token, entry] of fortnoxRateLimit) {
+      if (now > entry.resetTime) fortnoxRateLimit.delete(token)
+    }
     fortnoxRateLimit.set(accessToken, { count: 1, resetTime: now + 5000 })
     return { allowed: true, remaining: 24 }
   }
@@ -126,10 +157,15 @@ async function doTokenRefresh(integration, tokens) {
   const currentSettings = integration.settings || {}
   const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("company_integrations")
     .update({ settings: updatedSettings })
     .eq("id", integration.id)
+
+  if (updateError) {
+    log("error", "Token refresh", `Failed to persist new token: ${updateError.message}`)
+    // Continue — new token is still valid in memory for this request
+  }
 
   log("log", "Token refresh", "Token refreshed successfully")
   return refreshData.access_token
@@ -138,6 +174,14 @@ async function doTokenRefresh(integration, tokens) {
 // Helper function to refresh token if needed (with lock to prevent race conditions)
 async function refreshTokenIfNeeded(integration, tokens) {
   const integrationId = integration.id
+
+  // If integration is already marked expired, fail fast without hitting the API
+  if (integration.status === "expired") {
+    const error = new Error("Token expired. Please reconnect your Fortnox integration.")
+    error.code = "TOKEN_EXPIRED"
+    error.requiresReconnect = true
+    throw error
+  }
 
   // If a refresh is already in progress for this integration, wait for it
   if (tokenRefreshLocks.has(integrationId)) {
@@ -254,10 +298,23 @@ async function fetchAllFortnoxPages(basePath, dateFilter, accessToken, requiredS
     const items = data[dataKey] || []
     allItems.push(...items)
 
+    // Stop if we received no items — nothing more to fetch
+    if (items.length === 0) {
+      break
+    }
+
     // Check if there are more pages via MetaInformation
     const meta = data.MetaInformation
-    if (!meta || currentPage >= (meta["@TotalPages"] || 1)) {
-      break
+    if (meta) {
+      // MetaInformation present — use it authoritatively
+      if (currentPage >= (meta["@TotalPages"] || 1)) {
+        break
+      }
+    } else {
+      // No MetaInformation — if we got a full page, there may be more; otherwise stop
+      if (items.length < 100) {
+        break
+      }
     }
 
     currentPage++
@@ -992,7 +1049,8 @@ async function analyzeFortnoxCostLeaks(req, res) {
     const analysis = analyzeCostLeaks(data)
 
     // Convert SEK amounts to USD for display (Fortnox uses SEK natively)
-    const SEK_TO_USD = 0.095 // ~1 USD = 10.5 SEK
+    // Rate is fetched live from Frankfurter.app (ECB data) and cached for 24 hours
+    const SEK_TO_USD = await getSekToUsdRate()
     function convertSekToUsd(amount) {
       return Math.round((amount || 0) * SEK_TO_USD * 100) / 100
     }
@@ -1070,7 +1128,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
         const invoiceFindings = analysis.supplierInvoiceAnalysis?.findings || []
         if (invoiceFindings.length > 0) {
           const enhancedFindings = await openaiService.enhanceFindingsWithAI(invoiceFindings)
-          if (analysis.supplierInvoiceAnalysis?.findings) {
+          if (enhancedFindings && Array.isArray(enhancedFindings) && enhancedFindings.length > 0 && analysis.supplierInvoiceAnalysis?.findings) {
             analysis.supplierInvoiceAnalysis.findings = enhancedFindings
           }
         }

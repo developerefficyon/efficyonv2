@@ -204,6 +204,19 @@ async function chatComparison(req, res) {
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chatComparison:`, error.message)
+
+    // Token expiry from any platform — surface as 401 so the frontend can prompt reconnect
+    const isTokenExpiry = error.message.toLowerCase().includes("expired") ||
+      error.message.toLowerCase().includes("reconnect") ||
+      error.message.toLowerCase().includes("token refresh failed")
+    if (isTokenExpiry) {
+      return res.status(401).json({
+        error: "TOKEN_EXPIRED",
+        message: error.message,
+        action: "reconnect",
+      })
+    }
+
     res.status(500).json({ error: error.message })
   }
 }

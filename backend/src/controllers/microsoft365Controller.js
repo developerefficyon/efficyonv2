@@ -26,6 +26,10 @@ function checkRateLimit(accessToken) {
   const limit = microsoftRateLimit.get(accessToken)
 
   if (!limit || now > limit.resetTime) {
+    // Clean up expired entries to prevent unbounded Map growth across token refreshes
+    for (const [token, entry] of microsoftRateLimit) {
+      if (now > entry.resetTime) microsoftRateLimit.delete(token)
+    }
     microsoftRateLimit.set(accessToken, { count: 1, resetTime: now + 600000 }) // 10 minutes
     return { allowed: true, remaining: 9999 }
   }
@@ -44,85 +48,153 @@ function checkRateLimit(accessToken) {
   return { allowed: true, remaining: 10000 - limit.count }
 }
 
-// Helper function to refresh token if needed
+// Token refresh locks — Promise-based to block concurrent refreshes per integration
+const tokenRefreshLocks = new Map()
+
+// Helper function to perform the actual Microsoft 365 token refresh
+async function doMicrosoft365TokenRefresh(integration, tokens) {
+  const now = Math.floor(Date.now() / 1000)
+
+  log("log", "Token refresh", "Performing Microsoft 365 token refresh")
+
+  const settings = decryptIntegrationSettings(integration.settings || {})
+  const tenantId = settings.tenant_id || integration.tenant_id
+  const clientId = settings.client_id || integration.client_id
+  const clientSecret = settings.client_secret || integration.client_secret || ""
+
+  if (!tenantId || !clientId) {
+    throw new Error("Tenant ID or Client ID not found in integration settings")
+  }
+
+  const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`
+
+  const refreshResponse = await fetch(tokenEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: tokens.refresh_token,
+      scope: tokens.scope || "https://graph.microsoft.com/.default offline_access",
+    }).toString(),
+  })
+
+  if (!refreshResponse.ok) {
+    const errorText = await refreshResponse.text()
+    log("error", "Token refresh", `Failed: ${errorText}`)
+
+    let errorData = {}
+    try { errorData = JSON.parse(errorText) } catch (e) { /* Not JSON */ }
+
+    if (errorData.error === "invalid_grant" || errorData.error === "interaction_required") {
+      await supabase
+        .from("company_integrations")
+        .update({ status: "expired" })
+        .eq("id", integration.id)
+
+      const error = new Error("Token expired. Please reconnect your Microsoft 365 integration.")
+      error.code = "TOKEN_EXPIRED"
+      error.requiresReconnect = true
+      throw error
+    }
+
+    throw new Error("Token refresh failed. Please reconnect Microsoft 365.")
+  }
+
+  const refreshData = await refreshResponse.json()
+  const expiresIn = refreshData.expires_in || 3600
+  const newExpiresAt = now + expiresIn
+
+  const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
+  const currentTokens = currentOauthData.tokens || {}
+  const updatedOauthData = {
+    ...currentOauthData,
+    tokens: {
+      ...currentTokens,
+      access_token: refreshData.access_token,
+      refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
+      expires_in: expiresIn,
+      expires_at: newExpiresAt,
+      scope: refreshData.scope || currentTokens.scope,
+    },
+  }
+
+  const encryptedOauthData = encryptOAuthData(updatedOauthData)
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
+
+  const { error: updateError } = await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings })
+    .eq("id", integration.id)
+
+  if (updateError) {
+    log("error", "Token refresh", `Failed to persist new token: ${updateError.message}`)
+    // Continue — new token is still valid in memory for this request
+  }
+
+  log("log", "Token refresh", "Token refreshed successfully")
+  return refreshData.access_token
+}
+
+// Helper function to refresh token if needed (Promise-based lock prevents concurrent refreshes)
 async function refreshMicrosoft365TokenIfNeeded(integration, tokens) {
+  const integrationId = integration.id
+
+  // If integration is already marked expired, fail fast without hitting the API
+  if (integration.status === "expired") {
+    const error = new Error("Token expired. Please reconnect your Microsoft 365 integration.")
+    error.code = "TOKEN_EXPIRED"
+    error.requiresReconnect = true
+    throw error
+  }
+
+  // If a refresh is already in progress, await that same Promise
+  if (tokenRefreshLocks.has(integrationId)) {
+    log("log", "Token refresh", "Waiting for existing refresh to complete")
+    try {
+      return await tokenRefreshLocks.get(integrationId)
+    } catch (error) {
+      // Existing refresh failed — re-fetch integration to get any tokens that may have been saved
+      const { data: freshIntegration } = await supabase
+        .from("company_integrations")
+        .select("*")
+        .eq("id", integrationId)
+        .maybeSingle()
+
+      if (freshIntegration) {
+        const freshOauthData = decryptOAuthData(freshIntegration.settings?.oauth_data || {})
+        const freshTokens = freshOauthData?.tokens
+        if (freshTokens?.access_token) return freshTokens.access_token
+      }
+      throw error
+    }
+  }
+
+  // Check if token actually needs refresh (5 minute buffer)
   let expiresAt = tokens.expires_at
   if (typeof expiresAt === 'string') {
     expiresAt = Math.floor(new Date(expiresAt).getTime() / 1000)
   }
   const now = Math.floor(Date.now() / 1000)
-  let accessToken = tokens.access_token
 
-  // Refresh if token expires within 5 minutes
-  if (expiresAt && now >= (expiresAt - 300)) {
-    log("log", "Token refresh", "Microsoft 365 token refresh needed")
-
-    // Decrypt settings to get client credentials
-    const settings = decryptIntegrationSettings(integration.settings || {})
-    const tenantId = settings.tenant_id || integration.tenant_id
-    const clientId = settings.client_id || integration.client_id
-    const clientSecret = settings.client_secret || integration.client_secret || ""
-
-    if (!tenantId || !clientId) {
-      throw new Error("Tenant ID or Client ID not found in integration settings")
-    }
-
-    const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`
-
-    const refreshResponse = await fetch(tokenEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: tokens.refresh_token,
-        scope: tokens.scope || "https://graph.microsoft.com/.default offline_access",
-      }).toString(),
-    })
-
-    if (!refreshResponse.ok) {
-      const errorText = await refreshResponse.text()
-      log("error", "Token refresh", `Failed: ${errorText}`)
-      throw new Error("Token refresh failed")
-    }
-
-    const refreshData = await refreshResponse.json()
-    const expiresIn = refreshData.expires_in || 3600
-    const newExpiresAt = now + expiresIn
-
-    // Decrypt current OAuth data to get existing values
-    const currentOauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data || {})
-    const currentTokens = currentOauthData.tokens || {}
-    const updatedOauthData = {
-      ...currentOauthData,
-      tokens: {
-        ...currentTokens,
-        access_token: refreshData.access_token,
-        refresh_token: refreshData.refresh_token || currentTokens.refresh_token,
-        expires_in: expiresIn,
-        expires_at: newExpiresAt,
-        scope: refreshData.scope || currentTokens.scope,
-      },
-    }
-
-    // Encrypt before saving
-    const encryptedOauthData = encryptOAuthData(updatedOauthData)
-    const currentSettings = integration.settings || {}
-    const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
-
-    await supabase
-      .from("company_integrations")
-      .update({ settings: updatedSettings })
-      .eq("id", integration.id)
-
-    accessToken = refreshData.access_token
-    log("log", "Token refresh", "Token refreshed successfully")
+  if (!expiresAt || now < (expiresAt - 300)) {
+    return tokens.access_token
   }
 
-  return accessToken
+  // Token needs refresh — acquire lock so concurrent requests share this refresh
+  log("log", "Token refresh", "Microsoft 365 token refresh needed, acquiring lock")
+  const refreshPromise = doMicrosoft365TokenRefresh(integration, tokens)
+  tokenRefreshLocks.set(integrationId, refreshPromise)
+
+  try {
+    return await refreshPromise
+  } finally {
+    tokenRefreshLocks.delete(integrationId)
+  }
 }
 
 // Helper function to fetch Microsoft Graph API data
@@ -493,10 +565,18 @@ async function getMicrosoft365UsageReports(req, res) {
 
     // Fetch usage reports in parallel
     const [activeUserDetail, mailboxUsage, teamsActivity] = await Promise.allSettled([
-      fetchMicrosoftGraphData("/reports/getOffice365ActiveUserDetail(period='D30')", accessToken, "usage reports").catch(() => null),
-      fetchMicrosoftGraphData("/reports/getMailboxUsageDetail(period='D30')", accessToken, "mailbox usage").catch(() => null),
-      fetchMicrosoftGraphData("/reports/getTeamsUserActivityUserDetail(period='D30')", accessToken, "teams activity").catch(() => null),
+      fetchMicrosoftGraphData("/reports/getOffice365ActiveUserDetail(period='D30')", accessToken, "usage reports"),
+      fetchMicrosoftGraphData("/reports/getMailboxUsageDetail(period='D30')", accessToken, "mailbox usage"),
+      fetchMicrosoftGraphData("/reports/getTeamsUserActivityUserDetail(period='D30')", accessToken, "teams activity"),
     ])
+
+    // Surface auth failures explicitly rather than silently returning null
+    const authFailure = [activeUserDetail, mailboxUsage, teamsActivity].find(
+      r => r.status === "rejected" && (r.reason?.message?.includes("expired") || r.reason?.message?.includes("401"))
+    )
+    if (authFailure) {
+      return res.status(401).json({ error: authFailure.reason.message, action: "reconnect" })
+    }
 
     return res.json({
       activeUserDetail: activeUserDetail.status === "fulfilled" ? activeUserDetail.value : null,
@@ -587,7 +667,7 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
         const findings = analysis.licenseAnalysis?.findings || []
         if (findings.length > 0) {
           const enhancedFindings = await openaiService.enhanceFindingsWithAI(findings)
-          if (analysis.licenseAnalysis?.findings) {
+          if (enhancedFindings && Array.isArray(enhancedFindings) && enhancedFindings.length > 0 && analysis.licenseAnalysis?.findings) {
             analysis.licenseAnalysis.findings = enhancedFindings
           }
         }
