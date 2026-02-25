@@ -233,14 +233,47 @@ export function ImprovementCyclePanel({ workspaceId }: Props) {
       )
 
       if (res.ok) {
-        const data: CycleReport = await res.json()
-        setReport(data)
-        // Auto-expand all iterations
+        const json = await res.json()
+        const raw = json.report || json
+
+        // Map backend shape to frontend CycleReport shape
+        const firstScoring = raw.iterations?.[0]?.scoring || raw.iterations?.[0]?.steps?.score
+        const lastScoring = raw.iterations?.[raw.iterations.length - 1]?.scoring || raw.iterations?.[raw.iterations.length - 1]?.steps?.score
+        const f1Start = raw.overallImprovement?.f1Start ?? firstScoring?.f1Score ?? 0
+        const f1End = raw.overallImprovement?.f1End ?? lastScoring?.f1Score ?? 0
+
+        const mappedReport: CycleReport = {
+          iterationsCompleted: raw.totalIterations ?? raw.iterations?.length ?? 0,
+          f1Start,
+          f1End,
+          f1Delta: raw.overallImprovement?.f1Delta ?? Math.round((f1End - f1Start) * 10000) / 10000,
+          earlyStopReason: raw.iterations?.find((it: any) => it.earlyStop)?.earlyStop,
+          iterations: (raw.iterations || []).map((it: any) => {
+            // Convert steps object → array
+            const stepsObj = it.steps || {}
+            const stepsArray: StepResult[] = Object.entries(stepsObj).map(([key, val]: [string, any]) => ({
+              step: key,
+              status: val.status || "completed",
+              details: val.reason || val.error || (val.uploadCount != null ? `${val.uploadCount} uploads` : undefined),
+            }))
+
+            return {
+              iteration: it.iteration,
+              f1Score: it.scoring?.f1Score ?? it.steps?.score?.f1Score ?? 0,
+              totalFindings: it.steps?.analyze?.totalFindings ?? 0,
+              aiQualityScore: it.steps?.aiEvaluate?.qualityScore ?? 0,
+              improvementsCount: it.steps?.aiEvaluate?.improvementCount ?? 0,
+              steps: stepsArray,
+            }
+          }),
+        }
+
+        setReport(mappedReport)
         setExpandedIterations(
-          new Set(data.iterations.map((it) => it.iteration))
+          new Set(mappedReport.iterations.map((it) => it.iteration))
         )
         toast.success(
-          `Improvement cycle completed: ${data.iterationsCompleted} iteration${data.iterationsCompleted !== 1 ? "s" : ""}`
+          `Improvement cycle completed: ${mappedReport.iterationsCompleted} iteration${mappedReport.iterationsCompleted !== 1 ? "s" : ""}`
         )
       } else {
         const err = await res.json().catch(() => ({ error: "Unknown error" }))
@@ -594,7 +627,7 @@ export function ImprovementCyclePanel({ workspaceId }: Props) {
                                   : "text-red-400"
                             }`}
                           >
-                            {iter.aiQualityScore.toFixed(1)}
+                            {(iter.aiQualityScore ?? 0).toFixed(1)}
                           </span>
                         </span>
                         <span className="text-gray-400">
