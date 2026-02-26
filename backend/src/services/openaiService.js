@@ -805,6 +805,113 @@ function buildHubSpotContext(hubspotData) {
   return parts.join('\n') || "No significant HubSpot data."
 }
 
+/**
+ * Chat with AI using uploaded file analysis context
+ * @param {string} question - User's question
+ * @param {Object} fileAnalysis - Analysis results from file upload
+ * @returns {Promise<string>} AI response with markdown formatting
+ */
+async function chatWithFileContext(question, fileAnalysis) {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OpenAI API key not configured")
+  }
+
+  try {
+    const { schema, analysis, rawDataSummary, fileName, rowCount, analysisError } = fileAnalysis
+
+    // Build analysis context string
+    let analysisContext = "No structured analysis results available."
+    if (analysis) {
+      const analysisStr = JSON.stringify(analysis, null, 2)
+      analysisContext = analysisStr.length > 15000 ? analysisStr.substring(0, 15000) + "...(truncated)" : analysisStr
+    }
+
+    const schemaLabels = {
+      fortnox: "Fortnox-style financial data (invoices, supplier payments)",
+      m365: "Microsoft 365 license/user data",
+      hubspot: "HubSpot CRM user/seat data",
+      generic: "General cost/expense data",
+      unknown: "Unrecognized format",
+    }
+
+    const systemPrompt = `You are an expert business analyst. The user has uploaded a file for cost analysis and you need to help them understand the data and find cost optimization opportunities.
+
+FILE INFORMATION:
+- File: ${fileName}
+- Data Type Detected: ${schemaLabels[schema] || schema}
+- Total Records: ${rowCount}
+${analysisError ? `- Analysis Warning: ${analysisError}` : ""}
+
+RAW DATA SUMMARY:
+${rawDataSummary || "No data summary available."}
+
+STRUCTURED ANALYSIS RESULTS:
+${analysisContext}
+
+RESPONSE FORMATTING GUIDELINES:
+1. Use markdown formatting for clear, readable responses
+2. Use **bold** for important numbers and key findings
+3. Use tables (markdown format) when presenting structured data:
+   | Column1 | Column2 | Column3 |
+   |---------|---------|---------|
+   | data    | data    | data    |
+
+4. Use bullet points for lists of findings or recommendations
+5. Use headers (##, ###) to organize longer responses
+6. When showing financial amounts, format them clearly (e.g., **$12,500** or **12,500 SEK**)
+7. Highlight actionable insights and recommendations
+8. When appropriate, provide chart data in this format for the frontend to render:
+
+\`\`\`chart:bar
+{ "title": "Chart Title", "data": [{"label": "A", "value": 100}], "xKey": "label", "yKeys": ["value"] }
+\`\`\`
+
+\`\`\`table
+{ "headers": ["Col1", "Col2"], "rows": [["data1", "data2"]] }
+\`\`\`
+
+ANALYSIS APPROACH:
+1. Start with a clear summary of what was found in the uploaded file
+2. Highlight the most significant cost leaks or optimization opportunities
+3. Show data in tables and charts where it helps the user understand
+4. Provide specific, actionable recommendations with estimated savings when possible
+5. If the data didn't match a known format perfectly, still extract every useful insight you can
+6. Reference specific numbers and rows from the actual data — be precise, not generic
+
+Be thorough but concise. Focus on actionable insights that save money.`
+
+    console.log(`[${new Date().toISOString()}] File chat query for ${fileName}: ${question}`)
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
+        },
+      }
+    )
+
+    const answer = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] File chat response generated for ${fileName}`)
+
+    return answer
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in file chat:`, error.message)
+    throw new Error(`Failed to process file chat request: ${error.message}`)
+  }
+}
+
 module.exports = {
   generateAnalysisSummary,
   generateRecommendations,
@@ -813,4 +920,5 @@ module.exports = {
   enhanceFindingsWithAI,
   chatWithToolContext,
   chatWithComparisonContext,
+  chatWithFileContext,
 }

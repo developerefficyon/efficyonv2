@@ -1,6 +1,8 @@
 const { supabase } = require("../config/supabase")
 const openaiService = require("../services/openaiService")
 const tokenService = require("../services/tokenService")
+const { parseUploadedFile } = require("../services/fileParsingService")
+const { analyzeUploadedFile } = require("../services/fileAnalysisService")
 
 // Token cost for deep research
 const DEEP_RESEARCH_TOKEN_COST = 1
@@ -661,6 +663,117 @@ function getDataDescription(provider, dataType) {
   return descriptions[providerKey]?.[dataType] || descriptions[providerKey]?.general || "Tool data"
 }
 
+/* ------------------------------------------------------------------ */
+/*  File Upload Chat                                                   */
+/* ------------------------------------------------------------------ */
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB raw (base64 is ~33% larger)
+const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".pdf"]
+
+async function chatWithFileUpload(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/chat/file-upload`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { question, fileData, fileName, mimeType, cachedFileAnalysis } = req.body
+
+    if (!question) {
+      return res.status(400).json({ error: "question is required" })
+    }
+
+    let fileAnalysis = null
+    let tokensUsed = 0
+    let isDeepResearch = false
+
+    // If cached analysis provided, use it for free follow-up
+    if (cachedFileAnalysis && Object.keys(cachedFileAnalysis).length > 0) {
+      console.log(`[${new Date().toISOString()}] Using cached file analysis (free follow-up)`)
+      fileAnalysis = cachedFileAnalysis
+    } else {
+      // New file upload — requires token
+      if (!fileData || !fileName) {
+        return res.status(400).json({ error: "fileData and fileName are required for new uploads" })
+      }
+
+      // Validate file extension
+      const ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase()
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        return res.status(400).json({ error: `Unsupported file type: ${ext}. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}` })
+      }
+
+      // Validate file size (base64 is ~33% larger than raw)
+      const rawSize = Buffer.byteLength(fileData, "base64")
+      if (rawSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: `File too large (${(rawSize / 1024 / 1024).toFixed(1)}MB). Maximum: 10MB` })
+      }
+
+      isDeepResearch = true
+
+      // Check token balance
+      const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, DEEP_RESEARCH_TOKEN_COST)
+      if (!hasEnough) {
+        return res.status(402).json({
+          error: "INSUFFICIENT_TOKENS",
+          message: `File analysis requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${available} token(s) available.`,
+          available,
+          required: DEEP_RESEARCH_TOKEN_COST,
+        })
+      }
+
+      // Parse the file
+      console.log(`[${new Date().toISOString()}] Parsing file: ${fileName} (${(rawSize / 1024).toFixed(0)}KB)`)
+      let parsedFile = parseUploadedFile(fileData, fileName, mimeType)
+
+      // parseUploadedFile may return a Promise (for PDF)
+      if (parsedFile && typeof parsedFile.then === "function") {
+        parsedFile = await parsedFile
+      }
+
+      if (parsedFile.error && parsedFile.type === "unknown") {
+        return res.status(400).json({ error: parsedFile.error })
+      }
+
+      // Scanned PDF warning
+      if (parsedFile.isScannedPdf) {
+        return res.status(400).json({ error: parsedFile.error || "This PDF appears to be scanned. Please upload a text-based PDF or Excel file." })
+      }
+
+      // Run analysis
+      console.log(`[${new Date().toISOString()}] Running file analysis...`)
+      fileAnalysis = await analyzeUploadedFile(parsedFile, fileName, question)
+
+      // Consume token after successful analysis
+      const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "file_upload_analysis", {
+        integrationSources: [fileAnalysis.schema || "file_upload"],
+        description: `File analysis: ${fileName}`,
+      })
+
+      if (consumeResult.success) {
+        tokensUsed = DEEP_RESEARCH_TOKEN_COST
+        console.log(`[${new Date().toISOString()}] Consumed ${DEEP_RESEARCH_TOKEN_COST} token for file analysis. Remaining: ${consumeResult.balanceAfter}`)
+      }
+    }
+
+    // Generate AI response with file context
+    const response = await openaiService.chatWithFileContext(question, fileAnalysis)
+
+    return res.json({
+      success: true,
+      response,
+      fileAnalysis, // Frontend caches this for free follow-ups
+      isDeepResearch,
+      tokensUsed,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in chatWithFileUpload:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   getConversations,
   getConversation,
@@ -669,4 +782,5 @@ module.exports = {
   deleteConversation,
   addMessage,
   chatWithTool,
+  chatWithFileUpload,
 }

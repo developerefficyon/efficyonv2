@@ -124,6 +124,7 @@ const {
   deleteConversation,
   addMessage,
   chatWithTool,
+  chatWithFileUpload,
 } = require("../controllers/chatController")
 
 // Comparison Controller - cross-platform analysis
@@ -282,6 +283,7 @@ router.put("/api/chat/conversations/:id", requireAuth, requireRole("owner", "edi
 router.delete("/api/chat/conversations/:id", requireAuth, requireRole("owner", "editor"), deleteConversation)
 router.post("/api/chat/conversations/:id/messages", requireAuth, requireRole("owner", "editor"), addMessage)
 router.post("/api/chat/tool", requireAuth, requireRole("owner", "editor"), chatWithTool)
+router.post("/api/chat/file-upload", requireAuth, requireRole("owner", "editor"), chatWithFileUpload)
 
 // Cross-Platform Comparison Routes
 router.post("/api/chat/comparison", requireAuth, requireRole("owner", "editor"), chatComparison)
