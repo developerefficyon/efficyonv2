@@ -112,7 +112,7 @@ type ResearchCache = {
 
 export default function ChatbotPage() {
   const { user } = useAuth()
-  const { tokenBalance, refreshTokenBalance } = useTokens()
+  const { tokenBalance, aiModel, refreshTokenBalance } = useTokens()
   const { isViewer } = useTeamRole()
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState("general")
@@ -226,8 +226,9 @@ export default function ChatbotPage() {
     }
   }
 
-  // Token cost for deep research (same for all types)
-  const DEEP_RESEARCH_TOKEN_COST = 1
+  // Token cost for deep research (base=1, multiplied by AI model tier)
+  const modelMultiplier = aiModel?.multiplier || 1
+  const DEEP_RESEARCH_TOKEN_COST = 1 * modelMultiplier
 
   // Check if this chat type requires deep research (tool or comparison, not general)
   const requiresResearch = activeTab !== "general"
@@ -911,7 +912,7 @@ export default function ChatbotPage() {
                       {selectedFile && !researchCache.fileAnalysis ? (
                         <span className="flex items-center justify-center gap-1">
                           <Coins className="w-3 h-3" />
-                          File analysis costs {DEEP_RESEARCH_TOKEN_COST} token, follow-ups are free
+                          File analysis costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
                           {tokenBalance && (
                             <span className="text-cyan-400 ml-1">
                               ({tokenBalance.available} available)
@@ -933,7 +934,7 @@ export default function ChatbotPage() {
                       ) : (
                         <span className="flex items-center justify-center gap-1">
                           <Coins className="w-3 h-3" />
-                          First query costs {DEEP_RESEARCH_TOKEN_COST} token (deep research), follow-ups are free
+                          First query costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
                           {tokenBalance && (
                             <span className="text-cyan-400 ml-1">
                               ({tokenBalance.available} available)
@@ -960,7 +961,7 @@ export default function ChatbotPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
               <span className="block">
-                This deep research will use <span className="text-cyan-400 font-semibold">{DEEP_RESEARCH_TOKEN_COST} token</span> to fetch and analyze your data.
+                This deep research will use <span className="text-cyan-400 font-semibold">{DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}</span>{modelMultiplier > 1 && aiModel ? <span> ({aiModel.label} — {modelMultiplier}x cost)</span> : ""} to fetch and analyze your data.
               </span>
               <span className="block mt-2 text-green-400/80">
                 After this, follow-up questions about the research will be free!

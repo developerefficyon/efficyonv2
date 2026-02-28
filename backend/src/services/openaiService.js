@@ -10,7 +10,7 @@ const OPENAI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
  * @param {Object} analysisData - Cost leak analysis data
  * @returns {Promise<string>} AI-generated summary
  */
-async function generateAnalysisSummary(analysisData) {
+async function generateAnalysisSummary(analysisData, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping summary generation")
     return null
@@ -24,7 +24,7 @@ async function generateAnalysisSummary(analysisData) {
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -63,7 +63,7 @@ async function generateAnalysisSummary(analysisData) {
  * @param {Object} finding - Individual cost leak finding
  * @returns {Promise<string>} AI-generated recommendations
  */
-async function generateRecommendations(finding) {
+async function generateRecommendations(finding, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping recommendations")
     return null
@@ -79,7 +79,7 @@ async function generateRecommendations(finding) {
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -118,7 +118,7 @@ async function generateRecommendations(finding) {
  * @param {Object} finding - Cost leak finding
  * @returns {Promise<number>} Estimated savings amount
  */
-async function estimatePotentialSavings(finding) {
+async function estimatePotentialSavings(finding, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping savings estimation")
     return finding.potentialSavings || 0
@@ -141,7 +141,7 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -185,7 +185,7 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
  * @param {Object} analysisData - The cost leak analysis data for context
  * @returns {Promise<string>} AI response
  */
-async function chatAboutAnalysis(question, analysisData) {
+async function chatAboutAnalysis(question, analysisData, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -203,7 +203,7 @@ Help the user understand their cost leaks and provide actionable insights. Be fr
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -285,7 +285,7 @@ Provide 2-3 specific actions the company can take.
  * @param {Array} findings - Array of cost leak findings
  * @returns {Promise<Array>} Findings with AI enhancements
  */
-async function enhanceFindingsWithAI(findings) {
+async function enhanceFindingsWithAI(findings, options = {}) {
   if (!OPENROUTER_API_KEY || !findings || findings.length === 0) {
     return findings
   }
@@ -297,8 +297,8 @@ async function enhanceFindingsWithAI(findings) {
 
     const enhancedFindings = await Promise.all(
       findings.map(async (finding) => {
-        const recommendations = await generateRecommendations(finding)
-        const estimatedSavings = await estimatePotentialSavings(finding)
+        const recommendations = await generateRecommendations(finding, options)
+        const estimatedSavings = await estimatePotentialSavings(finding, options)
 
         return {
           ...finding,
@@ -326,7 +326,7 @@ async function enhanceFindingsWithAI(findings) {
  * @param {Object} toolContext - Tool context including data
  * @returns {Promise<string>} AI response with markdown formatting
  */
-async function chatWithToolContext(question, toolContext) {
+async function chatWithToolContext(question, toolContext, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -379,7 +379,7 @@ Be concise but thorough. Focus on actionable insights.`
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -421,7 +421,7 @@ Be concise but thorough. Focus on actionable insights.`
  * @param {Object} metrics - Pre-calculated cross-platform metrics
  * @returns {Promise<string>} AI response with markdown and chart formatting
  */
-async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null) {
+async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -551,7 +551,7 @@ Be specific with numbers. Reference actual data from the context. Focus on actio
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -811,7 +811,7 @@ function buildHubSpotContext(hubspotData) {
  * @param {Object} fileAnalysis - Analysis results from file upload
  * @returns {Promise<string>} AI response with markdown formatting
  */
-async function chatWithFileContext(question, fileAnalysis) {
+async function chatWithFileContext(question, fileAnalysis, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -885,7 +885,7 @@ Be thorough but concise. Focus on actionable insights that save money.`
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: question },

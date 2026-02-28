@@ -133,6 +133,9 @@ const {
   checkComparisonAvailability,
 } = require("../controllers/comparisonController")
 
+// Settings Controller - user/company settings
+const { getAiModel, setAiModel } = require("../controllers/settingsController")
+
 // Team Controller - team member management and invitations
 const {
   getTeamMembers,
@@ -181,6 +184,10 @@ router.get("/api/admin/reports", requireAuth, getAdminReports)
 // SaaS core routes (company + settings)
 router.get("/api/company", requireAuth, requireRole("owner", "editor", "viewer"), getCompany)
 router.post("/api/company", requireAuth, requireRole("owner"), upsertCompany)
+
+// Settings routes
+router.get("/api/settings/ai-model", requireAuth, requireRole("owner", "editor", "viewer"), getAiModel)
+router.put("/api/settings/ai-model", requireAuth, requireRole("owner"), setAiModel)
 
 router.get("/api/tools", requireAuth, requireRole("owner", "editor", "viewer"), getTools)
 router.get("/api/integrations", requireAuth, requireRole("owner", "editor", "viewer"), getIntegrations)

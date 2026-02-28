@@ -1,6 +1,7 @@
 const { supabase } = require("../config/supabase")
 const openaiService = require("../services/openaiService")
 const tokenService = require("../services/tokenService")
+const { getModelPreference } = require("../services/modelPreferenceService")
 
 /**
  * Analyze with AI enhancement
@@ -22,8 +23,13 @@ async function analyzeWithAI(req, res) {
       return res.status(400).json({ error: "analysisData is required" })
     }
 
-    // Calculate token cost based on integration sources
-    const tokenCost = tokenService.calculateTokenCost(integrationSources, includeAdvancedAI)
+    // Get model preference for this user's team
+    const modelPref = await getModelPreference(user.id)
+    const modelOpts = { modelId: modelPref.modelId }
+
+    // Calculate token cost based on integration sources × model multiplier
+    const baseCost = tokenService.calculateTokenCost(integrationSources, includeAdvancedAI)
+    const tokenCost = baseCost * modelPref.multiplier
     const actionType = tokenService.getActionType(integrationSources.length)
 
     // Check token balance before analysis
@@ -44,6 +50,7 @@ async function analyzeWithAI(req, res) {
     const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, actionType, {
       integrationSources,
       description: `AI analysis with ${integrationSources.length || 1} source(s)`,
+      modelUsed: modelPref.model,
     })
 
     if (!consumeResult.success) {
@@ -56,12 +63,12 @@ async function analyzeWithAI(req, res) {
 
     try {
       // Generate summary with AI
-      const summary = await openaiService.generateAnalysisSummary(analysisData)
+      const summary = await openaiService.generateAnalysisSummary(analysisData, modelOpts)
 
       // Enhance findings with AI recommendations and savings estimates
       let enhancedFindings = analysisData.findings || []
       if (enhancedFindings.length > 0) {
-        enhancedFindings = await openaiService.enhanceFindingsWithAI(enhancedFindings)
+        enhancedFindings = await openaiService.enhanceFindingsWithAI(enhancedFindings, modelOpts)
       }
 
       const response = {
@@ -139,8 +146,11 @@ async function chatAboutAnalysis(req, res) {
     // Check token balance (for display purposes, chat doesn't consume tokens)
     const { available: availableTokens } = await tokenService.checkTokenBalance(user.id, 0)
 
+    // Get model preference (still use selected model even though chat is free)
+    const modelPref = await getModelPreference(user.id)
+
     // Chat doesn't consume tokens - it's unlimited for Deep Research reports
-    const response = await openaiService.chatAboutAnalysis(question, analysisContext)
+    const response = await openaiService.chatAboutAnalysis(question, analysisContext, { modelId: modelPref.modelId })
 
     return res.json({
       success: true,
@@ -171,7 +181,8 @@ async function getRecommendations(req, res) {
       return res.status(400).json({ error: "finding is required" })
     }
 
-    const recommendations = await openaiService.generateRecommendations(finding)
+    const modelPref = await getModelPreference(user.id)
+    const recommendations = await openaiService.generateRecommendations(finding, { modelId: modelPref.modelId })
 
     return res.json({
       success: true,
@@ -203,9 +214,11 @@ async function estimateSavings(req, res) {
     }
 
     // Estimate savings for each finding
+    const modelPref = await getModelPreference(user.id)
+    const modelOpts = { modelId: modelPref.modelId }
     const estimatedSavings = await Promise.all(
       findings.map(async (finding) => {
-        const savings = await openaiService.estimatePotentialSavings(finding)
+        const savings = await openaiService.estimatePotentialSavings(finding, modelOpts)
         return {
           type: finding.type,
           estimatedAnnualSavings: savings,
@@ -248,7 +261,8 @@ async function getAnalysisSummary(req, res) {
       return res.status(400).json({ error: "analysisData is required" })
     }
 
-    const summary = await openaiService.generateAnalysisSummary(analysisData)
+    const modelPref = await getModelPreference(user.id)
+    const summary = await openaiService.generateAnalysisSummary(analysisData, { modelId: modelPref.modelId })
 
     return res.json({
       success: true,
