@@ -1,11 +1,12 @@
 /**
  * File Parsing Service
- * Parses uploaded Excel and PDF files, detects data schema,
+ * Parses uploaded Excel, CSV, PDF, and image files, detects data schema,
  * and maps data to analysis engine formats.
  */
 
 const XLSX = require("xlsx")
 const pdfParse = require("pdf-parse")
+const axios = require("axios")
 
 const MAX_ROWS_PER_SHEET = 10000
 
@@ -28,9 +29,18 @@ function parseUploadedFile(fileBase64, fileName, mimeType) {
     return { type: "excel", ...parseExcelFile(buffer) }
   }
 
+  if (ext === ".csv" || mimeType === "text/csv" || mimeType === "text/plain") {
+    return { type: "csv", ...parseCsvFile(buffer) }
+  }
+
   if (ext === ".pdf" || mimeType === "application/pdf") {
     // pdf-parse is async
     return parsePdfFile(buffer).then((result) => ({ type: "pdf", ...result }))
+  }
+
+  if ([".jpeg", ".jpg", ".png"].includes(ext) || mimeType?.startsWith("image/")) {
+    // Vision API is async
+    return parseImageFile(fileBase64, fileName, mimeType)
   }
 
   return { type: "unknown", error: `Unsupported file type: ${ext}` }
@@ -145,6 +155,108 @@ function parseDelimitedLines(lines, delimiter) {
 function isNumericString(val) {
   if (!val || typeof val !== "string") return false
   return /^-?[\d,\s]+\.?\d*$/.test(val.replace(/\s/g, ""))
+}
+
+/* ------------------------------------------------------------------ */
+/*  CSV Parsing                                                        */
+/* ------------------------------------------------------------------ */
+
+function parseCsvFile(buffer) {
+  // xlsx library can read CSV files natively
+  const workbook = XLSX.read(buffer, { type: "buffer", raw: false })
+  const sheetName = workbook.SheetNames[0]
+  const sheet = workbook.Sheets[sheetName]
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: null })
+  const limitedRows = rows.slice(0, MAX_ROWS_PER_SHEET)
+  const headers = limitedRows.length > 0 ? Object.keys(limitedRows[0]) : []
+
+  return {
+    sheets: [{
+      name: "CSV",
+      headers,
+      rows: limitedRows,
+      rowCount: rows.length,
+      truncated: rows.length > MAX_ROWS_PER_SHEET,
+    }],
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Image Parsing (via Vision API)                                     */
+/* ------------------------------------------------------------------ */
+
+async function parseImageFile(fileBase64, fileName, mimeType) {
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+  const VISION_MODEL = process.env.VISION_MODEL || "anthropic/claude-sonnet-4-5"
+
+  if (!OPENROUTER_API_KEY) {
+    return {
+      type: "image",
+      error: "Vision API not configured. Set OPENROUTER_API_KEY in your backend .env to enable image parsing.",
+      extractedTables: [],
+    }
+  }
+
+  try {
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: VISION_MODEL,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType || "image/jpeg"};base64,${fileBase64}`,
+              },
+            },
+            {
+              type: "text",
+              text: `Extract all tabular data from this image. Return a JSON object with:
+- "headers": array of column names
+- "rows": array of objects with column names as keys
+If there are multiple tables, return an array of such objects.
+If no tabular data exists, return { "headers": [], "rows": [], "description": "brief description of the image content" }.
+Return ONLY valid JSON, no markdown fences.`,
+            },
+          ],
+        }],
+        max_tokens: 4000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    const content = response.data?.choices?.[0]?.message?.content || ""
+
+    // Try to parse the JSON response
+    const cleaned = content.replace(/```json\n?|```\n?/g, "").trim()
+    const parsed = JSON.parse(cleaned)
+    const tables = Array.isArray(parsed) ? parsed : [parsed]
+
+    return {
+      type: "image",
+      extractedTables: tables.filter((t) => t.headers?.length > 0).map((t) => ({
+        headers: t.headers,
+        rows: (t.rows || []).slice(0, MAX_ROWS_PER_SHEET),
+        rowCount: (t.rows || []).length,
+      })),
+      rawText: content,
+      pages: 1,
+    }
+  } catch (err) {
+    console.error("[parseImageFile] Vision API error:", err.message)
+    return {
+      type: "image",
+      extractedTables: [],
+      error: `Failed to extract data from image: ${err.message}`,
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -315,17 +427,24 @@ function mapToFortnox(rows, mapping) {
   const hasCustomerFields = mapping.CustomerName || mapping.DocumentNumber
 
   const supplierInvoices = hasSupplierFields
-    ? rows.map((row) => ({
-        SupplierNumber: getField(row, mapping.SupplierNumber) || "",
-        SupplierName: getField(row, mapping.SupplierName) || "Unknown",
-        InvoiceDate: formatDate(getField(row, mapping.InvoiceDate)),
-        DueDate: formatDate(getField(row, mapping.DueDate)),
-        Total: parseNumber(getField(row, mapping.Total)),
-        Balance: parseNumber(getField(row, mapping.Balance)),
-        InvoiceNumber: String(getField(row, mapping.InvoiceNumber) || ""),
-        GivenNumber: String(getField(row, mapping.InvoiceNumber) || ""),
-        Booked: true,
-      }))
+    ? rows.map((row) => {
+        let supplierName = getField(row, mapping.SupplierName) || "Unknown"
+        // Guard against dates/timestamps ending up as supplier names
+        if (isLikelyDate(supplierName)) {
+          supplierName = "Unknown"
+        }
+        return {
+          SupplierNumber: getField(row, mapping.SupplierNumber) || "",
+          SupplierName: supplierName,
+          InvoiceDate: formatDate(getField(row, mapping.InvoiceDate)),
+          DueDate: formatDate(getField(row, mapping.DueDate)),
+          Total: parseNumber(getField(row, mapping.Total)),
+          Balance: parseNumber(getField(row, mapping.Balance)),
+          InvoiceNumber: String(getField(row, mapping.InvoiceNumber) || ""),
+          GivenNumber: String(getField(row, mapping.InvoiceNumber) || ""),
+          Booked: true,
+        }
+      })
     : []
 
   const invoices = hasCustomerFields
@@ -340,18 +459,30 @@ function mapToFortnox(rows, mapping) {
 
   // If we can't tell, default to supplier invoices (more common for cost analysis)
   if (!hasSupplierFields && !hasCustomerFields) {
+    // Smart column selection: find the best column for each field by inspecting values
+    const nameCol = mapping.vendor || findTextColumn(rows[0])
+    const dateCol = mapping.InvoiceDate || findDateColumn(rows[0])
+    const amountCol = mapping.Total || findAmountColumn(rows[0])
+
     return {
-      supplierInvoices: rows.map((row) => ({
-        SupplierNumber: "",
-        SupplierName: getField(row, mapping.vendor || Object.keys(row)[0]) || "Unknown",
-        InvoiceDate: formatDate(getField(row, mapping.date || findDateColumn(row))),
-        DueDate: formatDate(getField(row, mapping.DueDate)),
-        Total: parseNumber(getField(row, mapping.Total || findAmountColumn(row))),
-        Balance: 0,
-        InvoiceNumber: "",
-        GivenNumber: "",
-        Booked: true,
-      })),
+      supplierInvoices: rows.map((row) => {
+        let supplierName = getField(row, nameCol) || "Unknown"
+        // Guard against dates/timestamps ending up as supplier names
+        if (isLikelyDate(supplierName)) {
+          supplierName = "Unknown"
+        }
+        return {
+          SupplierNumber: "",
+          SupplierName: supplierName,
+          InvoiceDate: formatDate(getField(row, dateCol)),
+          DueDate: formatDate(getField(row, mapping.DueDate)),
+          Total: parseNumber(getField(row, amountCol)),
+          Balance: 0,
+          InvoiceNumber: "",
+          GivenNumber: "",
+          Booked: true,
+        }
+      }),
       invoices: [],
     }
   }
@@ -483,6 +614,35 @@ function findAmountColumn(row) {
   return null
 }
 
+/**
+ * Check if a value looks like a date/timestamp rather than a name
+ */
+function isLikelyDate(val) {
+  if (val == null) return false
+  if (val instanceof Date) return true
+  const s = String(val)
+  // ISO 8601 timestamps
+  if (/^\d{4}-\d{2}-\d{2}(T|\s)/.test(s)) return true
+  // Common date formats: YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY
+  if (/^\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}$/.test(s)) return true
+  // Excel serial date numbers (5-digit integers)
+  if (/^\d{5}$/.test(s)) return true
+  return false
+}
+
+/**
+ * Find a column whose values look like text names (not dates, not numbers)
+ */
+function findTextColumn(row) {
+  if (!row) return null
+  for (const [key, val] of Object.entries(row)) {
+    if (typeof val === "string" && val.length > 1 && !isLikelyDate(val) && !/^-?\d+\.?\d*$/.test(val)) {
+      return key
+    }
+  }
+  return null
+}
+
 function getFirstStringField(row) {
   for (const val of Object.values(row)) {
     if (typeof val === "string" && val.length > 1 && !/^\d+$/.test(val)) return val
@@ -500,7 +660,9 @@ function getFirstNumberField(row) {
 module.exports = {
   parseUploadedFile,
   parseExcelFile,
+  parseCsvFile,
   parsePdfFile,
+  parseImageFile,
   detectDataSchema,
   mapToAnalysisFormat,
 }

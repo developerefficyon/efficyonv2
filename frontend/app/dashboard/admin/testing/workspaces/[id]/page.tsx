@@ -28,6 +28,7 @@ import {
   ScrollText,
   BarChart3,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,6 +59,11 @@ const ComparisonPanel = dynamic(
 
 const ImprovementCyclePanel = dynamic(
   () => import("@/components/testing/improvement-cycle-panel").then((m) => m.ImprovementCyclePanel),
+  { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+)
+
+const DragDropUploadZone = dynamic(
+  () => import("@/components/testing/drag-drop-upload-zone").then((m) => m.DragDropUploadZone),
   { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
 )
 
@@ -305,16 +311,30 @@ export default function WorkspaceDetailPage() {
 
         {/* Uploads Tab */}
         <TabsContent value="uploads" className="space-y-4">
+          {/* Primary: Drag & Drop File Upload */}
+          <DragDropUploadZone
+            workspaceId={workspaceId}
+            onUploadComplete={handleUploadComplete}
+          />
+
+          {/* Mock Data Generator */}
           <MockDataGenerator
             workspaceId={workspaceId}
             scenarioProfile={workspace.scenario_profile}
             onGenerateComplete={handleUploadComplete}
           />
 
-          <WorkspaceUploadPanel
-            workspaceId={workspaceId}
-            onUploadComplete={handleUploadComplete}
-          />
+          {/* Advanced: Manual JSON Upload (collapsible) */}
+          <details className="group">
+            <summary className="cursor-pointer text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2 mb-2">
+              <ChevronRight className="w-4 h-4 group-open:rotate-90 transition-transform" />
+              Advanced: Paste JSON manually
+            </summary>
+            <WorkspaceUploadPanel
+              workspaceId={workspaceId}
+              onUploadComplete={handleUploadComplete}
+            />
+          </details>
 
           {uploads.length > 0 && (
             <Card className="bg-white/5 border-white/10">

@@ -306,6 +306,7 @@ const {
 // Test Upload Controller
 const {
   uploadData,
+  uploadFile,
   listUploads,
   getUpload,
   deleteUpload,
@@ -323,6 +324,7 @@ const {
   getWorkspaceLogs,
   aiEvaluateAnalysis,
   runImprovementCycleEndpoint,
+  generateAuditReport,
 } = require("../controllers/testAnalysisController")
 
 // Mock Data Generator Controller
@@ -368,6 +370,7 @@ router.delete("/api/test/workspaces/:id", requireAuth, requireAdmin, deleteWorks
 router.post("/api/test/workspaces/:id/generate", requireAuth, requireAdmin, generateMockData)
 
 // Uploads
+router.post("/api/test/workspaces/:id/upload-file", requireAuth, requireAdmin, uploadFile)
 router.post("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, uploadData)
 router.get("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, listUploads)
 router.get("/api/test/uploads/:uploadId", requireAuth, requireAdmin, getUpload)
@@ -393,6 +396,9 @@ router.get("/api/test/workspaces/:id/logs", requireAuth, requireAdmin, getWorksp
 
 // AI Evaluation
 router.post("/api/test/analyses/:analysisId/ai-evaluate", requireAuth, requireAdmin, aiEvaluateAnalysis)
+
+// Agent Audit
+router.post("/api/test/analyses/:analysisId/audit", requireAuth, requireAdmin, generateAuditReport)
 
 // Improvement Cycle
 router.post("/api/test/workspaces/:id/improvement-cycle", requireAuth, requireAdmin, runImprovementCycleEndpoint)

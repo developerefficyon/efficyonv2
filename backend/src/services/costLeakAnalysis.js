@@ -11,12 +11,28 @@ function formatSekAsUsd(amount) {
   return `$${usdAmount.toLocaleString('en-US')}`
 }
 
+// Format amount without currency conversion (for file uploads with unknown currency)
+function formatRawAmount(amount) {
+  return `$${Math.round(amount || 0).toLocaleString('en-US')}`
+}
+
+/**
+ * Check if a value looks like an ISO timestamp rather than a name
+ */
+function isLikelyTimestamp(val) {
+  if (!val || typeof val !== "string") return false
+  return /^\d{4}-\d{2}-\d{2}(T|\s)/.test(val)
+}
+
 /**
  * Analyze supplier invoices for cost leaks
  * @param {Array} supplierInvoices - Array of supplier invoices
+ * @param {Object} [options] - Analysis options
+ * @param {boolean} [options.fromFileUpload] - If true, skip SEK→USD conversion
  * @returns {Object} Analysis results
  */
-function analyzeSupplierInvoices(supplierInvoices) {
+function analyzeSupplierInvoices(supplierInvoices, options = {}) {
+  const fmt = options.fromFileUpload ? formatRawAmount : formatSekAsUsd
   const findings = []
   const summary = {
     totalInvoices: supplierInvoices.length,
@@ -39,7 +55,12 @@ function analyzeSupplierInvoices(supplierInvoices) {
 
   supplierInvoices.forEach((invoice) => {
     const supplierNumber = invoice.SupplierNumber || invoice.supplierNumber
-    const supplierName = invoice.SupplierName || invoice.supplierName || "Unknown"
+    let supplierName = invoice.SupplierName || invoice.supplierName || "Unknown"
+
+    // Sanitize: if supplier name is a timestamp, replace with "Unknown"
+    if (isLikelyTimestamp(supplierName)) {
+      supplierName = "Unknown"
+    }
 
     // Try multiple fields for the invoice total (Fortnox uses different fields)
     let invoiceTotal =
@@ -126,7 +147,10 @@ function analyzeSupplierInvoices(supplierInvoices) {
         groupedBySupplier[key].push(inv)
       })
 
-      Object.values(groupedBySupplier).forEach((supplierInvoices) => {
+      Object.entries(groupedBySupplier).forEach(([key, supplierInvoices]) => {
+        // Skip groups with empty/unknown supplier numbers (prevents false positives)
+        if (!key || key === "undefined" || key === "") return
+
         if (supplierInvoices.length > 1) {
           // Check date proximity (within 30 days)
           supplierInvoices.sort((a, b) => {
@@ -140,14 +164,19 @@ function analyzeSupplierInvoices(supplierInvoices) {
             const inv2 = supplierInvoices[i + 1]
             const date1 = new Date(inv1.InvoiceDate || inv1.invoiceDate)
             const date2 = new Date(inv2.InvoiceDate || inv2.invoiceDate)
+
+            // Skip if dates are invalid
+            if (isNaN(date1.getTime()) || isNaN(date2.getTime())) continue
+
             const daysDiff = Math.abs((date2 - date1) / (1000 * 60 * 60 * 24))
 
             if (daysDiff <= 30) {
+              const name = inv1.supplierName || inv1.SupplierName
               summary.duplicatePayments.push({
                 type: "duplicate_payment",
                 severity: "high",
                 title: "Potential Duplicate Payment",
-                description: `Same supplier (${inv1.supplierName || inv1.SupplierName}), same amount (${formatSekAsUsd(inv1.calculatedTotal)}), within ${Math.round(daysDiff)} days`,
+                description: `Same supplier (${name}), same amount (${fmt(inv1.calculatedTotal)}), within ${Math.round(daysDiff)} days`,
                 invoices: [inv1, inv2],
                 amount: inv1.calculatedTotal,
                 potentialSavings: inv1.calculatedTotal,
@@ -189,7 +218,7 @@ function analyzeSupplierInvoices(supplierInvoices) {
           type: "unusual_amount",
           severity: "medium",
           title: "Unusually High Invoice Amount",
-          description: `Invoice amount (${formatSekAsUsd(invoiceTotal)}) is significantly higher than average (${formatSekAsUsd(mean)})`,
+          description: `Invoice amount (${fmt(invoiceTotal)}) is significantly higher than average (${fmt(mean)})`,
           invoice,
           amount: invoiceTotal,
           averageAmount: mean,
@@ -202,9 +231,17 @@ function analyzeSupplierInvoices(supplierInvoices) {
   // 3. Detect recurring subscriptions (same supplier, similar amount, regular intervals)
   // Group by amount clusters within each supplier to find subscription patterns
   Object.values(invoicesBySupplier).forEach((supplier) => {
+    // Skip suppliers with invalid names (timestamps, empty)
+    if (!supplier.supplierName || supplier.supplierName === "Unknown" || isLikelyTimestamp(supplier.supplierName)) return
+
     if (supplier.count >= 3) {
       const invoices = supplier.invoices
-        .filter((inv) => inv.calculatedTotal > 0)
+        .filter((inv) => {
+          if (inv.calculatedTotal <= 0) return false
+          // Ensure dates are valid
+          const d = new Date(inv.InvoiceDate || inv.invoiceDate)
+          return !isNaN(d.getTime())
+        })
         .sort((a, b) => {
           const dateA = new Date(a.InvoiceDate || a.invoiceDate)
           const dateB = new Date(b.InvoiceDate || b.invoiceDate)
@@ -251,12 +288,13 @@ function analyzeSupplierInvoices(supplierInvoices) {
           const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
           const isRegular = intervals.every((interval) => Math.abs(interval - avgInterval) <= 5)
 
-          if (isRegular && avgInterval > 0) {
+          // Minimum 7-day interval to avoid false positives from clustered transactions
+          if (isRegular && avgInterval >= 7) {
             summary.recurringSubscriptions.push({
               type: "recurring_subscription",
               severity: "low",
               title: "Recurring Subscription Detected",
-              description: `Regular payments to ${supplier.supplierName} (~${formatSekAsUsd(avgAmount)} every ${Math.round(avgInterval)} days)`,
+              description: `Regular payments to ${supplier.supplierName} (~${fmt(avgAmount)} every ${Math.round(avgInterval)} days)`,
               supplier: {
                 number: supplier.supplierNumber,
                 name: supplier.supplierName,
@@ -381,7 +419,8 @@ function analyzeSupplierInvoices(supplierInvoices) {
  * @param {Array} invoices - Array of customer invoices
  * @returns {Object} Analysis results
  */
-function analyzeCustomerInvoices(invoices) {
+function analyzeCustomerInvoices(invoices, options = {}) {
+  const fmt = options.fromFileUpload ? formatRawAmount : formatSekAsUsd
   const findings = []
   const summary = {
     totalInvoices: invoices.length,
@@ -422,7 +461,7 @@ function analyzeCustomerInvoices(invoices) {
           type: "overdue_customer_invoice",
           severity,
           title: "Overdue Customer Invoice",
-          description: `Invoice #${docNumber} from ${customerName} is ${daysOverdue} days overdue with ${formatSekAsUsd(balance)} outstanding`,
+          description: `Invoice #${docNumber} from ${customerName} is ${daysOverdue} days overdue with ${fmt(balance)} outstanding`,
           invoice,
           amount: balance,
           daysOverdue,
@@ -439,9 +478,11 @@ function analyzeCustomerInvoices(invoices) {
 /**
  * Main analysis function - analyzes only invoices (supplier and customer)
  * @param {Object} data - Fortnox data object
+ * @param {Object} [options] - Analysis options
+ * @param {boolean} [options.fromFileUpload] - If true, skip SEK→USD conversion
  * @returns {Object} Complete analysis results
  */
-function analyzeCostLeaks(data) {
+function analyzeCostLeaks(data, options = {}) {
   const results = {
     timestamp: new Date().toISOString(),
     supplierInvoiceAnalysis: null,
@@ -457,7 +498,7 @@ function analyzeCostLeaks(data) {
 
   // Analyze supplier invoices (primary cost source)
   if (data.supplierInvoices && data.supplierInvoices.length > 0) {
-    results.supplierInvoiceAnalysis = analyzeSupplierInvoices(data.supplierInvoices)
+    results.supplierInvoiceAnalysis = analyzeSupplierInvoices(data.supplierInvoices, options)
     results.overallSummary.totalFindings += results.supplierInvoiceAnalysis.findings.length
     results.overallSummary.totalPotentialSavings += results.supplierInvoiceAnalysis.summary.totalPotentialSavings || 0
     
@@ -471,7 +512,7 @@ function analyzeCostLeaks(data) {
 
   // Analyze customer invoices (for comparison and overdue detection)
   if (data.invoices && data.invoices.length > 0) {
-    results.customerInvoiceAnalysis = analyzeCustomerInvoices(data.invoices)
+    results.customerInvoiceAnalysis = analyzeCustomerInvoices(data.invoices, options)
     results.overallSummary.totalFindings += results.customerInvoiceAnalysis.findings.length
     // Customer invoice overdue amounts are "revenue at risk", not "potential savings"
     // so we track them separately, not in totalPotentialSavings

@@ -46,7 +46,7 @@ async function analyzeUploadedFile(parsedFile, fileName, userHint) {
       case "fortnox": {
         const mapped = mapToAnalysisFormat(rows, "fortnox", columnMapping)
         if (mapped) {
-          analysis = analyzeCostLeaks(mapped)
+          analysis = analyzeCostLeaks(mapped, { fromFileUpload: true })
         }
         break
       }
@@ -268,6 +268,11 @@ function buildRawDataSummary(parsedFile, rows, detection) {
         lines.push(`  (truncated to ${rows.length} rows)`)
       }
     }
+  } else if (parsedFile.type === "csv") {
+    lines.push(`CSV file with ${parsedFile.sheets?.[0]?.rowCount || 0} rows`)
+    if (parsedFile.sheets?.[0]?.headers) {
+      lines.push(`  Columns: ${parsedFile.sheets[0].headers.join(", ")}`)
+    }
   } else if (parsedFile.type === "pdf") {
     lines.push(`PDF file with ${parsedFile.pages || 0} pages`)
     if (parsedFile.extractedTables?.length > 0) {
@@ -275,6 +280,14 @@ function buildRawDataSummary(parsedFile, rows, detection) {
     }
     if (parsedFile.rawText) {
       lines.push(`  Text length: ${parsedFile.rawText.length} characters`)
+    }
+  } else if (parsedFile.type === "image") {
+    lines.push(`Image file (OCR/vision extracted)`)
+    if (parsedFile.extractedTables?.length > 0) {
+      lines.push(`  Extracted ${parsedFile.extractedTables.length} table(s)`)
+      for (const table of parsedFile.extractedTables) {
+        lines.push(`  Table: ${table.rowCount} rows, columns: ${table.headers.join(", ")}`)
+      }
     }
   }
 

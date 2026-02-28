@@ -126,7 +126,7 @@ async function runTestAnalysis(workspaceId, params) {
     if (analysisType === "standard" || analysisType === "deep") {
       // Run individual platform analyses
       if (assembledData.fortnox && integrationLabels.includes("Fortnox")) {
-        result.fortnox = analyzeCostLeaks(assembledData.fortnox)
+        result.fortnox = analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })
       }
       if (assembledData.m365 && integrationLabels.includes("Microsoft365")) {
         result.microsoft365 = analyzeM365CostLeaks(assembledData.m365, {
@@ -147,7 +147,7 @@ async function runTestAnalysis(workspaceId, params) {
       const fortnoxCompData = assembledData.fortnox
         ? {
             supplierInvoices: assembledData.fortnox.supplierInvoices,
-            costLeaks: result.fortnox || analyzeCostLeaks(assembledData.fortnox),
+            costLeaks: result.fortnox || analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true }),
           }
         : null
 

@@ -248,6 +248,7 @@ async function generateFullEvaluation(analysisResult, anomalyConfig, scoringData
 }
 
 module.exports = {
+  callClaude,
   evaluateAnalysisQuality,
   suggestImprovements,
   diagnoseMissedAnomalies,
