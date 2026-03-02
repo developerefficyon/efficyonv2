@@ -79,15 +79,22 @@ function assembleDataFromUploads(uploads) {
  * @returns {Object} { analysisId, result }
  */
 async function runTestAnalysis(workspaceId, params) {
-  const { analysisType, integrationLabels, options = {}, template = null, userId } = params
+  const { analysisType, integrationLabels, uploadIds = null, options = {}, template = null, userId } = params
   const startTime = Date.now()
 
   // Fetch uploads for this workspace filtered by requested integrations
-  const { data: uploads, error: uploadError } = await supabase
+  let uploadQuery = supabase
     .from("test_uploads")
     .select("*")
     .eq("workspace_id", workspaceId)
     .in("integration_label", integrationLabels)
+
+  // If specific upload IDs provided, filter to only those
+  if (uploadIds && uploadIds.length > 0) {
+    uploadQuery = uploadQuery.in("id", uploadIds)
+  }
+
+  const { data: uploads, error: uploadError } = await uploadQuery
 
   if (uploadError) {
     throw new Error(`Failed to fetch uploads: ${uploadError.message}`)

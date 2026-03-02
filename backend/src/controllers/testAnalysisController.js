@@ -16,7 +16,7 @@ const { runImprovementCycle } = require("../services/continuousImprovementServic
 async function triggerAnalysis(req, res) {
   try {
     const { id: workspaceId } = req.params
-    const { analysis_type, template_id, integration_labels, options } = req.body
+    const { analysis_type, template_id, integration_labels, upload_ids, options } = req.body
 
     if (!analysis_type || !integration_labels || integration_labels.length === 0) {
       return res.status(400).json({ error: "Missing required fields: analysis_type, integration_labels" })
@@ -61,6 +61,7 @@ async function triggerAnalysis(req, res) {
     const result = await runTestAnalysis(workspaceId, {
       analysisType: analysis_type,
       integrationLabels: integration_labels,
+      uploadIds: upload_ids || null,
       options: options || {},
       template,
       userId: req.user.id,
