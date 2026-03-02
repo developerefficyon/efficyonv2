@@ -42,7 +42,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TokenBalanceDisplay } from "@/components/token-balance-display"
 import { TokenUsageHistory } from "@/components/token-usage-history"
-import { AiModelSelector } from "@/components/ai-model-selector"
+
 
 type Plan = {
   id: string
@@ -466,11 +466,6 @@ function SettingsContent() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* AI Model Selection */}
-              <div className="mt-6">
-                <AiModelSelector />
-              </div>
 
               {/* Token Balance Section */}
               <div className="mt-6 space-y-6">

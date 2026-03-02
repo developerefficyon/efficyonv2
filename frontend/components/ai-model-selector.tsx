@@ -3,14 +3,15 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, Check, Zap, Brain, Sparkles } from "lucide-react"
+import { Loader2, Check, Zap, Brain, Sparkles, ChevronDown } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
 import { useTokens } from "@/lib/token-context"
 import { toast } from "sonner"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-type ModelTier = {
+export type ModelTier = {
   key: string
   label: string
   description: string
@@ -21,7 +22,7 @@ type ModelTier = {
   borderColor: string
 }
 
-const MODEL_TIERS: ModelTier[] = [
+export const MODEL_TIERS: ModelTier[] = [
   {
     key: "haiku",
     label: "Claude Haiku",
@@ -225,5 +226,140 @@ export function AiModelSelector() {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+export function AiModelPopover() {
+  const { isOwner } = useTeamRole()
+  const { aiModel, refreshTokenBalance } = useTokens()
+  const [open, setOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const currentModel = aiModel?.key || "haiku"
+  const currentTier = MODEL_TIERS.find((t) => t.key === currentModel) || MODEL_TIERS[0]
+  const TriggerIcon = currentTier.icon
+
+  const handleSelect = async (modelKey: string) => {
+    if (modelKey === currentModel || !isOwner) return
+
+    setIsSaving(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired. Please log in again.")
+        return
+      }
+
+      const response = await fetch(`${apiBase}/api/settings/ai-model`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ model: modelKey }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to update AI model")
+      }
+
+      await refreshTokenBalance()
+      setOpen(false)
+
+      const tier = MODEL_TIERS.find((t) => t.key === modelKey)
+      toast.success(`Switched to ${tier?.label || modelKey}`, {
+        description:
+          modelKey !== "haiku"
+            ? `Token cost: ${tier?.multiplier}x`
+            : "Most efficient model",
+      })
+    } catch (error) {
+      console.error("Failed to save AI model:", error)
+      toast.error("Failed to update AI model", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10 gap-1.5"
+        >
+          <TriggerIcon className={cn("w-3.5 h-3.5", currentTier.color)} />
+          <span className="text-xs">{currentTier.label.replace("Claude ", "")}</span>
+          <span className={cn("text-[10px] font-bold", currentTier.color)}>
+            {currentTier.multiplier}x
+          </span>
+          <ChevronDown className="w-3 h-3 text-gray-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-64 p-2 bg-gray-900 border-white/10"
+      >
+        <div className="space-y-1">
+          <p className="text-xs text-gray-400 px-2 py-1 font-medium">
+            AI Model{!isOwner && " (owner only)"}
+          </p>
+          {MODEL_TIERS.map((tier) => {
+            const isActive = currentModel === tier.key
+            const TierIcon = tier.icon
+            return (
+              <button
+                key={tier.key}
+                type="button"
+                disabled={!isOwner || isSaving}
+                onClick={() => handleSelect(tier.key)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left transition-all",
+                  isOwner && !isSaving && "cursor-pointer hover:bg-white/5",
+                  !isOwner && "cursor-default opacity-60",
+                  isActive &&
+                    `bg-gradient-to-r ${tier.bgGradient} ${tier.borderColor} border`
+                )}
+              >
+                <TierIcon
+                  className={cn(
+                    "w-4 h-4 shrink-0",
+                    isActive ? tier.color : "text-gray-400"
+                  )}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white">
+                      {tier.label.replace("Claude ", "")}
+                    </span>
+                    {isActive && <Check className="w-3 h-3 text-cyan-400" />}
+                  </div>
+                  <p className="text-[10px] text-gray-500">{tier.description}</p>
+                </div>
+                <span
+                  className={cn(
+                    "text-xs font-bold shrink-0",
+                    isActive ? tier.color : "text-gray-400"
+                  )}
+                >
+                  {tier.multiplier}x
+                </span>
+              </button>
+            )
+          })}
+          {isSaving && (
+            <div className="flex items-center justify-center py-1">
+              <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+              <span className="text-[10px] text-gray-400 ml-1">Saving...</span>
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

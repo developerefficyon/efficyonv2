@@ -38,6 +38,7 @@ import { ChatSidebar, useChatConversations } from "@/components/chat-sidebar"
 import { ToolChatTabs, useConnectedTools, getToolDisplayName } from "@/components/tool-chat-tabs"
 import { ChatMessageRenderer } from "@/components/chat-message-renderer"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { AiModelPopover } from "@/components/ai-model-selector"
 
 type Message = {
   id: string
@@ -692,17 +693,20 @@ export default function ChatbotPage() {
                     </CardDescription>
                   </div>
                 </div>
-                {messages.length > 0 && !isViewer && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearChat}
-                    className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    New Chat
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <AiModelPopover />
+                  {messages.length > 0 && !isViewer && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearChat}
+                      className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      New Chat
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
