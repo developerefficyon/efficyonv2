@@ -5,7 +5,7 @@
  */
 
 const XLSX = require("xlsx")
-const pdfParse = require("pdf-parse")
+const { PDFParse } = require("pdf-parse")
 const axios = require("axios")
 
 const MAX_ROWS_PER_SHEET = 10000
@@ -79,9 +79,12 @@ function parseExcelFile(buffer) {
 /* ------------------------------------------------------------------ */
 
 async function parsePdfFile(buffer) {
-  const result = await pdfParse(buffer)
-  const rawText = result.text || ""
-  const pages = result.numpages || 0
+  const parser = new PDFParse({ data: new Uint8Array(buffer) })
+  await parser.load()
+  const textResult = await parser.getText()
+  const rawText = (textResult && textResult.text) || ""
+  const pages = (textResult && textResult.total) || 0
+  await parser.destroy()
 
   // Detect scanned PDFs (very little extractable text)
   if (rawText.trim().length < 50) {
