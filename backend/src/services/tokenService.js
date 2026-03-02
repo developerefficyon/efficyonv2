@@ -93,6 +93,7 @@ async function consumeTokens(userId, tokensToConsume, actionType, metadata = {})
     integration_sources: metadata.integrationSources || null,
     analysis_id: metadata.analysisId || null,
     description: metadata.description || null,
+    model_used: metadata.modelUsed || null,
     balance_before: balanceBefore,
     balance_after: balanceAfter,
   })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, type ChangeEvent } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Coins,
+  Paperclip,
+  FileSpreadsheet,
+  X,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTokens } from "@/lib/token-context"
@@ -41,6 +44,7 @@ type Message = {
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  fileName?: string
 }
 
 const suggestedQuestions = {
@@ -87,6 +91,13 @@ const suggestedQuestions = {
     "Show me key metrics",
     "What actions do you recommend?",
   ],
+  fileUpload: [
+    "Analyze this file for cost optimization opportunities",
+    "Find duplicate or unusual payments",
+    "Show spending trends over time",
+    "Which vendors have the highest spend?",
+    "Are there any anomalies in this data?",
+  ],
 }
 
 // Research data cache type
@@ -96,11 +107,12 @@ type ResearchCache = {
   m365Data?: any
   hubspotData?: any
   dataType?: string
+  fileAnalysis?: any
 }
 
 export default function ChatbotPage() {
   const { user } = useAuth()
-  const { tokenBalance, refreshTokenBalance } = useTokens()
+  const { tokenBalance, aiModel, refreshTokenBalance } = useTokens()
   const { isViewer } = useTeamRole()
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState("general")
@@ -115,6 +127,11 @@ export default function ChatbotPage() {
   const [researchCache, setResearchCache] = useState<ResearchCache>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<{ name: string; size: string; type: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get connected tools
   const { tools, refreshTools } = useConnectedTools()
@@ -164,9 +181,10 @@ export default function ChatbotPage() {
     scrollToBottom()
   }, [messages])
 
-  // Clear research cache when switching tabs
+  // Clear research cache and file selection when switching tabs
   useEffect(() => {
     setResearchCache({})
+    clearFile()
   }, [activeTab])
 
   // Load conversation messages when selecting a conversation
@@ -208,11 +226,54 @@ export default function ChatbotPage() {
     }
   }
 
-  // Token cost for deep research (same for all types)
-  const DEEP_RESEARCH_TOKEN_COST = 1
+  // Token cost for deep research (base=1, multiplied by AI model tier)
+  const modelMultiplier = aiModel?.multiplier || 1
+  const DEEP_RESEARCH_TOKEN_COST = 1 * modelMultiplier
 
   // Check if this chat type requires deep research (tool or comparison, not general)
   const requiresResearch = activeTab !== "general"
+
+  // File upload helpers
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".pdf"]
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase()
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      toast.error("Unsupported file type", { description: "Please upload .xlsx, .xls, or .pdf files" })
+      return
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File too large", { description: "Maximum file size is 10MB" })
+      return
+    }
+    setSelectedFile(file)
+    setFilePreview({
+      name: file.name,
+      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      type: ext.replace(".", "").toUpperCase(),
+    })
+  }
+
+  const clearFile = () => {
+    setSelectedFile(null)
+    setFilePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result.split(",")[1]) // Remove data:... prefix
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
 
   // Check if we have cached research data for the current chat type
   const hasCachedResearch = () => {
@@ -231,10 +292,25 @@ export default function ChatbotPage() {
 
   const sendMessage = async (messageText?: string, skipConfirmation = false) => {
     const text = messageText || input.trim()
-    if (!text || isLoading) return
+    if ((!text && !selectedFile) || isLoading) return
+
+    // File upload token confirmation (new file without cached analysis)
+    const requiresFileToken = !!selectedFile && !researchCache.fileAnalysis
+    if (requiresFileToken && !skipConfirmation) {
+      const availableTokens = tokenBalance?.available ?? 0
+      if (availableTokens < DEEP_RESEARCH_TOKEN_COST) {
+        toast.error("Insufficient tokens", {
+          description: `File analysis requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${availableTokens} token(s) available.`,
+        })
+        return
+      }
+      setPendingMessage(text || "Analyze this file for cost optimization opportunities")
+      setShowTokenConfirmation(true)
+      return
+    }
 
     // For tool/comparison chat without cached research, show confirmation for token usage
-    if (requiresResearch && !hasCachedResearch() && !skipConfirmation) {
+    if (!selectedFile && requiresResearch && !hasCachedResearch() && !skipConfirmation) {
       // Check if user has enough tokens
       const availableTokens = tokenBalance?.available ?? 0
       if (availableTokens < DEEP_RESEARCH_TOKEN_COST) {
@@ -260,8 +336,9 @@ export default function ChatbotPage() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: text,
+      content: text || "Analyze this file for cost optimization opportunities",
       timestamp: new Date(),
+      fileName: selectedFile?.name,
     }
 
     setMessages((prev) => [...prev, userMessage])
@@ -279,10 +356,55 @@ export default function ChatbotPage() {
         throw new Error("Session expired. Please log in again.")
       }
 
-      let response
-      let data
+      let response: Response
+      let data: any
 
-      if (activeTab === "general") {
+      if (selectedFile || researchCache.fileAnalysis) {
+        // File upload chat
+        const messageText = userMessage.content
+        let fileData: string | undefined
+        let fileName: string | undefined
+        let mimeType: string | undefined
+
+        if (selectedFile && !researchCache.fileAnalysis) {
+          fileData = await fileToBase64(selectedFile)
+          fileName = selectedFile.name
+          mimeType = selectedFile.type
+        }
+
+        response = await fetch(`${apiBase}/api/chat/file-upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            question: messageText,
+            fileData,
+            fileName: fileName || researchCache.fileAnalysis?.fileName,
+            mimeType,
+            cachedFileAnalysis: researchCache.fileAnalysis || undefined,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to analyze file")
+        }
+
+        data = await response.json()
+
+        // Cache file analysis for follow-ups
+        if (data.fileAnalysis) {
+          setResearchCache((prev) => ({ ...prev, fileAnalysis: data.fileAnalysis }))
+        }
+
+        if (data.tokensUsed > 0) {
+          await refreshTokenBalance()
+        }
+
+        clearFile()
+      } else if (activeTab === "general") {
         // General chat - use existing endpoint (always free)
         response = await fetch(`${apiBase}/api/ai/chat`, {
           method: "POST",
@@ -481,6 +603,7 @@ export default function ChatbotPage() {
 
   // Get suggested questions for current tab
   const getSuggestedQuestions = () => {
+    if (selectedFile || researchCache.fileAnalysis) return suggestedQuestions.fileUpload
     if (activeTab === "general") return suggestedQuestions.general
     if (activeTab === "comparison") return suggestedQuestions.comparison
     const tool = tools.find((t) => t.id === activeTab)
@@ -645,7 +768,15 @@ export default function ChatbotPage() {
                           {message.role === "assistant" ? (
                             <ChatMessageRenderer content={message.content} />
                           ) : (
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <>
+                              {message.fileName && (
+                                <div className="flex items-center gap-1.5 mb-1.5 text-xs text-white/80">
+                                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                                  <span>{message.fileName}</span>
+                                </div>
+                              )}
+                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            </>
                           )}
                           <p
                             className={cn(
@@ -675,7 +806,9 @@ export default function ChatbotPage() {
                           <div className="flex items-center gap-2">
                             <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
                             <span className="text-sm text-gray-400">
-                              {activeTab === "general"
+                              {researchCache.fileAnalysis || selectedFile
+                                ? "Parsing and analyzing your file..."
+                                : activeTab === "general"
                                 ? "Thinking..."
                                 : activeTab === "comparison"
                                 ? "Analyzing both platforms..."
@@ -707,14 +840,54 @@ export default function ChatbotPage() {
                   </p>
                 ) : (
                   <>
+                    {/* File preview banner */}
+                    {filePreview && (
+                      <div className="mb-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{filePreview.name}</p>
+                          <p className="text-[10px] text-gray-400">{filePreview.size} &middot; {filePreview.type}</p>
+                        </div>
+                        <button
+                          onClick={clearFile}
+                          className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls,.pdf"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+
                     <div className="flex gap-2">
+                      {/* File attachment button */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || !!filePreview}
+                        className="border-white/10 bg-black/50 text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/30 shrink-0 h-10 w-10"
+                        title="Upload Excel or PDF file"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </Button>
+
                       <Input
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={
-                          activeTab === "general"
+                          filePreview
+                            ? `Ask about ${filePreview.name}...`
+                            : activeTab === "general"
                             ? "Type your message..."
                             : activeTab === "comparison"
                             ? "Ask about cross-platform insights..."
@@ -725,7 +898,7 @@ export default function ChatbotPage() {
                       />
                       <Button
                         onClick={() => sendMessage()}
-                        disabled={!input.trim() || isLoading}
+                        disabled={(!input.trim() && !selectedFile) || isLoading}
                         className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4"
                       >
                         {isLoading ? (
@@ -736,7 +909,22 @@ export default function ChatbotPage() {
                       </Button>
                     </div>
                     <p className="text-[10px] text-gray-500 mt-2 text-center">
-                      {activeTab === "general" ? (
+                      {selectedFile && !researchCache.fileAnalysis ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <Coins className="w-3 h-3" />
+                          File analysis costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
+                          {tokenBalance && (
+                            <span className="text-cyan-400 ml-1">
+                              ({tokenBalance.available} available)
+                            </span>
+                          )}
+                        </span>
+                      ) : researchCache.fileAnalysis ? (
+                        <span className="flex items-center justify-center gap-1 text-green-400">
+                          <Sparkles className="w-3 h-3" />
+                          File data loaded - follow-up questions are free
+                        </span>
+                      ) : activeTab === "general" ? (
                         "Chat is unlimited - no credits required"
                       ) : hasCachedResearch() ? (
                         <span className="flex items-center justify-center gap-1 text-green-400">
@@ -746,7 +934,7 @@ export default function ChatbotPage() {
                       ) : (
                         <span className="flex items-center justify-center gap-1">
                           <Coins className="w-3 h-3" />
-                          First query costs {DEEP_RESEARCH_TOKEN_COST} token (deep research), follow-ups are free
+                          First query costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
                           {tokenBalance && (
                             <span className="text-cyan-400 ml-1">
                               ({tokenBalance.available} available)
@@ -773,7 +961,7 @@ export default function ChatbotPage() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
               <span className="block">
-                This deep research will use <span className="text-cyan-400 font-semibold">{DEEP_RESEARCH_TOKEN_COST} token</span> to fetch and analyze your data.
+                This deep research will use <span className="text-cyan-400 font-semibold">{DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}</span>{modelMultiplier > 1 && aiModel ? <span> ({aiModel.label} — {modelMultiplier}x cost)</span> : ""} to fetch and analyze your data.
               </span>
               <span className="block mt-2 text-green-400/80">
                 After this, follow-up questions about the research will be free!

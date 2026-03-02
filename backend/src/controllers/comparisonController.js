@@ -2,6 +2,7 @@ const { supabase } = require("../config/supabase")
 const openaiService = require("../services/openaiService")
 const comparisonAnalysisService = require("../services/comparisonAnalysisService")
 const tokenService = require("../services/tokenService")
+const { getModelPreference } = require("../services/modelPreferenceService")
 
 // Token cost for deep research (same for all types)
 const DEEP_RESEARCH_TOKEN_COST = 1
@@ -85,6 +86,10 @@ async function chatComparison(req, res) {
       })
     }
 
+    // Get model preference for this user's team
+    const modelPref = await getModelPreference(user.id)
+    const modelOpts = { modelId: modelPref.modelId }
+
     let fortnoxData = null
     let m365Data = null
     let hubspotData = null
@@ -112,13 +117,16 @@ async function chatComparison(req, res) {
       isDeepResearch = true
       console.log(`[${new Date().toISOString()}] Deep research requested - checking token balance`)
 
+      // Calculate cost with model multiplier
+      const tokenCost = DEEP_RESEARCH_TOKEN_COST * modelPref.multiplier
+
       // Check token balance before fetching
-      const tokenCheck = await tokenService.checkTokenBalance(user.id, DEEP_RESEARCH_TOKEN_COST)
+      const tokenCheck = await tokenService.checkTokenBalance(user.id, tokenCost)
       if (!tokenCheck.hasEnough) {
         return res.status(402).json({
           error: "INSUFFICIENT_TOKENS",
-          message: `Cross-platform deep research requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${tokenCheck.available} token(s) available.`,
-          required: DEEP_RESEARCH_TOKEN_COST,
+          message: `Cross-platform deep research requires ${tokenCost} token(s) (${modelPref.label}). You have ${tokenCheck.available} token(s) available.`,
+          required: tokenCost,
           available: tokenCheck.available,
         })
       }
@@ -156,17 +164,18 @@ async function chatComparison(req, res) {
       metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data, hubspotData)
 
       // Consume token after successful data fetch
-      const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "advanced_ai_deep_dive", {
+      const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "advanced_ai_deep_dive", {
         question: question.substring(0, 100),
         platformsAnalyzed: connectedPlatforms.length,
         fortnoxDataPoints: fortnoxData?.supplierInvoices?.length || 0,
         m365DataPoints: m365Data?.users?.length || 0,
         hubspotDataPoints: hubspotData?.users?.length || 0,
+        modelUsed: modelPref.model,
       })
 
       if (consumeResult.success) {
-        tokensUsed = DEEP_RESEARCH_TOKEN_COST
-        console.log(`[${new Date().toISOString()}] Consumed ${DEEP_RESEARCH_TOKEN_COST} token for deep research. Remaining: ${consumeResult.balanceAfter}`)
+        tokensUsed = tokenCost
+        console.log(`[${new Date().toISOString()}] Consumed ${tokenCost} token(s) for deep research (${modelPref.label}). Remaining: ${consumeResult.balanceAfter}`)
       }
     }
 
@@ -177,7 +186,8 @@ async function chatComparison(req, res) {
       fortnoxData,
       m365Data,
       metrics,
-      hubspotData
+      hubspotData,
+      modelOpts
     )
 
     return res.json({

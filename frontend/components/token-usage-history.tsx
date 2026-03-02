@@ -14,6 +14,7 @@ interface UsageEntry {
   description: string | null
   created_at: string
   balance_after: number
+  model_used: string | null
 }
 
 export function TokenUsageHistory() {
@@ -56,11 +57,22 @@ export function TokenUsageHistory() {
       advanced_ai_deep_dive: "AI Deep Dive",
       tool_deep_research: "AI Deep Dive",
       comparison_deep_research: "Comparison Analysis",
+      file_upload_analysis: "File Analysis",
       token_refund: "Token Refund",
       admin_adjustment: "Admin Adjustment",
       monthly_reset: "Monthly Reset",
     }
     return labels[actionType] || actionType
+  }
+
+  const getModelLabel = (modelKey: string | null) => {
+    if (!modelKey) return null
+    const labels: Record<string, string> = {
+      haiku: "Haiku",
+      sonnet: "Sonnet",
+      opus: "Opus",
+    }
+    return labels[modelKey] || modelKey
   }
 
   const getActionIcon = (actionType: string, tokensConsumed: number) => {
@@ -151,9 +163,16 @@ export function TokenUsageHistory() {
                       {getActionIcon(entry.action_type, entry.tokens_consumed)}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">
-                        {getActionLabel(entry.action_type)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-white">
+                          {getActionLabel(entry.action_type)}
+                        </p>
+                        {entry.model_used && getModelLabel(entry.model_used) && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                            {getModelLabel(entry.model_used)}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400">
                         {formatDate(entry.created_at)}
                       </p>

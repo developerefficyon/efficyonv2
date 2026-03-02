@@ -124,6 +124,7 @@ const {
   deleteConversation,
   addMessage,
   chatWithTool,
+  chatWithFileUpload,
 } = require("../controllers/chatController")
 
 // Comparison Controller - cross-platform analysis
@@ -131,6 +132,9 @@ const {
   chatComparison,
   checkComparisonAvailability,
 } = require("../controllers/comparisonController")
+
+// Settings Controller - user/company settings
+const { getAiModel, setAiModel } = require("../controllers/settingsController")
 
 // Team Controller - team member management and invitations
 const {
@@ -180,6 +184,10 @@ router.get("/api/admin/reports", requireAuth, getAdminReports)
 // SaaS core routes (company + settings)
 router.get("/api/company", requireAuth, requireRole("owner", "editor", "viewer"), getCompany)
 router.post("/api/company", requireAuth, requireRole("owner"), upsertCompany)
+
+// Settings routes
+router.get("/api/settings/ai-model", requireAuth, requireRole("owner", "editor", "viewer"), getAiModel)
+router.put("/api/settings/ai-model", requireAuth, requireRole("owner"), setAiModel)
 
 router.get("/api/tools", requireAuth, requireRole("owner", "editor", "viewer"), getTools)
 router.get("/api/integrations", requireAuth, requireRole("owner", "editor", "viewer"), getIntegrations)
@@ -282,6 +290,7 @@ router.put("/api/chat/conversations/:id", requireAuth, requireRole("owner", "edi
 router.delete("/api/chat/conversations/:id", requireAuth, requireRole("owner", "editor"), deleteConversation)
 router.post("/api/chat/conversations/:id/messages", requireAuth, requireRole("owner", "editor"), addMessage)
 router.post("/api/chat/tool", requireAuth, requireRole("owner", "editor"), chatWithTool)
+router.post("/api/chat/file-upload", requireAuth, requireRole("owner", "editor"), chatWithFileUpload)
 
 // Cross-Platform Comparison Routes
 router.post("/api/chat/comparison", requireAuth, requireRole("owner", "editor"), chatComparison)
@@ -304,6 +313,7 @@ const {
 // Test Upload Controller
 const {
   uploadData,
+  uploadFile,
   listUploads,
   getUpload,
   deleteUpload,
@@ -321,6 +331,7 @@ const {
   getWorkspaceLogs,
   aiEvaluateAnalysis,
   runImprovementCycleEndpoint,
+  generateAuditReport,
 } = require("../controllers/testAnalysisController")
 
 // Mock Data Generator Controller
@@ -366,6 +377,7 @@ router.delete("/api/test/workspaces/:id", requireAuth, requireAdmin, deleteWorks
 router.post("/api/test/workspaces/:id/generate", requireAuth, requireAdmin, generateMockData)
 
 // Uploads
+router.post("/api/test/workspaces/:id/upload-file", requireAuth, requireAdmin, uploadFile)
 router.post("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, uploadData)
 router.get("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, listUploads)
 router.get("/api/test/uploads/:uploadId", requireAuth, requireAdmin, getUpload)
@@ -391,6 +403,9 @@ router.get("/api/test/workspaces/:id/logs", requireAuth, requireAdmin, getWorksp
 
 // AI Evaluation
 router.post("/api/test/analyses/:analysisId/ai-evaluate", requireAuth, requireAdmin, aiEvaluateAnalysis)
+
+// Agent Audit
+router.post("/api/test/analyses/:analysisId/audit", requireAuth, requireAdmin, generateAuditReport)
 
 // Improvement Cycle
 router.post("/api/test/workspaces/:id/improvement-cycle", requireAuth, requireAdmin, runImprovementCycleEndpoint)

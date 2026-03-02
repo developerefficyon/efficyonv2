@@ -1,6 +1,7 @@
 const stripe = require("../config/stripe")
 const { supabase } = require("../config/supabase")
 const tokenService = require("../services/tokenService")
+const { getModelPreference } = require("../services/modelPreferenceService")
 
 /**
  * Resolve the billing user ID (company owner) for a given user.
@@ -1087,7 +1088,10 @@ async function getTokenBalance(req, res) {
 
     // Resolve to company owner for team members
     const billingUserId = await getBillingUserId(user.id)
-    const result = await tokenService.checkTokenBalance(billingUserId, 0)
+    const [result, modelPref] = await Promise.all([
+      tokenService.checkTokenBalance(billingUserId, 0),
+      getModelPreference(user.id),
+    ])
 
     return res.json({
       success: true,
@@ -1096,6 +1100,11 @@ async function getTokenBalance(req, res) {
         used: result.tokenBalance?.used_tokens || 0,
         available: result.available || 0,
         planTier: result.tokenBalance?.plan_tier || "free",
+      },
+      aiModel: {
+        key: modelPref.model,
+        label: modelPref.label,
+        multiplier: modelPref.multiplier,
       },
     })
   } catch (error) {

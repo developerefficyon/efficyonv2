@@ -10,7 +10,7 @@ const OPENAI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
  * @param {Object} analysisData - Cost leak analysis data
  * @returns {Promise<string>} AI-generated summary
  */
-async function generateAnalysisSummary(analysisData) {
+async function generateAnalysisSummary(analysisData, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping summary generation")
     return null
@@ -24,7 +24,7 @@ async function generateAnalysisSummary(analysisData) {
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -63,7 +63,7 @@ async function generateAnalysisSummary(analysisData) {
  * @param {Object} finding - Individual cost leak finding
  * @returns {Promise<string>} AI-generated recommendations
  */
-async function generateRecommendations(finding) {
+async function generateRecommendations(finding, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping recommendations")
     return null
@@ -79,7 +79,7 @@ async function generateRecommendations(finding) {
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -118,7 +118,7 @@ async function generateRecommendations(finding) {
  * @param {Object} finding - Cost leak finding
  * @returns {Promise<number>} Estimated savings amount
  */
-async function estimatePotentialSavings(finding) {
+async function estimatePotentialSavings(finding, options = {}) {
   if (!OPENROUTER_API_KEY) {
     console.warn("[OpenAI] API key not configured, skipping savings estimation")
     return finding.potentialSavings || 0
@@ -141,7 +141,7 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -185,7 +185,7 @@ Respond with ONLY a number (the estimated annual savings amount). Be conservativ
  * @param {Object} analysisData - The cost leak analysis data for context
  * @returns {Promise<string>} AI response
  */
-async function chatAboutAnalysis(question, analysisData) {
+async function chatAboutAnalysis(question, analysisData, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -203,7 +203,7 @@ Help the user understand their cost leaks and provide actionable insights. Be fr
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -285,7 +285,7 @@ Provide 2-3 specific actions the company can take.
  * @param {Array} findings - Array of cost leak findings
  * @returns {Promise<Array>} Findings with AI enhancements
  */
-async function enhanceFindingsWithAI(findings) {
+async function enhanceFindingsWithAI(findings, options = {}) {
   if (!OPENROUTER_API_KEY || !findings || findings.length === 0) {
     return findings
   }
@@ -297,8 +297,8 @@ async function enhanceFindingsWithAI(findings) {
 
     const enhancedFindings = await Promise.all(
       findings.map(async (finding) => {
-        const recommendations = await generateRecommendations(finding)
-        const estimatedSavings = await estimatePotentialSavings(finding)
+        const recommendations = await generateRecommendations(finding, options)
+        const estimatedSavings = await estimatePotentialSavings(finding, options)
 
         return {
           ...finding,
@@ -326,7 +326,7 @@ async function enhanceFindingsWithAI(findings) {
  * @param {Object} toolContext - Tool context including data
  * @returns {Promise<string>} AI response with markdown formatting
  */
-async function chatWithToolContext(question, toolContext) {
+async function chatWithToolContext(question, toolContext, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -379,7 +379,7 @@ Be concise but thorough. Focus on actionable insights.`
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -421,7 +421,7 @@ Be concise but thorough. Focus on actionable insights.`
  * @param {Object} metrics - Pre-calculated cross-platform metrics
  * @returns {Promise<string>} AI response with markdown and chart formatting
  */
-async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null) {
+async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -551,7 +551,7 @@ Be specific with numbers. Reference actual data from the context. Focus on actio
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: OPENAI_MODEL,
+        model: options.modelId || OPENAI_MODEL,
         messages: [
           {
             role: "system",
@@ -805,6 +805,113 @@ function buildHubSpotContext(hubspotData) {
   return parts.join('\n') || "No significant HubSpot data."
 }
 
+/**
+ * Chat with AI using uploaded file analysis context
+ * @param {string} question - User's question
+ * @param {Object} fileAnalysis - Analysis results from file upload
+ * @returns {Promise<string>} AI response with markdown formatting
+ */
+async function chatWithFileContext(question, fileAnalysis, options = {}) {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OpenAI API key not configured")
+  }
+
+  try {
+    const { schema, analysis, rawDataSummary, fileName, rowCount, analysisError } = fileAnalysis
+
+    // Build analysis context string
+    let analysisContext = "No structured analysis results available."
+    if (analysis) {
+      const analysisStr = JSON.stringify(analysis, null, 2)
+      analysisContext = analysisStr.length > 15000 ? analysisStr.substring(0, 15000) + "...(truncated)" : analysisStr
+    }
+
+    const schemaLabels = {
+      fortnox: "Fortnox-style financial data (invoices, supplier payments)",
+      m365: "Microsoft 365 license/user data",
+      hubspot: "HubSpot CRM user/seat data",
+      generic: "General cost/expense data",
+      unknown: "Unrecognized format",
+    }
+
+    const systemPrompt = `You are an expert business analyst. The user has uploaded a file for cost analysis and you need to help them understand the data and find cost optimization opportunities.
+
+FILE INFORMATION:
+- File: ${fileName}
+- Data Type Detected: ${schemaLabels[schema] || schema}
+- Total Records: ${rowCount}
+${analysisError ? `- Analysis Warning: ${analysisError}` : ""}
+
+RAW DATA SUMMARY:
+${rawDataSummary || "No data summary available."}
+
+STRUCTURED ANALYSIS RESULTS:
+${analysisContext}
+
+RESPONSE FORMATTING GUIDELINES:
+1. Use markdown formatting for clear, readable responses
+2. Use **bold** for important numbers and key findings
+3. Use tables (markdown format) when presenting structured data:
+   | Column1 | Column2 | Column3 |
+   |---------|---------|---------|
+   | data    | data    | data    |
+
+4. Use bullet points for lists of findings or recommendations
+5. Use headers (##, ###) to organize longer responses
+6. When showing financial amounts, format them clearly (e.g., **$12,500** or **12,500 SEK**)
+7. Highlight actionable insights and recommendations
+8. When appropriate, provide chart data in this format for the frontend to render:
+
+\`\`\`chart:bar
+{ "title": "Chart Title", "data": [{"label": "A", "value": 100}], "xKey": "label", "yKeys": ["value"] }
+\`\`\`
+
+\`\`\`table
+{ "headers": ["Col1", "Col2"], "rows": [["data1", "data2"]] }
+\`\`\`
+
+ANALYSIS APPROACH:
+1. Start with a clear summary of what was found in the uploaded file
+2. Highlight the most significant cost leaks or optimization opportunities
+3. Show data in tables and charts where it helps the user understand
+4. Provide specific, actionable recommendations with estimated savings when possible
+5. If the data didn't match a known format perfectly, still extract every useful insight you can
+6. Reference specific numbers and rows from the actual data — be precise, not generic
+
+Be thorough but concise. Focus on actionable insights that save money.`
+
+    console.log(`[${new Date().toISOString()}] File chat query for ${fileName}: ${question}`)
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: options.modelId || OPENAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
+        },
+      }
+    )
+
+    const answer = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] File chat response generated for ${fileName}`)
+
+    return answer
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in file chat:`, error.message)
+    throw new Error(`Failed to process file chat request: ${error.message}`)
+  }
+}
+
 module.exports = {
   generateAnalysisSummary,
   generateRecommendations,
@@ -813,4 +920,5 @@ module.exports = {
   enhanceFindingsWithAI,
   chatWithToolContext,
   chatWithComparisonContext,
+  chatWithFileContext,
 }

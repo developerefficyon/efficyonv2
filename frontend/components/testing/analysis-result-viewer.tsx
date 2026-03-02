@@ -17,6 +17,11 @@ const AnalysisScoringPanel = dynamic(
   { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
 )
 
+const AgentAuditPanel = dynamic(
+  () => import("@/components/testing/agent-audit-panel").then((m) => m.AgentAuditPanel),
+  { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+)
+
 interface AnalysisResult {
   id: string
   workspace_id: string
@@ -116,6 +121,14 @@ export function AnalysisResultViewer({
           scoring={analysis.scoring}
           status={analysis.status}
           onScoringUpdate={(newScoring) => onScoringUpdate?.(newScoring)}
+        />
+      )}
+
+      {/* Agent Audit Panel */}
+      {analysis.status === "completed" && (
+        <AgentAuditPanel
+          analysisId={analysis.id}
+          audit={analysis.scoring?.audit || null}
         />
       )}
 

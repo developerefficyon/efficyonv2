@@ -1,6 +1,9 @@
 const { supabase } = require("../config/supabase")
 const openaiService = require("../services/openaiService")
 const tokenService = require("../services/tokenService")
+const { parseUploadedFile } = require("../services/fileParsingService")
+const { analyzeUploadedFile } = require("../services/fileAnalysisService")
+const { getModelPreference } = require("../services/modelPreferenceService")
 
 // Token cost for deep research
 const DEEP_RESEARCH_TOKEN_COST = 1
@@ -406,6 +409,10 @@ async function chatWithTool(req, res) {
       return res.status(404).json({ error: "Tool not found" })
     }
 
+    // Get model preference for this user's team
+    const modelPref = await getModelPreference(user.id)
+    const modelOpts = { modelId: modelPref.modelId }
+
     let toolData = null
     let dataDescription = ""
     let tokensUsed = 0
@@ -421,15 +428,18 @@ async function chatWithTool(req, res) {
       isDeepResearch = true
       console.log(`[${new Date().toISOString()}] Deep research requested - checking token balance`)
 
+      // Calculate cost with model multiplier
+      const tokenCost = DEEP_RESEARCH_TOKEN_COST * modelPref.multiplier
+
       // Check token balance before fetching
-      const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, DEEP_RESEARCH_TOKEN_COST)
+      const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, tokenCost)
       if (!hasEnough) {
-        console.log(`[${new Date().toISOString()}] Insufficient tokens: ${available} available, ${DEEP_RESEARCH_TOKEN_COST} required`)
+        console.log(`[${new Date().toISOString()}] Insufficient tokens: ${available} available, ${tokenCost} required`)
         return res.status(402).json({
           error: "INSUFFICIENT_TOKENS",
-          message: `Deep research requires ${DEEP_RESEARCH_TOKEN_COST} token. You have ${available} token(s) available.`,
+          message: `Deep research requires ${tokenCost} token(s) (${modelPref.label}). You have ${available} token(s) available.`,
           available,
-          required: DEEP_RESEARCH_TOKEN_COST,
+          required: tokenCost,
         })
       }
 
@@ -438,14 +448,15 @@ async function chatWithTool(req, res) {
         dataDescription = getDataDescription(integration.provider, dataType)
 
         // Consume token after successful data fetch
-        const consumeResult = await tokenService.consumeTokens(user.id, DEEP_RESEARCH_TOKEN_COST, "advanced_ai_deep_dive", {
+        const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "advanced_ai_deep_dive", {
           integrationSources: [integration.provider.toLowerCase()],
           description: `${integration.provider} ${dataType || "general"} deep research`,
+          modelUsed: modelPref.model,
         })
 
         if (consumeResult.success) {
-          tokensUsed = DEEP_RESEARCH_TOKEN_COST
-          console.log(`[${new Date().toISOString()}] Consumed ${DEEP_RESEARCH_TOKEN_COST} token for deep research. Remaining: ${consumeResult.balanceAfter}`)
+          tokensUsed = tokenCost
+          console.log(`[${new Date().toISOString()}] Consumed ${tokenCost} token(s) for deep research (${modelPref.label}). Remaining: ${consumeResult.balanceAfter}`)
         }
       } catch (fetchError) {
         console.error(`[${new Date().toISOString()}] Error fetching tool data:`, fetchError.message)
@@ -478,7 +489,7 @@ async function chatWithTool(req, res) {
     }
 
     // Generate AI response with tool context
-    const response = await openaiService.chatWithToolContext(question, toolContext)
+    const response = await openaiService.chatWithToolContext(question, toolContext, modelOpts)
 
     return res.json({
       success: true,
@@ -661,6 +672,125 @@ function getDataDescription(provider, dataType) {
   return descriptions[providerKey]?.[dataType] || descriptions[providerKey]?.general || "Tool data"
 }
 
+/* ------------------------------------------------------------------ */
+/*  File Upload Chat                                                   */
+/* ------------------------------------------------------------------ */
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB raw (base64 is ~33% larger)
+const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".pdf"]
+
+async function chatWithFileUpload(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/chat/file-upload`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { question, fileData, fileName, mimeType, cachedFileAnalysis } = req.body
+
+    if (!question) {
+      return res.status(400).json({ error: "question is required" })
+    }
+
+    // Get model preference for this user's team
+    const modelPref = await getModelPreference(user.id)
+    const modelOpts = { modelId: modelPref.modelId }
+
+    let fileAnalysis = null
+    let tokensUsed = 0
+    let isDeepResearch = false
+
+    // If cached analysis provided, use it for free follow-up
+    if (cachedFileAnalysis && Object.keys(cachedFileAnalysis).length > 0) {
+      console.log(`[${new Date().toISOString()}] Using cached file analysis (free follow-up)`)
+      fileAnalysis = cachedFileAnalysis
+    } else {
+      // New file upload — requires token
+      if (!fileData || !fileName) {
+        return res.status(400).json({ error: "fileData and fileName are required for new uploads" })
+      }
+
+      // Validate file extension
+      const ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase()
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        return res.status(400).json({ error: `Unsupported file type: ${ext}. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}` })
+      }
+
+      // Validate file size (base64 is ~33% larger than raw)
+      const rawSize = Buffer.byteLength(fileData, "base64")
+      if (rawSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: `File too large (${(rawSize / 1024 / 1024).toFixed(1)}MB). Maximum: 10MB` })
+      }
+
+      isDeepResearch = true
+
+      // Calculate cost with model multiplier
+      const tokenCost = DEEP_RESEARCH_TOKEN_COST * modelPref.multiplier
+
+      // Check token balance
+      const { hasEnough, available } = await tokenService.checkTokenBalance(user.id, tokenCost)
+      if (!hasEnough) {
+        return res.status(402).json({
+          error: "INSUFFICIENT_TOKENS",
+          message: `File analysis requires ${tokenCost} token(s) (${modelPref.label}). You have ${available} token(s) available.`,
+          available,
+          required: tokenCost,
+        })
+      }
+
+      // Parse the file
+      console.log(`[${new Date().toISOString()}] Parsing file: ${fileName} (${(rawSize / 1024).toFixed(0)}KB)`)
+      let parsedFile = parseUploadedFile(fileData, fileName, mimeType)
+
+      // parseUploadedFile may return a Promise (for PDF)
+      if (parsedFile && typeof parsedFile.then === "function") {
+        parsedFile = await parsedFile
+      }
+
+      if (parsedFile.error && parsedFile.type === "unknown") {
+        return res.status(400).json({ error: parsedFile.error })
+      }
+
+      // Scanned PDF warning
+      if (parsedFile.isScannedPdf) {
+        return res.status(400).json({ error: parsedFile.error || "This PDF appears to be scanned. Please upload a text-based PDF or Excel file." })
+      }
+
+      // Run analysis
+      console.log(`[${new Date().toISOString()}] Running file analysis...`)
+      fileAnalysis = await analyzeUploadedFile(parsedFile, fileName, question)
+
+      // Consume token after successful analysis
+      const consumeResult = await tokenService.consumeTokens(user.id, tokenCost, "file_upload_analysis", {
+        integrationSources: [fileAnalysis.schema || "file_upload"],
+        description: `File analysis: ${fileName}`,
+        modelUsed: modelPref.model,
+      })
+
+      if (consumeResult.success) {
+        tokensUsed = tokenCost
+        console.log(`[${new Date().toISOString()}] Consumed ${tokenCost} token(s) for file analysis (${modelPref.label}). Remaining: ${consumeResult.balanceAfter}`)
+      }
+    }
+
+    // Generate AI response with file context
+    const response = await openaiService.chatWithFileContext(question, fileAnalysis, modelOpts)
+
+    return res.json({
+      success: true,
+      response,
+      fileAnalysis, // Frontend caches this for free follow-ups
+      isDeepResearch,
+      tokensUsed,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in chatWithFileUpload:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   getConversations,
   getConversation,
@@ -669,4 +799,5 @@ module.exports = {
   deleteConversation,
   addMessage,
   chatWithTool,
+  chatWithFileUpload,
 }

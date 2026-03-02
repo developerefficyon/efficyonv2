@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { useAuth, getBackendToken } from "./auth-hooks"
 
 interface TokenBalance {
@@ -10,8 +11,15 @@ interface TokenBalance {
   planTier: string
 }
 
+interface AiModelInfo {
+  key: string
+  label: string
+  multiplier: number
+}
+
 interface TokenContextType {
   tokenBalance: TokenBalance | null
+  aiModel: AiModelInfo | null
   isLoading: boolean
   refreshTokenBalance: () => Promise<void>
   lowTokenWarning: boolean
@@ -23,9 +31,11 @@ const TokenContext = createContext<TokenContextType | undefined>(undefined)
 export function TokenProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null)
+  const [aiModel, setAiModel] = useState<AiModelInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const userId = user?.id
+  const pathname = usePathname()
 
   const refreshTokenBalance = useCallback(async () => {
     if (!userId) {
@@ -58,6 +68,13 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
             planTier: data.tokenBalance.planTier || "free",
           })
         }
+        if (data.aiModel) {
+          setAiModel({
+            key: data.aiModel.key || "haiku",
+            label: data.aiModel.label || "Claude Haiku",
+            multiplier: data.aiModel.multiplier || 1,
+          })
+        }
       } else {
         console.warn("[Token] Failed to fetch token balance:", response.status)
       }
@@ -68,10 +85,10 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId])
 
-  // Fetch token balance when user changes
+  // Fetch token balance when user changes or route changes
   useEffect(() => {
     refreshTokenBalance()
-  }, [refreshTokenBalance])
+  }, [refreshTokenBalance, pathname])
 
   // Low token warning: when available <= 2 and total > 0
   const lowTokenWarning = tokenBalance
@@ -87,6 +104,7 @@ export function TokenProvider({ children }: { children: React.ReactNode }) {
     <TokenContext.Provider
       value={{
         tokenBalance,
+        aiModel,
         isLoading,
         refreshTokenBalance,
         lowTokenWarning,

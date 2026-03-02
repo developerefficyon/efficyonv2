@@ -430,6 +430,173 @@ async function runImprovementCycleEndpoint(req, res) {
   }
 }
 
+/**
+ * Generate an Agent Audit Report for a completed analysis.
+ * AI classifies each finding as correct, misclassified, hallucinated, or logic_gap.
+ */
+async function generateAuditReport(req, res) {
+  try {
+    const { analysisId } = req.params
+
+    // Fetch analysis with full results
+    const { data: analysis, error: fetchError } = await supabase
+      .from("test_analyses")
+      .select("*")
+      .eq("id", analysisId)
+      .single()
+
+    if (fetchError || !analysis) {
+      return res.status(404).json({ error: "Analysis not found" })
+    }
+
+    if (analysis.status !== "completed") {
+      return res.status(400).json({ error: "Can only audit completed analyses" })
+    }
+
+    // Fetch the original uploads to compare against
+    const { data: uploads } = await supabase
+      .from("test_uploads")
+      .select("integration_label, data_type, file_data")
+      .eq("workspace_id", analysis.workspace_id)
+      .in("integration_label", analysis.integration_labels || [])
+
+    // Fetch workspace for anomaly config (ground truth)
+    const { data: workspace } = await supabase
+      .from("test_workspaces")
+      .select("id, metadata")
+      .eq("id", analysis.workspace_id)
+      .single()
+
+    const anomalyConfig = workspace?.metadata?.last_mock_generation?.anomaly_config || {}
+
+    // Build audit data payload (limit upload samples to avoid token overflow)
+    const uploadSummary = (uploads || []).map((u) => ({
+      integration: u.integration_label,
+      dataType: u.data_type,
+      rowCount: Array.isArray(u.file_data) ? u.file_data.length : 1,
+      sampleRows: Array.isArray(u.file_data) ? u.file_data.slice(0, 20) : u.file_data,
+    }))
+
+    const systemPrompt = `You are a senior financial data analyst auditing an automated cost-leak analysis engine called Efficyon. Your job is to find errors, hallucinations, and logic gaps in the analysis output.
+
+You will receive:
+1. ORIGINAL DATA: Sample rows from the raw uploaded data that was analyzed
+2. ANALYSIS OUTPUT: What Efficyon's engine produced (findings, summary)
+3. ANOMALY CONFIG: Which anomalies were injected (if this was mock/test data)
+
+For each finding in the analysis output, classify it as:
+- CORRECT: Finding is supported by the data
+- MISCLASSIFIED: Finding type or category is wrong (e.g., labeled "General/Other" but actually cloud costs)
+- HALLUCINATED: Finding has no basis in the data
+- LOGIC_GAP: Finding is partially correct but the reasoning or calculation is flawed
+
+Return ONLY valid JSON with this structure:
+{
+  "totalFindingsAudited": <number>,
+  "correct": <number>,
+  "misclassified": <number>,
+  "hallucinated": <number>,
+  "logicGaps": <number>,
+  "accuracy": <number 0-1>,
+  "issues": [
+    {
+      "findingTitle": "<title of the finding>",
+      "classification": "correct|misclassified|hallucinated|logic_gap",
+      "explanation": "<why this classification>",
+      "affectedRows": <number or 0>,
+      "suggestedCorrection": "<what should be done differently, or null>"
+    }
+  ],
+  "summary": "<2-3 sentence executive summary of audit results>",
+  "recommendation": "<actionable recommendation for improving the analysis engine>"
+}`
+
+    const userMessage = `ORIGINAL DATA (sample rows per upload):
+${JSON.stringify(uploadSummary, null, 2)}
+
+ANALYSIS OUTPUT:
+${JSON.stringify(analysis.analysis_result, null, 2)}
+
+ANOMALY CONFIG (injected anomalies, if any):
+${JSON.stringify(anomalyConfig, null, 2)}
+
+Audit each finding in the analysis output. Classify it and explain your reasoning.`
+
+    const auditRaw = await claudeService.callClaude(systemPrompt, userMessage, 4000)
+
+    if (!auditRaw) {
+      return res.status(503).json({
+        error: "AI evaluation unavailable. Ensure OPENROUTER_API_KEY is configured.",
+      })
+    }
+
+    // callClaude() already parses JSON and returns an object.
+    // Use it directly if it's an object; only try string parsing as fallback.
+    let auditReport
+    if (typeof auditRaw === "object" && auditRaw !== null && !Array.isArray(auditRaw)) {
+      auditReport = auditRaw
+    } else if (typeof auditRaw === "string") {
+      try {
+        const cleaned = auditRaw.replace(/```json\n?|```\n?/g, "").trim()
+        // Try direct parse first, then extract JSON substring
+        try {
+          auditReport = JSON.parse(cleaned)
+        } catch {
+          const start = cleaned.indexOf("{")
+          const end = cleaned.lastIndexOf("}")
+          if (start !== -1 && end > start) {
+            auditReport = JSON.parse(cleaned.substring(start, end + 1))
+          } else {
+            throw new Error("No JSON object found in response")
+          }
+        }
+      } catch {
+        auditReport = {
+          totalFindingsAudited: 0,
+          correct: 0,
+          misclassified: 0,
+          hallucinated: 0,
+          logicGaps: 0,
+          accuracy: 0,
+          issues: [],
+          summary: typeof auditRaw === "string" ? auditRaw : JSON.stringify(auditRaw),
+          recommendation: "Could not parse structured audit. Raw response included in summary.",
+          parseError: true,
+        }
+      }
+    } else {
+      auditReport = auditRaw
+    }
+
+    // Store audit in scoring
+    const updatedScoring = {
+      ...(analysis.scoring || {}),
+      audit: {
+        ...auditReport,
+        generatedAt: new Date().toISOString(),
+      },
+    }
+
+    await supabase
+      .from("test_analyses")
+      .update({ scoring: updatedScoring })
+      .eq("id", analysisId)
+
+    await logTestRun(analysis.workspace_id, analysisId, "info", "Agent audit report generated", {
+      accuracy: auditReport.accuracy,
+      correct: auditReport.correct,
+      misclassified: auditReport.misclassified,
+      hallucinated: auditReport.hallucinated,
+      logicGaps: auditReport.logicGaps,
+    })
+
+    res.json({ analysisId, audit: auditReport })
+  } catch (err) {
+    console.error("generateAuditReport error:", err)
+    res.status(500).json({ error: err.message || "Audit failed" })
+  }
+}
+
 module.exports = {
   triggerAnalysis,
   listAnalyses,
@@ -439,4 +606,5 @@ module.exports = {
   getWorkspaceLogs,
   aiEvaluateAnalysis,
   runImprovementCycleEndpoint,
+  generateAuditReport,
 }
