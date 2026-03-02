@@ -29,6 +29,7 @@ import {
   BarChart3,
   RefreshCw,
   ChevronRight,
+  FileText,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -125,6 +126,7 @@ export default function WorkspaceDetailPage() {
   const [analysisType, setAnalysisType] = useState("standard")
   const [selectedTemplate, setSelectedTemplate] = useState("none")
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([])
+  const [selectedUploadIds, setSelectedUploadIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) {
@@ -187,6 +189,7 @@ export default function WorkspaceDetailPage() {
       const body: any = {
         analysis_type: analysisType,
         integration_labels: selectedIntegrations,
+        upload_ids: selectedUploadIds,
       }
 
       if (selectedTemplate !== "none") {
@@ -442,8 +445,14 @@ export default function WorkspaceDetailPage() {
                             onClick={() => {
                               if (selected) {
                                 setSelectedIntegrations((prev) => prev.filter((i) => i !== label))
+                                // Also deselect uploads belonging to this integration
+                                const idsToRemove = uploads.filter((u) => u.integration_label === label).map((u) => u.id)
+                                setSelectedUploadIds((prev) => prev.filter((id) => !idsToRemove.includes(id)))
                               } else {
                                 setSelectedIntegrations((prev) => [...prev, label])
+                                // Auto-select all uploads for this integration
+                                const idsToAdd = uploads.filter((u) => u.integration_label === label).map((u) => u.id)
+                                setSelectedUploadIds((prev) => [...prev, ...idsToAdd.filter((id) => !prev.includes(id))])
                               }
                             }}
                           >
@@ -455,9 +464,84 @@ export default function WorkspaceDetailPage() {
                     </div>
                   </div>
 
+                  {/* File Selection */}
+                  {selectedIntegrations.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm text-gray-400">Select Files to Analyze</label>
+                        <div className="flex gap-2">
+                          <button
+                            className="text-xs text-cyan-400 hover:text-cyan-300"
+                            onClick={() => {
+                              const allIds = uploads
+                                .filter((u) => selectedIntegrations.includes(u.integration_label))
+                                .map((u) => u.id)
+                              setSelectedUploadIds(allIds)
+                            }}
+                          >
+                            Select All
+                          </button>
+                          <span className="text-gray-600 text-xs">|</span>
+                          <button
+                            className="text-xs text-gray-400 hover:text-gray-300"
+                            onClick={() => setSelectedUploadIds([])}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1 max-h-48 overflow-y-auto rounded-md border border-white/10 bg-black/30 p-2">
+                        {uploads
+                          .filter((u) => selectedIntegrations.includes(u.integration_label))
+                          .map((u) => {
+                            const isSelected = selectedUploadIds.includes(u.id)
+                            return (
+                              <label
+                                key={u.id}
+                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                  isSelected ? "bg-cyan-500/10" : "hover:bg-white/5"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setSelectedUploadIds((prev) =>
+                                      isSelected
+                                        ? prev.filter((id) => id !== u.id)
+                                        : [...prev, u.id]
+                                    )
+                                  }}
+                                  className="rounded border-white/20 bg-black/50 text-cyan-500 focus:ring-cyan-500/30"
+                                />
+                                <FileText className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                                <span className="text-sm text-white truncate flex-1">{u.filename}</span>
+                                <Badge className="text-[10px] bg-white/5 text-gray-400 border-white/10 flex-shrink-0">
+                                  {u.integration_label}
+                                </Badge>
+                                <Badge className={`text-[10px] flex-shrink-0 ${
+                                  u.validation_status === "valid"
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : u.validation_status === "invalid"
+                                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                    : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                }`}>
+                                  {u.validation_status}
+                                </Badge>
+                              </label>
+                            )
+                          })}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedUploadIds.length} of{" "}
+                        {uploads.filter((u) => selectedIntegrations.includes(u.integration_label)).length} files selected
+                      </p>
+                    </div>
+                  )}
+
                   <Button
                     onClick={runAnalysis}
-                    disabled={analyzing || selectedIntegrations.length === 0}
+                    disabled={analyzing || selectedUploadIds.length === 0}
                     className="bg-cyan-600 hover:bg-cyan-700 text-white"
                   >
                     {analyzing ? (
@@ -465,7 +549,7 @@ export default function WorkspaceDetailPage() {
                     ) : (
                       <Play className="w-4 h-4 mr-2" />
                     )}
-                    {analyzing ? "Running Analysis..." : "Run Analysis"}
+                    {analyzing ? "Running Analysis..." : `Run Analysis (${selectedUploadIds.length} file${selectedUploadIds.length !== 1 ? "s" : ""})`}
                   </Button>
                 </>
               )}
