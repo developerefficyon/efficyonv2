@@ -243,6 +243,10 @@ async function autoScoreAnalysis(req, res) {
       })
     }
 
+    if (!analysis.analysis_result) {
+      return res.status(400).json({ error: "Analysis has no results. Re-run the analysis first." })
+    }
+
     // Compute detection score
     const detectionScore = computeDetectionScore(analysis.analysis_result, anomalyConfig)
 

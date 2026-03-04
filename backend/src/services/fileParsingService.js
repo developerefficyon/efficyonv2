@@ -268,21 +268,26 @@ Return ONLY valid JSON, no markdown fences.`,
 
 const SCHEMA_KEYWORDS = {
   fortnox: {
-    strong: ["supplierinvoice", "supplierinvoices", "suppliernumber", "suppliername", "invoicenumber", "givenumber"],
-    medium: ["supplier", "faktura", "leverant", "invoice", "duedate", "due date", "balance", "booked", "invoicedate"],
+    // Exclusive: if ANY of these match, it's almost certainly this schema
+    exclusive: ["supplierinvoice", "supplierinvoices", "suppliernumber", "givenumber", "fakturanummer", "leverantörsnummer", "leverantörsnamn"],
+    strong: ["supplierinvoice", "supplierinvoices", "suppliernumber", "suppliername", "invoicenumber", "givenumber", "dokumentnummer"],
+    medium: ["supplier", "faktura", "leverant", "invoice", "duedate", "due date", "balance", "booked", "invoicedate", "förfallodatum", "fakturadatum"],
     weak: ["total", "amount", "date"],
   },
   m365: {
+    exclusive: ["skupartnumber", "skuid", "consumedunits", "prepaidunits", "assignedlicenses", "signinactivity", "userprincipalname"],
     strong: ["skupartnumber", "skuid", "consumedunits", "prepaidunits", "assignedlicenses", "signinactivity"],
     medium: ["license", "licens", "sku", "signin", "sign in", "accountenabled", "userprincipalname"],
-    weak: ["user", "displayname", "email"],
+    weak: ["displayname"],
   },
   hubspot: {
+    exclusive: ["userprovisioningstate", "superadmin", "roleids", "primaryteamid", "lastloginat"],
     strong: ["userprovisioningstate", "superadmin", "roleids", "primaryteamid", "lastloginat"],
     medium: ["hubspot", "provisioning", "roleid", "teamid", "lastlogin", "last login"],
-    weak: ["email", "role", "status"],
+    weak: ["role"],
   },
   generic: {
+    exclusive: [],
     strong: [],
     medium: ["vendor", "cost", "expense", "payment", "category", "department"],
     weak: ["amount", "total", "date", "description", "price"],
@@ -290,7 +295,13 @@ const SCHEMA_KEYWORDS = {
 }
 
 /**
- * Detect which analysis schema matches the data
+ * Detect which analysis schema matches the data.
+ *
+ * Scoring: exclusive match → instant pick (confidence 0.95).
+ * Otherwise weighted keyword scoring with margin check — the winner
+ * must lead the runner-up by at least 30% of its own score to avoid
+ * ambiguous picks.
+ *
  * @param {{ sheets?: Array, extractedTables?: Array }} parsedData
  * @returns {{ detectedSchema: string, confidence: number, columnMapping: Object, allHeaders: string[] }}
  */
@@ -311,24 +322,47 @@ function detectDataSchema(parsedData) {
 
   const headersLower = allHeaders.map((h) => String(h).toLowerCase().replace(/[_\-\s]+/g, ""))
 
-  const scores = {}
+  // 1. Check for exclusive keywords first — instant match
   for (const [schema, keywords] of Object.entries(SCHEMA_KEYWORDS)) {
-    let score = 0
-    for (const h of headersLower) {
-      if (keywords.strong.some((k) => h.includes(k))) score += 3
-      else if (keywords.medium.some((k) => h.includes(k))) score += 2
-      else if (keywords.weak.some((k) => h.includes(k))) score += 1
+    if (!keywords.exclusive || keywords.exclusive.length === 0) continue
+    const exclusiveHits = headersLower.filter((h) =>
+      keywords.exclusive.some((k) => h.includes(k))
+    ).length
+    if (exclusiveHits >= 1) {
+      const columnMapping = buildColumnMapping(allHeaders, schema)
+      return { detectedSchema: schema, confidence: 0.95, columnMapping, allHeaders }
     }
-    scores[schema] = score
   }
 
-  // Find the highest-scoring schema
+  // 2. Weighted keyword scoring (skip weak keywords shared across schemas)
+  const scores = {}
+  const matchCounts = {}
+  for (const [schema, keywords] of Object.entries(SCHEMA_KEYWORDS)) {
+    let score = 0
+    let matches = 0
+    for (const h of headersLower) {
+      if (keywords.strong.some((k) => h.includes(k))) { score += 3; matches++ }
+      else if (keywords.medium.some((k) => h.includes(k))) { score += 2; matches++ }
+      else if (keywords.weak.some((k) => h.includes(k))) { score += 1 }
+    }
+    scores[schema] = score
+    matchCounts[schema] = matches
+  }
+
+  // 3. Sort and apply margin check
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1])
   const [bestSchema, bestScore] = sorted[0]
-  const confidence = Math.min(bestScore / (allHeaders.length * 2), 1)
+  const runnerUpScore = sorted.length > 1 ? sorted[1][1] : 0
 
-  // Only claim a specific schema if we have reasonable confidence
-  const detectedSchema = bestScore >= 4 ? bestSchema : "generic"
+  // Confidence: ratio of strong+medium matches to total keyword pool for this schema
+  const keywords = SCHEMA_KEYWORDS[bestSchema]
+  const keywordPoolSize = keywords.strong.length + keywords.medium.length
+  const matchRatio = keywordPoolSize > 0 ? matchCounts[bestSchema] / keywordPoolSize : 0
+  const confidence = Math.min(matchRatio, 1)
+
+  // Require: score >= 6 AND clear margin over runner-up (30% lead)
+  const hasMargin = bestScore === 0 || (bestScore - runnerUpScore) >= bestScore * 0.3
+  const detectedSchema = bestScore >= 6 && hasMargin ? bestSchema : "generic"
   const columnMapping = buildColumnMapping(allHeaders, detectedSchema)
 
   return { detectedSchema, confidence, columnMapping, allHeaders }

@@ -93,11 +93,18 @@ async function runImprovementCycle(params) {
 
       iterationReport.steps.generate = { uploadCount: uploadIds.length, status: "completed" }
 
-      // Persist anomaly config to workspace metadata
+      // Persist anomaly config to workspace metadata (preserve existing metadata)
+      const { data: currentWs } = await supabase
+        .from("test_workspaces")
+        .select("metadata")
+        .eq("id", workspaceId)
+        .single()
+
       await supabase
         .from("test_workspaces")
         .update({
           metadata: {
+            ...(currentWs?.metadata || {}),
             last_mock_generation: {
               anomaly_config: anomalyConfig,
               integrations,
@@ -122,6 +129,7 @@ async function runImprovementCycle(params) {
       const analysisResult = await runTestAnalysis(workspaceId, {
         analysisType: "standard",
         integrationLabels: integrations,
+        uploadIds,
         options: {},
         template,
         userId,

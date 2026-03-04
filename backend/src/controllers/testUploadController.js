@@ -273,9 +273,9 @@ async function uploadFile(req, res) {
     // 2. Detect schema
     const detection = detectDataSchema(parsedFile)
 
-    // Allow user hints to override low-confidence detection
+    // User hints always override auto-detection — the user knows their data
     let finalSchema = detection.detectedSchema
-    if (integrationHint && detection.confidence < 0.5) {
+    if (integrationHint) {
       const hintMap = { Fortnox: "fortnox", Microsoft365: "m365", HubSpot: "hubspot" }
       finalSchema = hintMap[integrationHint] || finalSchema
     }

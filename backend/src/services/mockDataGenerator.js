@@ -500,12 +500,21 @@ function generateM365Data(config, anomalyConfig = {}) {
     }
   }
 
-  // Over-provisioned: give E5 to users who don't need it (only for scaleup with E5)
+  // Over-provisioned: upgrade some non-E5 users to E5 to create over-provisioning
   if (anomalyConfig.overProvisioned !== false) {
     const e5Sku = licenseMix.find((l) => l.skuPartNumber === "SPE_E5")
     if (e5Sku) {
-      // E5 users are already assigned via the mix — analysis will flag them
-      // No extra injection needed; the license mix itself creates over-provisioning findings
+      const nonE5Users = users.filter(
+        (u) => !u.assignedLicenses.some((l) => l.skuId === e5Sku.skuId)
+      )
+      const overProvisionCount = Math.max(2, Math.floor(nonE5Users.length * 0.1))
+      const targets = pickN(
+        nonE5Users.map((_, i) => users.indexOf(nonE5Users[i])),
+        overProvisionCount
+      )
+      for (const idx of targets) {
+        users[idx].assignedLicenses = [{ skuId: e5Sku.skuId }]
+      }
     }
   }
 
@@ -660,23 +669,6 @@ function generateHubSpotData(config, anomalyConfig = {}) {
     for (const idx of targets) {
       hubspot_users[idx].roleId = null
       hubspot_users[idx].primaryTeamId = null
-    }
-  }
-
-  // Pending invitations: set provisioning state to PENDING
-  if (anomalyConfig.pendingInvitations !== false) {
-    const pendingCount = Math.max(1, Math.ceil(userCount * 0.08))
-    const nonAdminIndices = hubspot_users
-      .map((u, i) => ({ i, isAdmin: u.superAdmin }))
-      .filter((x) => !x.isAdmin)
-      .map((x) => x.i)
-    const targets = pickN(nonAdminIndices, pendingCount)
-    for (const idx of targets) {
-      hubspot_users[idx].userProvisioningState = "PENDING"
-      hubspot_users[idx].status = "PENDING"
-      hubspot_users[idx].lastLoginAt = null
-      // createdAt === updatedAt signals never accepted
-      hubspot_users[idx].updatedAt = hubspot_users[idx].createdAt
     }
   }
 
