@@ -144,6 +144,16 @@ export default function ToolsPage() {
     tier: "professional",
     paidSeats: "",
   })
+  const [quickbooksForm, setQuickbooksForm] = useState({
+    clientId: "",
+    clientSecret: "",
+    environment: "sandbox",
+  })
+  const [shopifyForm, setShopifyForm] = useState({
+    shopDomain: "",
+    clientId: "",
+    clientSecret: "",
+  })
 
   const loadTools = useCallback(async () => {
     try {
@@ -863,6 +873,190 @@ export default function ToolsPage() {
     }
   }
 
+  const handleConnectQuickBooks = async () => {
+    if (!quickbooksForm.clientId || !quickbooksForm.clientSecret) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "QuickBooks",
+              connection_type: "oauth",
+              status: "pending",
+              client_id: quickbooksForm.clientId,
+              client_secret: quickbooksForm.clientSecret,
+              environment: quickbooksForm.environment,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+        throw new Error(errorData.error || "Failed to save QuickBooks configuration")
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/quickbooks/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to QuickBooks to authorize...", {
+        description: "You'll be taken to Intuit to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting QuickBooks:", error)
+      toast.error("Failed to connect QuickBooks", {
+        description: error.message || "An error occurred.",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleConnectShopify = async () => {
+    if (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    // Normalize shop domain
+    let shopDomain = shopifyForm.shopDomain.trim()
+    if (!shopDomain.includes(".myshopify.com")) {
+      shopDomain = `${shopDomain}.myshopify.com`
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "Shopify",
+              connection_type: "oauth",
+              status: "pending",
+              client_id: shopifyForm.clientId,
+              client_secret: shopifyForm.clientSecret,
+              shop_domain: shopDomain,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+        throw new Error(errorData.error || "Failed to save Shopify configuration")
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/shopify/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Shopify to authorize...", {
+        description: "You'll be taken to Shopify to install the app.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting Shopify:", error)
+      toast.error("Failed to connect Shopify", {
+        description: error.message || "An error occurred.",
+      })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
   const handleSyncNow = async (integration: Integration) => {
     setSyncingId(integration.id)
     try {
@@ -1553,8 +1747,14 @@ export default function ToolsPage() {
                       <SelectItem value="hubspot" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
                         HubSpot
                       </SelectItem>
+                      <SelectItem value="quickbooks" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                        QuickBooks
+                      </SelectItem>
+                      <SelectItem value="shopify" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                        Shopify
+                      </SelectItem>
                       {availableTools.length > 0 && availableTools
-                        .filter(tool => !["fortnox", "microsoft365", "hubspot"].includes(tool.name.toLowerCase()))
+                        .filter(tool => !["fortnox", "microsoft365", "hubspot", "quickbooks", "shopify"].includes(tool.name.toLowerCase()))
                         .map((tool) => (
                           <SelectItem
                             key={tool.id}
@@ -1830,6 +2030,133 @@ export default function ToolsPage() {
                 </div>
               </div>
             )}
+
+            {selectedTool === "quickbooks" && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <Label htmlFor="qb-client-id" className="text-gray-300">
+                    Client ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="qb-client-id"
+                    type="text"
+                    placeholder="Your QuickBooks App Client ID"
+                    value={quickbooksForm.clientId}
+                    onChange={(e) =>
+                      setQuickbooksForm({ ...quickbooksForm, clientId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="qb-client-secret" className="text-gray-300">
+                    Client Secret <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="qb-client-secret"
+                    type="password"
+                    placeholder="Your QuickBooks App Client Secret"
+                    value={quickbooksForm.clientSecret}
+                    onChange={(e) =>
+                      setQuickbooksForm({ ...quickbooksForm, clientSecret: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="qb-environment" className="text-gray-300">
+                    Environment
+                  </Label>
+                  <select
+                    id="qb-environment"
+                    value={quickbooksForm.environment}
+                    onChange={(e) =>
+                      setQuickbooksForm({ ...quickbooksForm, environment: e.target.value })
+                    }
+                    className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                  >
+                    <option value="sandbox">Sandbox</option>
+                    <option value="production">Production</option>
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Go to developer.intuit.com and create an app</li>
+                    <li>Select &quot;Accounting&quot; scope</li>
+                    <li>Add redirect URI: your backend callback URL</li>
+                    <li>Copy Client ID and Client Secret here</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            {selectedTool === "shopify" && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-shop" className="text-gray-300">
+                    Shop Domain <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="shopify-shop"
+                    type="text"
+                    placeholder="your-store.myshopify.com"
+                    value={shopifyForm.shopDomain}
+                    onChange={(e) =>
+                      setShopifyForm({ ...shopifyForm, shopDomain: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Your Shopify store URL (e.g., my-store or my-store.myshopify.com)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-client-id" className="text-gray-300">
+                    Client ID <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="shopify-client-id"
+                    type="text"
+                    placeholder="Your Shopify App API Key"
+                    value={shopifyForm.clientId}
+                    onChange={(e) =>
+                      setShopifyForm({ ...shopifyForm, clientId: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-client-secret" className="text-gray-300">
+                    Client Secret <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="shopify-client-secret"
+                    type="password"
+                    placeholder="Your Shopify App API Secret Key"
+                    value={shopifyForm.clientSecret}
+                    onChange={(e) =>
+                      setShopifyForm({ ...shopifyForm, clientSecret: e.target.value })
+                    }
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Go to partners.shopify.com and create an app</li>
+                    <li>Set redirect URL to your backend callback URL</li>
+                    <li>Copy the API Key (Client ID) and API Secret Key (Client Secret)</li>
+                  </ol>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1841,6 +2168,8 @@ export default function ToolsPage() {
                 setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
                 setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
                 setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
+                setQuickbooksForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+                setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
               }}
               className="border-white/10 bg-black/50 text-white"
             >
@@ -1854,6 +2183,10 @@ export default function ToolsPage() {
                   handleConnectMicrosoft365()
                 } else if (selectedTool === "hubspot") {
                   handleConnectHubSpot()
+                } else if (selectedTool === "quickbooks") {
+                  handleConnectQuickBooks()
+                } else if (selectedTool === "shopify") {
+                  handleConnectShopify()
                 }
               }}
               disabled={
@@ -1861,6 +2194,8 @@ export default function ToolsPage() {
                 (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
                 (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
                 (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret || !hubspotForm.paidSeats)) ||
+                (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
+                (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
                 isConnecting
               }
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
