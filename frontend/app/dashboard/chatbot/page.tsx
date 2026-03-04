@@ -28,6 +28,10 @@ import {
   Paperclip,
   FileSpreadsheet,
   X,
+  Zap,
+  Brain,
+  ChevronDown,
+  Check,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTokens } from "@/lib/token-context"
@@ -98,6 +102,105 @@ const suggestedQuestions = {
     "Which vendors have the highest spend?",
     "Are there any anomalies in this data?",
   ],
+}
+
+// Model tiers for inline selector
+const MODEL_TIERS = [
+  { key: "haiku", label: "Haiku", description: "Fast & efficient", multiplier: 1, icon: Zap, color: "text-emerald-400", bg: "bg-emerald-500/20", border: "border-emerald-500/40" },
+  { key: "sonnet", label: "Sonnet", description: "Balanced", multiplier: 2, icon: Brain, color: "text-blue-400", bg: "bg-blue-500/20", border: "border-blue-500/40" },
+  { key: "opus", label: "Opus", description: "Most capable", multiplier: 3, icon: Sparkles, color: "text-purple-400", bg: "bg-purple-500/20", border: "border-purple-500/40" },
+]
+
+function InlineModelSelector() {
+  const { aiModel, refreshTokenBalance } = useTokens()
+  const { isOwner } = useTeamRole()
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const current = MODEL_TIERS.find((t) => t.key === aiModel?.key) || MODEL_TIERS[0]
+  const Icon = current.icon
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectModel = async (key: string) => {
+    if (key === aiModel?.key || !isOwner) return
+    setSaving(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) throw new Error("Session expired")
+      const res = await fetch(`${apiBase}/api/settings/ai-model`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ model: key }),
+      })
+      if (!res.ok) throw new Error("Failed to update")
+      await refreshTokenBalance()
+      const tier = MODEL_TIERS.find((t) => t.key === key)
+      toast.success(`Switched to ${tier?.label || key}`)
+    } catch {
+      toast.error("Failed to switch model")
+    } finally {
+      setSaving(false)
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => isOwner && setOpen(!open)}
+        disabled={saving}
+        className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border",
+          current.border, current.bg, current.color,
+          isOwner ? "hover:brightness-125 cursor-pointer" : "cursor-default opacity-80"
+        )}
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
+        <span>{current.label}</span>
+        {isOwner && <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />}
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-1.5 w-52 rounded-xl border border-white/10 bg-black/95 backdrop-blur-xl shadow-2xl shadow-black/50 z-50 p-1.5">
+          {MODEL_TIERS.map((tier) => {
+            const TierIcon = tier.icon
+            const isActive = tier.key === aiModel?.key
+            return (
+              <button
+                key={tier.key}
+                onClick={() => selectModel(tier.key)}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150",
+                  isActive ? `${tier.bg} ${tier.border} border` : "border border-transparent hover:bg-white/5"
+                )}
+              >
+                <TierIcon className={cn("w-3.5 h-3.5", isActive ? tier.color : "text-gray-400")} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-white">{tier.label}</div>
+                  <div className="text-[10px] text-gray-500">{tier.description}</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("text-[10px] font-semibold", isActive ? tier.color : "text-gray-500")}>
+                    {tier.multiplier}x
+                  </span>
+                  {isActive && <Check className={cn("w-3 h-3", tier.color)} />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Research data cache type
@@ -692,17 +795,20 @@ export default function ChatbotPage() {
                     </CardDescription>
                   </div>
                 </div>
-                {messages.length > 0 && !isViewer && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearChat}
-                    className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    New Chat
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <InlineModelSelector />
+                  {messages.length > 0 && !isViewer && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearChat}
+                      className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      New Chat
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
