@@ -333,6 +333,31 @@ export default function ChatbotPage() {
   const modelMultiplier = aiModel?.multiplier || 1
   const DEEP_RESEARCH_TOKEN_COST = 1 * modelMultiplier
 
+  // Classify whether a prompt needs actual data fetching (heavy) or can be answered for free (basic)
+  const isHeavyPrompt = useCallback((text: string): boolean => {
+    const q = text.toLowerCase().trim()
+
+    // Heavy keywords — anything that asks for actual data from connected tools
+    const heavyPatterns = [
+      // Data fetch triggers
+      /\b(show|list|display|get|fetch|pull|retrieve|export)\b.*\b(invoice|bill|expense|payment|license|user|seat|subscription|supplier|vendor|customer|data|report|metric|number|amount|record|transaction|receipt)\b/,
+      // Analysis triggers requiring real data
+      /\b(analyze|analyse|audit|scan|check|review|inspect|examine)\b.*\b(my|our|the|this|company|account|spending|spend|cost|usage|utilization|activity|invoice|license|tool|subscription|platform)\b/,
+      // Specific data questions
+      /\b(how (much|many)|what('s| is| are) (my|our|the)|total|average|sum|count|breakdown|trend|top|highest|lowest|most|least)\b.*\b(spend|cost|invoice|license|user|seat|payment|expense|subscription|vendor|supplier|tool)\b/,
+      // Direct commands for data
+      /\b(find|detect|identify|spot|flag)\b.*\b(duplicate|unused|inactive|overdue|anomal|waste|saving|optimization|opportunity|leak|overlap|redundant)\b/,
+      // Comparison data requests
+      /\b(compare|cross-reference|correlate|match|gap analysis|cost per)\b/,
+      // Specific tool references asking for their data
+      /\b(fortnox|microsoft 365|m365|hubspot)\b.*\b(data|invoice|license|user|seat|report|dashboard)\b/,
+      // Run/execute actions
+      /\b(run|execute|perform|do|start)\b.*\b(analysis|audit|scan|research|deep dive|report)\b/,
+    ]
+
+    return heavyPatterns.some((pattern) => pattern.test(q))
+  }, [])
+
   // Check if this chat type requires deep research (tool or comparison, not general)
   const requiresResearch = activeTab !== "general"
 
@@ -413,7 +438,8 @@ export default function ChatbotPage() {
     }
 
     // For tool/comparison chat without cached research, show confirmation for token usage
-    if (!selectedFile && requiresResearch && !hasCachedResearch() && !skipConfirmation) {
+    // But only if the prompt actually needs data fetching (heavy prompt)
+    if (!selectedFile && requiresResearch && !hasCachedResearch() && !skipConfirmation && isHeavyPrompt(text)) {
       // Check if user has enough tokens
       const availableTokens = tokenBalance?.available ?? 0
       if (availableTokens < DEEP_RESEARCH_TOKEN_COST) {
@@ -509,6 +535,26 @@ export default function ChatbotPage() {
         clearFile()
       } else if (activeTab === "general") {
         // General chat - use existing endpoint (always free)
+        response = await fetch(`${apiBase}/api/ai/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            question: text,
+            chatType: "general",
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to get response from AI")
+        }
+
+        data = await response.json()
+      } else if (activeTab !== "general" && !isHeavyPrompt(text)) {
+        // Basic/general question on a tool or comparison tab — route to free endpoint
         response = await fetch(`${apiBase}/api/ai/chat`, {
           method: "POST",
           headers: {
@@ -1037,10 +1083,15 @@ export default function ChatbotPage() {
                           <Sparkles className="w-3 h-3" />
                           Research data loaded - follow-up questions are free
                         </span>
+                      ) : input.trim() && !isHeavyPrompt(input) ? (
+                        <span className="flex items-center justify-center gap-1 text-green-400">
+                          <Sparkles className="w-3 h-3" />
+                          General question - free
+                        </span>
                       ) : (
                         <span className="flex items-center justify-center gap-1">
                           <Coins className="w-3 h-3" />
-                          First query costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
+                          Data analysis costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, general questions are free
                           {tokenBalance && (
                             <span className="text-cyan-400 ml-1">
                               ({tokenBalance.available} available)
