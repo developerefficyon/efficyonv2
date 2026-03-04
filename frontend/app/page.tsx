@@ -524,7 +524,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/90" />
 
         <div className="relative z-10 container mx-auto px-4">
-          <div className="grid lg:grid-cols-5 md:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-12">
             {/* Company Info */}
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-4">
@@ -554,6 +554,15 @@ export default function HomePage() {
                   <Facebook className="h-5 w-5" />
                 </a>
               </div>
+
+              <div className="flex items-center space-x-3 text-gray-300">
+                <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <a href="mailto:info@efficyon.com" className="hover:text-white transition-colors duration-300 text-sm">
+                  info@efficyon.com
+                </a>
+              </div>
             </div>
 
             {/* Product */}
@@ -566,6 +575,7 @@ export default function HomePage() {
                   { name: "Subscription Tracking", href: "/features/subscription-tracking" },
                   { name: "Duplicate Detection", href: "/features/duplicate-payment-detection" },
                   { name: "Integrations", href: "/integrations" },
+                  { name: "Solutions", href: "/solutions" },
                 ].map((item) => (
                   <li key={item.name}>
                     <Link
@@ -609,10 +619,11 @@ export default function HomePage() {
               <h4 className="text-lg font-semibold text-white">Company</h4>
               <ul className="space-y-3">
                 {[
-                  { name: "Solutions", href: "/solutions" },
                   { name: "Pricing", href: "#pricing" },
                   { name: "FAQ", href: "#faq" },
                   { name: "Contact", href: "#contact" },
+                  { name: "Privacy Policy", href: "/privacy" },
+                  { name: "Terms of Service", href: "/terms" },
                 ].map((item) => (
                   <li key={item.name}>
                     <Link
@@ -625,11 +636,6 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              <div className="pt-2">
-                <a href="mailto:info@efficyon.com" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
-                  info@efficyon.com
-                </a>
-              </div>
             </div>
           </div>
 
