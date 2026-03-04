@@ -524,7 +524,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/90" />
 
         <div className="relative z-10 container mx-auto px-4">
-          <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-5 md:grid-cols-2 gap-12">
             {/* Company Info */}
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-4">
@@ -556,25 +556,49 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Features */}
+            {/* Product */}
             <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">Features</h4>
+              <h4 className="text-lg font-semibold text-white">Product</h4>
               <ul className="space-y-3">
                 {[
-                  "License Optimization",
-                  "Workflow Analysis",
-                  "AI Recommendations",
-                  "ROI Tracking",
-                  "Integration Hub",
-                ].map((feature) => (
-                  <li key={feature}>
-                    <a
-                      href="#services"
+                  { name: "All Features", href: "/features" },
+                  { name: "Cost Optimization", href: "/features/saas-cost-optimization" },
+                  { name: "Subscription Tracking", href: "/features/subscription-tracking" },
+                  { name: "Duplicate Detection", href: "/features/duplicate-payment-detection" },
+                  { name: "Integrations", href: "/integrations" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
                       className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
                     >
                       <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {feature}
-                    </a>
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div className="space-y-6">
+              <h4 className="text-lg font-semibold text-white">Resources</h4>
+              <ul className="space-y-3">
+                {[
+                  { name: "Blog", href: "/blog" },
+                  { name: "ROI Calculator", href: "/calculator/roi" },
+                  { name: "SaaS Benchmarks", href: "/benchmarks" },
+                  { name: "Tool Analysis", href: "/tools" },
+                  { name: "Compare", href: "/compare" },
+                ].map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
+                    >
+                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {item.name}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -585,36 +609,26 @@ export default function HomePage() {
               <h4 className="text-lg font-semibold text-white">Company</h4>
               <ul className="space-y-3">
                 {[
-                  { name: "About Us", href: "#" },
+                  { name: "Solutions", href: "/solutions" },
                   { name: "Pricing", href: "#pricing" },
                   { name: "FAQ", href: "#faq" },
                   { name: "Contact", href: "#contact" },
                 ].map((item) => (
                   <li key={item.name}>
-                    <a
+                    <Link
                       href={item.href}
                       className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
                     >
                       <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       {item.name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">Get in Touch</h4>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 text-gray-300">
-                  <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <a href="mailto:info@efficyon.com" className="hover:text-white transition-colors duration-300">
-                    info@efficyon.com
-                  </a>
-                </div>
+              <div className="pt-2">
+                <a href="mailto:info@efficyon.com" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                  info@efficyon.com
+                </a>
               </div>
             </div>
           </div>
@@ -622,7 +636,7 @@ export default function HomePage() {
           {/* Bottom Section */}
           <div className="border-t border-white/10 mt-16 pt-8">
             <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
-              <p className="text-gray-400 text-center lg:text-left">© 2025 Efficyon. All rights reserved.</p>
+              <p className="text-gray-400 text-center lg:text-left">© 2026 Efficyon. All rights reserved.</p>
 
               <div className="flex flex-wrap justify-center lg:justify-end space-x-8">
                 <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
