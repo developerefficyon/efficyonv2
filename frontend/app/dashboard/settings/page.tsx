@@ -34,6 +34,9 @@ import {
   X,
   Clock,
   AlertCircle,
+  Coins,
+  Plus,
+  TrendingUp,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
@@ -122,6 +125,10 @@ function SettingsContent() {
   const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false)
+  const [selectedPackage, setSelectedPackage] = useState<string>("")
+  const [isTopUpProcessing, setIsTopUpProcessing] = useState(false)
+  const [tokenPackages, setTokenPackages] = useState<any[]>([])
 
   const [notifications, setNotifications] = useState({
     emailAlerts: true,
@@ -171,20 +178,58 @@ function SettingsContent() {
   // Check for payment success/cancel from Stripe redirect
   useEffect(() => {
     const paymentStatus = searchParams.get("payment")
+    const tokenPurchaseStatus = searchParams.get("token_purchase")
+
     if (paymentStatus === "success") {
       toast.success("Plan changed successfully!", {
         description: "Your subscription has been updated.",
       })
-      // Clean up URL
       router.replace("/dashboard/settings")
     } else if (paymentStatus === "canceled") {
       toast.error("Payment canceled", {
         description: "Your plan change was canceled.",
       })
-      // Clean up URL
+      router.replace("/dashboard/settings")
+    } else if (tokenPurchaseStatus === "success") {
+      toast.success("Tokens purchased successfully!", {
+        description: "Your token balance has been updated.",
+      })
+      router.replace("/dashboard/settings")
+    } else if (tokenPurchaseStatus === "canceled") {
+      toast.error("Token purchase canceled", {
+        description: "No tokens were added.",
+      })
       router.replace("/dashboard/settings")
     }
+
+    // Open top-up modal if URL has topup=true
+    if (searchParams.get("topup") === "true") {
+      setIsTopUpModalOpen(true)
+    }
   }, [searchParams, router])
+
+  // Fetch token packages when top-up modal opens
+  useEffect(() => {
+    if (isTopUpModalOpen && tokenPackages.length === 0) {
+      const fetchPackages = async () => {
+        try {
+          const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+          const accessToken = await getBackendToken()
+          if (!accessToken) return
+          const response = await fetch(`${apiBase}/api/stripe/token-packages`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setTokenPackages(data.packages || [])
+          }
+        } catch (error) {
+          console.error("Failed to fetch token packages:", error)
+        }
+      }
+      fetchPackages()
+    }
+  }, [isTopUpModalOpen, tokenPackages.length])
 
   // Set current plan when modal opens
   useEffect(() => {
@@ -277,6 +322,57 @@ function SettingsContent() {
         description: error instanceof Error ? error.message : "An error occurred",
       })
       setIsProcessing(false)
+    }
+  }
+
+  const handlePurchaseTokens = async () => {
+    if (!selectedPackage) {
+      toast.error("Please select a package")
+      return
+    }
+
+    setIsTopUpProcessing(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const response = await fetch(`${apiBase}/api/stripe/purchase-tokens`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          packageId: selectedPackage,
+          returnUrl: "/dashboard/settings",
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create checkout session")
+      }
+
+      const data = await response.json()
+
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl
+        return
+      }
+
+      throw new Error("No checkout URL available")
+    } catch (error) {
+      console.error("Error creating token purchase session:", error)
+      toast.error("Failed to start checkout", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+      setIsTopUpProcessing(false)
     }
   }
 
@@ -467,6 +563,34 @@ function SettingsContent() {
                 </CardContent>
               </Card>
 
+              {/* Token Top-Up Section */}
+              <div className="mt-6">
+                <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 via-cyan-500/5 to-transparent border border-purple-500/20 hover:border-purple-500/30 transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30">
+                        <Coins className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Need More Tokens?</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Buy additional tokens without changing your plan
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500/50 bg-purple-500/20 text-white hover:bg-purple-500/30 hover:border-purple-400 hover:text-white w-full sm:w-auto transition-all"
+                      onClick={() => setIsTopUpModalOpen(true)}
+                    >
+                      <Plus className="w-3 h-3 mr-2" />
+                      Buy More Tokens
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               {/* AI Model Selection */}
               <div className="mt-6">
                 <AiModelSelector />
@@ -592,6 +716,137 @@ function SettingsContent() {
           </Card>
         </div>
       </div>
+
+      {/* Token Top-Up Modal */}
+      <Dialog open={isTopUpModalOpen} onOpenChange={(open) => {
+        setIsTopUpModalOpen(open)
+        if (!open) {
+          setSelectedPackage("")
+          setIsTopUpProcessing(false)
+        }
+      }}>
+        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[96vw] sm:max-w-2xl max-h-[95vh] overflow-hidden p-0 gap-0 flex flex-col">
+          {/* Header */}
+          <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/10 shrink-0">
+            <button
+              onClick={() => setIsTopUpModalOpen(false)}
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-all z-10"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="text-center space-y-1">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                Buy More Tokens
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-400">
+                One-time purchase. Tokens are added to your current balance and reset with your billing cycle.
+              </DialogDescription>
+            </div>
+          </div>
+
+          {/* Packages */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {tokenPackages.map((pkg) => {
+                const isSelected = selectedPackage === pkg.id
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => setSelectedPackage(pkg.id)}
+                    className={cn(
+                      "relative p-4 rounded-xl border-2 text-left transition-all duration-300",
+                      "hover:scale-[1.02] hover:shadow-lg",
+                      isSelected
+                        ? "border-purple-400 bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-2 ring-purple-500/20"
+                        : "border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent hover:border-white/20"
+                    )}
+                  >
+                    {isSelected && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-cyan-500 flex items-center justify-center shadow-lg z-10">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    )}
+
+                    {pkg.savings && (
+                      <div className="absolute top-3 right-3">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                          {pkg.savings}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold",
+                        isSelected
+                          ? "bg-gradient-to-br from-purple-500/40 to-cyan-500/40 border border-purple-400/50 text-white"
+                          : "bg-white/10 border border-white/20 text-gray-300"
+                      )}>
+                        {pkg.tokens}
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-white">{pkg.label}</p>
+                        <p className="text-xs text-gray-400">{pkg.perToken} per token</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-white">
+                        ${(pkg.priceCents / 100).toFixed(2)}
+                      </span>
+                      <span className="text-xs text-gray-500">one-time</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {tokenPackages.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-black/80">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-400 order-2 sm:order-1">
+                <Shield className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-gray-300">Secure checkout</span>
+                <span className="text-gray-500">powered by Stripe</span>
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTopUpModalOpen(false)}
+                  className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:border-white/20 px-5 h-9 w-full sm:w-auto text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePurchaseTokens}
+                  disabled={!selectedPackage || isTopUpProcessing}
+                  className="bg-gradient-to-r from-purple-500 via-cyan-500 to-purple-500 hover:from-purple-400 hover:via-cyan-400 hover:to-purple-400 text-white font-bold text-sm px-6 h-9 shadow-xl shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-w-0 sm:min-w-[180px] transition-all duration-300"
+                >
+                  {isTopUpProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Purchase Tokens
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Change Plan Modal */}
       <Dialog open={isChangePlanModalOpen} onOpenChange={setIsChangePlanModalOpen}>

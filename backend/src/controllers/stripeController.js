@@ -4,6 +4,16 @@ const tokenService = require("../services/tokenService")
 const { getModelPreference } = require("../services/modelPreferenceService")
 
 /**
+ * Token top-up packages (one-time purchases)
+ */
+const TOKEN_PACKAGES = [
+  { id: "tokens_5",  tokens: 5,  priceCents: 499,  label: "5 Tokens",  perToken: "$1.00", savings: null },
+  { id: "tokens_15", tokens: 15, priceCents: 999,  label: "15 Tokens", perToken: "$0.67", savings: "33% off" },
+  { id: "tokens_30", tokens: 30, priceCents: 1499, label: "30 Tokens", perToken: "$0.50", savings: "50% off" },
+  { id: "tokens_60", tokens: 60, priceCents: 2499, label: "60 Tokens", perToken: "$0.42", savings: "58% off" },
+]
+
+/**
  * Resolve the billing user ID (company owner) for a given user.
  * Team members share the owner's subscription/tokens.
  */
@@ -696,6 +706,11 @@ async function handleCheckoutSessionCompleted(session) {
     return handleTrialSetupCompleted(session)
   }
 
+  // Check if this is a one-time token purchase
+  if (session.metadata?.type === "token_purchase") {
+    return handleTokenPurchaseCompleted(session)
+  }
+
   const userId = session.metadata?.userId
   const planTier = session.metadata?.planTier
 
@@ -869,6 +884,59 @@ async function handleCheckoutSessionCompleted(session) {
     }
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error handling checkout session:`, error.message)
+  }
+}
+
+/**
+ * Handle completed token purchase checkout session
+ */
+async function handleTokenPurchaseCompleted(session) {
+  const userId = session.metadata?.userId
+  const tokens = parseInt(session.metadata?.tokens, 10)
+  const packageId = session.metadata?.packageId
+
+  if (!userId || !tokens) {
+    console.warn(`[${new Date().toISOString()}] Token purchase session missing metadata:`, session.metadata)
+    return
+  }
+
+  console.log(`[${new Date().toISOString()}] Processing token purchase: ${tokens} tokens for user ${userId} (package: ${packageId})`)
+
+  try {
+    const result = await tokenService.addPurchasedTokens(userId, tokens, session.id)
+
+    if (result.success) {
+      console.log(`[${new Date().toISOString()}] Token purchase completed. Balance: ${result.balanceBefore} -> ${result.balanceAfter}`)
+
+      // Record payment
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", userId)
+        .maybeSingle()
+
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle()
+
+      await supabase.from("payments").insert({
+        subscription_id: subscription?.id || null,
+        company_id: profile?.company_id || null,
+        user_id: userId,
+        stripe_checkout_session_id: session.id,
+        amount_cents: session.amount_total || 0,
+        currency: session.currency || "usd",
+        status: "succeeded",
+        description: `Token top-up: ${tokens} tokens (${packageId})`,
+        raw_response: session,
+      })
+    } else {
+      console.error(`[${new Date().toISOString()}] Failed to add purchased tokens:`, result.error)
+    }
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error handling token purchase:`, error.message)
   }
 }
 
@@ -1410,6 +1478,118 @@ async function handleTrialSetupCompleted(session) {
   }
 }
 
+/**
+ * Get available token top-up packages
+ */
+async function getTokenPackages(req, res) {
+  console.log(`[${new Date().toISOString()}] GET /api/stripe/token-packages`)
+
+  try {
+    return res.json({ packages: TOKEN_PACKAGES })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching token packages:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+/**
+ * Purchase a one-time token package via Stripe Checkout
+ */
+async function purchaseTokens(req, res) {
+  console.log(`[${new Date().toISOString()}] POST /api/stripe/purchase-tokens`)
+
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" })
+    }
+
+    const { packageId, returnUrl } = req.body
+
+    if (!packageId) {
+      return res.status(400).json({ error: "packageId is required" })
+    }
+
+    // Validate package
+    const pkg = TOKEN_PACKAGES.find(p => p.id === packageId)
+    if (!pkg) {
+      return res.status(400).json({ error: "Invalid package ID" })
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+    const successUrl = returnUrl
+      ? `${frontendUrl}${returnUrl}?token_purchase=success&session_id={CHECKOUT_SESSION_ID}`
+      : `${frontendUrl}/dashboard/settings?token_purchase=success&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = returnUrl
+      ? `${frontendUrl}${returnUrl}?token_purchase=canceled`
+      : `${frontendUrl}/dashboard/settings?token_purchase=canceled`
+
+    // Resolve billing user (company owner)
+    const billingUserId = await getBillingUserId(user.id)
+
+    // Get or create Stripe customer
+    let { data: existingSubscription } = await supabase
+      .from("subscriptions")
+      .select("stripe_customer_id, company_id")
+      .eq("user_id", billingUserId)
+      .maybeSingle()
+
+    let stripeCustomerId = existingSubscription?.stripe_customer_id
+
+    if (!stripeCustomerId) {
+      // Create Stripe customer
+      stripeCustomerId = await createStripeCustomer(user.id, user.email || "", "")
+    }
+
+    // Get user's company_id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", billingUserId)
+      .maybeSingle()
+
+    // Create one-time Stripe Checkout Session
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer: stripeCustomerId,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${pkg.label} Top-Up`,
+              description: `One-time purchase of ${pkg.tokens} analysis tokens`,
+            },
+            unit_amount: pkg.priceCents,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        type: "token_purchase",
+        packageId: pkg.id,
+        tokens: String(pkg.tokens),
+        userId: billingUserId,
+        companyId: profile?.company_id || "",
+      },
+    })
+
+    console.log(`[${new Date().toISOString()}] Token purchase checkout session created: ${checkoutSession.id}`)
+
+    return res.json({
+      sessionId: checkoutSession.id,
+      sessionUrl: checkoutSession.url,
+      package: pkg,
+    })
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error creating token purchase session:`, error.message)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   createPaymentIntent,
   createTrialSetupSession,
@@ -1423,5 +1603,7 @@ module.exports = {
   adminGetTokenUsage,
   adminAdjustTokens,
   adminChangePlan,
+  getTokenPackages,
+  purchaseTokens,
 }
 

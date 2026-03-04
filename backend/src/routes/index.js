@@ -130,6 +130,8 @@ const {
   adminGetTokenUsage,
   adminAdjustTokens,
   adminChangePlan,
+  getTokenPackages,
+  purchaseTokens,
 } = require("../controllers/stripeController")
 
 // Auth Controller - login
@@ -299,6 +301,8 @@ router.get("/api/stripe/plans", getPlansDetails)
 router.post("/api/stripe/use-tokens", requireAuth, requireRole("owner"), useTokens)
 router.get("/api/stripe/token-history", requireAuth, requireRole("owner", "editor", "viewer"), getTokenHistory)
 router.get("/api/stripe/token-balance", requireAuth, requireRole("owner", "editor", "viewer"), getTokenBalance)
+router.get("/api/stripe/token-packages", requireAuth, requireRole("owner", "editor", "viewer"), getTokenPackages)
+router.post("/api/stripe/purchase-tokens", requireAuth, requireRole("owner"), purchaseTokens)
 
 // Stripe Webhook (requires raw body, no JSON parsing)
 router.post("/api/stripe/webhook", express.raw({type: 'application/json'}), handleStripeWebhook)

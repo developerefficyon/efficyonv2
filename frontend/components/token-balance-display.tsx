@@ -4,7 +4,7 @@ import { useTokens } from "@/lib/token-context"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Coins, AlertTriangle, Sparkles } from "lucide-react"
+import { Coins, AlertTriangle, Sparkles, Plus } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -113,15 +113,27 @@ export function TokenBalanceDisplay({
         </div>
 
         {showUpgrade && tokenBalance.available <= 2 && tokenBalance.total > 0 && (
-          <Link href="/dashboard/settings">
-            <Button
-              size="sm"
-              className="w-full mt-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Upgrade Plan
-            </Button>
-          </Link>
+          <div className="flex gap-2 mt-3">
+            <Link href="/dashboard/settings?topup=true" className="flex-1">
+              <Button
+                size="sm"
+                className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-400 hover:to-cyan-400"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Buy More
+              </Button>
+            </Link>
+            <Link href="/dashboard/settings" className="flex-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Upgrade
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
     )

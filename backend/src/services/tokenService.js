@@ -386,6 +386,65 @@ async function getAllTokenUsage() {
   return { customers: formattedData }
 }
 
+/**
+ * Add purchased tokens to a user's balance (one-time top-up)
+ * @param {string} userId - User ID (will resolve to company owner)
+ * @param {number} tokensToAdd - Number of tokens to add
+ * @param {string} purchaseId - Stripe checkout session ID for reference
+ * @returns {Promise<Object>} Result with updated balance
+ */
+async function addPurchasedTokens(userId, tokensToAdd, purchaseId) {
+  console.log(`[${new Date().toISOString()}] Adding ${tokensToAdd} purchased tokens for user ${userId}`)
+
+  const { data: tokenBalance, error: fetchError } = await supabase
+    .from("token_balances")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (fetchError || !tokenBalance) {
+    console.error(`[${new Date().toISOString()}] Error fetching token balance for purchase:`, fetchError?.message)
+    return { success: false, error: "No token balance found" }
+  }
+
+  const balanceBefore = tokenBalance.total_tokens - tokenBalance.used_tokens
+  const newTotalTokens = tokenBalance.total_tokens + tokensToAdd
+  const balanceAfter = newTotalTokens - tokenBalance.used_tokens
+
+  const { error: updateError } = await supabase
+    .from("token_balances")
+    .update({
+      total_tokens: newTotalTokens,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", tokenBalance.id)
+
+  if (updateError) {
+    console.error(`[${new Date().toISOString()}] Error updating token balance for purchase:`, updateError.message)
+    return { success: false, error: updateError.message }
+  }
+
+  // Log purchase to usage history
+  await supabase.from("token_usage_history").insert({
+    user_id: userId,
+    company_id: tokenBalance.company_id,
+    tokens_consumed: -tokensToAdd, // Negative = tokens added
+    action_type: "token_purchase",
+    description: `Purchased ${tokensToAdd} tokens (Session: ${purchaseId})`,
+    balance_before: balanceBefore,
+    balance_after: balanceAfter,
+  })
+
+  console.log(`[${new Date().toISOString()}] Tokens purchased successfully. Balance: ${balanceBefore} -> ${balanceAfter}`)
+
+  return {
+    success: true,
+    tokensAdded: tokensToAdd,
+    balanceBefore,
+    balanceAfter,
+  }
+}
+
 module.exports = {
   TOKEN_COSTS,
   checkTokenBalance,
@@ -393,6 +452,7 @@ module.exports = {
   refundTokens,
   resetTokensForRenewal,
   adminAdjustTokens,
+  addPurchasedTokens,
   calculateTokenCost,
   getActionType,
   getTokenHistory,
