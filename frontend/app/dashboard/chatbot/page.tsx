@@ -80,6 +80,20 @@ const suggestedQuestions = {
     "Analyze HubSpot user activity",
     "What's my HubSpot cost optimization potential?",
   ],
+  quickbooks: [
+    "Show me all overdue customer invoices",
+    "Analyze vendor payment patterns",
+    "Find potential duplicate vendor payments",
+    "Show expense category breakdown",
+    "What are my recurring subscriptions?",
+  ],
+  shopify: [
+    "Show my top-selling products",
+    "Which apps cost the most per month?",
+    "Find dead inventory items",
+    "Analyze product margins",
+    "Show order volume and revenue trends",
+  ],
   comparison: [
     "Run a deep analysis across all platforms",
     "Show cost vs. activity gap analysis",
@@ -350,7 +364,7 @@ export default function ChatbotPage() {
       // Comparison data requests
       /\b(compare|cross-reference|correlate|match|gap analysis|cost per)\b/,
       // Specific tool references asking for their data
-      /\b(fortnox|microsoft 365|m365|hubspot)\b.*\b(data|invoice|license|user|seat|report|dashboard)\b/,
+      /\b(fortnox|microsoft 365|m365|hubspot|quickbooks|qbo|shopify)\b.*\b(data|invoice|bill|license|user|seat|report|dashboard|order|product|app|inventory|vendor|expense)\b/,
       // Run/execute actions
       /\b(run|execute|perform|do|start)\b.*\b(analysis|audit|scan|research|deep dive|report)\b/,
     ]
@@ -719,6 +733,17 @@ export default function ChatbotPage() {
     if (q.includes("seat") || q.includes("hubspot user")) return "users"
     if (q.includes("hubspot account") || q.includes("portal")) return "account"
 
+    // QuickBooks data types
+    if (q.includes("bill") || q.includes("vendor payment")) return "bills"
+    if (q.includes("quickbooks expense") || q.includes("purchase")) return "expenses"
+    if (q.includes("quickbooks vendor") || q.includes("qbo vendor")) return "vendors"
+    if (q.includes("chart of accounts") || q.includes("account list")) return "accounts"
+
+    // Shopify data types
+    if (q.includes("order") || q.includes("revenue") || q.includes("fulfillment")) return "orders"
+    if (q.includes("product") || q.includes("catalog") || q.includes("inventory")) return "products"
+    if (q.includes("app charge") || q.includes("app subscription") || q.includes("installed app")) return "app-charges"
+
     return "general"
   }
 
@@ -790,6 +815,12 @@ export default function ChatbotPage() {
       }
       if (provider === "hubspot") {
         return "Ask about HubSpot seats, users, activity, and cost optimization"
+      }
+      if (provider === "quickbooks") {
+        return "Ask about invoices, bills, vendors, expenses, and financial analysis"
+      }
+      if (provider === "shopify") {
+        return "Ask about orders, products, app subscriptions, inventory, and margins"
       }
     }
     return "Ask questions about this tool's data and get insights"

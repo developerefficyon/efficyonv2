@@ -103,6 +103,20 @@ export default function ToolDetailPage() {
     users?: any[]
     accountInfo?: any
   }>({})
+  const [quickbooksInfo, setQuickbooksInfo] = useState<{
+    company?: any
+    invoices?: any[]
+    bills?: any[]
+    expenses?: any[]
+    vendors?: any[]
+    accounts?: any[]
+  }>({})
+  const [shopifyInfo, setShopifyInfo] = useState<{
+    shop?: any
+    orders?: any[]
+    products?: any[]
+    appCharges?: any[]
+  }>({})
   const [isLoadingInfo, setIsLoadingInfo] = useState(false)
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
@@ -193,6 +207,10 @@ export default function ToolDetailPage() {
         setActiveDataTab("licenses")
       } else if (found.tool_name === "HubSpot" || found.provider === "HubSpot") {
         setActiveDataTab("users")
+      } else if (found.tool_name === "QuickBooks" || found.provider === "QuickBooks") {
+        setActiveDataTab("company")
+      } else if (found.tool_name === "Shopify" || found.provider === "Shopify") {
+        setActiveDataTab("shop")
       } else {
         setActiveDataTab("company")
       }
@@ -211,6 +229,16 @@ export default function ToolDetailPage() {
       // If it's HubSpot and connected, load the information
       if (found.tool_name === "HubSpot" && found.status === "connected") {
         void loadHubSpotInfo(found)
+      }
+
+      // If it's QuickBooks and connected, load the information
+      if (found.tool_name === "QuickBooks" && found.status === "connected") {
+        void loadQuickBooksInfo(found)
+      }
+
+      // If it's Shopify and connected, load the information
+      if (found.tool_name === "Shopify" && found.status === "connected") {
+        void loadShopifyInfo(found)
       }
     } catch (error) {
       console.error("Error loading integration:", error)
@@ -546,6 +574,208 @@ export default function ToolDetailPage() {
     } catch (error) {
       console.error("Error loading HubSpot info:", error)
       toast.error("Failed to load HubSpot information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const loadQuickBooksInfo = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setQuickbooksInfo({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [companyRes, invoicesRes, billsRes, vendorsRes, accountsRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/quickbooks/company`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/quickbooks/invoices`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/quickbooks/bills`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/quickbooks/vendors`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/quickbooks/accounts`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      for (const response of [companyRes, invoicesRes, billsRes, vendorsRes, accountsRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your QuickBooks integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (companyRes.status === "fulfilled" && companyRes.value.ok) {
+        try {
+          const data = await companyRes.value.json()
+          info.company = data.companyInfo || data
+        } catch (e) {
+          console.error("Error parsing QuickBooks company:", e)
+        }
+      }
+
+      if (invoicesRes.status === "fulfilled" && invoicesRes.value.ok) {
+        try {
+          const data = await invoicesRes.value.json()
+          info.invoices = data.invoices || []
+        } catch (e) {
+          console.error("Error parsing QuickBooks invoices:", e)
+        }
+      }
+
+      if (billsRes.status === "fulfilled" && billsRes.value.ok) {
+        try {
+          const data = await billsRes.value.json()
+          info.bills = data.bills || []
+        } catch (e) {
+          console.error("Error parsing QuickBooks bills:", e)
+        }
+      }
+
+      if (vendorsRes.status === "fulfilled" && vendorsRes.value.ok) {
+        try {
+          const data = await vendorsRes.value.json()
+          info.vendors = data.vendors || []
+        } catch (e) {
+          console.error("Error parsing QuickBooks vendors:", e)
+        }
+      }
+
+      if (accountsRes.status === "fulfilled" && accountsRes.value.ok) {
+        try {
+          const data = await accountsRes.value.json()
+          info.accounts = data.accounts || []
+        } catch (e) {
+          console.error("Error parsing QuickBooks accounts:", e)
+        }
+      }
+
+      setQuickbooksInfo(info)
+    } catch (error) {
+      console.error("Error loading QuickBooks info:", error)
+      toast.error("Failed to load QuickBooks information")
+    } finally {
+      setIsLoadingInfo(false)
+    }
+  }
+
+  const loadShopifyInfo = async (integration: Integration) => {
+    setIsLoadingInfo(true)
+    setShopifyInfo({})
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Authentication required")
+        setIsLoadingInfo(false)
+        return
+      }
+
+      const [shopRes, ordersRes, productsRes, appChargesRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/integrations/shopify/shop`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/shopify/orders`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/shopify/products`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`${apiBase}/api/integrations/shopify/app-charges`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ])
+
+      const info: any = {}
+
+      for (const response of [shopRes, ordersRes, productsRes, appChargesRes]) {
+        if (response.status === "fulfilled" && !response.value.ok) {
+          try {
+            const errorClone = response.value.clone()
+            const errorData = await errorClone.json()
+            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+              toast.error("Integration token expired", {
+                description: "Please reconnect your Shopify integration to continue.",
+                duration: 10000,
+              })
+              setIsLoadingInfo(false)
+              return
+            }
+          } catch (e) {
+            // Ignore JSON parse errors
+          }
+        }
+      }
+
+      if (shopRes.status === "fulfilled" && shopRes.value.ok) {
+        try {
+          const data = await shopRes.value.json()
+          info.shop = data.shop || data
+        } catch (e) {
+          console.error("Error parsing Shopify shop:", e)
+        }
+      }
+
+      if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+        try {
+          const data = await ordersRes.value.json()
+          info.orders = data.orders || []
+        } catch (e) {
+          console.error("Error parsing Shopify orders:", e)
+        }
+      }
+
+      if (productsRes.status === "fulfilled" && productsRes.value.ok) {
+        try {
+          const data = await productsRes.value.json()
+          info.products = data.products || []
+        } catch (e) {
+          console.error("Error parsing Shopify products:", e)
+        }
+      }
+
+      if (appChargesRes.status === "fulfilled" && appChargesRes.value.ok) {
+        try {
+          const data = await appChargesRes.value.json()
+          info.appCharges = data.recurring_application_charges || data.appCharges || []
+        } catch (e) {
+          console.error("Error parsing Shopify app charges:", e)
+        }
+      }
+
+      setShopifyInfo(info)
+    } catch (error) {
+      console.error("Error loading Shopify info:", error)
+      toast.error("Failed to load Shopify information")
     } finally {
       setIsLoadingInfo(false)
     }
@@ -1630,7 +1860,9 @@ export default function ToolDetailPage() {
   const isFortnox = integration.tool_name === "Fortnox" || integration.provider === "Fortnox"
   const isMicrosoft365 = integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365"
   const isHubSpot = integration.tool_name === "HubSpot" || integration.provider === "HubSpot"
-  const hasFullUI = isFortnox || isMicrosoft365 || isHubSpot
+  const isQuickBooks = integration.tool_name === "QuickBooks" || integration.provider === "QuickBooks"
+  const isShopify = integration.tool_name === "Shopify" || integration.provider === "Shopify"
+  const hasFullUI = isFortnox || isMicrosoft365 || isHubSpot || isQuickBooks || isShopify
 
   return (
     <>
@@ -2823,7 +3055,7 @@ export default function ToolDetailPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
                     <Package className="w-5 h-5" />
-                    {isMicrosoft365 ? "Microsoft 365 Data" : "Fortnox Data"}
+                    {isMicrosoft365 ? "Microsoft 365 Data" : isHubSpot ? "HubSpot Data" : isQuickBooks ? "QuickBooks Data" : isShopify ? "Shopify Data" : "Fortnox Data"}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2937,6 +3169,152 @@ export default function ToolDetailPage() {
                             >
                               <Settings className="w-4 h-4" />
                               <span className="hidden sm:inline">Account</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Data Tab Navigation - QuickBooks */}
+                        {isQuickBooks && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("company")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "company"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Wallet className="w-4 h-4" />
+                              <span className="hidden sm:inline">Company</span>
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("invoices")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "invoices"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="hidden sm:inline">Invoices</span>
+                              {quickbooksInfo.invoices && quickbooksInfo.invoices.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {quickbooksInfo.invoices.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("bills")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "bills"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Receipt className="w-4 h-4" />
+                              <span className="hidden sm:inline">Bills</span>
+                              {quickbooksInfo.bills && quickbooksInfo.bills.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {quickbooksInfo.bills.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("vendors")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "vendors"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline">Vendors</span>
+                              {quickbooksInfo.vendors && quickbooksInfo.vendors.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {quickbooksInfo.vendors.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("accounts")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "accounts"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <BookOpen className="w-4 h-4" />
+                              <span className="hidden sm:inline">Accounts</span>
+                              {quickbooksInfo.accounts && quickbooksInfo.accounts.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {quickbooksInfo.accounts.length}
+                                </Badge>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Data Tab Navigation - Shopify */}
+                        {isShopify && (
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                            <button
+                              onClick={() => setActiveDataTab("shop")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "shop"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Settings className="w-4 h-4" />
+                              <span className="hidden sm:inline">Shop Info</span>
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("orders")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "orders"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span className="hidden sm:inline">Orders</span>
+                              {shopifyInfo.orders && shopifyInfo.orders.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {shopifyInfo.orders.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("products")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "products"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <Package className="w-4 h-4" />
+                              <span className="hidden sm:inline">Products</span>
+                              {shopifyInfo.products && shopifyInfo.products.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {shopifyInfo.products.length}
+                                </Badge>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setActiveDataTab("appCharges")}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                                activeDataTab === "appCharges"
+                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              <span className="hidden sm:inline">App Subscriptions</span>
+                              {shopifyInfo.appCharges && shopifyInfo.appCharges.length > 0 && (
+                                <Badge className="h-5 px-1.5 text-[10px] bg-white/10 text-gray-300 border-white/20">
+                                  {shopifyInfo.appCharges.length}
+                                </Badge>
+                              )}
                             </button>
                           </div>
                         )}
@@ -3297,6 +3675,495 @@ export default function ToolDetailPage() {
 
                       {/* Show message if no HubSpot data */}
                       {isHubSpot && Object.keys(hubspotInfo).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* QuickBooks Company Tab */}
+                      {isQuickBooks && activeDataTab === "company" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Wallet className="w-4 h-4 text-cyan-400" />
+                            Company Information
+                          </h3>
+                          {quickbooksInfo.company ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {(quickbooksInfo.company.CompanyName || quickbooksInfo.company.LegalName) && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
+                                  <p className="text-white font-medium">{quickbooksInfo.company.CompanyName || quickbooksInfo.company.LegalName}</p>
+                                </div>
+                              )}
+                              {quickbooksInfo.company.CompanyAddr && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Address</p>
+                                  <p className="text-white font-medium">
+                                    {[quickbooksInfo.company.CompanyAddr.Line1, quickbooksInfo.company.CompanyAddr.City, quickbooksInfo.company.CompanyAddr.CountrySubDivisionCode].filter(Boolean).join(", ")}
+                                  </p>
+                                </div>
+                              )}
+                              {quickbooksInfo.company.FiscalYearStartMonth && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fiscal Year Start</p>
+                                  <p className="text-white font-medium">Month {quickbooksInfo.company.FiscalYearStartMonth}</p>
+                                </div>
+                              )}
+                              {quickbooksInfo.company.Country && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
+                                  <p className="text-white font-medium">{quickbooksInfo.company.Country}</p>
+                                </div>
+                              )}
+                              {quickbooksInfo.company.CompanyEmail?.Address && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email</p>
+                                  <p className="text-white font-medium">{quickbooksInfo.company.CompanyEmail.Address}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              Company information not available.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* QuickBooks Invoices Tab */}
+                      {isQuickBooks && activeDataTab === "invoices" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-cyan-400" />
+                            Invoices
+                            {quickbooksInfo.invoices && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {quickbooksInfo.invoices.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {quickbooksInfo.invoices && quickbooksInfo.invoices.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Doc #</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Customer</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Total</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Balance</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Due Date</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Txn Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(quickbooksInfo.invoices, infoSearchQuery).slice(0, 50).map((inv: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{inv.DocNumber || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{inv.CustomerRef?.name || "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">{inv.TotalAmt ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-white">{inv.Balance ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">{inv.DueDate || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">{inv.TxnDate || "N/A"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {quickbooksInfo.invoices.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {quickbooksInfo.invoices.length} invoices. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No invoices found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* QuickBooks Bills Tab */}
+                      {isQuickBooks && activeDataTab === "bills" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Receipt className="w-4 h-4 text-cyan-400" />
+                            Bills
+                            {quickbooksInfo.bills && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {quickbooksInfo.bills.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {quickbooksInfo.bills && quickbooksInfo.bills.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Doc #</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Vendor</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Total</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Balance</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Due Date</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Txn Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(quickbooksInfo.bills, infoSearchQuery).slice(0, 50).map((bill: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{bill.DocNumber || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{bill.VendorRef?.name || "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">{bill.TotalAmt ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-white">{bill.Balance ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">{bill.DueDate || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">{bill.TxnDate || "N/A"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {quickbooksInfo.bills.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {quickbooksInfo.bills.length} bills. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No bills found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* QuickBooks Vendors Tab */}
+                      {isQuickBooks && activeDataTab === "vendors" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-cyan-400" />
+                            Vendors
+                            {quickbooksInfo.vendors && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {quickbooksInfo.vendors.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {quickbooksInfo.vendors && quickbooksInfo.vendors.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Display Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Company</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Phone</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Email</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(quickbooksInfo.vendors, infoSearchQuery).slice(0, 50).map((vendor: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{vendor.DisplayName || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{vendor.CompanyName || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{vendor.PrimaryPhone?.FreeFormNumber || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{vendor.PrimaryEmailAddr?.Address || "N/A"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {quickbooksInfo.vendors.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {quickbooksInfo.vendors.length} vendors. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No vendors found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* QuickBooks Accounts Tab */}
+                      {isQuickBooks && activeDataTab === "accounts" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-cyan-400" />
+                            Accounts
+                            {quickbooksInfo.accounts && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {quickbooksInfo.accounts.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {quickbooksInfo.accounts && quickbooksInfo.accounts.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Type</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Balance</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(quickbooksInfo.accounts, infoSearchQuery).slice(0, 50).map((acct: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{acct.Name || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400">{acct.AccountType || "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">{acct.CurrentBalance ?? "N/A"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {quickbooksInfo.accounts.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {quickbooksInfo.accounts.length} accounts. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No accounts found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no QuickBooks data */}
+                      {isQuickBooks && Object.keys(quickbooksInfo).length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
+                        </div>
+                      )}
+
+                      {/* Shopify Shop Info Tab */}
+                      {isShopify && activeDataTab === "shop" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Settings className="w-4 h-4 text-cyan-400" />
+                            Shop Information
+                          </h3>
+                          {shopifyInfo.shop ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {shopifyInfo.shop.name && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shop Name</p>
+                                  <p className="text-white font-medium">{shopifyInfo.shop.name}</p>
+                                </div>
+                              )}
+                              {shopifyInfo.shop.domain && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Domain</p>
+                                  <p className="text-white font-medium">{shopifyInfo.shop.domain}</p>
+                                </div>
+                              )}
+                              {shopifyInfo.shop.plan_name && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Plan</p>
+                                  <p className="text-white font-medium capitalize">{shopifyInfo.shop.plan_name}</p>
+                                </div>
+                              )}
+                              {shopifyInfo.shop.country_name && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
+                                  <p className="text-white font-medium">{shopifyInfo.shop.country_name}</p>
+                                </div>
+                              )}
+                              {shopifyInfo.shop.currency && (
+                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Currency</p>
+                                  <p className="text-white font-medium">{shopifyInfo.shop.currency}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">
+                              Shop information not available.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Shopify Orders Tab */}
+                      {isShopify && activeDataTab === "orders" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-cyan-400" />
+                            Orders
+                            {shopifyInfo.orders && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {shopifyInfo.orders.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {shopifyInfo.orders && shopifyInfo.orders.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Order</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Created</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Total</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Payment</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Fulfillment</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(shopifyInfo.orders, infoSearchQuery).slice(0, 50).map((order: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{order.name || "N/A"}</td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {order.created_at ? new Date(order.created_at).toLocaleDateString() : "N/A"}
+                                      </td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">{order.total_price ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={
+                                          order.financial_status === "paid"
+                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                            : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                        }>
+                                          {order.financial_status || "N/A"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={
+                                          order.fulfillment_status === "fulfilled"
+                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                            : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                        }>
+                                          {order.fulfillment_status || "unfulfilled"}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {shopifyInfo.orders.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {shopifyInfo.orders.length} orders. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No orders found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Shopify Products Tab */}
+                      {isShopify && activeDataTab === "products" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Package className="w-4 h-4 text-cyan-400" />
+                            Products
+                            {shopifyInfo.products && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {shopifyInfo.products.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {shopifyInfo.products && shopifyInfo.products.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Title</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Variants</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Price Range</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(shopifyInfo.products, infoSearchQuery).slice(0, 50).map((product: any, idx: number) => {
+                                    const prices = (product.variants || []).map((v: any) => parseFloat(v.price || "0")).filter((p: number) => !isNaN(p))
+                                    const minPrice = prices.length > 0 ? Math.min(...prices) : null
+                                    const maxPrice = prices.length > 0 ? Math.max(...prices) : null
+                                    return (
+                                      <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                        <td className="py-3 px-4 text-white font-medium">{product.title || "N/A"}</td>
+                                        <td className="py-3 px-4 text-center">
+                                          <Badge className={
+                                            product.status === "active"
+                                              ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                              : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                          }>
+                                            {product.status || "N/A"}
+                                          </Badge>
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-cyan-400">{product.variants?.length || 0}</td>
+                                        <td className="py-3 px-4 text-right text-white">
+                                          {minPrice !== null
+                                            ? minPrice === maxPrice
+                                              ? `${minPrice}`
+                                              : `${minPrice} - ${maxPrice}`
+                                            : "N/A"}
+                                        </td>
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                              {shopifyInfo.products.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {shopifyInfo.products.length} products. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No products found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Shopify App Subscriptions Tab */}
+                      {isShopify && activeDataTab === "appCharges" && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-cyan-400" />
+                            App Subscriptions
+                            {shopifyInfo.appCharges && (
+                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                {shopifyInfo.appCharges.length}
+                              </Badge>
+                            )}
+                          </h3>
+                          {shopifyInfo.appCharges && shopifyInfo.appCharges.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-white/10">
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Price</th>
+                                    <th className="text-center py-3 px-4 text-gray-400 font-medium">Status</th>
+                                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Created</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filterData(shopifyInfo.appCharges, infoSearchQuery).slice(0, 50).map((charge: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <td className="py-3 px-4 text-white font-medium">{charge.name || "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-cyan-400">{charge.price ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-center">
+                                        <Badge className={
+                                          charge.status === "active"
+                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                            : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                        }>
+                                          {charge.status || "N/A"}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4 text-gray-400 text-xs">
+                                        {charge.created_at ? new Date(charge.created_at).toLocaleDateString() : "N/A"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {shopifyInfo.appCharges.length > 50 && (
+                                <p className="text-center text-gray-500 text-sm mt-4">
+                                  Showing 50 of {shopifyInfo.appCharges.length} subscriptions. Use search to filter.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-400">No app subscriptions found.</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show message if no Shopify data */}
+                      {isShopify && Object.keys(shopifyInfo).length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-gray-400">No data available. Data is loading or integration needs to be reconnected.</p>
                         </div>

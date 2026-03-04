@@ -48,7 +48,9 @@ async function chatComparison(req, res) {
       .in("provider", [
         "Fortnox", "fortnox",
         "Microsoft365", "microsoft365", "Microsoft 365", "microsoft 365",
-        "HubSpot", "hubspot"
+        "HubSpot", "hubspot",
+        "QuickBooks", "quickbooks",
+        "Shopify", "shopify"
       ])
 
     if (intError) {
@@ -67,9 +69,15 @@ async function chatComparison(req, res) {
     const hubspotIntegration = integrations?.find(i =>
       i.provider?.toLowerCase() === "hubspot"
     )
+    const quickbooksIntegration = integrations?.find(i =>
+      i.provider?.toLowerCase() === "quickbooks"
+    )
+    const shopifyIntegration = integrations?.find(i =>
+      i.provider?.toLowerCase() === "shopify"
+    )
 
     // Count connected platforms
-    const connectedPlatforms = [fortnoxIntegration, m365Integration, hubspotIntegration].filter(Boolean)
+    const connectedPlatforms = [fortnoxIntegration, m365Integration, hubspotIntegration, quickbooksIntegration, shopifyIntegration].filter(Boolean)
 
     if (connectedPlatforms.length < 2) {
       const connected = []
@@ -80,6 +88,10 @@ async function chatComparison(req, res) {
       else missing.push("Microsoft 365")
       if (hubspotIntegration) connected.push("HubSpot")
       else missing.push("HubSpot")
+      if (quickbooksIntegration) connected.push("QuickBooks")
+      else missing.push("QuickBooks")
+      if (shopifyIntegration) connected.push("Shopify")
+      else missing.push("Shopify")
 
       return res.status(400).json({
         error: `Cross-platform comparison requires at least 2 platforms connected. You have ${connectedPlatforms.length} connected (${connected.join(", ") || "none"}). Connect one of: ${missing.join(", ")}`
@@ -93,6 +105,8 @@ async function chatComparison(req, res) {
     let fortnoxData = null
     let m365Data = null
     let hubspotData = null
+    let quickbooksData = null
+    let shopifyData = null
     let metrics = null
     let tokensUsed = 0
     let isDeepResearch = false
@@ -110,6 +124,8 @@ async function chatComparison(req, res) {
       fortnoxData = cachedResearchData.fortnoxData || null
       m365Data = cachedResearchData.m365Data || null
       hubspotData = cachedResearchData.hubspotData || null
+      quickbooksData = cachedResearchData.quickbooksData || null
+      shopifyData = cachedResearchData.shopifyData || null
       // Recalculate metrics from cached data
       metrics = comparisonAnalysisService.calculateCrossplatformMetrics(fortnoxData, m365Data, hubspotData)
     } else {
@@ -149,6 +165,14 @@ async function chatComparison(req, res) {
         fetchPromises.push(fetchHubSpotComparisonData(hubspotIntegration, req))
         platformNames.push("hubspot")
       }
+      if (quickbooksIntegration) {
+        fetchPromises.push(fetchQuickBooksComparisonData(quickbooksIntegration, req))
+        platformNames.push("quickbooks")
+      }
+      if (shopifyIntegration) {
+        fetchPromises.push(fetchShopifyComparisonData(shopifyIntegration, req))
+        platformNames.push("shopify")
+      }
 
       const results = await Promise.all(fetchPromises)
 
@@ -157,6 +181,8 @@ async function chatComparison(req, res) {
         if (name === "fortnox") fortnoxData = results[index]
         else if (name === "m365") m365Data = results[index]
         else if (name === "hubspot") hubspotData = results[index]
+        else if (name === "quickbooks") quickbooksData = results[index]
+        else if (name === "shopify") shopifyData = results[index]
       })
 
       // Calculate cross-platform metrics
@@ -187,6 +213,8 @@ async function chatComparison(req, res) {
       m365Data,
       metrics,
       hubspotData,
+      quickbooksData,
+      shopifyData,
       modelOpts
     )
 
@@ -198,6 +226,8 @@ async function chatComparison(req, res) {
         fortnoxData,
         m365Data,
         hubspotData,
+        quickbooksData,
+        shopifyData,
       },
       metrics: {
         costMetrics: metrics.costMetrics,
@@ -391,6 +421,98 @@ async function callControllerMethod(method, req) {
 }
 
 /**
+ * Fetch QuickBooks data for comparison analysis
+ */
+async function fetchQuickBooksComparisonData(integration, req) {
+  const quickbooksController = require("./quickbooksController")
+  const mockReq = { ...req, user: req.user }
+
+  const data = {
+    bills: null,
+    costLeaks: null,
+  }
+
+  try {
+    const billsResult = await callControllerMethod(
+      quickbooksController.getQuickBooksBills,
+      mockReq
+    )
+    data.bills = billsResult?.bills || billsResult?.Bill || []
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching QuickBooks bills:`, error.message)
+  }
+
+  try {
+    const costLeaksResult = await callControllerMethod(
+      quickbooksController.analyzeQuickBooksCostLeaks,
+      mockReq
+    )
+    data.costLeaks = costLeaksResult?.analysis || costLeaksResult || null
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching QuickBooks cost leaks:`, error.message)
+  }
+
+  return data
+}
+
+/**
+ * Fetch Shopify data for comparison analysis
+ */
+async function fetchShopifyComparisonData(integration, req) {
+  const shopifyController = require("./shopifyController")
+  const mockReq = { ...req, user: req.user }
+
+  const data = {
+    orders: null,
+    products: null,
+    appCharges: null,
+    costLeaks: null,
+  }
+
+  try {
+    const ordersResult = await callControllerMethod(
+      shopifyController.getShopifyOrders,
+      mockReq
+    )
+    data.orders = ordersResult?.orders || []
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching Shopify orders:`, error.message)
+  }
+
+  try {
+    const productsResult = await callControllerMethod(
+      shopifyController.getShopifyProducts,
+      mockReq
+    )
+    data.products = productsResult?.products || []
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching Shopify products:`, error.message)
+  }
+
+  try {
+    const appChargesResult = await callControllerMethod(
+      shopifyController.getShopifyAppCharges,
+      mockReq
+    )
+    data.appCharges = appChargesResult?.appCharges || appChargesResult?.recurring_application_charges || []
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching Shopify app charges:`, error.message)
+  }
+
+  try {
+    const costLeaksResult = await callControllerMethod(
+      shopifyController.analyzeShopifyCostLeaks,
+      mockReq
+    )
+    data.costLeaks = costLeaksResult?.analysis || costLeaksResult || null
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching Shopify cost leaks:`, error.message)
+  }
+
+  return data
+}
+
+/**
  * Check if user has at least 2 platforms connected for comparison
  */
 async function checkComparisonAvailability(req, res) {
@@ -440,7 +562,15 @@ async function checkComparisonAvailability(req, res) {
       i.provider?.toLowerCase() === "hubspot"
     ) || false
 
-    const connectedCount = [fortnoxConnected, m365Connected, hubspotConnected].filter(Boolean).length
+    const quickbooksConnected = integrations?.some(i =>
+      i.provider?.toLowerCase() === "quickbooks"
+    ) || false
+
+    const shopifyConnected = integrations?.some(i =>
+      i.provider?.toLowerCase() === "shopify"
+    ) || false
+
+    const connectedCount = [fortnoxConnected, m365Connected, hubspotConnected, quickbooksConnected, shopifyConnected].filter(Boolean).length
     const available = connectedCount >= 2
 
     // Build reason string
@@ -450,6 +580,8 @@ async function checkComparisonAvailability(req, res) {
       if (!fortnoxConnected) missing.push("Fortnox")
       if (!m365Connected) missing.push("Microsoft 365")
       if (!hubspotConnected) missing.push("HubSpot")
+      if (!quickbooksConnected) missing.push("QuickBooks")
+      if (!shopifyConnected) missing.push("Shopify")
       reason = `Need at least 2 platforms connected. Missing: ${missing.join(", ")}`
     }
 
@@ -458,6 +590,8 @@ async function checkComparisonAvailability(req, res) {
       fortnoxConnected,
       m365Connected,
       hubspotConnected,
+      quickbooksConnected,
+      shopifyConnected,
       connectedCount,
       reason,
     })

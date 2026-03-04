@@ -421,7 +421,7 @@ Be concise but thorough. Focus on actionable insights.`
  * @param {Object} metrics - Pre-calculated cross-platform metrics
  * @returns {Promise<string>} AI response with markdown and chart formatting
  */
-async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null, options = {}) {
+async function chatWithComparisonContext(question, fortnoxData, m365Data, metrics, hubspotData = null, quickbooksData = null, shopifyData = null, options = {}) {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenAI API key not configured")
   }
@@ -433,10 +433,12 @@ async function chatWithComparisonContext(question, fortnoxData, m365Data, metric
     const fortnoxContext = buildFortnoxContext(fortnoxData)
     const m365Context = buildM365Context(m365Data)
     const hubspotContext = buildHubSpotContext(hubspotData)
+    const quickbooksContext = buildQuickBooksContext(quickbooksData)
+    const shopifyContext = buildShopifyContext(shopifyData)
     const metricsContext = JSON.stringify(metrics, null, 2)
 
     // Determine which platforms are available
-    const platformCount = [fortnoxData, m365Data, hubspotData].filter(Boolean).length
+    const platformCount = [fortnoxData, m365Data, hubspotData, quickbooksData, shopifyData].filter(Boolean).length
     const platformDescriptor = platformCount === 3 ? "THREE" : "TWO"
 
     let platformSections = ""
@@ -461,6 +463,22 @@ ${m365Context}
     if (hubspotData) {
       platformSections += `## PLATFORM ${platformNum}: HUBSPOT (CRM/Sales)
 ${hubspotContext}
+
+`
+      platformNum++
+    }
+
+    if (quickbooksData) {
+      platformSections += `## PLATFORM ${platformNum}: QUICKBOOKS (Accounting/Finance)
+${quickbooksContext}
+
+`
+      platformNum++
+    }
+
+    if (shopifyData) {
+      platformSections += `## PLATFORM ${platformNum}: SHOPIFY (E-Commerce)
+${shopifyContext}
 
 `
     }
@@ -803,6 +821,121 @@ function buildHubSpotContext(hubspotData) {
   }
 
   return parts.join('\n') || "No significant HubSpot data."
+}
+
+/**
+ * Build QuickBooks context string for AI prompt
+ */
+function buildQuickBooksContext(quickbooksData) {
+  if (!quickbooksData) return "No QuickBooks data available."
+
+  const parts = []
+
+  // Bills summary
+  const bills = quickbooksData.bills || []
+  if (bills.length > 0) {
+    const totalAmount = bills.reduce((sum, b) => sum + (parseFloat(b.TotalAmt) || 0), 0)
+    parts.push(`Vendor Bills: ${bills.length} bills, Total: $${totalAmount.toLocaleString()}`)
+
+    // Vendor breakdown
+    const vendorGroups = {}
+    bills.forEach(b => {
+      const vendor = b.VendorRef?.name || 'Unknown'
+      vendorGroups[vendor] = (vendorGroups[vendor] || 0) + (parseFloat(b.TotalAmt) || 0)
+    })
+    const topVendors = Object.entries(vendorGroups).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    if (topVendors.length > 0) {
+      parts.push(`\nTop Vendors by Spend:`)
+      topVendors.forEach(([vendor, amount], i) => {
+        parts.push(`${i + 1}. ${vendor}: $${amount.toLocaleString()}`)
+      })
+    }
+  }
+
+  // Cost leak findings
+  const costLeaks = quickbooksData.costLeaks
+  if (costLeaks) {
+    const overall = costLeaks.overallSummary || {}
+    parts.push(`\nCost Leak Findings:`)
+    parts.push(`- Total Findings: ${overall.totalFindings || 0}`)
+    parts.push(`- High Severity: ${overall.highSeverity || 0}`)
+    parts.push(`- Potential Savings: $${(overall.totalPotentialSavings || 0).toLocaleString()}`)
+
+    // Top findings
+    const allFindings = [
+      ...(costLeaks.billAnalysis?.findings || []),
+      ...(costLeaks.invoiceAnalysis?.findings || []),
+    ].slice(0, 5)
+    if (allFindings.length > 0) {
+      parts.push(`\nTop Findings:`)
+      allFindings.forEach((f, i) => {
+        parts.push(`${i + 1}. [${f.severity}] ${f.title}: ${f.description}`)
+      })
+    }
+  }
+
+  return parts.join('\n') || "No significant QuickBooks data."
+}
+
+/**
+ * Build Shopify context string for AI prompt
+ */
+function buildShopifyContext(shopifyData) {
+  if (!shopifyData) return "No Shopify data available."
+
+  const parts = []
+
+  // Orders summary
+  const orders = shopifyData.orders || []
+  if (orders.length > 0) {
+    const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
+    const avgOrderValue = totalRevenue / orders.length
+    parts.push(`Orders: ${orders.length} orders, Revenue: $${totalRevenue.toLocaleString()}`)
+    parts.push(`Average Order Value: $${avgOrderValue.toFixed(2)}`)
+  }
+
+  // Products summary
+  const products = shopifyData.products || []
+  if (products.length > 0) {
+    parts.push(`\nProducts: ${products.length} total`)
+  }
+
+  // App charges
+  const appCharges = shopifyData.appCharges || []
+  if (appCharges.length > 0) {
+    const activeApps = appCharges.filter(a => a.status === 'active')
+    const monthlyAppCost = activeApps.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0)
+    parts.push(`\nApp Subscriptions: ${activeApps.length} active, Monthly Cost: $${monthlyAppCost.toFixed(2)}`)
+
+    if (activeApps.length > 0) {
+      parts.push(`Apps:`)
+      activeApps.forEach(a => {
+        parts.push(`- ${a.name}: $${a.price}/mo`)
+      })
+    }
+  }
+
+  // Cost leak findings
+  const costLeaks = shopifyData.costLeaks
+  if (costLeaks) {
+    const summary = costLeaks.summary || {}
+    parts.push(`\nCost Optimization:`)
+    parts.push(`- Health Score: ${summary.healthScore || 'N/A'}/100`)
+    parts.push(`- Issues Found: ${summary.issuesFound || 0}`)
+    parts.push(`- Dead Inventory Value: $${(summary.deadInventoryValue || 0).toLocaleString()}`)
+    parts.push(`- Monthly App Cost: $${(summary.monthlyAppCost || 0).toFixed(2)}`)
+    parts.push(`- Potential Savings: $${(summary.potentialMonthlySavings || 0).toFixed(2)}/mo`)
+
+    const findings = costLeaks.findings || []
+    if (findings.length > 0) {
+      parts.push(`\nTop Findings:`)
+      findings.slice(0, 5).forEach((f, i) => {
+        parts.push(`${i + 1}. [${f.severity}] ${f.title}: ${f.description}`)
+      })
+    }
+  }
+
+  return parts.join('\n') || "No significant Shopify data."
 }
 
 /**

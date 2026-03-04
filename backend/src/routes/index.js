@@ -88,6 +88,33 @@ const {
   analyzeHubSpotCostLeaks,
   disconnectHubSpot,
 } = require("../controllers/hubspotController")
+
+// QuickBooks Controller - QuickBooks OAuth and data operations
+const {
+  startQuickBooksOAuth,
+  quickbooksOAuthCallback,
+  getQuickBooksCompanyInfo,
+  getQuickBooksInvoices,
+  getQuickBooksBills,
+  getQuickBooksExpenses,
+  getQuickBooksVendors,
+  getQuickBooksAccounts,
+  analyzeQuickBooksCostLeaks,
+  disconnectQuickBooks,
+} = require("../controllers/quickbooksController")
+
+// Shopify Controller - Shopify OAuth and data operations
+const {
+  startShopifyOAuth,
+  shopifyOAuthCallback,
+  getShopifyShopInfo,
+  getShopifyOrders,
+  getShopifyProducts,
+  getShopifyAppCharges,
+  getShopifyInventoryLevels,
+  analyzeShopifyCostLeaks,
+  disconnectShopify,
+} = require("../controllers/shopifyController")
 const { requireAuth } = require("../middleware/auth")
 const { requireRole } = require("../middleware/requireRole")
 const {
@@ -224,6 +251,29 @@ router.get("/api/integrations/hubspot/users", requireAuth, requireRole("owner", 
 router.get("/api/integrations/hubspot/account", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotAccountInfo)
 router.get("/api/integrations/hubspot/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeHubSpotCostLeaks)
 router.delete("/api/integrations/hubspot/disconnect", requireAuth, requireRole("owner", "editor"), disconnectHubSpot)
+
+// QuickBooks routes
+router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
+router.get("/api/integrations/quickbooks/callback", quickbooksOAuthCallback)
+router.get("/api/integrations/quickbooks/company", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksCompanyInfo)
+router.get("/api/integrations/quickbooks/invoices", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksInvoices)
+router.get("/api/integrations/quickbooks/bills", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksBills)
+router.get("/api/integrations/quickbooks/expenses", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksExpenses)
+router.get("/api/integrations/quickbooks/vendors", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksVendors)
+router.get("/api/integrations/quickbooks/accounts", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksAccounts)
+router.get("/api/integrations/quickbooks/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeQuickBooksCostLeaks)
+router.delete("/api/integrations/quickbooks/disconnect", requireAuth, requireRole("owner", "editor"), disconnectQuickBooks)
+
+// Shopify routes
+router.get("/api/integrations/shopify/oauth/start", requireAuth, requireRole("owner", "editor"), startShopifyOAuth)
+router.get("/api/integrations/shopify/callback", shopifyOAuthCallback)
+router.get("/api/integrations/shopify/shop", requireAuth, requireRole("owner", "editor", "viewer"), getShopifyShopInfo)
+router.get("/api/integrations/shopify/orders", requireAuth, requireRole("owner", "editor", "viewer"), getShopifyOrders)
+router.get("/api/integrations/shopify/products", requireAuth, requireRole("owner", "editor", "viewer"), getShopifyProducts)
+router.get("/api/integrations/shopify/app-charges", requireAuth, requireRole("owner", "editor", "viewer"), getShopifyAppCharges)
+router.get("/api/integrations/shopify/inventory", requireAuth, requireRole("owner", "editor", "viewer"), getShopifyInventoryLevels)
+router.get("/api/integrations/shopify/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeShopifyCostLeaks)
+router.delete("/api/integrations/shopify/disconnect", requireAuth, requireRole("owner", "editor"), disconnectShopify)
 
 // Analysis History Routes
 router.post("/api/analysis-history", requireAuth, requireRole("owner", "editor"), saveAnalysis)

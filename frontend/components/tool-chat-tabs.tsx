@@ -16,6 +16,8 @@ const toolIcons: Record<string, string> = {
   google: "G",
   hubspot: "H",
   salesforce: "SF",
+  quickbooks: "Q",
+  shopify: "Sh",
 }
 
 export type ConnectedTool = {
@@ -96,6 +98,8 @@ function getToolDisplayName(provider: string): string {
     google: "Google Workspace",
     hubspot: "HubSpot",
     salesforce: "Salesforce",
+    quickbooks: "QuickBooks",
+    shopify: "Shopify",
   }
   return displayNames[provider.toLowerCase()] || provider
 }
@@ -115,6 +119,8 @@ function getToolColor(provider: string): string {
     google: "from-red-500 to-orange-500",
     hubspot: "from-orange-500 to-red-600",
     salesforce: "from-blue-400 to-cyan-500",
+    quickbooks: "from-green-600 to-green-800",
+    shopify: "from-green-400 to-lime-500",
   }
   return colors[provider.toLowerCase()] || "from-gray-500 to-gray-600"
 }
@@ -187,7 +193,9 @@ export function ToolChatTabs({ activeTab, onTabChange, className }: ToolChatTabs
               t.provider?.toLowerCase() === "microsoft 365"
             )
             const hasHubSpot = tools.some(t => t.provider?.toLowerCase() === "hubspot")
-            const connectedPlatforms = [hasFortnox, hasMicrosoft365, hasHubSpot].filter(Boolean).length
+            const hasQuickBooks = tools.some(t => t.provider?.toLowerCase() === "quickbooks")
+            const hasShopify = tools.some(t => t.provider?.toLowerCase() === "shopify")
+            const connectedPlatforms = [hasFortnox, hasMicrosoft365, hasHubSpot, hasQuickBooks, hasShopify].filter(Boolean).length
             const showComparison = connectedPlatforms >= 2
 
             return showComparison ? (
@@ -206,8 +214,8 @@ export function ToolChatTabs({ activeTab, onTabChange, className }: ToolChatTabs
                   <GitCompare className="w-3.5 h-3.5 text-white" />
                 </div>
                 <span className="text-gray-200">Comparison</span>
-                {connectedPlatforms === 3 && (
-                  <span className="text-[10px] text-purple-400 ml-1">(3)</span>
+                {connectedPlatforms >= 3 && (
+                  <span className="text-[10px] text-purple-400 ml-1">({connectedPlatforms})</span>
                 )}
               </TabsTrigger>
             ) : null

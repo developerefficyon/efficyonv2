@@ -517,6 +517,10 @@ async function fetchToolData(integration, dataType, req) {
     return await fetchMicrosoft365Data(integration, dataType, req)
   } else if (provider === "hubspot") {
     return await fetchHubSpotData(integration, dataType, req)
+  } else if (provider === "quickbooks") {
+    return await fetchQuickBooksData(integration, dataType, req)
+  } else if (provider === "shopify") {
+    return await fetchShopifyData(integration, dataType, req)
   }
 
   return null
@@ -620,6 +624,82 @@ async function fetchHubSpotData(integration, dataType, req) {
 }
 
 /**
+ * Fetch QuickBooks data
+ */
+async function fetchQuickBooksData(integration, dataType, req) {
+  const quickbooksController = require("./quickbooksController")
+
+  const mockReq = { ...req, user: req.user }
+  let data = null
+
+  switch (dataType) {
+    case "invoices":
+      data = await callControllerMethod(quickbooksController.getQuickBooksInvoices, mockReq)
+      break
+    case "bills":
+    case "supplier-invoices":
+      data = await callControllerMethod(quickbooksController.getQuickBooksBills, mockReq)
+      break
+    case "expenses":
+      data = await callControllerMethod(quickbooksController.getQuickBooksExpenses, mockReq)
+      break
+    case "vendors":
+    case "suppliers":
+      data = await callControllerMethod(quickbooksController.getQuickBooksVendors, mockReq)
+      break
+    case "accounts":
+      data = await callControllerMethod(quickbooksController.getQuickBooksAccounts, mockReq)
+      break
+    case "cost-leaks":
+      data = await callControllerMethod(quickbooksController.analyzeQuickBooksCostLeaks, mockReq)
+      break
+    case "company":
+      data = await callControllerMethod(quickbooksController.getQuickBooksCompanyInfo, mockReq)
+      break
+    default:
+      data = await callControllerMethod(quickbooksController.getQuickBooksCompanyInfo, mockReq)
+  }
+
+  return data
+}
+
+/**
+ * Fetch Shopify data
+ */
+async function fetchShopifyData(integration, dataType, req) {
+  const shopifyController = require("./shopifyController")
+
+  const mockReq = { ...req, user: req.user }
+  let data = null
+
+  switch (dataType) {
+    case "orders":
+      data = await callControllerMethod(shopifyController.getShopifyOrders, mockReq)
+      break
+    case "products":
+      data = await callControllerMethod(shopifyController.getShopifyProducts, mockReq)
+      break
+    case "app-charges":
+    case "subscriptions":
+      data = await callControllerMethod(shopifyController.getShopifyAppCharges, mockReq)
+      break
+    case "inventory":
+      data = await callControllerMethod(shopifyController.getShopifyInventoryLevels, mockReq)
+      break
+    case "cost-leaks":
+      data = await callControllerMethod(shopifyController.analyzeShopifyCostLeaks, mockReq)
+      break
+    case "shop":
+      data = await callControllerMethod(shopifyController.getShopifyShopInfo, mockReq)
+      break
+    default:
+      data = await callControllerMethod(shopifyController.getShopifyShopInfo, mockReq)
+  }
+
+  return data
+}
+
+/**
  * Helper to call controller methods and capture response data
  */
 async function callControllerMethod(method, req) {
@@ -665,6 +745,28 @@ function getDataDescription(provider, dataType) {
       account: "HubSpot account information and settings",
       "cost-leaks": "Seat utilization analysis and cost optimization opportunities",
       general: "HubSpot users and seat summary",
+    },
+    quickbooks: {
+      invoices: "Customer invoices including amounts, dates, and payment status from QuickBooks",
+      bills: "Vendor bills and payments from QuickBooks",
+      "supplier-invoices": "Vendor bills and payments from QuickBooks",
+      expenses: "Expense/purchase transactions from QuickBooks",
+      vendors: "Vendor list with contact details from QuickBooks",
+      suppliers: "Vendor list with contact details from QuickBooks",
+      accounts: "Chart of accounts from QuickBooks",
+      "cost-leaks": "Cost analysis identifying duplicate payments, unusual expenses, and savings opportunities",
+      company: "QuickBooks company information",
+      general: "General QuickBooks financial information",
+    },
+    shopify: {
+      orders: "Shopify orders including revenue, shipping costs, and discounts",
+      products: "Product catalog with pricing and inventory from Shopify",
+      "app-charges": "Installed app subscriptions and recurring charges",
+      subscriptions: "Installed app subscriptions and recurring charges",
+      inventory: "Inventory levels and dead stock analysis",
+      "cost-leaks": "E-commerce cost optimization: dead inventory, app costs, margin analysis",
+      shop: "Shopify store information and configuration",
+      general: "Shopify store summary and key metrics",
     },
   }
 
