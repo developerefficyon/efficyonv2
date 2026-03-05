@@ -383,6 +383,231 @@ export default function SetupGuidePage() {
           </p>
         </div>
       </section>
+      {/* QuickBooks Section */}
+      <section id="quickbooks" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+        <h3 className="text-xl font-semibold text-white">QuickBooks</h3>
+
+        <div>
+          <p className="text-sm font-medium text-gray-300 mb-2">Prerequisites</p>
+          <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
+            <li>A QuickBooks Online account (Simple Start, Essentials, Plus, or Advanced)</li>
+            <li>Admin access to the QuickBooks company you want to connect</li>
+            <li>An Intuit Developer account</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-300">Steps</p>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={1} />
+            <p className="text-sm text-gray-400">
+              Go to{" "}
+              <a href="https://developer.intuit.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1">
+                developer.intuit.com <ExternalLink className="w-3 h-3" />
+              </a>{" "}
+              and sign in with your Intuit account (or create one).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={2} />
+            <p className="text-sm text-gray-400">
+              Navigate to <span className="font-mono text-gray-300">Dashboard</span> and click <span className="font-mono text-gray-300">Create an app</span>.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={3} />
+            <p className="text-sm text-gray-400">
+              Select <span className="font-mono text-gray-300">QuickBooks Online and Payments</span> as the platform. Enter a name (e.g. &quot;Effycion Integration&quot;).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={4} />
+            <p className="text-sm text-gray-400">
+              Under <span className="font-mono text-gray-300">Scopes</span>, enable the following:
+            </p>
+          </div>
+          <div className="ml-9 flex flex-wrap gap-2">
+            <ScopeBadge>com.intuit.quickbooks.accounting</ScopeBadge>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={5} />
+            <p className="text-sm text-gray-400">
+              Go to <span className="font-mono text-gray-300">Keys &amp; credentials</span>. Choose your environment (<span className="font-mono text-gray-300">Sandbox</span> for testing or <span className="font-mono text-gray-300">Production</span> for live data).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={6} />
+            <p className="text-sm text-gray-400">
+              Under <span className="font-mono text-gray-300">Keys &amp; credentials</span>, scroll to the <span className="font-mono text-gray-300">URIs</span> section and fill in the following:
+            </p>
+          </div>
+          <div className="ml-9 overflow-x-auto">
+            <table className="text-xs text-gray-400 border border-white/10 rounded">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/5">
+                  <th className="px-3 py-1.5 text-left text-gray-300">Field</th>
+                  <th className="px-3 py-1.5 text-left text-gray-300">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-white/5">
+                  <td className="px-3 py-1.5 font-mono">Host domain</td>
+                  <td className="px-3 py-1.5 font-mono">efficyonv2.onrender.com</td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="px-3 py-1.5 font-mono">Launch URL</td>
+                  <td className="px-3 py-1.5 font-mono">https://www.efficyon.com/dashboard/tools</td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="px-3 py-1.5 font-mono">Disconnect URL</td>
+                  <td className="px-3 py-1.5 font-mono">https://www.efficyon.com/dashboard/tools</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-1.5 font-mono">Connect/Reconnect URL</td>
+                  <td className="px-3 py-1.5 font-mono">https://efficyonv2.onrender.com/api/integrations/quickbooks/callback</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={7} />
+            <p className="text-sm text-gray-400">
+              Copy your <span className="font-mono text-gray-300">Client ID</span> and <span className="font-mono text-gray-300">Client Secret</span> from the same Keys &amp; credentials page. The Client Secret is sensitive — store it securely and never share it publicly.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={8} />
+            <p className="text-sm text-gray-400">
+              In Effycion, go to <Link href="/dashboard/tools" className="text-cyan-400 hover:text-cyan-300">Tools &amp; Integrations</Link>, click <span className="font-mono text-gray-300">Connect New Tool</span>, select <span className="font-mono text-gray-300">QuickBooks</span>, and paste your Client ID and Client Secret.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={9} />
+            <p className="text-sm text-gray-400">
+              Click <span className="font-mono text-gray-300">Connect</span>. You&apos;ll be redirected to Intuit&apos;s OAuth screen to authorize read-only access to your QuickBooks company data.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+          <p className="text-xs font-medium text-gray-300 mb-1">Security Note</p>
+          <p className="text-xs text-gray-500">
+            Effycion uses OAuth 2.0 with the <span className="font-mono">com.intuit.quickbooks.accounting</span> scope for read-only access. Your Client Secret and OAuth tokens are encrypted at rest using AES-256-GCM. Effycion will never create, modify, or delete any data in your QuickBooks account. You can disconnect the integration at any time.
+          </p>
+        </div>
+      </section>
+
+      {/* Shopify Section */}
+      <section id="shopify" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+        <h3 className="text-xl font-semibold text-white">Shopify</h3>
+
+        <div>
+          <p className="text-sm font-medium text-gray-300 mb-2">Prerequisites</p>
+          <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
+            <li>A Shopify store with an active plan</li>
+            <li>Store owner or staff account with <span className="font-mono text-gray-300">Apps</span> permission</li>
+            <li>Access to the Shopify Partners dashboard (for creating a custom app)</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-300">Steps</p>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={1} />
+            <p className="text-sm text-gray-400">
+              Log into your Shopify admin at{" "}
+              <span className="font-mono text-gray-300">your-store.myshopify.com/admin</span>.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={2} />
+            <p className="text-sm text-gray-400">
+              Go to <span className="font-mono text-gray-300">Settings</span> &gt; <span className="font-mono text-gray-300">Apps and sales channels</span> &gt; <span className="font-mono text-gray-300">Develop apps</span>.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={3} />
+            <p className="text-sm text-gray-400">
+              If this is your first custom app, click <span className="font-mono text-gray-300">Allow custom app development</span> and confirm.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={4} />
+            <p className="text-sm text-gray-400">
+              Click <span className="font-mono text-gray-300">Create an app</span>. Enter a name (e.g. &quot;Effycion&quot;) and select an app developer.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={5} />
+            <p className="text-sm text-gray-400">
+              Go to <span className="font-mono text-gray-300">Configuration</span> &gt; <span className="font-mono text-gray-300">Admin API integration</span> and enable the following scopes:
+            </p>
+          </div>
+          <div className="ml-9 flex flex-wrap gap-2">
+            <ScopeBadge>read_orders</ScopeBadge>
+            <ScopeBadge>read_products</ScopeBadge>
+            <ScopeBadge>read_inventory</ScopeBadge>
+            <ScopeBadge>read_analytics</ScopeBadge>
+            <ScopeBadge>read_billing</ScopeBadge>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={6} />
+            <p className="text-sm text-gray-400">
+              Under <span className="font-mono text-gray-300">Allowed redirection URL(s)</span>, add the callback URL provided by Effycion during onboarding.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={7} />
+            <p className="text-sm text-gray-400">
+              Save the configuration, then go to <span className="font-mono text-gray-300">API credentials</span>. Copy your <span className="font-mono text-gray-300">API key</span> (this is your Client ID) and <span className="font-mono text-gray-300">API secret key</span> (this is your Client Secret).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={8} />
+            <p className="text-sm text-gray-400">
+              Note your shop domain — it&apos;s the <span className="font-mono text-gray-300">your-store.myshopify.com</span> URL (not a custom domain).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={9} />
+            <p className="text-sm text-gray-400">
+              In Effycion, go to <Link href="/dashboard/tools" className="text-cyan-400 hover:text-cyan-300">Tools &amp; Integrations</Link>, click <span className="font-mono text-gray-300">Connect New Tool</span>, select <span className="font-mono text-gray-300">Shopify</span>, and paste your Client ID, Client Secret, and Shop Domain.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <StepNumber n={10} />
+            <p className="text-sm text-gray-400">
+              Click <span className="font-mono text-gray-300">Connect</span>. You&apos;ll be redirected to Shopify to authorize access. Once approved, your store data will begin syncing.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+          <p className="text-xs font-medium text-gray-300 mb-1">Security Note</p>
+          <p className="text-xs text-gray-500">
+            Shopify access tokens are permanent and do not expire unless the app is uninstalled. Your API secret key and access token are encrypted at rest using AES-256-GCM. Effycion verifies all OAuth callbacks using HMAC-SHA256 to ensure authenticity. All scopes are read-only — Effycion will never modify your store data. To revoke access, uninstall the app from your Shopify admin or disconnect in Effycion.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }

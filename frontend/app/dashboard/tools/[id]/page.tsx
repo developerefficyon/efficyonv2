@@ -942,8 +942,8 @@ export default function ToolDetailPage() {
       const accessToken = await getBackendToken()
 
       if (!accessToken) {
-        toast.error("Session expired", { 
-          description: "Please log in again to continue" 
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
         })
         router.push("/login")
         setIsLoadingAnalysis(false)
@@ -1023,14 +1023,161 @@ export default function ToolDetailPage() {
     }
   }
 
+  const fetchQuickBooksCostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        router.push("/login")
+        setIsLoadingAnalysis(false)
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/quickbooks/cost-leaks`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
+          })
+          router.push("/login")
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your QuickBooks integration to continue.",
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        throw new Error(errorData.error || "Failed to analyze QuickBooks cost leaks")
+      }
+
+      const data = await res.json()
+      setCostLeakAnalysis(data)
+
+      toast.success("Analysis complete", {
+        description: `Found ${data.overallSummary?.totalFindings || 0} potential cost optimization opportunities. Saving to history...`,
+      })
+
+      await autoSaveAnalysis(data, "QuickBooks", {})
+    } catch (error) {
+      console.error("Error fetching QuickBooks cost leak analysis:", error)
+      toast.error("Failed to analyze QuickBooks cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred.",
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
+  const fetchShopifyCostLeakAnalysis = async () => {
+    setIsLoadingAnalysis(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue"
+        })
+        router.push("/login")
+        setIsLoadingAnalysis(false)
+        return
+      }
+
+      const params = new URLSearchParams()
+      params.append("inactivityDays", inactivityDays.toString())
+
+      const res = await fetch(`${apiBase}/api/integrations/shopify/cost-leaks?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          toast.error("Session expired", {
+            description: "Please log in again to continue"
+          })
+          router.push("/login")
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+
+        if (errorData.requiresReconnect || errorData.action === "reconnect") {
+          toast.error("Integration token expired", {
+            description: "Please reconnect your Shopify integration to continue.",
+            duration: 10000,
+          })
+          setIsLoadingAnalysis(false)
+          return
+        }
+
+        throw new Error(errorData.error || "Failed to analyze Shopify cost leaks")
+      }
+
+      const data = await res.json()
+
+      // Normalize Shopify data structure to match UI expectations
+      const normalizedAnalysis = {
+        ...data,
+        overallSummary: {
+          totalFindings: data.summary?.issuesFound || 0,
+          totalPotentialSavings: data.summary?.potentialMonthlySavings || 0,
+          highSeverity: data.summary?.highSeverityIssues || 0,
+          mediumSeverity: data.summary?.mediumSeverityIssues || 0,
+          lowSeverity: data.summary?.lowSeverityIssues || 0,
+        },
+        supplierInvoiceAnalysis: {
+          findings: data.findings || [],
+        },
+      }
+
+      setCostLeakAnalysis(normalizedAnalysis)
+
+      toast.success("Analysis complete", {
+        description: `Found ${normalizedAnalysis.overallSummary.totalFindings} potential cost optimization opportunities. Saving to history...`,
+      })
+
+      await autoSaveAnalysis(normalizedAnalysis, "Shopify", { inactivityDays })
+    } catch (error) {
+      console.error("Error fetching Shopify cost leak analysis:", error)
+      toast.error("Failed to analyze Shopify cost leaks", {
+        description: error instanceof Error ? error.message : "An error occurred.",
+      })
+    } finally {
+      setIsLoadingAnalysis(false)
+    }
+  }
+
   // Wrapper function to call appropriate analysis based on integration type
   const handleAnalyzeCostLeaks = () => {
     if (!integration) return
 
-    if (integration.tool_name === "Microsoft365" || integration.provider === "Microsoft365") {
+    const provider = integration.tool_name || integration.provider || ""
+
+    if (provider === "Microsoft365") {
       fetchMicrosoft365CostLeakAnalysis()
-    } else if (integration.tool_name === "HubSpot" || integration.provider === "HubSpot") {
+    } else if (provider === "HubSpot") {
       fetchHubSpotCostLeakAnalysis()
+    } else if (provider === "QuickBooks") {
+      fetchQuickBooksCostLeakAnalysis()
+    } else if (provider === "Shopify") {
+      fetchShopifyCostLeakAnalysis()
     } else {
       fetchCostLeakAnalysis()
     }

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS cost_leak_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   integration_id UUID NOT NULL REFERENCES company_integrations(id) ON DELETE CASCADE,
-  provider TEXT NOT NULL, -- 'Fortnox', 'Microsoft365', 'HubSpot'
+  provider TEXT NOT NULL, -- 'Fortnox', 'Microsoft365', 'HubSpot', 'QuickBooks', 'Shopify'
 
   -- Analysis parameters used
   parameters JSONB DEFAULT '{}',
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS cost_leak_analyses (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   -- Index for faster queries
-  CONSTRAINT valid_provider CHECK (provider IN ('Fortnox', 'Microsoft365', 'HubSpot'))
+  CONSTRAINT valid_provider CHECK (provider IN ('Fortnox', 'Microsoft365', 'HubSpot', 'QuickBooks', 'Shopify'))
 );
 
 -- Indexes for common queries
