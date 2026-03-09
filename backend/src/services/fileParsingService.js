@@ -96,6 +96,12 @@ async function parsePdfFile(buffer) {
     }
   }
 
+  // Try Fortnox Resultatrapport (P&L) parsing first — it has a known structure
+  const plResult = parseResultatrapport(rawText)
+  if (plResult) {
+    return { rawText, pages, extractedTables: [plResult], isResultatrapport: true }
+  }
+
   // Try to extract tabular data from text
   const extractedTables = extractTablesFromText(rawText)
 
@@ -286,6 +292,12 @@ const SCHEMA_KEYWORDS = {
     medium: ["hubspot", "provisioning", "roleid", "teamid", "lastlogin", "last login"],
     weak: ["role"],
   },
+  profit_loss: {
+    exclusive: ["accountcode", "accountname", "previousyear", "groupkey"],
+    strong: ["accountcode", "accountname", "accumulated", "previousyear", "groupkey", "category"],
+    medium: ["period", "accumulated"],
+    weak: [],
+  },
   generic: {
     exclusive: [],
     strong: [],
@@ -306,6 +318,14 @@ const SCHEMA_KEYWORDS = {
  * @returns {{ detectedSchema: string, confidence: number, columnMapping: Object, allHeaders: string[] }}
  */
 function detectDataSchema(parsedData) {
+  // Fast path: if already identified as a Resultatrapport by the PDF parser
+  if (parsedData.isResultatrapport) {
+    const source = (parsedData.extractedTables || [])[0] || {}
+    const allHeaders = source.headers || []
+    const columnMapping = buildColumnMapping(allHeaders, "profit_loss")
+    return { detectedSchema: "profit_loss", confidence: 0.95, columnMapping, allHeaders }
+  }
+
   // Gather all headers from sheets or extracted tables
   let allHeaders = []
   const dataSource = parsedData.sheets || parsedData.extractedTables || []
@@ -401,6 +421,15 @@ const COLUMN_MAPS = {
     userProvisioningState: ["userprovisioningstate", "provisioning state", "status", "state"],
     superAdmin: ["superadmin", "super admin", "admin", "is admin"],
   },
+  profit_loss: {
+    AccountCode: ["accountcode", "account code", "account_code", "konto", "kontonummer", "account number", "acct"],
+    AccountName: ["accountname", "account name", "account_name", "kontonamn", "description", "beskrivning"],
+    Period: ["period", "amount", "belopp", "current period", "current"],
+    Accumulated: ["accumulated", "ackumulerat", "ytd", "year to date"],
+    PreviousYear: ["previousyear", "previous year", "period fg år", "prior year", "föregående år", "fg år"],
+    Category: ["category", "kategori", "type", "group"],
+    GroupKey: ["groupkey", "group key", "group_key"],
+  },
   generic: {
     vendor: ["vendor", "supplier", "company", "merchant", "payee", "leverantör"],
     amount: ["amount", "total", "cost", "price", "sum", "belopp", "summa", "value"],
@@ -451,6 +480,8 @@ function mapToAnalysisFormat(rows, schema, columnMapping) {
       return mapToM365(rows, columnMapping)
     case "hubspot":
       return mapToHubSpot(rows, columnMapping)
+    case "profit_loss":
+      return mapToProfitLoss(rows, columnMapping)
     case "generic":
       return mapToGeneric(rows, columnMapping)
     default:
@@ -588,6 +619,18 @@ function mapToHubSpot(rows, mapping) {
   }
 }
 
+function mapToProfitLoss(rows, mapping) {
+  return rows.map((row) => ({
+    AccountCode: getField(row, mapping.AccountCode) || row.AccountCode || "",
+    AccountName: getField(row, mapping.AccountName) || row.AccountName || "",
+    Period: parseNumber(getField(row, mapping.Period) || row.Period),
+    Accumulated: parseNumber(getField(row, mapping.Accumulated) || row.Accumulated),
+    PreviousYear: parseNumber(getField(row, mapping.PreviousYear) || row.PreviousYear),
+    Category: getField(row, mapping.Category) || row.Category || "",
+    GroupKey: getField(row, mapping.GroupKey) || row.GroupKey || "",
+  }))
+}
+
 function mapToGeneric(rows, mapping) {
   return rows.map((row) => ({
     vendor: getField(row, mapping.vendor) || getFirstStringField(row),
@@ -694,6 +737,231 @@ function getFirstNumberField(row) {
   return 0
 }
 
+/* ------------------------------------------------------------------ */
+/*  Fortnox Resultatrapport (P&L) Parser                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * BAS account code ranges for Swedish chart of accounts
+ */
+const BAS_CATEGORIES = {
+  "30": "Nettoomsättning",
+  "31": "Nettoomsättning",
+  "32": "Nettoomsättning",
+  "33": "Nettoomsättning",
+  "34": "Nettoomsättning",
+  "35": "Nettoomsättning",
+  "36": "Övriga rörelseintäkter",
+  "37": "Övriga rörelseintäkter",
+  "38": "Övriga rörelseintäkter",
+  "39": "Övriga rörelseintäkter",
+  "40": "Råvaror och förnödenheter",
+  "41": "Råvaror och förnödenheter",
+  "42": "Råvaror och förnödenheter",
+  "43": "Råvaror och förnödenheter",
+  "44": "Råvaror och förnödenheter",
+  "45": "Övriga externa kostnader",
+  "46": "Övriga externa kostnader",
+  "47": "Övriga externa kostnader",
+  "48": "Övriga varu- och materialkostnader",
+  "49": "Övriga varu- och materialkostnader",
+  "50": "Lokalkostnader",
+  "51": "Fastighetskostnader",
+  "52": "Hyra/leasing",
+  "53": "Förbrukningsinventarier",
+  "54": "Förbrukningsinventarier",
+  "55": "Reparationer",
+  "56": "Transportkostnader",
+  "57": "Frakt och transport",
+  "58": "Resekostnader",
+  "59": "Reklam och PR",
+  "60": "Övriga försäljningskostnader",
+  "61": "Kontorsmaterial",
+  "62": "Tele och post",
+  "63": "Försäkringar",
+  "64": "Förvaltningskostnader",
+  "65": "Övriga externa tjänster",
+  "66": "Övriga externa tjänster",
+  "67": "Övriga externa tjänster",
+  "68": "Inhyrd personal",
+  "69": "Övriga externa kostnader",
+  "70": "Personalkostnader",
+  "71": "Löner",
+  "72": "Löner",
+  "73": "Kostnadsersättningar",
+  "74": "Pensionskostnader",
+  "75": "Arbetsgivaravgifter",
+  "76": "Övriga personalkostnader",
+  "77": "Nedskrivningar",
+  "78": "Avskrivningar",
+  "79": "Övriga rörelsekostnader",
+  "80": "Finansiella intäkter",
+  "81": "Finansiella intäkter",
+  "82": "Finansiella intäkter",
+  "83": "Finansiella kostnader",
+  "84": "Finansiella kostnader",
+  "85": "Finansiella kostnader",
+  "86": "Finansiella kostnader",
+  "87": "Extraordinära poster",
+  "88": "Bokslutsdispositioner",
+  "89": "Skatt",
+}
+
+const BAS_GROUPS = {
+  revenue: ["30", "31", "32", "33", "34", "35"],
+  otherRevenue: ["36", "37", "38", "39"],
+  cogs: ["40", "41", "42", "43", "44"],
+  materials: ["45", "46", "47", "48", "49"],
+  premises: ["50", "51"],
+  leasingEquipment: ["52", "53", "54", "55"],
+  transport: ["56", "57"],
+  travel: ["58"],
+  marketing: ["59"],
+  sellingExpenses: ["60"],
+  officeSupplies: ["61"],
+  telecom: ["62"],
+  insurance: ["63"],
+  administration: ["64", "65", "66", "67"],
+  contractStaff: ["68"],
+  otherExternal: ["69"],
+  salaries: ["70", "71", "72"],
+  benefits: ["73"],
+  pensions: ["74"],
+  socialFees: ["75"],
+  otherPersonnel: ["76"],
+  depreciation: ["77", "78"],
+  otherOperating: ["79"],
+  financialIncome: ["80", "81", "82"],
+  financialExpenses: ["83", "84", "85", "86"],
+  extraordinary: ["87"],
+  appropriations: ["88"],
+  tax: ["89"],
+}
+
+/**
+ * Parse a Fortnox Resultatrapport PDF text into structured line items.
+ * Returns null if the text doesn't look like a Resultatrapport.
+ */
+function parseResultatrapport(rawText) {
+  // Quick detection: must contain "Resultatrapport" and Swedish accounting keywords
+  const textLower = rawText.toLowerCase()
+  if (!textLower.includes("resultatrapport") && !textLower.includes("resultaträkning")) {
+    return null
+  }
+
+  // Must have BAS account codes (4-digit numbers at start of lines)
+  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean)
+  const accountLinePattern = /^(\d{4})\s+(.+)/
+  const accountLines = lines.filter((l) => accountLinePattern.test(l))
+  if (accountLines.length < 5) return null // Not enough account lines
+
+  // Detect period from header lines
+  let period = null
+  let companyName = null
+  let orgNumber = null
+  for (const line of lines.slice(0, 15)) {
+    const periodMatch = line.match(/Period\s+(\d{4}-\d{2}-\d{2})\s*-\s*(\d{4}-\d{2}-\d{2})/)
+    if (periodMatch) {
+      period = { from: periodMatch[1], to: periodMatch[2] }
+    }
+    const orgMatch = line.match(/^(\d{6}-\d{4})$/)
+    if (orgMatch) orgNumber = orgMatch[1]
+    // Company name is usually the first non-date, non-number line
+    if (!companyName && line.length > 3 && !/^\d/.test(line) && !line.includes("Resultatrapport") && !line.includes("ÅRL") && !line.includes("Utskrivet")) {
+      companyName = line
+    }
+  }
+
+  // Parse account lines into structured rows
+  const rows = []
+  for (const line of accountLines) {
+    const parsed = parseAccountLine(line)
+    if (parsed) rows.push(parsed)
+  }
+
+  if (rows.length === 0) return null
+
+  const headers = ["AccountCode", "AccountName", "Period", "Accumulated", "PreviousYear", "Category", "GroupKey"]
+
+  return {
+    headers,
+    rows,
+    rowCount: rows.length,
+    metadata: {
+      companyName,
+      orgNumber,
+      period,
+      reportType: "resultatrapport",
+    },
+  }
+}
+
+/**
+ * Parse a single account line from Resultatrapport text.
+ * Format: "3041 Fsg tjänster 20 166 175,80 20 166 175,80 14 977 078,98"
+ * Swedish numbers use space as thousands separator and comma as decimal.
+ */
+function parseAccountLine(line) {
+  const match = line.match(/^(\d{4})\s+(.+)/)
+  if (!match) return null
+
+  const accountCode = match[1]
+  const rest = match[2]
+
+  // Swedish number pattern: optional minus, digits with space separators, optional comma+decimals
+  const sweNumPattern = /-?[\d\s]+,\d{2}/g
+  const numbers = []
+  let numMatch
+  while ((numMatch = sweNumPattern.exec(rest)) !== null) {
+    numbers.push({
+      raw: numMatch[0],
+      value: parseSweNum(numMatch[0]),
+      index: numMatch.index,
+    })
+  }
+
+  // Account name is the text before the first number
+  let accountName = rest
+  if (numbers.length > 0) {
+    accountName = rest.substring(0, numbers[0].index).trim()
+  }
+
+  // Map account code to category
+  const prefix = accountCode.substring(0, 2)
+  const category = BAS_CATEGORIES[prefix] || "Övrigt"
+  const groupKey = findGroupKey(prefix)
+
+  return {
+    AccountCode: accountCode,
+    AccountName: accountName,
+    Period: numbers[0]?.value ?? 0,
+    Accumulated: numbers[1]?.value ?? numbers[0]?.value ?? 0,
+    PreviousYear: numbers[2]?.value ?? 0,
+    Category: category,
+    GroupKey: groupKey,
+  }
+}
+
+/**
+ * Parse Swedish-formatted number: "20 166 175,80" → 20166175.80
+ */
+function parseSweNum(str) {
+  if (!str) return 0
+  const cleaned = str.replace(/\s/g, "").replace(",", ".")
+  const num = parseFloat(cleaned)
+  return isNaN(num) ? 0 : num
+}
+
+/**
+ * Find which expense group an account prefix belongs to
+ */
+function findGroupKey(prefix) {
+  for (const [key, prefixes] of Object.entries(BAS_GROUPS)) {
+    if (prefixes.includes(prefix)) return key
+  }
+  return "other"
+}
+
 module.exports = {
   parseUploadedFile,
   parseExcelFile,
@@ -702,4 +970,5 @@ module.exports = {
   parseImageFile,
   detectDataSchema,
   mapToAnalysisFormat,
+  parseResultatrapport,
 }

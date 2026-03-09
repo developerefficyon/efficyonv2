@@ -285,12 +285,14 @@ async function uploadFile(req, res) {
       fortnox: "Fortnox",
       m365: "Microsoft365",
       hubspot: "HubSpot",
+      profit_loss: "Fortnox",
       generic: integrationHint || "Fortnox",
     }
     const schemaToDataType = {
       fortnox: dataTypeHint || "supplier_invoices",
       m365: dataTypeHint || "licenses",
       hubspot: dataTypeHint || "hubspot_users",
+      profit_loss: "profit_loss",
       generic: dataTypeHint || "supplier_invoices",
     }
 
@@ -305,7 +307,17 @@ async function uploadFile(req, res) {
 
     // 6. Determine what to store in file_data
     let fileDataToStore
-    if (finalSchema === "fortnox" && mappedData) {
+    if (finalSchema === "profit_loss") {
+      // For P&L data, store the mapped rows directly and include metadata
+      fileDataToStore = mappedData || rows
+      // Attach resultatrapport metadata if available
+      if (parsedFile.isResultatrapport && parsedFile.extractedTables?.[0]?.metadata) {
+        fileDataToStore = {
+          lineItems: mappedData || rows,
+          metadata: parsedFile.extractedTables[0].metadata,
+        }
+      }
+    } else if (finalSchema === "fortnox" && mappedData) {
       fileDataToStore = mappedData.supplierInvoices?.length > 0
         ? mappedData.supplierInvoices
         : mappedData.invoices?.length > 0

@@ -50,6 +50,7 @@ const DATA_TYPES: Record<string, { label: string; types: { value: string; label:
       { value: "vouchers", label: "Vouchers" },
       { value: "accounts", label: "Accounts" },
       { value: "articles", label: "Articles" },
+      { value: "profit_loss", label: "Resultatrapport (P&L)" },
     ],
   },
   Microsoft365: {
@@ -252,6 +253,7 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     fortnox: "Fortnox",
     m365: "Microsoft 365",
     hubspot: "HubSpot",
+    profit_loss: "Resultatrapport (P&L)",
     generic: "Generic Cost Data",
     unknown: "Unknown",
   }

@@ -9,6 +9,7 @@ const { analyzeCostLeaks } = require("./costLeakAnalysis")
 const { analyzeM365CostLeaks } = require("./microsoft365CostLeakAnalysis")
 const { analyzeHubSpotCostLeaks } = require("./hubspotCostLeakAnalysis")
 const { calculateCrossplatformMetrics } = require("./comparisonAnalysisService")
+const { analyzeProfitLoss } = require("./profitLossAnalysis")
 
 /**
  * Assemble uploaded test data into the structures expected by existing analysis services
@@ -20,6 +21,7 @@ function assembleDataFromUploads(uploads) {
     fortnox: null,
     m365: null,
     hubspot: null,
+    profitLoss: null,
   }
 
   // Group uploads by integration
@@ -62,6 +64,13 @@ function assembleDataFromUploads(uploads) {
       users: h.hubspot_users || [],
       accountInfo: h.hubspot_account || null,
     }
+  }
+
+  // Assemble Profit & Loss data (from Fortnox Resultatrapport uploads)
+  if (byIntegration.Fortnox?.profit_loss) {
+    const pl = byIntegration.Fortnox.profit_loss
+    // Handle both wrapped { lineItems, metadata } and raw array formats
+    data.profitLoss = pl
   }
 
   return data
@@ -146,6 +155,9 @@ async function runTestAnalysis(workspaceId, params) {
           assembledData.hubspot.accountInfo,
           { inactiveDays: options.inactivityDays || 30 }
         )
+      }
+      if (assembledData.profitLoss && integrationLabels.includes("Fortnox")) {
+        result.profitLoss = analyzeProfitLoss(assembledData.profitLoss)
       }
     }
 
@@ -269,6 +281,16 @@ function buildOverallSummary(result) {
     summary.mediumSeverity += s.mediumSeverityIssues || 0
     summary.lowSeverity += s.lowSeverityIssues || 0
     summary.platformResults.hubspot = s
+  }
+
+  if (result.profitLoss?.overallSummary) {
+    const s = result.profitLoss.overallSummary
+    summary.totalFindings += s.totalFindings || 0
+    summary.totalPotentialSavings += s.totalPotentialSavings || 0
+    summary.highSeverity += s.highSeverity || 0
+    summary.mediumSeverity += s.mediumSeverity || 0
+    summary.lowSeverity += s.lowSeverity || 0
+    summary.platformResults.profitLoss = s
   }
 
   if (result.crossPlatform) {

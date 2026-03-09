@@ -41,6 +41,11 @@ const SCHEMAS = {
       recommended: ["Description", "SalesPrice"],
       optional: ["PurchasePrice", "Active", "StockGoods"],
     },
+    profit_loss: {
+      required: ["AccountCode", "AccountName"],
+      recommended: ["Period", "Category"],
+      optional: ["Accumulated", "PreviousYear", "GroupKey"],
+    },
   },
   Microsoft365: {
     licenses: {
@@ -99,8 +104,14 @@ function validateData(integrationLabel, dataType, data) {
     return report
   }
 
+  // Handle profit_loss wrapped format { lineItems, metadata }
+  let actualData = data
+  if (dataType === "profit_loss" && data && !Array.isArray(data) && Array.isArray(data.lineItems)) {
+    actualData = data.lineItems
+  }
+
   // Handle single objects (like hubspot_account)
-  const records = Array.isArray(data) ? data : [data]
+  const records = Array.isArray(actualData) ? actualData : [actualData]
   report.stats.totalRows = records.length
 
   if (records.length === 0) {

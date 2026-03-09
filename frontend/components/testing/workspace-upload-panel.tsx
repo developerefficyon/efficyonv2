@@ -31,6 +31,7 @@ const DATA_TYPES: Record<string, { label: string; types: { value: string; label:
       { value: "vouchers", label: "Vouchers" },
       { value: "accounts", label: "Accounts" },
       { value: "articles", label: "Articles" },
+      { value: "profit_loss", label: "Resultatrapport (P&L)" },
     ],
   },
   Microsoft365: {
