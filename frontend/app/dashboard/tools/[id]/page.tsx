@@ -143,7 +143,26 @@ export default function ToolDetailPage() {
 
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue"]))
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue", "subscriptions", "priceIncreases", "categorySpending", "inactive", "utilization", "unassigned"]))
+
+  // Recommendation tracking state
+  const [recommendationStatuses, setRecommendationStatuses] = useState<Record<string, {
+    status: "pending" | "applied" | "dismissed" | "snoozed"
+    completedSteps: number[]
+    notes: string
+    id?: string
+  }>>({})
+  const [expandedRecommendations, setExpandedRecommendations] = useState<Set<string>>(new Set())
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
+  const [recommendationSummary, setRecommendationSummary] = useState<{
+    total: number
+    pending: number
+    applied: number
+    dismissed: number
+    snoozed: number
+    totalSavingsRealized: number
+    totalSavingsPending: number
+  } | null>(null)
   const [groupPages, setGroupPages] = useState<{ [key: string]: number }>({})
   const [showPdfPreview, setShowPdfPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -1340,9 +1359,16 @@ export default function ToolDetailPage() {
 
   // Helper functions for findings management
   const getFilteredFindings = () => {
-    // Support Fortnox (supplierInvoiceAnalysis + customerInvoiceAnalysis), Microsoft 365 (licenseAnalysis), and HubSpot (findings)
+    // Support Fortnox, Microsoft 365, HubSpot, QuickBooks, and generic findings
     let findings_source: any[] = []
-    if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
+    if (costLeakAnalysis?.billAnalysis?.findings || costLeakAnalysis?.invoiceAnalysis?.findings || costLeakAnalysis?.categoryAnalysis?.findings) {
+      // QuickBooks: merge bill + invoice + category findings
+      findings_source = [
+        ...(costLeakAnalysis?.billAnalysis?.findings || []),
+        ...(costLeakAnalysis?.invoiceAnalysis?.findings || []),
+        ...(costLeakAnalysis?.categoryAnalysis?.findings || []),
+      ]
+    } else if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
       // Fortnox: merge supplier + customer invoice findings
       findings_source = [
         ...(costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []),
@@ -1386,6 +1412,7 @@ export default function ToolDetailPage() {
     // Dynamic groups based on integration type
     const isMicrosoft365Analysis = costLeakAnalysis?.licenseAnalysis?.findings?.length > 0
     const isHubSpotAnalysis = costLeakAnalysis?.findings?.length > 0 && costLeakAnalysis?.summary?.healthScore !== undefined
+    const isQuickBooksAnalysis = costLeakAnalysis?.billAnalysis || costLeakAnalysis?.invoiceAnalysis || costLeakAnalysis?.categoryAnalysis
 
     let groups: { [key: string]: { title: string; icon: any; findings: any[]; color: string } }
 
@@ -1404,6 +1431,16 @@ export default function ToolDetailPage() {
         unassigned: { title: "Unassigned Roles", icon: Users, findings: [], color: "red" },
         other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
       }
+    } else if (isQuickBooksAnalysis) {
+      groups = {
+        duplicates: { title: "Duplicate Payments", icon: Copy, findings: [], color: "red" },
+        unusual: { title: "Unusual Amounts", icon: AlertTriangle, findings: [], color: "amber" },
+        subscriptions: { title: "Recurring Subscriptions", icon: RefreshCw, findings: [], color: "blue" },
+        overdue: { title: "Overdue Receivables", icon: Clock, findings: [], color: "orange" },
+        priceIncreases: { title: "Vendor Price Increases", icon: TrendingDown, findings: [], color: "red" },
+        categorySpending: { title: "Category Spending Trends", icon: BarChart3, findings: [], color: "purple" },
+        other: { title: "Other Findings", icon: AlertTriangle, findings: [], color: "slate" },
+      }
     } else {
       groups = {
         duplicates: { title: "Duplicate Payments", icon: FileText, findings: [], color: "red" },
@@ -1416,7 +1453,13 @@ export default function ToolDetailPage() {
 
     // Get the original findings source for index lookup
     let findingsSource: any[] = []
-    if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
+    if (costLeakAnalysis?.billAnalysis?.findings || costLeakAnalysis?.invoiceAnalysis?.findings || costLeakAnalysis?.categoryAnalysis?.findings) {
+      findingsSource = [
+        ...(costLeakAnalysis?.billAnalysis?.findings || []),
+        ...(costLeakAnalysis?.invoiceAnalysis?.findings || []),
+        ...(costLeakAnalysis?.categoryAnalysis?.findings || []),
+      ]
+    } else if (costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.customerInvoiceAnalysis?.findings) {
       findingsSource = [
         ...(costLeakAnalysis?.supplierInvoiceAnalysis?.findings || []),
         ...(costLeakAnalysis?.customerInvoiceAnalysis?.findings || []),
@@ -1452,6 +1495,23 @@ export default function ToolDetailPage() {
           groups.utilization.findings.push(findingWithIdx)
         } else if (finding.type === "unassigned_roles" || finding.title?.toLowerCase().includes("role") || finding.title?.toLowerCase().includes("unassigned")) {
           groups.unassigned.findings.push(findingWithIdx)
+        } else {
+          groups.other.findings.push(findingWithIdx)
+        }
+      } else if (isQuickBooksAnalysis) {
+        // QuickBooks grouping by finding type
+        if (finding.type === "duplicate_payment") {
+          groups.duplicates.findings.push(findingWithIdx)
+        } else if (finding.type === "unusual_amount") {
+          groups.unusual.findings.push(findingWithIdx)
+        } else if (finding.type === "recurring_subscription") {
+          groups.subscriptions.findings.push(findingWithIdx)
+        } else if (finding.type === "overdue_receivable") {
+          groups.overdue.findings.push(findingWithIdx)
+        } else if (finding.type === "price_increase") {
+          groups.priceIncreases.findings.push(findingWithIdx)
+        } else if (finding.type === "category_spending_increase") {
+          groups.categorySpending.findings.push(findingWithIdx)
         } else {
           groups.other.findings.push(findingWithIdx)
         }
@@ -1503,6 +1563,182 @@ export default function ToolDetailPage() {
       return next
     })
   }
+
+  // ==========================================
+  // Recommendation Management Functions
+  // ==========================================
+
+  const getRecommendationApiBase = () => {
+    const provider = integration?.tool_name || integration?.provider || ""
+    const providerKey = provider.toLowerCase().replace(/\s+/g, "")
+    return providerKey
+  }
+
+  const fetchRecommendationStatuses = async () => {
+    const provider = integration?.tool_name || integration?.provider || ""
+    if (!provider) return
+
+    setIsLoadingRecommendations(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) return
+
+      const providerKey = getRecommendationApiBase()
+      const res = await fetch(`${apiBase}/api/integrations/${providerKey}/recommendations?provider=${encodeURIComponent(provider)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) return
+
+      const data = await res.json()
+      const statusMap: Record<string, any> = {}
+      ;(data.recommendations || []).forEach((rec: any) => {
+        statusMap[rec.finding_hash] = {
+          status: rec.status,
+          completedSteps: rec.completed_steps || [],
+          notes: rec.notes || "",
+          id: rec.id,
+        }
+      })
+      setRecommendationStatuses(statusMap)
+      setRecommendationSummary(data.summary || null)
+    } catch (error) {
+      console.error("Failed to fetch recommendation statuses:", error)
+    } finally {
+      setIsLoadingRecommendations(false)
+    }
+  }
+
+  const handleApplyRecommendation = async (finding: any, status: "applied" | "dismissed" | "snoozed" | "pending") => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired")
+        return
+      }
+
+      const providerKey = getRecommendationApiBase()
+      const res = await fetch(`${apiBase}/api/integrations/${providerKey}/recommendations/apply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          findingHash: finding.findingHash,
+          findingType: finding.type,
+          findingTitle: finding.title,
+          findingDescription: finding.description,
+          potentialSavings: finding.potentialSavings || finding.revenueAtRisk || 0,
+          status,
+          actionSteps: finding.actionSteps || [],
+          provider: integration?.tool_name || integration?.provider || "",
+          integrationId: integration?.id,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(err.error || "Failed to update recommendation")
+      }
+
+      const data = await res.json()
+
+      // Update local state
+      setRecommendationStatuses(prev => ({
+        ...prev,
+        [finding.findingHash]: {
+          status,
+          completedSteps: prev[finding.findingHash]?.completedSteps || [],
+          notes: prev[finding.findingHash]?.notes || "",
+          id: data.recommendation?.id,
+        },
+      }))
+
+      const statusMessages: Record<string, { title: string; desc: string }> = {
+        applied: { title: "Recommendation applied", desc: finding.potentialSavings ? `$${finding.potentialSavings.toLocaleString()} in savings tracked!` : "Marked as completed" },
+        dismissed: { title: "Finding dismissed", desc: "This finding won't appear in future analyses" },
+        snoozed: { title: "Finding snoozed", desc: "We'll remind you about this later" },
+        pending: { title: "Status reset", desc: "Finding moved back to pending" },
+      }
+
+      const msg = statusMessages[status]
+      toast.success(msg.title, { description: msg.desc })
+
+      // Refresh summary
+      fetchRecommendationStatuses()
+    } catch (error) {
+      console.error("Failed to apply recommendation:", error)
+      toast.error("Failed to update recommendation", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      })
+    }
+  }
+
+  const handleToggleStep = async (finding: any, stepIdx: number) => {
+    const hash = finding.findingHash
+    const current = recommendationStatuses[hash]
+    if (!current?.id) return
+
+    const completedSteps = [...(current.completedSteps || [])]
+    const idx = completedSteps.indexOf(stepIdx)
+    if (idx >= 0) {
+      completedSteps.splice(idx, 1)
+    } else {
+      completedSteps.push(stepIdx)
+    }
+
+    // Optimistic update
+    setRecommendationStatuses(prev => ({
+      ...prev,
+      [hash]: { ...prev[hash], completedSteps },
+    }))
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) return
+
+      const providerKey = getRecommendationApiBase()
+      await fetch(`${apiBase}/api/integrations/${providerKey}/recommendations/steps`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recommendationId: current.id,
+          completedSteps,
+        }),
+      })
+    } catch (error) {
+      console.error("Failed to update step:", error)
+    }
+  }
+
+  const toggleRecommendationExpanded = (hash: string) => {
+    setExpandedRecommendations(prev => {
+      const next = new Set(prev)
+      if (next.has(hash)) {
+        next.delete(hash)
+      } else {
+        next.add(hash)
+      }
+      return next
+    })
+  }
+
+  // Fetch recommendation statuses when analysis is loaded (QuickBooks or HubSpot)
+  useEffect(() => {
+    if (costLeakAnalysis && integration) {
+      const provider = integration.tool_name || integration.provider || ""
+      if (provider === "QuickBooks" || provider === "HubSpot") {
+        fetchRecommendationStatuses()
+      }
+    }
+  }, [costLeakAnalysis, integration?.id])
 
   const getGroupPage = (groupKey: string) => groupPages[groupKey] || 0
 
@@ -2389,12 +2625,16 @@ export default function ToolDetailPage() {
                                 </div>
                               </div>
                             )}
-                            {costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 && (
+                            {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 || costLeakAnalysis.billAnalysis?.findings?.length > 0) && (
                               <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
                                 <Zap className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                                 <div>
                                   <p className="text-cyan-400 font-medium text-sm">Quick Win</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">Start with duplicate payments for immediate savings</p>
+                                  <p className="text-gray-400 text-xs mt-0.5">
+                                    {costLeakAnalysis.overallSummary?.recommendationsSummary?.lowEffort > 0
+                                      ? `${costLeakAnalysis.overallSummary.recommendationsSummary.lowEffort} low-effort recommendations to start with`
+                                      : "Start with duplicate payments for immediate savings"}
+                                  </p>
                                 </div>
                               </div>
                             )}
@@ -2405,10 +2645,67 @@ export default function ToolDetailPage() {
                   </Card>
                 )}
 
+                {/* Recommendation Savings Tracker */}
+                {recommendationSummary && recommendationSummary.total > 0 && (
+                  <Card className="bg-gradient-to-r from-emerald-900/30 via-slate-900/80 to-cyan-900/30 border-emerald-500/30">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-emerald-500/20">
+                          <Target className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">Recommendation Progress</h3>
+                          <p className="text-gray-400 text-xs">Track your cost optimization actions</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-black/30 rounded-lg p-3 border border-emerald-500/20">
+                          <p className="text-xs text-gray-400 mb-1">Savings Realized</p>
+                          <p className="text-lg font-bold text-emerald-400">
+                            ${recommendationSummary.totalSavingsRealized.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </p>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-3 border border-amber-500/20">
+                          <p className="text-xs text-gray-400 mb-1">Savings Pending</p>
+                          <p className="text-lg font-bold text-amber-400">
+                            ${recommendationSummary.totalSavingsPending.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </p>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-3 border border-cyan-500/20">
+                          <p className="text-xs text-gray-400 mb-1">Applied</p>
+                          <p className="text-lg font-bold text-cyan-400">{recommendationSummary.applied}</p>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-3 border border-slate-500/20">
+                          <p className="text-xs text-gray-400 mb-1">Pending</p>
+                          <p className="text-lg font-bold text-gray-300">{recommendationSummary.pending}</p>
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      {recommendationSummary.total > 0 && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+                            <span>Completion</span>
+                            <span>{Math.round((recommendationSummary.applied / recommendationSummary.total) * 100)}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
+                              style={{ width: `${(recommendationSummary.applied / recommendationSummary.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Findings Section */}
                 {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.customerInvoiceAnalysis?.findings?.length > 0 ||
-                  costLeakAnalysis.licenseAnalysis?.findings?.length > 0) && (
+                  costLeakAnalysis.licenseAnalysis?.findings?.length > 0 ||
+                  costLeakAnalysis.billAnalysis?.findings?.length > 0 ||
+                  costLeakAnalysis.invoiceAnalysis?.findings?.length > 0 ||
+                  costLeakAnalysis.categoryAnalysis?.findings?.length > 0) && (
                   <Card className="bg-slate-900/80 border-slate-700/50">
                     <CardHeader className="pb-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2416,6 +2713,9 @@ export default function ToolDetailPage() {
                           <CardTitle className="text-white text-lg">Cost Leak Findings</CardTitle>
                           <Badge variant="outline" className="border-slate-600 text-gray-400">
                             {activeFindings.length} of {(
+                              (costLeakAnalysis.billAnalysis?.findings?.length || 0) +
+                              (costLeakAnalysis.invoiceAnalysis?.findings?.length || 0) +
+                              (costLeakAnalysis.categoryAnalysis?.findings?.length || 0) ||
                               (costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || 0) +
                               (costLeakAnalysis.customerInvoiceAnalysis?.findings?.length || 0) ||
                               costLeakAnalysis.licenseAnalysis?.findings?.length || 0
@@ -2515,16 +2815,26 @@ export default function ToolDetailPage() {
                           {/* Group Content */}
                           {expandedGroups.has(groupKey) && (
                             <div className="divide-y divide-slate-800/50">
-                              {getPagedFindings(group.findings, groupKey).map((finding: any, idx: number) => (
+                              {getPagedFindings(group.findings, groupKey).map((finding: any, idx: number) => {
+                                const recStatus = finding.findingHash ? recommendationStatuses[finding.findingHash] : null
+                                const isRecExpanded = finding.findingHash ? expandedRecommendations.has(finding.findingHash) : false
+                                const isApplied = recStatus?.status === "applied"
+                                const isDismissedRec = recStatus?.status === "dismissed"
+                                const isSnoozed = recStatus?.status === "snoozed"
+
+                                return (
                                 <div
                                   key={idx}
                                   className={`p-4 bg-slate-900/50 hover:bg-slate-800/50 transition-all ${
+                                    isApplied ? 'opacity-60 border-l-2 border-l-emerald-500' :
+                                    isDismissedRec ? 'opacity-40' :
                                     resolvedFindings.has(finding.originalIdx) ? 'opacity-50' : ''
                                   }`}
                                 >
                                   <div className="flex items-start gap-4">
                                     {/* Severity Indicator */}
                                     <div className={`w-1 h-full min-h-[60px] rounded-full shrink-0 ${
+                                      isApplied ? "bg-emerald-500" :
                                       finding.severity === "high" ? "bg-red-500" :
                                       finding.severity === "medium" ? "bg-amber-500" :
                                       "bg-slate-500"
@@ -2547,7 +2857,38 @@ export default function ToolDetailPage() {
                                             >
                                               {finding.severity?.toUpperCase()}
                                             </Badge>
-                                            {resolvedFindings.has(finding.originalIdx) && (
+                                            {finding.effort && (
+                                              <Badge
+                                                className={`text-[10px] px-1.5 py-0 ${
+                                                  finding.effort === "low"
+                                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                                    : finding.effort === "medium"
+                                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                                                    : "bg-purple-500/10 text-purple-400 border-purple-500/30"
+                                                }`}
+                                                variant="outline"
+                                              >
+                                                {finding.effort} effort
+                                              </Badge>
+                                            )}
+                                            {isApplied && (
+                                              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                                <CheckCircle className="w-3 h-3 mr-0.5" />
+                                                APPLIED
+                                              </Badge>
+                                            )}
+                                            {isDismissedRec && (
+                                              <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                                DISMISSED
+                                              </Badge>
+                                            )}
+                                            {isSnoozed && (
+                                              <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                                <Clock className="w-3 h-3 mr-0.5" />
+                                                SNOOZED
+                                              </Badge>
+                                            )}
+                                            {resolvedFindings.has(finding.originalIdx) && !isApplied && (
                                               <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
                                                 RESOLVED
                                               </Badge>
@@ -2556,20 +2897,32 @@ export default function ToolDetailPage() {
                                           <h4 className="font-medium text-white text-sm mb-1">{finding.title}</h4>
                                           <p className="text-gray-400 text-xs leading-relaxed">{finding.description}</p>
 
-                                          {finding.potentialSavings > 0 && (
-                                            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
-                                              <DollarSign className="w-3 h-3" />
-                                              <span className="text-xs font-medium">
-                                                Save ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                              </span>
-                                            </div>
-                                          )}
-                                          {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
-                                            <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-2 py-1 rounded-md">
-                                              <AlertTriangle className="w-3 h-3" />
-                                              <span className="text-xs font-medium">
-                                                ${finding.revenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} at risk
-                                              </span>
+                                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                            {finding.potentialSavings > 0 && (
+                                              <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
+                                                <DollarSign className="w-3 h-3" />
+                                                <span className="text-xs font-medium">
+                                                  Save ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
+                                              <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-2 py-1 rounded-md">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                <span className="text-xs font-medium">
+                                                  ${finding.revenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} at risk
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Recommendation text */}
+                                          {finding.recommendation && (
+                                            <div className="mt-3 p-2.5 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+                                              <div className="flex items-start gap-2">
+                                                <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                                                <p className="text-xs text-cyan-300 leading-relaxed">{finding.recommendation}</p>
+                                              </div>
                                             </div>
                                           )}
 
@@ -2601,36 +2954,163 @@ export default function ToolDetailPage() {
                                               </div>
                                             </details>
                                           )}
+
+                                          {/* Bill Details (for QuickBooks duplicate payments) */}
+                                          {finding.bills?.length > 0 && (
+                                            <details className="mt-3 group/details">
+                                              <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                                <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
+                                                {finding.bills.length} related bill{finding.bills.length !== 1 ? 's' : ''}
+                                              </summary>
+                                              <div className="mt-2 space-y-1.5 ml-4">
+                                                {finding.bills.slice(0, 5).map((bill: any, billIdx: number) => (
+                                                  <div key={billIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
+                                                    <div className="flex items-center gap-2">
+                                                      <FileText className="w-3 h-3 text-gray-500" />
+                                                      <span className="text-gray-300">{bill.TxnDate || "N/A"}</span>
+                                                      {bill.VendorRef?.name && (
+                                                        <span className="text-gray-500">• {bill.VendorRef.name}</span>
+                                                      )}
+                                                    </div>
+                                                    <span className="text-emerald-400 font-medium">
+                                                      ${(bill.TotalAmt || bill.calculatedTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </details>
+                                          )}
+
+                                          {/* Action Steps Checklist (expandable) */}
+                                          {finding.actionSteps?.length > 0 && finding.findingHash && (
+                                            <div className="mt-3">
+                                              <button
+                                                onClick={() => toggleRecommendationExpanded(finding.findingHash)}
+                                                className="text-xs text-purple-400 cursor-pointer hover:text-purple-300 font-medium flex items-center gap-1.5"
+                                              >
+                                                <ChevronRight className={`w-3 h-3 transition-transform ${isRecExpanded ? 'rotate-90' : ''}`} />
+                                                {finding.actionSteps.length} action steps
+                                                {(recStatus?.completedSteps?.length ?? 0) > 0 && (
+                                                  <span className="text-emerald-400">
+                                                    ({recStatus?.completedSteps?.length ?? 0}/{finding.actionSteps.length} done)
+                                                  </span>
+                                                )}
+                                              </button>
+                                              {isRecExpanded && (
+                                                <div className="mt-2 space-y-1.5 ml-4">
+                                                  {finding.actionSteps.map((step: string, stepIdx: number) => {
+                                                    const isCompleted = recStatus?.completedSteps?.includes(stepIdx)
+                                                    return (
+                                                      <button
+                                                        key={stepIdx}
+                                                        onClick={() => handleToggleStep(finding, stepIdx)}
+                                                        className={`w-full flex items-start gap-2.5 text-xs p-2 rounded-lg border transition-all text-left ${
+                                                          isCompleted
+                                                            ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                                                            : 'bg-black/20 border-slate-800 text-gray-300 hover:border-slate-700'
+                                                        }`}
+                                                      >
+                                                        <div className={`w-4 h-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
+                                                          isCompleted
+                                                            ? 'bg-emerald-500 border-emerald-500'
+                                                            : 'border-slate-600'
+                                                        }`}>
+                                                          {isCompleted && <CheckCheck className="w-3 h-3 text-white" />}
+                                                        </div>
+                                                        <span className={isCompleted ? 'line-through opacity-70' : ''}>{step}</span>
+                                                      </button>
+                                                    )
+                                                  })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          {!resolvedFindings.has(finding.originalIdx) && (
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => handleResolve(finding.originalIdx)}
-                                              className="h-8 w-8 p-0 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10"
-                                              title="Mark as resolved"
-                                            >
-                                              <CheckCheck className="w-4 h-4" />
-                                            </Button>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                          {/* Apply/Dismiss/Snooze buttons for findings with recommendations */}
+                                          {finding.findingHash && finding.recommendation && (
+                                            <div className="flex items-center gap-1">
+                                              {!isApplied && !isDismissedRec && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => handleApplyRecommendation(finding, "applied")}
+                                                  className="h-7 px-2.5 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white"
+                                                  title="Apply recommendation"
+                                                >
+                                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                                  Apply
+                                                </Button>
+                                              )}
+                                              {!isDismissedRec && !isApplied && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() => handleApplyRecommendation(finding, "snoozed")}
+                                                  className="h-7 px-2 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                                  title="Snooze - remind later"
+                                                >
+                                                  <Clock className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                              {!isDismissedRec && !isApplied && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() => handleApplyRecommendation(finding, "dismissed")}
+                                                  className="h-7 px-2 text-[10px] text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                                                  title="Dismiss recommendation"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                              {(isApplied || isDismissedRec || isSnoozed) && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() => handleApplyRecommendation(finding, "pending")}
+                                                  className="h-7 px-2.5 text-[10px] text-gray-400 hover:text-white hover:bg-slate-700"
+                                                  title="Reset to pending"
+                                                >
+                                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                                  Undo
+                                                </Button>
+                                              )}
+                                            </div>
                                           )}
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => handleDismiss(finding.originalIdx)}
-                                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                                            title="Dismiss"
-                                          >
-                                            <X className="w-4 h-4" />
-                                          </Button>
+
+                                          {/* Fallback resolve/dismiss for findings without recommendation tracking */}
+                                          {!finding.findingHash && (
+                                            <div className="flex items-center gap-1">
+                                              {!resolvedFindings.has(finding.originalIdx) && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() => handleResolve(finding.originalIdx)}
+                                                  className="h-8 w-8 p-0 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                                  title="Mark as resolved"
+                                                >
+                                                  <CheckCheck className="w-4 h-4" />
+                                                </Button>
+                                              )}
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleDismiss(finding.originalIdx)}
+                                                className="h-8 w-8 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                                                title="Dismiss"
+                                              >
+                                                <X className="w-4 h-4" />
+                                              </Button>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                              )})}
                               {/* Pagination */}
                               {group.findings.length > ITEMS_PER_PAGE && (
                                 <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900/50 via-slate-800/30 to-slate-900/50 border-t border-slate-700/30 flex flex-col sm:flex-row items-center justify-between gap-3">

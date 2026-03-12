@@ -101,6 +101,10 @@ const {
   getQuickBooksAccounts,
   analyzeQuickBooksCostLeaks,
   disconnectQuickBooks,
+  getRecommendations: getQuickBooksRecommendations,
+  applyRecommendation: applyQuickBooksRecommendation,
+  updateRecommendationSteps: updateQuickBooksRecommendationSteps,
+  deleteRecommendation: deleteQuickBooksRecommendation,
 } = require("../controllers/quickbooksController")
 
 // Shopify Controller - Shopify OAuth and data operations
@@ -252,6 +256,10 @@ router.get("/api/integrations/hubspot/callback", hubspotOAuthCallback)
 router.get("/api/integrations/hubspot/users", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotUsers)
 router.get("/api/integrations/hubspot/account", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotAccountInfo)
 router.get("/api/integrations/hubspot/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeHubSpotCostLeaks)
+router.get("/api/integrations/hubspot/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
+router.post("/api/integrations/hubspot/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
+router.patch("/api/integrations/hubspot/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
+router.delete("/api/integrations/hubspot/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
 router.delete("/api/integrations/hubspot/disconnect", requireAuth, requireRole("owner", "editor"), disconnectHubSpot)
 
 // QuickBooks routes
@@ -264,6 +272,10 @@ router.get("/api/integrations/quickbooks/expenses", requireAuth, requireRole("ow
 router.get("/api/integrations/quickbooks/vendors", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksVendors)
 router.get("/api/integrations/quickbooks/accounts", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksAccounts)
 router.get("/api/integrations/quickbooks/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeQuickBooksCostLeaks)
+router.get("/api/integrations/quickbooks/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
+router.post("/api/integrations/quickbooks/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
+router.patch("/api/integrations/quickbooks/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
+router.delete("/api/integrations/quickbooks/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
 router.delete("/api/integrations/quickbooks/disconnect", requireAuth, requireRole("owner", "editor"), disconnectQuickBooks)
 
 // Shopify routes

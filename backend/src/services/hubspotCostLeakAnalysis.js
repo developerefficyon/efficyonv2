@@ -3,7 +3,18 @@
  * Analyzes HubSpot seat usage, inactive users, and cost optimization opportunities
  */
 
+const crypto = require("crypto")
 const { getPerSeatCost, calculatePotentialSavings, getPricingDisplayInfo } = require("../utils/hubspotPricing")
+
+/**
+ * Generate a stable hash for a finding so we can track it across analyses
+ * @param {Object} finding - The finding object
+ * @returns {string} MD5 hash string
+ */
+function generateFindingHash(finding) {
+  const key = `${finding.type}:${finding.title}:${finding.affectedUsers?.length || 0}`
+  return crypto.createHash("md5").update(key).digest("hex")
+}
 
 /**
  * Check if a user has accepted their invitation (is an active user, not pending)
@@ -109,7 +120,7 @@ function analyzeInactiveSeats(users, inactiveDays = 30) {
   const findings = []
 
   if (inactiveUsers.length > 0) {
-    findings.push({
+    const finding = {
       type: "inactive_seats",
       severity: inactiveUsers.length > 5 ? "high" : inactiveUsers.length > 2 ? "medium" : "low",
       title: `${inactiveUsers.length} Inactive HubSpot User${inactiveUsers.length > 1 ? "s" : ""}`,
@@ -119,8 +130,19 @@ function analyzeInactiveSeats(users, inactiveDays = 30) {
         email: u.email,
         lastActivity: u.lastLoginAt || u.updatedAt || "Never",
       })),
-      recommendation: "Review these accounts and consider removing seats for users who no longer need access",
-    })
+      recommendation: "Remove or downgrade these inactive seats to stop paying for users who aren't using HubSpot",
+      actionSteps: [
+        "Review the list of inactive users below",
+        "Contact each user to confirm they no longer need HubSpot access",
+        "Deactivate or remove confirmed inactive users from HubSpot Settings > Users & Teams",
+        "Document which seats were freed for audit trail",
+        "Verify the seat count reduction on your next HubSpot invoice",
+      ],
+      effort: "low",
+      impact: inactiveUsers.length > 5 ? "high" : inactiveUsers.length > 2 ? "medium" : "low",
+    }
+    finding.findingHash = generateFindingHash(finding)
+    findings.push(finding)
   }
 
   return {
@@ -164,7 +186,7 @@ function analyzeUnusedSeats(accountInfo, users) {
   const unassignedRoleUsers = users?.filter((u) => !hasValidRole(u)) || []
 
   if (unassignedRoleUsers.length > 0) {
-    findings.push({
+    const finding = {
       type: "unassigned_roles",
       severity: unassignedRoleUsers.length > 3 ? "medium" : "low",
       title: `${unassignedRoleUsers.length} User${unassignedRoleUsers.length > 1 ? "s" : ""} Without Roles`,
@@ -173,8 +195,19 @@ function analyzeUnusedSeats(accountInfo, users) {
         id: u.id,
         email: u.email,
       })),
-      recommendation: "Assign appropriate roles to these users or remove them if they don't need access",
-    })
+      recommendation: "Assign proper roles or remove these users — unassigned seats still count toward your paid seat limit",
+      actionSteps: [
+        "Go to HubSpot Settings > Users & Teams",
+        "Review each user without a role assignment",
+        "Assign the appropriate role (Sales, Marketing, Service, etc.) based on their job function",
+        "Remove users who no longer need access to free up seats",
+        "Set up an onboarding checklist to ensure new users get roles assigned immediately",
+      ],
+      effort: "low",
+      impact: unassignedRoleUsers.length > 3 ? "medium" : "low",
+    }
+    finding.findingHash = generateFindingHash(finding)
+    findings.push(finding)
   }
 
   return {
@@ -234,7 +267,7 @@ function analyzeSeatUtilization(users) {
   const findings = []
 
   if (utilizationScore < 50) {
-    findings.push({
+    const finding = {
       type: "low_utilization",
       severity: "high",
       title: "Low HubSpot Seat Utilization",
@@ -245,10 +278,22 @@ function analyzeSeatUtilization(users) {
         inactiveUsers,
         totalUsers: users.length,
       },
-      recommendation: "Consider downgrading your HubSpot plan or removing unused seats to reduce costs",
-    })
+      recommendation: "Your utilization is critically low — evaluate whether your current plan tier and seat count match actual usage",
+      actionSteps: [
+        "Export a list of all HubSpot users and their last login dates",
+        "Identify users who haven't logged in within 30 days",
+        "Schedule meetings with team leads to confirm which seats are still needed",
+        "Remove or deactivate unnecessary user accounts",
+        "Contact HubSpot to discuss downgrading to a plan with fewer seats",
+        "Set up quarterly seat utilization reviews to prevent future waste",
+      ],
+      effort: "medium",
+      impact: "high",
+    }
+    finding.findingHash = generateFindingHash(finding)
+    findings.push(finding)
   } else if (utilizationScore < 75) {
-    findings.push({
+    const finding = {
       type: "moderate_utilization",
       severity: "medium",
       title: "Moderate HubSpot Seat Utilization",
@@ -259,8 +304,18 @@ function analyzeSeatUtilization(users) {
         inactiveUsers,
         totalUsers: users.length,
       },
-      recommendation: "Review partially active and inactive users to optimize seat allocation",
-    })
+      recommendation: "Review partially active users to determine if they still need full seat access or can be switched to view-only",
+      actionSteps: [
+        "Review the list of partially active users (logged in within 30 days but not last 7 days)",
+        "Determine if these users need full seat access or can use free/view-only access",
+        "Reach out to partially active users to understand their usage patterns",
+        "Reassign or remove seats that are underutilized",
+      ],
+      effort: "low",
+      impact: "medium",
+    }
+    finding.findingHash = generateFindingHash(finding)
+    findings.push(finding)
   }
 
   return {
@@ -331,6 +386,27 @@ function analyzeHubSpotCostLeaks(users, accountInfo = null, options = {}) {
   }
 
   const potentialSavings = inactiveAnalysis.inactiveCount * estimatedSeatCost
+
+  // Enrich findings with potentialSavings based on pricing
+  allFindings.forEach((finding) => {
+    if (finding.type === "inactive_seats") {
+      finding.potentialSavings = potentialSavings
+    } else if (finding.type === "unassigned_roles") {
+      // Unassigned role users might be removable — estimate at half the inactive savings
+      const unassignedCount = finding.affectedUsers?.length || 0
+      finding.potentialSavings = Math.round(unassignedCount * estimatedSeatCost * 0.5)
+    } else if (finding.type === "low_utilization") {
+      // Low utilization — estimate savings from removing all inactive + half of partially active
+      const metrics = finding.metrics || {}
+      const removable = (metrics.inactiveUsers || 0) + Math.floor((metrics.partiallyActiveUsers || 0) * 0.5)
+      finding.potentialSavings = removable * estimatedSeatCost
+    } else if (finding.type === "moderate_utilization") {
+      // Moderate utilization — estimate from partially active users
+      const metrics = finding.metrics || {}
+      const removable = Math.floor((metrics.partiallyActiveUsers || 0) * 0.3)
+      finding.potentialSavings = removable * estimatedSeatCost
+    }
+  })
 
   // Get pricing display info
   const pricingInfo = pricing ? getPricingDisplayInfo(pricing) : null
@@ -430,4 +506,5 @@ module.exports = {
   analyzeSeatUtilization,
   analyzeHubSpotCostLeaks,
   generateRecommendations,
+  generateFindingHash,
 }
