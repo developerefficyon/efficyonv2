@@ -3,7 +3,7 @@ const { getHealth } = require("../controllers/healthController")
 const {
   analyzeWithAI,
   chatAboutAnalysis,
-  getRecommendations,
+  getRecommendations: getAIRecommendations,
   estimateSavings,
   getAnalysisSummary,
 } = require("../controllers/aiController")
@@ -101,11 +101,15 @@ const {
   getQuickBooksAccounts,
   analyzeQuickBooksCostLeaks,
   disconnectQuickBooks,
-  getRecommendations: getQuickBooksRecommendations,
-  applyRecommendation: applyQuickBooksRecommendation,
-  updateRecommendationSteps: updateQuickBooksRecommendationSteps,
-  deleteRecommendation: deleteQuickBooksRecommendation,
 } = require("../controllers/quickbooksController")
+
+// Recommendation Controller - shared across all providers
+const {
+  getRecommendations,
+  applyRecommendation,
+  updateRecommendationSteps,
+  deleteRecommendation,
+} = require("../controllers/recommendationController")
 
 // Shopify Controller - Shopify OAuth and data operations
 const {
@@ -241,10 +245,10 @@ router.get("/api/integrations/fortnox/articles", requireAuth, requireRole("owner
 router.get("/api/integrations/fortnox/suppliers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSuppliers)
 router.get("/api/integrations/fortnox/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeFortnoxCostLeaks)
 router.post("/api/integrations/fortnox/sync-customers", requireAuth, requireRole("owner", "editor"), syncFortnoxCustomers)
-router.get("/api/integrations/fortnox/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
-router.post("/api/integrations/fortnox/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
-router.patch("/api/integrations/fortnox/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
-router.delete("/api/integrations/fortnox/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
+router.get("/api/integrations/fortnox/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post("/api/integrations/fortnox/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
+router.patch("/api/integrations/fortnox/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
+router.delete("/api/integrations/fortnox/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 
 // Microsoft 365 routes
 router.get("/api/integrations/microsoft365/oauth/start", requireAuth, requireRole("owner", "editor"), startMicrosoft365OAuth)
@@ -253,10 +257,10 @@ router.get("/api/integrations/microsoft365/licenses", requireAuth, requireRole("
 router.get("/api/integrations/microsoft365/users", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365Users)
 router.get("/api/integrations/microsoft365/usage", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365UsageReports)
 router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeMicrosoft365CostLeaks)
-router.get("/api/integrations/microsoft365/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
-router.post("/api/integrations/microsoft365/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
-router.patch("/api/integrations/microsoft365/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
-router.delete("/api/integrations/microsoft365/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
+router.get("/api/integrations/microsoft365/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post("/api/integrations/microsoft365/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
+router.patch("/api/integrations/microsoft365/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
+router.delete("/api/integrations/microsoft365/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 
 // HubSpot routes
 router.get("/api/integrations/hubspot/oauth/start", requireAuth, requireRole("owner", "editor"), startHubSpotOAuth)
@@ -264,10 +268,10 @@ router.get("/api/integrations/hubspot/callback", hubspotOAuthCallback)
 router.get("/api/integrations/hubspot/users", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotUsers)
 router.get("/api/integrations/hubspot/account", requireAuth, requireRole("owner", "editor", "viewer"), getHubSpotAccountInfo)
 router.get("/api/integrations/hubspot/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeHubSpotCostLeaks)
-router.get("/api/integrations/hubspot/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
-router.post("/api/integrations/hubspot/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
-router.patch("/api/integrations/hubspot/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
-router.delete("/api/integrations/hubspot/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
+router.get("/api/integrations/hubspot/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post("/api/integrations/hubspot/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
+router.patch("/api/integrations/hubspot/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
+router.delete("/api/integrations/hubspot/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 router.delete("/api/integrations/hubspot/disconnect", requireAuth, requireRole("owner", "editor"), disconnectHubSpot)
 
 // QuickBooks routes
@@ -280,10 +284,10 @@ router.get("/api/integrations/quickbooks/expenses", requireAuth, requireRole("ow
 router.get("/api/integrations/quickbooks/vendors", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksVendors)
 router.get("/api/integrations/quickbooks/accounts", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksAccounts)
 router.get("/api/integrations/quickbooks/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeQuickBooksCostLeaks)
-router.get("/api/integrations/quickbooks/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
-router.post("/api/integrations/quickbooks/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
-router.patch("/api/integrations/quickbooks/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
-router.delete("/api/integrations/quickbooks/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
+router.get("/api/integrations/quickbooks/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post("/api/integrations/quickbooks/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
+router.patch("/api/integrations/quickbooks/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
+router.delete("/api/integrations/quickbooks/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 router.delete("/api/integrations/quickbooks/disconnect", requireAuth, requireRole("owner", "editor"), disconnectQuickBooks)
 
 // Shopify routes
@@ -344,7 +348,7 @@ router.post("/api/team/invitations/:invitationId/resend", requireAuth, resendInv
 // AI/OpenAI Routes
 router.post("/api/ai/analyze", requireAuth, requireRole("owner", "editor"), analyzeWithAI)
 router.post("/api/ai/chat", requireAuth, requireRole("owner", "editor"), chatAboutAnalysis)
-router.post("/api/ai/recommendations", requireAuth, requireRole("owner", "editor"), getRecommendations)
+router.post("/api/ai/recommendations", requireAuth, requireRole("owner", "editor"), getAIRecommendations)
 router.post("/api/ai/estimate-savings", requireAuth, requireRole("owner", "editor"), estimateSavings)
 router.post("/api/ai/summary", requireAuth, requireRole("owner", "editor"), getAnalysisSummary)
 
