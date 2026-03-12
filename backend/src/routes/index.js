@@ -249,6 +249,10 @@ router.get("/api/integrations/microsoft365/licenses", requireAuth, requireRole("
 router.get("/api/integrations/microsoft365/users", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365Users)
 router.get("/api/integrations/microsoft365/usage", requireAuth, requireRole("owner", "editor", "viewer"), getMicrosoft365UsageReports)
 router.get("/api/integrations/microsoft365/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeMicrosoft365CostLeaks)
+router.get("/api/integrations/microsoft365/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
+router.post("/api/integrations/microsoft365/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
+router.patch("/api/integrations/microsoft365/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
+router.delete("/api/integrations/microsoft365/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
 
 // HubSpot routes
 router.get("/api/integrations/hubspot/oauth/start", requireAuth, requireRole("owner", "editor"), startHubSpotOAuth)

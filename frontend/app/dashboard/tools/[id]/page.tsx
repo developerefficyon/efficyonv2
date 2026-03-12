@@ -143,7 +143,7 @@ export default function ToolDetailPage() {
 
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue", "subscriptions", "priceIncreases", "categorySpending", "inactive", "utilization", "unassigned"]))
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["duplicates", "anomalies", "overdue", "subscriptions", "priceIncreases", "categorySpending", "inactive", "utilization", "unassigned", "orphaned", "overprovisioned", "unused"]))
 
   // Recommendation tracking state
   const [recommendationStatuses, setRecommendationStatuses] = useState<Record<string, {
@@ -1730,11 +1730,11 @@ export default function ToolDetailPage() {
     })
   }
 
-  // Fetch recommendation statuses when analysis is loaded (QuickBooks or HubSpot)
+  // Fetch recommendation statuses when analysis is loaded
   useEffect(() => {
     if (costLeakAnalysis && integration) {
       const provider = integration.tool_name || integration.provider || ""
-      if (provider === "QuickBooks" || provider === "HubSpot") {
+      if (provider === "QuickBooks" || provider === "HubSpot" || provider === "Microsoft365") {
         fetchRecommendationStatuses()
       }
     }

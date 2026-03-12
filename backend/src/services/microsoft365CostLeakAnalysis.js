@@ -3,6 +3,19 @@
  * Analyzes Microsoft 365 license and usage data to identify cost optimization opportunities
  */
 
+const crypto = require("crypto")
+
+/**
+ * Generate a stable hash for a finding so we can track it across analyses
+ * @param {Object} finding - The finding object
+ * @returns {string} MD5 hash string
+ */
+function generateFindingHash(finding) {
+  const userKey = finding.user?.email || finding.user?.id || finding.addon?.skuPartNumber || ""
+  const key = `${finding.type}:${finding.title}:${userKey}`
+  return crypto.createHash("md5").update(key).digest("hex")
+}
+
 // Microsoft 365 License SKU IDs and their monthly costs (USD)
 const M365_LICENSE_COSTS = {
   // Enterprise Plans
@@ -79,7 +92,7 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
     if (!lastSignIn) {
       // Never signed in but has licenses
       const licenseCost = calculateUserLicenseCost(user.assignedLicenses)
-      findings.push({
+      const finding = {
         type: "inactive_license",
         severity: "high",
         title: "User Never Signed In",
@@ -93,8 +106,19 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
         licenses: user.assignedLicenses,
         daysInactive: null,
         potentialSavings: licenseCost,
-        recommendation: "Remove licenses or verify if user needs access",
-      })
+        recommendation: "This user has never signed in — remove their licenses to stop paying immediately",
+        actionSteps: [
+          "Verify with the user's manager if this account is still needed",
+          "Check if the user was recently onboarded and hasn't completed setup",
+          "Go to Microsoft 365 Admin Center > Users > Active Users",
+          "Select the user and remove all license assignments",
+          "If the account is no longer needed, disable or delete it",
+        ],
+        effort: "low",
+        impact: "high",
+      }
+      finding.findingHash = generateFindingHash(finding)
+      findings.push(finding)
       return
     }
 
@@ -107,7 +131,7 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
       if (daysSinceSignIn >= 90) severity = "high"
       else if (daysSinceSignIn >= 60) severity = "high"
 
-      findings.push({
+      const finding = {
         type: "inactive_license",
         severity,
         title: `Inactive for ${daysSinceSignIn} Days`,
@@ -123,9 +147,27 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
         daysInactive: daysSinceSignIn,
         potentialSavings: licenseCost,
         recommendation: daysSinceSignIn >= 90
-          ? "Consider removing licenses - user may have left organization"
-          : "Verify if user still needs access",
-      })
+          ? "User has been inactive for 90+ days — likely no longer needs licenses"
+          : "Verify if user still needs access and remove licenses if not",
+        actionSteps: daysSinceSignIn >= 90
+          ? [
+              "Check with HR if this employee is still active in the organization",
+              "Contact the user's manager to confirm license removal",
+              "Go to Microsoft 365 Admin Center > Users > Active Users",
+              "Remove all license assignments from this user",
+              "Consider disabling the account if the user has left",
+            ]
+          : [
+              "Contact the user to check if they still need Microsoft 365 access",
+              "Review if the user has moved to a different role that doesn't require M365",
+              "Go to Microsoft 365 Admin Center > Users > Active Users",
+              "Remove or downgrade licenses if access is no longer needed",
+            ],
+        effort: "low",
+        impact: severity === "high" ? "high" : "medium",
+      }
+      finding.findingHash = generateFindingHash(finding)
+      findings.push(finding)
     }
   })
 
@@ -144,7 +186,7 @@ function analyzeOrphanedLicenses(users) {
     if (!user.accountEnabled && user.assignedLicenses && user.assignedLicenses.length > 0) {
       const licenseCost = calculateUserLicenseCost(user.assignedLicenses)
 
-      findings.push({
+      const finding = {
         type: "orphaned_license",
         severity: "high",
         title: "License on Disabled Account",
@@ -157,8 +199,19 @@ function analyzeOrphanedLicenses(users) {
         },
         licenses: user.assignedLicenses,
         potentialSavings: licenseCost,
-        recommendation: "Remove licenses from disabled account immediately",
-      })
+        recommendation: "Remove all licenses from this disabled account — this is pure waste with zero risk",
+        actionSteps: [
+          "Go to Microsoft 365 Admin Center > Users > Active Users",
+          "Find and select this disabled user account",
+          "Remove all license assignments from the account",
+          "Optionally delete the account if data retention is not needed",
+          "Verify the license is freed up and available for reassignment",
+        ],
+        effort: "low",
+        impact: "high",
+      }
+      finding.findingHash = generateFindingHash(finding)
+      findings.push(finding)
     }
   })
 
@@ -209,7 +262,7 @@ function analyzeOverProvisionedLicenses(users, licenses) {
         // For now, flag E5 users as potential over-provisioned
         // In a real scenario, we'd check actual feature usage via reports API
         if (tier === 'E5') {
-          findings.push({
+          const finding = {
             type: "over_provisioned",
             severity: "medium",
             title: "Potential Over-Provisioning",
@@ -222,8 +275,19 @@ function analyzeOverProvisionedLicenses(users, licenses) {
             currentLicense: skuInfo,
             recommendedTier: downgradeRec.to,
             potentialSavings: downgradeRec.savings,
-            recommendation: `Review if user needs E5 features. Downgrade to ${downgradeRec.to} could save $${downgradeRec.savings}/month.`,
-          })
+            recommendation: `Downgrading from ${tier} to ${downgradeRec.to} saves $${downgradeRec.savings}/month — verify E5-only feature usage first`,
+            actionSteps: [
+              `Check if ${user.displayName || user.userPrincipalName} uses E5-exclusive features (Advanced eDiscovery, Auto-labeling, Advanced Threat Protection)`,
+              "Review Microsoft 365 usage reports for this user's app activity",
+              "Confirm with the user or their manager if a downgrade is acceptable",
+              `Go to Admin Center > Users and change license from ${skuInfo.name} to ${downgradeRec.to}`,
+              "Monitor for any access issues after the downgrade for 1-2 weeks",
+            ],
+            effort: "medium",
+            impact: "medium",
+          }
+          finding.findingHash = generateFindingHash(finding)
+          findings.push(finding)
         }
       }
     })
@@ -271,7 +335,7 @@ function analyzeUnusedAddons(users, licenses) {
       if (!addonInfo) return
 
       if (isInactive) {
-        findings.push({
+        const finding = {
           type: "unused_addon",
           severity: "low",
           title: `Unused ${addonInfo.name}`,
@@ -283,8 +347,18 @@ function analyzeUnusedAddons(users, licenses) {
           },
           addon: addonInfo,
           potentialSavings: addonInfo.cost,
-          recommendation: `Review if ${addonInfo.name} is needed. Could save $${addonInfo.cost}/month.`,
-        })
+          recommendation: `Remove ${addonInfo.name} from this inactive user to save $${addonInfo.cost}/month`,
+          actionSteps: [
+            `Confirm ${user.displayName || user.userPrincipalName} no longer needs ${addonInfo.name}`,
+            "Go to Microsoft 365 Admin Center > Users > Active Users",
+            `Select the user and remove the ${addonInfo.name} license`,
+            "Reassign the freed license to an active user if needed",
+          ],
+          effort: "low",
+          impact: "low",
+        }
+        finding.findingHash = generateFindingHash(finding)
+        findings.push(finding)
       }
     })
   })
@@ -299,7 +373,7 @@ function analyzeUnusedAddons(users, licenses) {
       const unusedCount = addon.prepaidUnits - addon.consumedUnits
       const monthlySavings = unusedCount * addon.cost
 
-      findings.push({
+      const finding = {
         type: "unused_addon",
         severity: "medium",
         title: `Underutilized ${addon.name} Licenses`,
@@ -309,8 +383,19 @@ function analyzeUnusedAddons(users, licenses) {
         available: addon.prepaidUnits,
         utilizationPercent: utilization.toFixed(0),
         potentialSavings: monthlySavings,
-        recommendation: `Consider reducing ${addon.name} licenses. ${unusedCount} unused licenses cost $${monthlySavings}/month.`,
-      })
+        recommendation: `Reduce ${addon.name} licenses from ${addon.prepaidUnits} to ${addon.consumedUnits} to save $${monthlySavings}/month`,
+        actionSteps: [
+          `Audit which users are actively using ${addon.name}`,
+          "Confirm with team leads that unassigned licenses are not needed",
+          `Go to Microsoft 365 Admin Center > Billing > Licenses`,
+          `Reduce the ${addon.name} subscription quantity from ${addon.prepaidUnits} to ${addon.consumedUnits}`,
+          "Verify the cost reduction on your next Microsoft invoice",
+        ],
+        effort: "medium",
+        impact: "medium",
+      }
+      finding.findingHash = generateFindingHash(finding)
+      findings.push(finding)
     }
   })
 
@@ -436,5 +521,6 @@ module.exports = {
   analyzeOrphanedLicenses,
   analyzeOverProvisionedLicenses,
   analyzeUnusedAddons,
+  generateFindingHash,
   M365_LICENSE_COSTS,
 }
