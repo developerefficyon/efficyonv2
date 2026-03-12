@@ -26,6 +26,21 @@ export const metadata: Metadata = {
     description:
       "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
     siteName: "Efficyon",
+    images: [
+      {
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Efficyon - AI-Powered SaaS Cost Optimization",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Efficyon - AI-Powered SaaS Cost Optimization",
+    description:
+      "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+    images: ["/api/og"],
   },
   icons: {
     icon: "/favicon.ico",
