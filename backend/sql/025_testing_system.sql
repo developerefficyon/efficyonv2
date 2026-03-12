@@ -36,6 +36,7 @@ create index if not exists idx_analysis_templates_is_active on public.analysis_t
 
 alter table public.analysis_templates enable row level security;
 
+drop policy if exists "Service role can manage analysis templates" on public.analysis_templates;
 create policy "Service role can manage analysis templates"
   on public.analysis_templates for all
   using (auth.role() = 'service_role');
@@ -62,6 +63,7 @@ create index if not exists idx_test_workspaces_created_at on public.test_workspa
 
 alter table public.test_workspaces enable row level security;
 
+drop policy if exists "Service role can manage test workspaces" on public.test_workspaces;
 create policy "Service role can manage test workspaces"
   on public.test_workspaces for all
   using (auth.role() = 'service_role');
@@ -79,7 +81,8 @@ create table if not exists public.test_uploads (
     check (data_type in (
       'supplier_invoices', 'invoices', 'customers', 'expenses', 'vouchers', 'accounts', 'articles',
       'licenses', 'users', 'usage_reports',
-      'hubspot_users', 'hubspot_account'
+      'hubspot_users', 'hubspot_account',
+      'profit_loss'
     )),
   file_data jsonb not null,
   validation_status text not null default 'pending'
@@ -94,6 +97,7 @@ create index if not exists idx_test_uploads_integration_label on public.test_upl
 
 alter table public.test_uploads enable row level security;
 
+drop policy if exists "Service role can manage test uploads" on public.test_uploads;
 create policy "Service role can manage test uploads"
   on public.test_uploads for all
   using (auth.role() = 'service_role');
@@ -130,6 +134,7 @@ create index if not exists idx_test_analyses_created_at on public.test_analyses(
 
 alter table public.test_analyses enable row level security;
 
+drop policy if exists "Service role can manage test analyses" on public.test_analyses;
 create policy "Service role can manage test analyses"
   on public.test_analyses for all
   using (auth.role() = 'service_role');
@@ -154,6 +159,7 @@ create index if not exists idx_test_run_logs_created_at on public.test_run_logs(
 
 alter table public.test_run_logs enable row level security;
 
+drop policy if exists "Service role can manage test run logs" on public.test_run_logs;
 create policy "Service role can manage test run logs"
   on public.test_run_logs for all
   using (auth.role() = 'service_role');

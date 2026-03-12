@@ -186,8 +186,11 @@ export default function WorkspaceDetailPage() {
       const token = await getBackendToken()
       if (!token) return
 
+      // Auto-upgrade to cross_platform when multiple integrations are selected
+      const effectiveType = selectedIntegrations.length >= 2 ? "cross_platform" : analysisType
+
       const body: any = {
-        analysis_type: analysisType,
+        analysis_type: effectiveType,
         integration_labels: selectedIntegrations,
         upload_ids: selectedUploadIds,
       }
@@ -396,7 +399,7 @@ export default function WorkspaceDetailPage() {
               ) : (
                 <>
                   <div>
-                    <label className="text-sm text-gray-400">Analysis Type</label>
+                    <label className="text-sm text-gray-400">Analysis Depth</label>
                     <Select value={analysisType} onValueChange={setAnalysisType}>
                       <SelectTrigger className="mt-1 bg-black/50 border-white/10 text-white">
                         <SelectValue />
@@ -404,7 +407,6 @@ export default function WorkspaceDetailPage() {
                       <SelectContent className="bg-gray-900 border-white/10">
                         <SelectItem value="standard" className="text-white focus:bg-white/10 focus:text-white">Standard</SelectItem>
                         <SelectItem value="deep" className="text-white focus:bg-white/10 focus:text-white">Deep Research</SelectItem>
-                        <SelectItem value="cross_platform" className="text-white focus:bg-white/10 focus:text-white">Cross-Platform</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Sparkles, CheckCircle, Info, ChevronDown, ChevronRight, Zap } from "lucide-react"
+import { Loader2, Sparkles, CheckCircle, ChevronDown, ChevronRight, Zap, Settings2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface Props {
@@ -15,41 +15,40 @@ interface Props {
 }
 
 const INTEGRATIONS = [
-  { key: "Fortnox", label: "Fortnox", description: "Supplier invoices, customer invoices, expenses" },
-  { key: "Microsoft365", label: "Microsoft 365", description: "Licenses, users, usage activity" },
-  { key: "HubSpot", label: "HubSpot", description: "Users, account info, roles" },
+  { key: "Fortnox", label: "Fortnox", description: "Invoices, expenses, suppliers" },
+  { key: "Microsoft365", label: "Microsoft 365", description: "Licenses, users, usage" },
+  { key: "HubSpot", label: "HubSpot", description: "Users, accounts, roles" },
 ]
 
-const ANOMALY_OPTIONS: Record<string, { key: string; label: string; description: string }[]> = {
+const ANOMALY_OPTIONS: Record<string, { key: string; label: string }[]> = {
   Fortnox: [
-    { key: "duplicates", label: "Duplicate Invoices", description: "Same supplier + amount within 30 days" },
-    { key: "unusualAmounts", label: "Unusual Amounts", description: "Invoice spikes 3-5x normal" },
-    { key: "overdueInvoices", label: "Overdue Invoices", description: "Unpaid past due date" },
-    { key: "priceDrift", label: "Price Drift", description: "25-50% gradual increase over 12 months" },
+    { key: "duplicates", label: "Duplicate invoices" },
+    { key: "unusualAmounts", label: "Unusual amounts" },
+    { key: "overdueInvoices", label: "Overdue invoices" },
+    { key: "priceDrift", label: "Price drift" },
   ],
   Microsoft365: [
-    { key: "inactiveUsers", label: "Inactive Users", description: "No sign-in for 45+ days" },
-    { key: "orphanedLicenses", label: "Orphaned Licenses", description: "Licenses on disabled accounts" },
-    { key: "overProvisioned", label: "Over-Provisioned", description: "E5 licenses for basic users" },
+    { key: "inactiveUsers", label: "Inactive users" },
+    { key: "orphanedLicenses", label: "Orphaned licenses" },
+    { key: "overProvisioned", label: "Over-provisioned" },
   ],
   HubSpot: [
-    { key: "inactiveUsers", label: "Inactive Users", description: "No login for 45+ days" },
-    { key: "unassignedRoles", label: "Unassigned Roles", description: "Users without role assignments" },
-    { key: "pendingInvitations", label: "Pending Invitations", description: "Users who haven't accepted" },
+    { key: "inactiveUsers", label: "Inactive users" },
+    { key: "unassignedRoles", label: "Unassigned roles" },
+    { key: "pendingInvitations", label: "Pending invitations" },
   ],
 }
 
 const STRESS_SCENARIOS = [
-  { key: "extreme_values", label: "Extreme Values", description: "Negative amounts, huge numbers, zero totals" },
-  { key: "large_datasets", label: "Large Datasets", description: "1000-5000 records for performance testing" },
-  { key: "partial_data", label: "Partial Data", description: "Missing required fields at 40% rate" },
-  { key: "empty_arrays", label: "Empty Arrays", description: "Valid structure but zero records" },
-  { key: "type_mismatches", label: "Type Mismatches", description: "Numbers as strings, wrong field types" },
-  { key: "duplicate_heavy", label: "Duplicate Heavy", description: "50%+ exact duplicated records" },
-  { key: "boundary_dates", label: "Boundary Dates", description: "Far future, epoch 0, invalid formats" },
+  { key: "extreme_values", label: "Extreme values" },
+  { key: "large_datasets", label: "Large datasets (1k-5k rows)" },
+  { key: "partial_data", label: "Missing fields (40%)" },
+  { key: "empty_arrays", label: "Empty arrays" },
+  { key: "type_mismatches", label: "Type mismatches" },
+  { key: "duplicate_heavy", label: "50%+ duplicates" },
+  { key: "boundary_dates", label: "Boundary dates" },
 ]
 
-// Initialize all anomalies as ON by default
 function getDefaultAnomalyConfig() {
   const config: Record<string, Record<string, boolean>> = {}
   for (const [integration, options] of Object.entries(ANOMALY_OPTIONS)) {
@@ -67,8 +66,7 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
   const [anomalyConfig, setAnomalyConfig] = useState(getDefaultAnomalyConfig)
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState<any>(null)
-  const [showAnomalies, setShowAnomalies] = useState(false)
-  const [showGuide, setShowGuide] = useState(true)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [stressMode, setStressMode] = useState(false)
   const [selectedStressScenarios, setSelectedStressScenarios] = useState<string[]>([])
 
@@ -150,7 +148,7 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
 
   return (
     <Card className="bg-white/5 border-white/10">
-      <CardHeader>
+      <CardHeader className="pb-4">
         <CardTitle className="text-white text-lg flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-cyan-400" />
           Generate Mock Data
@@ -158,210 +156,111 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
             {scenarioLabel}
           </Badge>
         </CardTitle>
+        <p className="text-sm text-gray-500 mt-1">
+          Select integrations below, then hit generate. Anomalies are injected automatically.
+        </p>
       </CardHeader>
-      <CardContent className="space-y-5">
-        {/* Guide Section */}
-        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 overflow-hidden">
-          <button
-            className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-blue-500/10 transition-colors"
-            onClick={() => setShowGuide(!showGuide)}
-          >
-            <Info className="w-4 h-4 text-blue-400 shrink-0" />
-            <span className="text-sm font-medium text-blue-300">How to use the Mock Data Generator</span>
-            {showGuide ? (
-              <ChevronDown className="w-4 h-4 text-blue-400 ml-auto" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-blue-400 ml-auto" />
-            )}
-          </button>
-          {showGuide && (
-            <div className="px-4 pb-4 space-y-2">
-              <div className="flex gap-3 items-start">
-                <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">1</span>
-                <p className="text-sm text-gray-300">
-                  <span className="text-white font-medium">Select integrations</span> — Choose which platforms to generate test data for. Each integration produces realistic synthetic datasets matching the workspace&apos;s scenario profile.
-                </p>
-              </div>
-              <div className="flex gap-3 items-start">
-                <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">2</span>
-                <p className="text-sm text-gray-300">
-                  <span className="text-white font-medium">Configure anomalies</span> (optional) — Expand &quot;Anomaly Injection&quot; to toggle specific issues the analysis engine should detect. All anomalies are enabled by default.
-                </p>
-              </div>
-              <div className="flex gap-3 items-start">
-                <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">3</span>
-                <p className="text-sm text-gray-300">
-                  <span className="text-white font-medium">Generate</span> — Click the button to create mock uploads. Once generated, switch to the <span className="text-cyan-400">Run Analysis</span> tab to analyze the data and verify findings in <span className="text-cyan-400">Results</span>.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
+      <CardContent className="space-y-4">
         {/* Integration Selection */}
-        <div>
-          <label className="text-sm text-gray-400 block mb-2">Select Integrations</label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {INTEGRATIONS.map(({ key, label, description }) => {
-              const selected = selectedIntegrations.includes(key)
-              return (
-                <button
-                  key={key}
-                  className={`text-left p-3 rounded-lg border transition-all ${
-                    selected
-                      ? "border-cyan-500/50 bg-cyan-500/10 ring-1 ring-cyan-500/30"
-                      : "border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-white/20"
-                  }`}
-                  onClick={() => toggleIntegration(key)}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-sm font-medium ${selected ? "text-cyan-400" : "text-gray-300"}`}>
-                      {label}
-                    </span>
-                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                      selected ? "border-cyan-500 bg-cyan-500" : "border-gray-600 bg-transparent"
-                    }`}>
-                      {selected && (
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {INTEGRATIONS.map(({ key, label, description }) => {
+            const selected = selectedIntegrations.includes(key)
+            return (
+              <button
+                key={key}
+                className={`text-left p-3 rounded-lg border transition-all ${
+                  selected
+                    ? "border-cyan-500/50 bg-cyan-500/10 ring-1 ring-cyan-500/30"
+                    : "border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-white/20"
+                }`}
+                onClick={() => toggleIntegration(key)}
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className={`text-sm font-medium ${selected ? "text-cyan-400" : "text-gray-300"}`}>
+                    {label}
+                  </span>
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                    selected ? "border-cyan-500 bg-cyan-500" : "border-gray-600 bg-transparent"
+                  }`}>
+                    {selected && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-500">{description}</p>
-                </button>
-              )
-            })}
-          </div>
-          {selectedIntegrations.length === 0 && (
-            <p className="text-xs text-amber-400/80 mt-2">Select at least one integration to generate data</p>
-          )}
+                </div>
+                <p className="text-xs text-gray-500">{description}</p>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Mode Toggle — Normal vs Stress Test */}
+        {/* Advanced Options Toggle */}
         {selectedIntegrations.length > 0 && (
-          <div className="flex items-center gap-3">
-            <button
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !stressMode
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                  : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
-              }`}
-              onClick={() => setStressMode(false)}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Normal Mode
-            </button>
-            <button
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                stressMode
-                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                  : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
-              }`}
-              onClick={() => setStressMode(true)}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              Stress Test
-            </button>
-          </div>
+          <button
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1.5"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            Advanced options
+            {showAdvanced ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
         )}
 
-        {/* Stress Scenario Selection — only show in stress mode */}
-        {selectedIntegrations.length > 0 && stressMode && (
-          <div>
-            <label className="text-sm text-gray-400 block mb-2">Select Stress Scenarios</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {STRESS_SCENARIOS.map(({ key, label, description }) => {
-                const selected = selectedStressScenarios.includes(key)
-                return (
-                  <button
-                    key={key}
-                    className={`text-left p-2.5 rounded-lg border transition-colors ${
-                      selected
-                        ? "border-amber-500/30 bg-amber-500/10"
-                        : "border-white/10 bg-white/[0.02] hover:bg-white/5"
-                    }`}
-                    onClick={() => toggleStressScenario(key)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium ${selected ? "text-amber-400" : "text-gray-300"}`}>
-                        {label}
-                      </span>
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                        selected ? "border-amber-500 bg-amber-500" : "border-gray-600 bg-transparent"
-                      }`}>
-                        {selected && (
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{description}</p>
-                  </button>
-                )
-              })}
+        {/* Advanced Panel */}
+        {selectedIntegrations.length > 0 && showAdvanced && (
+          <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-4">
+            {/* Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  !stressMode
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                }`}
+                onClick={() => setStressMode(false)}
+              >
+                <Sparkles className="w-3 h-3" />
+                Normal
+              </button>
+              <button
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  stressMode
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                }`}
+                onClick={() => setStressMode(true)}
+              >
+                <Zap className="w-3 h-3" />
+                Stress Test
+              </button>
             </div>
-            {selectedStressScenarios.length === 0 && (
-              <p className="text-xs text-amber-400/80 mt-2">Select at least one stress scenario</p>
-            )}
-          </div>
-        )}
 
-        {/* Anomaly Toggles — only show in normal mode when integrations are selected */}
-        {selectedIntegrations.length > 0 && !stressMode && (
-          <div>
-            <button
-              className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
-              onClick={() => setShowAnomalies(!showAnomalies)}
-            >
-              {showAnomalies ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-              Anomaly Injection
-              {!showAnomalies && (
-                <span className="text-xs text-gray-500 ml-1">(all enabled by default)</span>
-              )}
-            </button>
-
-            {showAnomalies && (
-              <div className="mt-3 space-y-4">
+            {/* Normal mode: Anomaly toggles */}
+            {!stressMode && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">Anomalies to inject (all on by default):</p>
                 {selectedIntegrations.map((integration) => {
                   const options = ANOMALY_OPTIONS[integration]
                   if (!options) return null
                   const configKey = integration === "Microsoft365" ? "microsoft365" : integration.toLowerCase()
-
                   return (
-                    <div key={integration}>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">{integration}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div key={integration} className="space-y-1.5">
+                      <p className="text-xs text-gray-500 font-medium">{integration}</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {options.map((opt) => {
                           const enabled = anomalyConfig[configKey]?.[opt.key] !== false
                           return (
                             <button
                               key={opt.key}
-                              className={`text-left p-2.5 rounded-lg border transition-colors ${
+                              className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
                                 enabled
-                                  ? "border-cyan-500/30 bg-cyan-500/5"
-                                  : "border-white/5 bg-black/20"
+                                  ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+                                  : "bg-white/5 text-gray-500 border border-white/5"
                               }`}
                               onClick={() => toggleAnomaly(integration, opt.key)}
                             >
-                              <div className="flex items-center justify-between">
-                                <span className={`text-sm font-medium ${enabled ? "text-white" : "text-gray-500"}`}>
-                                  {opt.label}
-                                </span>
-                                <div className={`w-8 h-4 rounded-full transition-colors ${
-                                  enabled ? "bg-cyan-500" : "bg-gray-700"
-                                }`}>
-                                  <div className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-transform ${
-                                    enabled ? "translate-x-4" : "translate-x-0.5"
-                                  }`} />
-                                </div>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-0.5">{opt.description}</p>
+                              {opt.label}
                             </button>
                           )
                         })}
@@ -371,6 +270,34 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
                 })}
               </div>
             )}
+
+            {/* Stress mode: Scenario selection */}
+            {stressMode && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">Select stress scenarios:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STRESS_SCENARIOS.map(({ key, label }) => {
+                    const selected = selectedStressScenarios.includes(key)
+                    return (
+                      <button
+                        key={key}
+                        className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
+                          selected
+                            ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                            : "bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10"
+                        }`}
+                        onClick={() => toggleStressScenario(key)}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedStressScenarios.length === 0 && (
+                  <p className="text-xs text-amber-400/80">Pick at least one scenario</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -378,20 +305,20 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
         <Button
           onClick={handleGenerate}
           disabled={generating || selectedIntegrations.length === 0 || (stressMode && selectedStressScenarios.length === 0)}
-          className={`${stressMode ? "bg-amber-600 hover:bg-amber-700" : "bg-cyan-600 hover:bg-cyan-700"} text-white disabled:opacity-40 disabled:cursor-not-allowed`}
+          className={`${stressMode && showAdvanced ? "bg-amber-600 hover:bg-amber-700" : "bg-cyan-600 hover:bg-cyan-700"} text-white disabled:opacity-40 disabled:cursor-not-allowed`}
         >
           {generating ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          ) : stressMode ? (
+          ) : stressMode && showAdvanced ? (
             <Zap className="w-4 h-4 mr-2" />
           ) : (
             <Sparkles className="w-4 h-4 mr-2" />
           )}
           {generating
             ? "Generating..."
-            : stressMode
-              ? `Run Stress Test${selectedIntegrations.length > 0 ? ` (${selectedStressScenarios.length} scenario${selectedStressScenarios.length !== 1 ? "s" : ""})` : ""}`
-              : `Generate Mock Data${selectedIntegrations.length > 0 ? ` (${selectedIntegrations.length} integration${selectedIntegrations.length > 1 ? "s" : ""})` : ""}`
+            : stressMode && showAdvanced
+              ? `Run Stress Test (${selectedStressScenarios.length})`
+              : `Generate${selectedIntegrations.length > 0 ? ` (${selectedIntegrations.length})` : ""}`
           }
         </Button>
 
@@ -400,7 +327,7 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
           <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-white font-medium">{result.message}</span>
+              <span className="text-white font-medium text-sm">{result.message}</span>
             </div>
             <div className="space-y-1">
               {result.uploads.map((upload: any) => (
@@ -422,7 +349,7 @@ export function MockDataGenerator({ workspaceId, scenarioProfile, onGenerateComp
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-3">
-              Data is ready. Go to <span className="text-cyan-400">Run Analysis</span> tab to analyze, then check <span className="text-cyan-400">Results</span> for findings.
+              Ready — switch to <span className="text-cyan-400">Run Analysis</span> to analyze.
             </p>
           </div>
         )}

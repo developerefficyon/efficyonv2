@@ -94,7 +94,11 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  // Override controls
+  // Pre-upload tool hint
+  const [hintIntegration, setHintIntegration] = useState("")
+  const [hintDataType, setHintDataType] = useState("")
+
+  // Override controls (post-upload)
   const [showOverride, setShowOverride] = useState(false)
   const [overrideIntegration, setOverrideIntegration] = useState("")
   const [overrideDataType, setOverrideDataType] = useState("")
@@ -203,9 +207,11 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     (files: FileList | File[]) => {
       const file = files[0]
       if (!file) return
-      processFile(file)
+      const integration = hintIntegration && hintIntegration !== "auto" ? hintIntegration : undefined
+      const dataType = hintDataType && hintDataType !== "auto" ? hintDataType : undefined
+      processFile(file, integration, dataType)
     },
-    [processFile]
+    [processFile, hintIntegration, hintDataType]
   )
 
   // Drag event handlers
@@ -238,6 +244,8 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     setSelectedFile(null)
     setUploadProgress(0)
     setStatusText("")
+    setHintIntegration("")
+    setHintDataType("")
     setShowOverride(false)
     setOverrideIntegration("")
     setOverrideDataType("")
@@ -275,42 +283,80 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
       <CardContent>
         {/* IDLE STATE */}
         {state === "idle" && (
-          <div
-            ref={dropZoneRef}
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPT_STRING}
-              onChange={(e) => e.target.files && handleFiles(e.target.files)}
-              className="hidden"
-            />
-            <FileUp className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-            <p className="text-sm text-white mb-1">
-              Drop CSV, Excel, PDF, or JPEG files here
-            </p>
-            <p className="text-xs text-gray-500 mb-3">
-              or click to browse &middot; Max 15MB
-            </p>
-            <div className="flex gap-2 justify-center flex-wrap">
-              <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">
-                .csv
-              </Badge>
-              <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">
-                .xlsx
-              </Badge>
-              <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">
-                .pdf
-              </Badge>
-              <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">
-                .jpeg
-              </Badge>
+          <div className="space-y-3">
+            {/* Tool selector */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Tool / Integration</label>
+                <Select
+                  value={hintIntegration}
+                  onValueChange={(val) => {
+                    setHintIntegration(val)
+                    setHintDataType("")
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-sm bg-black/50 border-white/10 text-white">
+                    <SelectValue placeholder="Auto-detect" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-white/10">
+                    <SelectItem value="auto" className="text-white focus:bg-white/10 focus:text-white">Auto-detect</SelectItem>
+                    {Object.entries(DATA_TYPES).map(([key, { label }]) => (
+                      <SelectItem key={key} value={key} className="text-white focus:bg-white/10 focus:text-white">{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Data Type</label>
+                <Select
+                  value={hintDataType}
+                  onValueChange={setHintDataType}
+                  disabled={!hintIntegration || hintIntegration === "auto"}
+                >
+                  <SelectTrigger className="h-9 text-sm bg-black/50 border-white/10 text-white">
+                    <SelectValue placeholder="Auto-detect" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-white/10">
+                    <SelectItem value="auto" className="text-white focus:bg-white/10 focus:text-white">Auto-detect</SelectItem>
+                    {hintIntegration && hintIntegration !== "auto" &&
+                      DATA_TYPES[hintIntegration]?.types.map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="text-white focus:bg-white/10 focus:text-white">{t.label}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Drop zone */}
+            <div
+              ref={dropZoneRef}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_STRING}
+                onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                className="hidden"
+              />
+              <FileUp className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-sm text-white mb-1">
+                Drop CSV, Excel, PDF, or JPEG files here
+              </p>
+              <p className="text-xs text-gray-500 mb-3">
+                or click to browse &middot; Max 15MB
+              </p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.csv</Badge>
+                <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.xlsx</Badge>
+                <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.pdf</Badge>
+                <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.jpeg</Badge>
+              </div>
             </div>
           </div>
         )}

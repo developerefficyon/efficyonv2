@@ -207,6 +207,11 @@ async function refreshQuickBooksTokenIfNeeded(integration, tokens) {
   }
 }
 
+// QuickBooks API base URL — use sandbox for development, production otherwise
+const QB_API_BASE = process.env.NODE_ENV === "production"
+  ? "https://quickbooks.api.intuit.com"
+  : "https://sandbox-quickbooks.api.intuit.com"
+
 // Helper function to fetch QuickBooks API data
 async function fetchQuickBooksAPI(endpoint, accessToken, realmId, scopeName) {
   const rateLimitCheck = checkRateLimit(realmId)
@@ -214,7 +219,7 @@ async function fetchQuickBooksAPI(endpoint, accessToken, realmId, scopeName) {
     throw new Error(`Rate limit exceeded: ${rateLimitCheck.message}`)
   }
 
-  const url = `https://quickbooks.api.intuit.com/v3/company/${realmId}${endpoint}`
+  const url = `${QB_API_BASE}/v3/company/${realmId}${endpoint}`
 
   const response = await fetch(url, {
     method: "GET",
