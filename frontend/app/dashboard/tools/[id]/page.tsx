@@ -1734,7 +1734,7 @@ export default function ToolDetailPage() {
   useEffect(() => {
     if (costLeakAnalysis && integration) {
       const provider = integration.tool_name || integration.provider || ""
-      if (provider === "QuickBooks" || provider === "HubSpot" || provider === "Microsoft365") {
+      if (provider === "QuickBooks" || provider === "HubSpot" || provider === "Microsoft365" || provider === "Fortnox") {
         fetchRecommendationStatuses()
       }
     }

@@ -241,6 +241,10 @@ router.get("/api/integrations/fortnox/articles", requireAuth, requireRole("owner
 router.get("/api/integrations/fortnox/suppliers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSuppliers)
 router.get("/api/integrations/fortnox/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeFortnoxCostLeaks)
 router.post("/api/integrations/fortnox/sync-customers", requireAuth, requireRole("owner", "editor"), syncFortnoxCustomers)
+router.get("/api/integrations/fortnox/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getQuickBooksRecommendations)
+router.post("/api/integrations/fortnox/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyQuickBooksRecommendation)
+router.patch("/api/integrations/fortnox/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateQuickBooksRecommendationSteps)
+router.delete("/api/integrations/fortnox/recommendations/:id", requireAuth, requireRole("owner"), deleteQuickBooksRecommendation)
 
 // Microsoft 365 routes
 router.get("/api/integrations/microsoft365/oauth/start", requireAuth, requireRole("owner", "editor"), startMicrosoft365OAuth)

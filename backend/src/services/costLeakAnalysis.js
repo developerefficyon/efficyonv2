@@ -2,7 +2,16 @@
  * Cost Leak Analysis Service
  * Analyzes Fortnox data to identify potential cost leaks and anomalies
  */
+const crypto = require("crypto")
 const { formatCurrencyForIntegration } = require("../utils/currency")
+
+/**
+ * Generate a stable hash for a finding to track recommendation status
+ */
+function generateFindingHash(finding) {
+  const key = `${finding.type}:${finding.title}:${finding.description || ""}`
+  return crypto.createHash("md5").update(key).digest("hex")
+}
 
 // Convert SEK to USD for display (Fortnox uses SEK natively)
 const SEK_TO_USD = 0.095 // ~1 USD = 10.5 SEK
@@ -172,7 +181,7 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
 
             if (daysDiff <= 30) {
               const name = inv1.supplierName || inv1.SupplierName
-              summary.duplicatePayments.push({
+              const dupFinding = {
                 type: "duplicate_payment",
                 severity: "high",
                 title: "Potential Duplicate Payment",
@@ -180,7 +189,18 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
                 invoices: [inv1, inv2],
                 amount: inv1.calculatedTotal,
                 potentialSavings: inv1.calculatedTotal,
-              })
+                effort: "medium",
+                impact: "high",
+                actionSteps: [
+                  "Compare the two invoices side-by-side (invoice numbers, dates, line items)",
+                  "Check if both invoices have been paid or only one is booked",
+                  "Contact the supplier to confirm whether this is a genuine duplicate",
+                  "If confirmed duplicate, request a credit note or refund from the supplier",
+                  "Mark the duplicate invoice as cancelled in Fortnox to prevent future payment",
+                ],
+              }
+              dupFinding.findingHash = generateFindingHash(dupFinding)
+              summary.duplicatePayments.push(dupFinding)
             }
           }
         }
@@ -214,7 +234,7 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
       }
 
       if (invoiceTotal > threshold && invoiceTotal > mean * 1.5) {
-        summary.unusualAmounts.push({
+        const unusualFinding = {
           type: "unusual_amount",
           severity: "medium",
           title: "Unusually High Invoice Amount",
@@ -223,7 +243,18 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
           amount: invoiceTotal,
           averageAmount: mean,
           deviation: ((invoiceTotal - mean) / mean * 100).toFixed(1) + "%",
-        })
+          effort: "low",
+          impact: "medium",
+          actionSteps: [
+            "Review the invoice line items to verify all charges are correct",
+            "Compare with previous invoices from the same supplier for price changes",
+            "Check if this is a one-time expense or indicates a pricing trend",
+            "Contact the supplier to clarify any unexpected charges",
+            "Approve or dispute the invoice based on your review",
+          ],
+        }
+        unusualFinding.findingHash = generateFindingHash(unusualFinding)
+        summary.unusualAmounts.push(unusualFinding)
       }
     })
   }
@@ -290,7 +321,7 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
 
           // Minimum 7-day interval to avoid false positives from clustered transactions
           if (isRegular && avgInterval >= 7) {
-            summary.recurringSubscriptions.push({
+            const subFinding = {
               type: "recurring_subscription",
               severity: "low",
               title: "Recurring Subscription Detected",
@@ -304,7 +335,17 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
               frequency: Math.round(avgInterval) + " days",
               totalAmount: cluster.reduce((sum, inv) => sum + inv.calculatedTotal, 0),
               potentialSavings: avgAmount,
-            })
+              effort: "low",
+              impact: "medium",
+              actionSteps: [
+                "Verify this subscription is still actively needed by the team",
+                "Check if there are cheaper alternatives or if you can negotiate a better rate",
+                "Review the contract terms for cancellation policy and renewal dates",
+                "If no longer needed, cancel the subscription and update Fortnox accordingly",
+              ],
+            }
+            subFinding.findingHash = generateFindingHash(subFinding)
+            summary.recurringSubscriptions.push(subFinding)
           }
         }
       })
@@ -348,7 +389,7 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
           }, 0)
         }
 
-        summary.overdueInvoices.push({
+        const overdueFinding = {
           type: "overdue_invoice",
           severity: "medium",
           title: "Overdue Invoice",
@@ -357,7 +398,18 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
           daysOverdue,
           amount: invoiceTotal,
           potentialCost: invoiceTotal * 0.02, // 2% late fee estimate
-        })
+          effort: "low",
+          impact: daysOverdue > 60 ? "high" : "medium",
+          actionSteps: [
+            "Verify the invoice is legitimate and has not already been paid",
+            "Check if the supplier has sent payment reminders or late fee notices",
+            "Process the payment immediately to avoid additional late fees",
+            "Set up a payment reminder or auto-pay for this supplier to prevent future overdue invoices",
+            "Update the invoice status in Fortnox after payment is made",
+          ],
+        }
+        overdueFinding.findingHash = generateFindingHash(overdueFinding)
+        summary.overdueInvoices.push(overdueFinding)
       }
     }
   })
@@ -377,7 +429,7 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
       const increase = ((lastAmount - firstAmount) / firstAmount) * 100
 
       if (increase > 20) {
-        summary.priceIncreases.push({
+        const priceFinding = {
           type: "price_increase",
           severity: "medium",
           title: "Significant Price Increase",
@@ -390,7 +442,18 @@ function analyzeSupplierInvoices(supplierInvoices, options = {}) {
           lastInvoice: invoices[invoices.length - 1],
           increasePercent: increase.toFixed(1),
           amountIncrease: lastAmount - firstAmount,
-        })
+          effort: "medium",
+          impact: "medium",
+          actionSteps: [
+            "Review the price history to understand the trend and timing of increases",
+            "Contact the supplier to request justification for the price increase",
+            "Research alternative suppliers or negotiate a volume discount",
+            "If the increase is unjustified, request a price match or switch suppliers",
+            "Update your budget forecasts to reflect the new pricing",
+          ],
+        }
+        priceFinding.findingHash = generateFindingHash(priceFinding)
+        summary.priceIncreases.push(priceFinding)
       }
     }
   })
@@ -457,7 +520,7 @@ function analyzeCustomerInvoices(invoices, options = {}) {
         const docNumber = invoice.DocumentNumber || "N/A"
         const severity = daysOverdue > 60 ? "high" : daysOverdue > 30 ? "medium" : "low"
 
-        findings.push({
+        const custFinding = {
           type: "overdue_customer_invoice",
           severity,
           title: "Overdue Customer Invoice",
@@ -467,7 +530,18 @@ function analyzeCustomerInvoices(invoices, options = {}) {
           daysOverdue,
           customerName,
           revenueAtRisk: balance,
-        })
+          effort: "low",
+          impact: daysOverdue > 60 ? "high" : "medium",
+          actionSteps: [
+            "Send a payment reminder to the customer with the outstanding invoice details",
+            "Follow up with a phone call if the customer has not responded within 7 days",
+            "Review the customer's payment history for patterns of late payment",
+            "Consider offering a payment plan if the amount is significant",
+            "Escalate to collections or adjust credit terms if payment remains outstanding",
+          ],
+        }
+        custFinding.findingHash = generateFindingHash(custFinding)
+        findings.push(custFinding)
       }
     }
   })
@@ -698,5 +772,6 @@ module.exports = {
   analyzeCostLeaks,
   analyzeSupplierInvoices,
   analyzeCustomerInvoices,
+  generateFindingHash,
 }
 
