@@ -65,6 +65,21 @@ export async function GET() {
           Turn SaaS sprawl into financial clarity. Reveal unused licenses,
           overlapping tools, and hidden savings.
         </div>
+
+        {/* CTA */}
+        <div
+          style={{
+            marginTop: 40,
+            padding: "14px 40px",
+            borderRadius: 9999,
+            background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+            color: "#ffffff",
+            fontSize: 20,
+            fontWeight: 600,
+          }}
+        >
+          Start saving on SaaS today
+        </div>
       </div>
     ),
     {

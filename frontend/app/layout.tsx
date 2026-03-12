@@ -10,11 +10,11 @@ const siteUrl = "https://www.efficyon.com"
 
 export const metadata: Metadata = {
   title: {
-    default: "Efficyon - AI-Powered SaaS Cost Optimization",
+    default: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
     template: "%s | Efficyon",
   },
   description:
-    "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+    "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: "/",
@@ -22,24 +22,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Efficyon - AI-Powered SaaS Cost Optimization",
+    title: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
     description:
-      "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+      "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
     siteName: "Efficyon",
     images: [
       {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Efficyon - AI-Powered SaaS Cost Optimization",
+        alt: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Efficyon - AI-Powered SaaS Cost Optimization",
+    title: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
     description:
-      "Turn SaaS sprawl into financial clarity. Efficyon compares SaaS spend with real usage to reveal unused licenses, overlapping tools, and hidden savings across your software stack.",
+      "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
     images: ["/api/og"],
   },
   icons: {
