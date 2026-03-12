@@ -45,7 +45,7 @@ ALTER TABLE public.applied_recommendations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY applied_recommendations_select ON public.applied_recommendations
   FOR SELECT USING (
     company_id IN (
-      SELECT company_id FROM public.company_members WHERE user_id = auth.uid()
+      SELECT company_id FROM public.team_members WHERE user_id = auth.uid()
     )
   );
 
@@ -53,7 +53,7 @@ CREATE POLICY applied_recommendations_select ON public.applied_recommendations
 CREATE POLICY applied_recommendations_insert ON public.applied_recommendations
   FOR INSERT WITH CHECK (
     company_id IN (
-      SELECT company_id FROM public.company_members
+      SELECT company_id FROM public.team_members
       WHERE user_id = auth.uid() AND role IN ('owner', 'editor')
     )
   );
@@ -62,7 +62,7 @@ CREATE POLICY applied_recommendations_insert ON public.applied_recommendations
 CREATE POLICY applied_recommendations_update ON public.applied_recommendations
   FOR UPDATE USING (
     company_id IN (
-      SELECT company_id FROM public.company_members
+      SELECT company_id FROM public.team_members
       WHERE user_id = auth.uid() AND role IN ('owner', 'editor')
     )
   );
@@ -71,7 +71,7 @@ CREATE POLICY applied_recommendations_update ON public.applied_recommendations
 CREATE POLICY applied_recommendations_delete ON public.applied_recommendations
   FOR DELETE USING (
     company_id IN (
-      SELECT company_id FROM public.company_members
+      SELECT company_id FROM public.team_members
       WHERE user_id = auth.uid() AND role = 'owner'
     )
   );
