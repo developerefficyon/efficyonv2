@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
 import "./globals.css"
 
-const siteUrl = "https://www.efficyon.com"
+const siteUrl = "https://efficyon.com"
 
 export const metadata: Metadata = {
   title: {
@@ -22,25 +22,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
-    description:
-      "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
+    title: "Efficyon",
+    description: "Your SaaS stack is leaking money. We'll find it.",
     siteName: "Efficyon",
     images: [
       {
-        url: "/api/og",
+        url: "/opengraph.jpeg",
         width: 1200,
         height: 630,
-        alt: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
+        alt: "Efficyon",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
-    description:
-      "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
-    images: ["/api/og"],
+    title: "Efficyon",
+    description: "Your SaaS stack is leaking money. We'll find it.",
+    images: ["/opengraph.jpeg"],
   },
   icons: {
     icon: "/favicon.ico",
