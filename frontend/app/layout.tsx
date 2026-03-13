@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     siteName: "Efficyon",
     images: [
       {
-        url: "/opengraph.jpeg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Efficyon",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Efficyon",
     description: "Your SaaS stack is leaking money. We'll find it.",
-    images: ["/opengraph.jpeg"],
+    images: ["/og-image.png"],
   },
   icons: {
     icon: "/favicon.ico",
