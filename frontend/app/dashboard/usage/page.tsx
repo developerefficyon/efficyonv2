@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -71,20 +71,6 @@ interface DashboardSummary {
 }
 
 export default function UsagePage() {
-  const [appliedCount, setAppliedCount] = useState(0)
-
-  useEffect(() => {
-    // Load applied recommendations count from localStorage
-    const savedApplied = localStorage.getItem("appliedRecommendations")
-    if (savedApplied) {
-      try {
-        const applied = JSON.parse(savedApplied)
-        setAppliedCount(Array.isArray(applied) ? applied.length : 0)
-      } catch (e) {
-        console.error("Failed to parse applied recommendations")
-      }
-    }
-  }, [])
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -331,9 +317,9 @@ export default function UsagePage() {
               ${totalSavingsIdentified.toFixed(0)}
             </p>
             <p className="text-sm text-gray-400">potential identified</p>
-            <p className="mt-3 text-xs text-green-400">
+            <p className="mt-3 text-xs text-gray-400">
               <CheckCircle className="w-3 h-3 inline mr-1" />
-              {appliedCount} recommendations applied
+              savings identified
             </p>
           </CardContent>
         </Card>

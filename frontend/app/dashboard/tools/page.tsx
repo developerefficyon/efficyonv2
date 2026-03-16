@@ -769,15 +769,18 @@ export default function ToolsPage() {
   }
 
   const handleConnectHubSpot = async () => {
-    if (!hubspotForm.clientId || !hubspotForm.clientSecret || !hubspotForm.paidSeats) {
+    if (!hubspotForm.clientId || !hubspotForm.clientSecret) {
       toast.error("Please fill in all required fields")
       return
     }
 
-    const paidSeatsNum = parseInt(hubspotForm.paidSeats, 10)
-    if (isNaN(paidSeatsNum) || paidSeatsNum < 1) {
-      toast.error("Please enter a valid number of paid seats")
-      return
+    let paidSeatsNum: number | null = null
+    if (hubspotForm.paidSeats) {
+      paidSeatsNum = parseInt(hubspotForm.paidSeats, 10)
+      if (isNaN(paidSeatsNum) || paidSeatsNum < 1) {
+        toast.error("Please enter a valid number of paid seats")
+        return
+      }
     }
 
     setIsConnecting(true)
@@ -809,7 +812,7 @@ export default function ToolsPage() {
               pricing: {
                 hub_type: hubspotForm.hubType,
                 tier: hubspotForm.tier,
-                paid_seats: paidSeatsNum,
+                ...(paidSeatsNum ? { paid_seats: paidSeatsNum } : {}),
               },
             },
           ],
@@ -1704,7 +1707,7 @@ export default function ToolsPage() {
           }
         }}
       >
-        <DialogContent className="!bg-black/95 !border-white/10 text-white w-[95vw] max-w-md sm:w-full">
+        <DialogContent className="!bg-black/95 !border-white/10 text-white w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-white/20" style={{ scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
           <DialogHeader>
             <DialogTitle>Connect New Tool</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -1947,12 +1950,13 @@ export default function ToolsPage() {
                 </div>
 
                 <div className="pt-3 border-t border-white/10">
-                  <p className="text-sm text-cyan-400 mb-3">Pricing Information (for accurate cost analysis)</p>
+                  <p className="text-sm text-cyan-400 mb-1">Pricing Information</p>
+                  <p className="text-xs text-gray-500 mb-3">Optional — helps provide more accurate cost analysis</p>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="hubspot-hub-type" className="text-gray-300">
-                        Primary Hub <span className="text-red-400">*</span>
+                        Primary Hub
                       </Label>
                       <select
                         id="hubspot-hub-type"
@@ -1973,7 +1977,7 @@ export default function ToolsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="hubspot-tier" className="text-gray-300">
-                        Plan Tier <span className="text-red-400">*</span>
+                        Plan Tier
                       </Label>
                       <select
                         id="hubspot-tier"
@@ -1991,13 +1995,13 @@ export default function ToolsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="hubspot-seats" className="text-gray-300">
-                        Number of Paid Seats <span className="text-red-400">*</span>
+                        Number of Paid Seats
                       </Label>
                       <Input
                         id="hubspot-seats"
                         type="number"
                         min="1"
-                        placeholder="e.g., 10"
+                        placeholder="Auto-detected after connection"
                         value={hubspotForm.paidSeats}
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, paidSeats: e.target.value })
@@ -2005,7 +2009,7 @@ export default function ToolsPage() {
                         className="bg-black/50 border-white/10 text-white"
                       />
                       <p className="text-xs text-gray-500">
-                        Total paid seats in your HubSpot subscription (excludes free view-only seats)
+                        Leave blank to auto-detect from your HubSpot account
                       </p>
                     </div>
                   </div>
@@ -2193,7 +2197,7 @@ export default function ToolsPage() {
                 !selectedTool ||
                 (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
                 (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
-                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret || !hubspotForm.paidSeats)) ||
+                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
                 (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
                 (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
                 isConnecting

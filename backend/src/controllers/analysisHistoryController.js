@@ -362,6 +362,13 @@ function extractSummary(analysisData, provider) {
     if (analysisData.licenseAnalysis?.summary?.healthScore !== undefined) {
       summary.healthScore = analysisData.licenseAnalysis.summary.healthScore
     }
+  } else if (provider === "QuickBooks") {
+    const overall = analysisData.overallSummary || {}
+    summary.totalFindings = overall.totalFindings || 0
+    summary.totalPotentialSavings = overall.totalPotentialSavings || 0
+    summary.highSeverity = overall.highSeverity || 0
+    summary.mediumSeverity = overall.mediumSeverity || 0
+    summary.lowSeverity = overall.lowSeverity || 0
   } else if (provider === "HubSpot") {
     const summaryData = analysisData.summary || {}
     summary.totalFindings = summaryData.issuesFound || 0
@@ -369,6 +376,15 @@ function extractSummary(analysisData, provider) {
     summary.highSeverity = summaryData.highSeverityIssues || 0
     summary.mediumSeverity = summaryData.mediumSeverityIssues || 0
     summary.lowSeverity = summaryData.lowSeverityIssues || 0
+    summary.healthScore = summaryData.healthScore || null
+  } else if (provider === "Shopify") {
+    const summaryData = analysisData.summary || {}
+    const allFindings = analysisData.findings || []
+    summary.totalFindings = summaryData.issuesFound || allFindings.length || 0
+    summary.totalPotentialSavings = summaryData.potentialMonthlySavings || 0
+    summary.highSeverity = allFindings.filter(f => f.severity === "high").length
+    summary.mediumSeverity = allFindings.filter(f => f.severity === "medium").length
+    summary.lowSeverity = allFindings.filter(f => f.severity === "low").length
     summary.healthScore = summaryData.healthScore || null
   }
 
@@ -450,6 +466,104 @@ function generateRecommendationsFromFindings(analysisData, provider, summary) {
         priority: 1,
         action: "Maintain Current Setup",
         description: "Your Microsoft 365 license allocation looks healthy. Continue monitoring usage.",
+        impact: "low",
+        effort: "low",
+        savings: 0,
+      })
+    }
+  } else if (provider === "QuickBooks") {
+    // Collect all findings from bill, invoice, and category analyses
+    const billFindings = analysisData.billAnalysis?.findings || []
+    const invoiceFindings = analysisData.invoiceAnalysis?.findings || []
+    const categoryFindings = analysisData.categoryAnalysis?.findings || []
+
+    // Group bill findings by type
+    const duplicates = billFindings.filter(f => f.type === "duplicate_payment")
+    const unusualAmounts = billFindings.filter(f => f.type === "unusual_amount")
+    const recurringSubscriptions = billFindings.filter(f => f.type === "recurring_subscription")
+    const priceIncreases = billFindings.filter(f => f.type === "price_increase")
+
+    if (duplicates.length > 0) {
+      const dupSavings = duplicates.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || parseFloat(f.amount) || 0), 0)
+      recommendations.push({
+        priority: 1,
+        action: "Review Duplicate Payments",
+        description: `Found ${duplicates.length} potential duplicate vendor payment(s). Investigate to recover $${dupSavings.toFixed(2)}`,
+        impact: "high",
+        effort: "low",
+        savings: dupSavings,
+      })
+    }
+
+    if (unusualAmounts.length > 0) {
+      const unusualSavings = unusualAmounts.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || 0), 0)
+      recommendations.push({
+        priority: 2,
+        action: "Investigate Unusual Amounts",
+        description: `Found ${unusualAmounts.length} bill(s) with unusual amounts that may indicate overbilling`,
+        impact: "medium",
+        effort: "medium",
+        savings: unusualSavings,
+      })
+    }
+
+    if (priceIncreases.length > 0) {
+      const priceSavings = priceIncreases.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || 0), 0)
+      recommendations.push({
+        priority: 3,
+        action: "Review Vendor Price Increases",
+        description: `${priceIncreases.length} vendor(s) have increased prices. Renegotiate or find alternatives`,
+        impact: "medium",
+        effort: "medium",
+        savings: priceSavings,
+      })
+    }
+
+    if (recurringSubscriptions.length > 0) {
+      const subSavings = recurringSubscriptions.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || 0), 0)
+      recommendations.push({
+        priority: 4,
+        action: "Audit Recurring Subscriptions",
+        description: `${recurringSubscriptions.length} recurring subscription(s) detected. Review for unused or redundant services`,
+        impact: "medium",
+        effort: "low",
+        savings: subSavings,
+      })
+    }
+
+    // Overdue customer invoices
+    const overdueInvoices = invoiceFindings.filter(f => f.type === "overdue_invoice")
+    if (overdueInvoices.length > 0) {
+      const revenueAtRisk = overdueInvoices.reduce((sum, f) => sum + (parseFloat(f.revenueAtRisk) || parseFloat(f.amount) || 0), 0)
+      recommendations.push({
+        priority: 2,
+        action: "Collect Overdue Invoices",
+        description: `${overdueInvoices.length} customer invoice(s) are overdue. Follow up to recover $${revenueAtRisk.toFixed(2)} in revenue`,
+        impact: "high",
+        effort: "low",
+        savings: revenueAtRisk,
+      })
+    }
+
+    // Category spending spikes
+    const spendingIncreases = categoryFindings.filter(f => f.type === "spending_increase" || f.type === "category_spike")
+    if (spendingIncreases.length > 0) {
+      const spikeSavings = spendingIncreases.reduce((sum, f) => sum + (parseFloat(f.potentialSavings) || 0), 0)
+      recommendations.push({
+        priority: 5,
+        action: "Review Spending Increases",
+        description: `${spendingIncreases.length} expense category(ies) show significant spending increases`,
+        impact: spikeSavings > 500 ? "high" : "medium",
+        effort: "medium",
+        savings: spikeSavings,
+      })
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push({
+        priority: 1,
+        action: "Maintain Current Processes",
+        description: "No significant cost leaks detected in your QuickBooks data. Continue monitoring.",
         impact: "low",
         effort: "low",
         savings: 0,

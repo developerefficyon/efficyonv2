@@ -486,6 +486,28 @@ async function hubspotOAuthCallback(req, res) {
     const currentSettings = integration.settings || {}
     const updatedSettings = { ...currentSettings, oauth_data: encryptedOauthData }
 
+    // Auto-detect paid seats if not provided by the user
+    const decryptedSettings = decryptIntegrationSettings(currentSettings)
+    const existingSeats = decryptedSettings?.pricing?.paid_seats
+    if (!existingSeats) {
+      try {
+        log("log", endpoint, "No paid seats configured, auto-detecting from HubSpot users API...")
+        const usersData = await fetchHubSpotData("/settings/v3/users", tokenData.access_token, "settings.users.read")
+        const userCount = usersData.results?.length || 0
+        if (userCount > 0) {
+          updatedSettings.pricing = {
+            ...(updatedSettings.pricing || {}),
+            paid_seats: userCount,
+            seats_auto_detected: true,
+          }
+          log("log", endpoint, `Auto-detected ${userCount} users as paid seats`)
+        }
+      } catch (seatsError) {
+        log("warn", endpoint, `Could not auto-detect seats: ${seatsError.message}`)
+        // Non-fatal — continue without auto-detected seats
+      }
+    }
+
     // Update integration with new tokens
     log("log", endpoint, `Updating integration ${integration.id} with new tokens...`)
     const { error: updateError } = await supabase

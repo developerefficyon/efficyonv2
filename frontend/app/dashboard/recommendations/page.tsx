@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useCallback } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -14,7 +14,6 @@ import {
 import {
   TrendingDown,
   X,
-  CheckCircle,
   ArrowRight,
   DollarSign,
   Zap,
@@ -22,9 +21,11 @@ import {
   Lightbulb,
   AlertCircle,
   Info,
+  ExternalLink,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
 import { useApiCache } from "@/lib/use-api-cache"
+import Link from "next/link"
 
 interface Recommendation {
   id: string
@@ -37,6 +38,7 @@ interface Recommendation {
   effort: string
   tool: string
   priority?: number
+  integrationId?: string
 }
 
 interface DashboardData {
@@ -58,20 +60,7 @@ interface DashboardData {
 }
 
 export default function RecommendationsPage() {
-  const [applied, setApplied] = useState<string[]>([])
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null)
-
-  // Load applied recommendations from localStorage on mount
-  useEffect(() => {
-    const savedApplied = localStorage.getItem("appliedRecommendations")
-    if (savedApplied) {
-      try {
-        setApplied(JSON.parse(savedApplied))
-      } catch (e) {
-        console.error("Failed to parse saved applied recommendations")
-      }
-    }
-  }, [])
 
   const fetchRecommendations = useCallback(async () => {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -98,19 +87,6 @@ export default function RecommendationsPage() {
     "dashboard-summary",
     fetchRecommendations
   )
-
-  const handleApply = (id: string) => {
-    const newApplied = [...applied, id]
-    setApplied(newApplied)
-    // Save to localStorage for persistence
-    localStorage.setItem("appliedRecommendations", JSON.stringify(newApplied))
-  }
-
-  const handleUnapply = (id: string) => {
-    const newApplied = applied.filter(a => a !== id)
-    setApplied(newApplied)
-    localStorage.setItem("appliedRecommendations", JSON.stringify(newApplied))
-  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -143,20 +119,8 @@ export default function RecommendationsPage() {
   const recommendations: Recommendation[] = dashboardData?.recommendations || []
   const hasRealData = dashboardData?.hasData === true && recommendations.length > 0
 
-  // Use total potential savings from summary, or calculate from recommendations
   const totalPotentialSavings = dashboardData?.summary?.totalPotentialSavings ||
     recommendations.reduce((sum, r) => sum + (r.savings || 0), 0)
-
-  // Calculate remaining savings after applied recommendations
-  const appliedSavings = recommendations
-    .filter((r) => applied.includes(r.id))
-    .reduce((sum, r) => sum + (r.savings || 0), 0)
-
-  const totalSavings = totalPotentialSavings - appliedSavings
-
-  const appliedCount = applied.filter(id =>
-    recommendations.some(r => r.id === id)
-  ).length
 
   if (loading) {
     return (
@@ -205,19 +169,9 @@ export default function RecommendationsPage() {
               AI-powered suggestions to optimize your SaaS spending
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-              <CardContent className="p-4">
-                <p className="text-xs text-gray-400 mb-1">Potential Savings</p>
-                <p className="text-xl font-bold text-gray-500">$0/mo</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-              <CardContent className="p-4">
-                <p className="text-xs text-gray-400 mb-1">Applied</p>
-                <p className="text-xl font-bold text-gray-500">0</p>
-              </CardContent>
-            </Card>
+          <div className="rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl px-5 py-3">
+            <p className="text-xs text-gray-400 mb-0.5">Potential Savings</p>
+            <p className="text-xl font-bold text-gray-500">$0/mo</p>
           </div>
         </div>
 
@@ -249,127 +203,102 @@ export default function RecommendationsPage() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">Recommendations</h2>
           <p className="text-gray-400">
             AI-powered suggestions to optimize your SaaS spending
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-400 mb-1">Potential Savings</p>
-              <p className="text-xl font-bold text-green-400">${totalSavings}/mo</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-400 mb-1">Applied</p>
-              <p className="text-xl font-bold text-cyan-400">{appliedCount}</p>
-            </CardContent>
-          </Card>
+        <div className="rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl px-5 py-3">
+          <p className="text-xs text-gray-400 mb-0.5">Potential Savings</p>
+          <p className="text-2xl font-bold text-green-400 whitespace-nowrap">${totalPotentialSavings % 1 === 0 ? totalPotentialSavings.toLocaleString() : totalPotentialSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</p>
         </div>
       </div>
 
       {/* Recommendations List */}
-      <div className="space-y-4">
-        {recommendations.map((rec) => {
-          const isApplied = applied.includes(rec.id)
-          return (
-            <Card
-              key={rec.id}
-              className={`bg-black/80 backdrop-blur-xl border-white/10 transition-all ${
-                isApplied
-                  ? "opacity-60 border-green-500/30"
-                  : "hover:border-cyan-500/30"
-              }`}
-            >
-              <CardHeader>
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-white/5">
-                    {getTypeIcon(rec.type || rec.title)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-white">{rec.title}</CardTitle>
-                          {isApplied && (
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Applied
-                            </Badge>
-                          )}
-                        </div>
-                        <Badge className={getImpactBadge(rec.impact)}>
-                          {rec.impact} impact
-                        </Badge>
-                      </div>
-                      <div className="text-right">
-                        {rec.savings > 0 ? (
-                          <>
-                            <p className="text-2xl font-bold text-green-400">
-                              ${rec.savings.toFixed(2)}/mo
-                            </p>
-                            <p className="text-xs text-gray-500">Savings</p>
-                          </>
-                        ) : (
-                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                            Optimization
-                          </Badge>
-                        )}
-                      </div>
+      <div className="space-y-3">
+        {recommendations.map((rec) => (
+          <Card
+            key={rec.id}
+            className="bg-black/80 backdrop-blur-xl border-white/10 hover:border-cyan-500/30 transition-all"
+          >
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 rounded-lg bg-white/5 mt-0.5">
+                  {getTypeIcon(rec.type || rec.title)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-white truncate mb-1.5">{rec.title}</h3>
+                      <Badge className={getImpactBadge(rec.impact)}>
+                        {rec.impact} impact
+                      </Badge>
                     </div>
-                    <p className="text-sm text-gray-300 mb-3">{rec.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="text-right shrink-0">
+                      {rec.savings > 0 ? (
+                        <>
+                          <p className="text-xl font-bold text-green-400">
+                            ${rec.savings % 1 === 0 ? rec.savings.toLocaleString() : rec.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                          </p>
+                          <p className="text-xs text-gray-500">Savings</p>
+                        </>
+                      ) : (
+                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                          Optimization
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 mt-2">{rec.description}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
                         {rec.tool}
                       </span>
                       {rec.category && (
                         <>
-                          <span>•</span>
+                          <span>·</span>
                           <span>{rec.category}</span>
                         </>
                       )}
                       {rec.effort && (
                         <>
-                          <span>•</span>
+                          <span>·</span>
                           <span>Effort: {rec.effort}</span>
                         </>
                       )}
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-white/10 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white h-8 text-xs"
+                        onClick={() => setSelectedRecommendation(rec)}
+                      >
+                        <Info className="w-3.5 h-3.5 mr-1.5" />
+                        Details
+                      </Button>
+                      {rec.integrationId && (
+                        <Link href={`/dashboard/tools/${rec.integrationId}`}>
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white h-8 text-xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View in Tool
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
-                    onClick={() => setSelectedRecommendation(rec)}
-                  >
-                    <Info className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                  {isApplied && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-500/50 hover:text-green-300"
-                      onClick={() => handleUnapply(rec.id)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Applied (Undo)
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Last Analysis Info */}
@@ -432,6 +361,14 @@ export default function RecommendationsPage() {
                 >
                   Close
                 </Button>
+                {selectedRecommendation.integrationId && (
+                  <Link href={`/dashboard/tools/${selectedRecommendation.integrationId}`}>
+                    <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white">
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View in Tool
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           )}

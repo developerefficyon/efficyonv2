@@ -1658,7 +1658,7 @@ export default function ToolDetailPage() {
       }))
 
       const statusMessages: Record<string, { title: string; desc: string }> = {
-        applied: { title: "Recommendation applied", desc: finding.potentialSavings ? `$${finding.potentialSavings.toLocaleString()} in savings tracked!` : "Marked as completed" },
+        applied: { title: "Marked as done", desc: finding.potentialSavings ? `$${finding.potentialSavings.toLocaleString()} in savings tracked!` : "Marked as completed" },
         dismissed: { title: "Finding dismissed", desc: "This finding won't appear in future analyses" },
         snoozed: { title: "Finding snoozed", desc: "We'll remind you about this later" },
         pending: { title: "Status reset", desc: "Finding moved back to pending" },
@@ -2563,7 +2563,7 @@ export default function ToolDetailPage() {
 
                 {/* Summary Insights */}
                 {costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0 && (
-                  <Card className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-slate-700/50">
+                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <div className="p-3 bg-cyan-500/10 rounded-xl shrink-0">
@@ -2647,10 +2647,10 @@ export default function ToolDetailPage() {
 
                 {/* Recommendation Savings Tracker */}
                 {recommendationSummary && recommendationSummary.total > 0 && (
-                  <Card className="bg-gradient-to-r from-emerald-900/30 via-slate-900/80 to-cyan-900/30 border-emerald-500/30">
+                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-emerald-500/20">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
                           <Target className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
@@ -2659,23 +2659,23 @@ export default function ToolDetailPage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-black/30 rounded-lg p-3 border border-emerald-500/20">
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                           <p className="text-xs text-gray-400 mb-1">Savings Realized</p>
                           <p className="text-lg font-bold text-emerald-400">
                             ${recommendationSummary.totalSavingsRealized.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-3 border border-amber-500/20">
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                           <p className="text-xs text-gray-400 mb-1">Savings Pending</p>
                           <p className="text-lg font-bold text-amber-400">
                             ${recommendationSummary.totalSavingsPending.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-3 border border-cyan-500/20">
-                          <p className="text-xs text-gray-400 mb-1">Applied</p>
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                          <p className="text-xs text-gray-400 mb-1">Done</p>
                           <p className="text-lg font-bold text-cyan-400">{recommendationSummary.applied}</p>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-3 border border-slate-500/20">
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                           <p className="text-xs text-gray-400 mb-1">Pending</p>
                           <p className="text-lg font-bold text-gray-300">{recommendationSummary.pending}</p>
                         </div>
@@ -2687,7 +2687,7 @@ export default function ToolDetailPage() {
                             <span>Completion</span>
                             <span>{Math.round((recommendationSummary.applied / recommendationSummary.total) * 100)}%</span>
                           </div>
-                          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
                               style={{ width: `${(recommendationSummary.applied / recommendationSummary.total) * 100}%` }}
@@ -2706,7 +2706,7 @@ export default function ToolDetailPage() {
                   costLeakAnalysis.billAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.invoiceAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.categoryAnalysis?.findings?.length > 0) && (
-                  <Card className="bg-slate-900/80 border-slate-700/50">
+                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
                     <CardHeader className="pb-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -2874,7 +2874,7 @@ export default function ToolDetailPage() {
                                             {isApplied && (
                                               <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
                                                 <CheckCircle className="w-3 h-3 mr-0.5" />
-                                                APPLIED
+                                                DONE
                                               </Badge>
                                             )}
                                             {isDismissedRec && (
@@ -3029,7 +3029,7 @@ export default function ToolDetailPage() {
 
                                         {/* Actions */}
                                         <div className="flex flex-col items-end gap-1 shrink-0">
-                                          {/* Apply/Dismiss/Snooze buttons for findings with recommendations */}
+                                          {/* Mark as Done/Dismiss/Snooze buttons for findings with recommendations */}
                                           {finding.findingHash && finding.recommendation && (
                                             <div className="flex items-center gap-1">
                                               {!isApplied && !isDismissedRec && (
@@ -3037,10 +3037,10 @@ export default function ToolDetailPage() {
                                                   size="sm"
                                                   onClick={() => handleApplyRecommendation(finding, "applied")}
                                                   className="h-7 px-2.5 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                  title="Apply recommendation"
+                                                  title="Mark as done"
                                                 >
                                                   <CheckCircle className="w-3 h-3 mr-1" />
-                                                  Apply
+                                                  Done
                                                 </Button>
                                               )}
                                               {!isDismissedRec && !isApplied && (
@@ -3060,7 +3060,7 @@ export default function ToolDetailPage() {
                                                   variant="ghost"
                                                   onClick={() => handleApplyRecommendation(finding, "dismissed")}
                                                   className="h-7 px-2 text-[10px] text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                                                  title="Dismiss recommendation"
+                                                  title="Dismiss finding"
                                                 >
                                                   <X className="w-3 h-3" />
                                                 </Button>
