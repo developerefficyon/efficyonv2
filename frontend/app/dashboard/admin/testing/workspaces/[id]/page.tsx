@@ -205,7 +205,7 @@ export default function WorkspaceDetailPage() {
   const summary = selectedAnalysis?.analysis_result?.overallSummary
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/dashboard/admin/testing/workspaces">
