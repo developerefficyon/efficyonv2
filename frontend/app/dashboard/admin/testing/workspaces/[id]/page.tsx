@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
+  Trash2,
   ScrollText,
   BarChart3,
   RefreshCw,
@@ -249,6 +250,31 @@ export default function WorkspaceDetailPage() {
     fetchWorkspace()
   }
 
+  async function deleteUpload(uploadId: string) {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) return
+
+      const res = await fetch(`${apiBase}/api/test/uploads/${uploadId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        setUploads((prev) => prev.filter((u) => u.id !== uploadId))
+        setSelectedUploadIds((prev) => prev.filter((id) => id !== uploadId))
+        toast.success("Upload deleted")
+      } else {
+        const err = await res.json()
+        toast.error(`Failed to delete: ${err.error}`)
+      }
+    } catch (err) {
+      console.error("Failed to delete upload:", err)
+      toast.error("Failed to delete upload")
+    }
+  }
+
   const validationIcon = (status: string) => {
     if (status === "valid") return <CheckCircle className="w-4 h-4 text-green-400" />
     if (status === "partial") return <AlertTriangle className="w-4 h-4 text-yellow-400" />
@@ -365,18 +391,27 @@ export default function WorkspaceDetailPage() {
                           </p>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          upload.validation_status === "valid"
-                            ? "border-green-500/30 text-green-400"
-                            : upload.validation_status === "partial"
-                            ? "border-yellow-500/30 text-yellow-400"
-                            : "border-red-500/30 text-red-400"
-                        }
-                      >
-                        {upload.validation_status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={
+                            upload.validation_status === "valid"
+                              ? "border-green-500/30 text-green-400"
+                              : upload.validation_status === "partial"
+                              ? "border-yellow-500/30 text-yellow-400"
+                              : "border-red-500/30 text-red-400"
+                          }
+                        >
+                          {upload.validation_status}
+                        </Badge>
+                        <button
+                          onClick={() => deleteUpload(upload.id)}
+                          className="p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
+                          title="Delete upload"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
