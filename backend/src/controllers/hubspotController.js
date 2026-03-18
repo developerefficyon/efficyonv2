@@ -352,8 +352,10 @@ async function hubspotOAuthCallback(req, res) {
     return res.status(500).send("Supabase not configured on backend")
   }
 
-  const { code, state, error, error_description } = req.query
   const frontendUrl = process.env.FRONTEND_APP_URL || "http://localhost:3000"
+
+  try {
+  const { code, state, error, error_description } = req.query
 
   log("log", endpoint, `Callback params - code: ${code ? "present" : "missing"}, state: ${state ? "present" : "missing"}, error: ${error || "none"}`)
 
@@ -523,8 +525,12 @@ async function hubspotOAuthCallback(req, res) {
     log("log", endpoint, `HubSpot OAuth completed successfully for integration ${integration.id}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=connected`)
   } catch (e) {
-    log("error", endpoint, `Unexpected error: ${e.message}`)
-    return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_unexpected`)
+    log("error", endpoint, `Unexpected error (inner): ${e.message}`, { stack: e.stack })
+    return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_unexpected&details=${encodeURIComponent((e.message || "Unknown error").substring(0, 150))}`)
+  }
+  } catch (outerError) {
+    log("error", endpoint, `Unexpected error (outer): ${outerError.message}`, { stack: outerError.stack })
+    return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_unexpected&details=${encodeURIComponent((outerError.message || "Unknown error").substring(0, 150))}`)
   }
 }
 

@@ -439,7 +439,7 @@ export default function ReportsPage() {
                 <DollarSign className="w-6 h-6 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">${totalSavingsFound.toFixed(0)}</p>
+                <p className="text-2xl font-bold text-white">${Math.round(totalSavingsFound).toLocaleString()}</p>
                 <p className="text-sm text-gray-400">Total Savings Found</p>
               </div>
             </div>
@@ -517,7 +517,7 @@ export default function ReportsPage() {
                       <span>•</span>
                       <span className="flex items-center gap-1 text-green-400">
                         <DollarSign className="w-3 h-3" />
-                        ${(analysis.summary?.totalPotentialSavings || 0).toFixed(0)} savings
+                        ${Math.round(analysis.summary?.totalPotentialSavings || 0).toLocaleString()} savings
                       </span>
                       <span className="hidden sm:inline">•</span>
                       <span className="hidden sm:inline flex items-center gap-1">
@@ -594,7 +594,7 @@ export default function ReportsPage() {
                     {selectedAnalysis.summary?.totalFindings || 0} findings
                   </span>
                   <span className="text-green-400">
-                    ${(selectedAnalysis.summary?.totalPotentialSavings || 0).toFixed(0)} savings
+                    ${Math.round(selectedAnalysis.summary?.totalPotentialSavings || 0).toLocaleString()} savings
                   </span>
                 </div>
               </div>

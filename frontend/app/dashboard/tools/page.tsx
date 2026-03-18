@@ -33,6 +33,9 @@ import {
   Users,
   DollarSign,
   Activity,
+  Clock,
+  Plug,
+  ShieldCheck,
   BarChart3,
   Zap,
   Loader2,
@@ -274,6 +277,8 @@ export default function ToolsPage() {
     const params = new URLSearchParams(window.location.search)
     const microsoft365Status = params.get("microsoft365")
     const hubspotStatus = params.get("hubspot")
+    const quickbooksStatus = params.get("quickbooks")
+    const shopifyStatus = params.get("shopify")
 
     // Handle Microsoft 365 OAuth callback immediately (before auth check)
     if (microsoft365Status) {
@@ -309,16 +314,76 @@ export default function ToolsPage() {
         // Get additional error details if available
         const errorDetails = params.get("details")
         const errorParam = params.get("error")
-        let description = hubspotStatus.replace("error_", "").replace(/_/g, " ")
+        let description = hubspotStatus === "error" ? "Connection failed" : hubspotStatus.replace("error_", "").replace(/_/g, " ")
         if (errorDetails) {
           description += `: ${decodeURIComponent(errorDetails)}`
         } else if (errorParam) {
           description += `: ${decodeURIComponent(errorParam)}`
         }
 
-        console.error("HubSpot OAuth error:", { status: hubspotStatus, details: errorDetails, error: errorParam })
+        console.error(`HubSpot OAuth error: status=${hubspotStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
 
         toast.error("Failed to connect HubSpot", {
+          description,
+          duration: 10000,
+        })
+      }
+    }
+
+    // Handle QuickBooks OAuth callback immediately (before auth check)
+    if (quickbooksStatus) {
+      setIsConnecting(false)
+      window.history.replaceState({}, "", window.location.pathname)
+      oauthCallbackProcessedRef.current = true
+
+      if (quickbooksStatus === "connected") {
+        toast.success("QuickBooks connected successfully!", {
+          description: "Your QuickBooks integration is now active.",
+          duration: 5000,
+        })
+      } else {
+        const errorDetails = params.get("details")
+        const errorParam = params.get("error")
+        let description = quickbooksStatus === "error" ? "Connection failed" : quickbooksStatus.replace("error_", "").replace(/_/g, " ")
+        if (errorDetails) {
+          description += `: ${decodeURIComponent(errorDetails)}`
+        } else if (errorParam) {
+          description += `: ${decodeURIComponent(errorParam)}`
+        }
+
+        console.error(`QuickBooks OAuth error: status=${quickbooksStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
+
+        toast.error("Failed to connect QuickBooks", {
+          description,
+          duration: 10000,
+        })
+      }
+    }
+
+    // Handle Shopify OAuth callback immediately (before auth check)
+    if (shopifyStatus) {
+      setIsConnecting(false)
+      window.history.replaceState({}, "", window.location.pathname)
+      oauthCallbackProcessedRef.current = true
+
+      if (shopifyStatus === "connected") {
+        toast.success("Shopify connected successfully!", {
+          description: "Your Shopify integration is now active.",
+          duration: 5000,
+        })
+      } else {
+        const errorDetails = params.get("details")
+        const errorParam = params.get("error")
+        let description = shopifyStatus === "error" ? "Connection failed" : shopifyStatus.replace("error_", "").replace(/_/g, " ")
+        if (errorDetails) {
+          description += `: ${decodeURIComponent(errorDetails)}`
+        } else if (errorParam) {
+          description += `: ${decodeURIComponent(errorParam)}`
+        }
+
+        console.error(`Shopify OAuth error: status=${shopifyStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
+
+        toast.error("Failed to connect Shopify", {
           description,
           duration: 10000,
         })
@@ -762,6 +827,102 @@ export default function ToolsPage() {
     } catch (error: any) {
       console.error("Error starting HubSpot OAuth:", error)
       toast.error("Failed to start HubSpot OAuth", {
+        description: error.message || "An error occurred.",
+      })
+      setReconnectingId(null)
+    }
+  }
+
+  const startQuickBooksOAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/quickbooks/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start QuickBooks OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to QuickBooks to authorize...", {
+        description: "You'll be taken to Intuit to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting QuickBooks OAuth:", error)
+      toast.error("Failed to start QuickBooks OAuth", {
+        description: error.message || "An error occurred.",
+      })
+      setReconnectingId(null)
+    }
+  }
+
+  const startShopifyOAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/shopify/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start Shopify OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Shopify to authorize...", {
+        description: "You'll be taken to Shopify to install the app.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting Shopify OAuth:", error)
+      toast.error("Failed to start Shopify OAuth", {
         description: error.message || "An error occurred.",
       })
       setReconnectingId(null)
@@ -1302,9 +1463,15 @@ export default function ToolsPage() {
     return matchesSearch && matchesCategory && matchesStatus
   })
 
-  const totalCost = tools.reduce((sum, t) => sum + t.cost, 0)
-  const totalUnusedSeats = tools.reduce((sum, t) => sum + t.unusedSeats, 0)
-  const toolsNeedingAttention = tools.filter((t) => t.wasteLevel !== "low" || t.status === "error").length
+  const healthyTools = tools.filter((t) => t.status === "connected").length
+  const issueTools = tools.filter((t) => t.status === "error" || t.status === "expired" || t.status === "pending").length
+  const slotsRemaining = integrationLimits.max === 999 ? null : integrationLimits.max - integrationLimits.current
+  const lastActivity = tools.length > 0
+    ? tools.reduce((latest, t) => {
+        const tDate = new Date(integrations.find(i => i.id === t.id)?.updated_at || 0)
+        return tDate > latest ? tDate : latest
+      }, new Date(0))
+    : null
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
@@ -1361,7 +1528,7 @@ export default function ToolsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Connected Tools</p>
+                <p className="text-sm text-gray-400 mb-1">Connected</p>
                 {isLoading ? (
                   <>
                     <div className="h-8 w-16 bg-white/10 rounded animate-pulse" />
@@ -1369,17 +1536,15 @@ export default function ToolsPage() {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-2xl font-bold text-white">
-                        {integrationLimits.current}
-                        <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "∞" : integrationLimits.max}</span>
-                      </p>
-                    </div>
+                    <p className="text-2xl font-bold text-white">
+                      {integrationLimits.current}
+                      <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "\u221E" : integrationLimits.max}</span>
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">{integrationLimits.planName} plan</p>
                   </>
                 )}
               </div>
-              <BarChart3 className="w-8 h-8 text-cyan-400 opacity-50" />
+              <Plug className="w-8 h-8 text-cyan-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -1387,44 +1552,70 @@ export default function ToolsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Total Monthly Cost</p>
+                <p className="text-sm text-gray-400 mb-1">Healthy</p>
+                {isLoading ? (
+                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-green-400">{healthyTools}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {tools.length > 0 ? `${Math.round((healthyTools / tools.length) * 100)}% uptime` : "No tools yet"}
+                    </p>
+                  </>
+                )}
+              </div>
+              <ShieldCheck className="w-8 h-8 text-green-400 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Issues</p>
+                {isLoading ? (
+                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <>
+                    <p className={`text-2xl font-bold ${issueTools > 0 ? "text-red-400" : "text-white"}`}>{issueTools}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {issueTools > 0 ? "Action required" : "All clear"}
+                    </p>
+                  </>
+                )}
+              </div>
+              <AlertTriangle className={`w-8 h-8 opacity-50 ${issueTools > 0 ? "text-red-400" : "text-gray-600"}`} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Last Activity</p>
                 {isLoading ? (
                   <div className="h-8 w-20 bg-white/10 rounded animate-pulse" />
                 ) : (
-                  <p className="text-2xl font-bold text-white">${totalCost.toLocaleString()}</p>
+                  <>
+                    <p className="text-2xl font-bold text-white">
+                      {lastActivity ? (() => {
+                        const diffMs = Date.now() - lastActivity.getTime()
+                        const diffMins = Math.floor(diffMs / 60000)
+                        const diffHours = Math.floor(diffMs / 3600000)
+                        const diffDays = Math.floor(diffMs / 86400000)
+                        if (diffMins < 1) return "Just now"
+                        if (diffMins < 60) return `${diffMins}m`
+                        if (diffHours < 24) return `${diffHours}h`
+                        return `${diffDays}d`
+                      })() : "--"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {lastActivity ? "ago" : "No activity yet"}
+                    </p>
+                  </>
                 )}
               </div>
-              <DollarSign className="w-8 h-8 text-green-400 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Unused Seats</p>
-                {isLoading ? (
-                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
-                ) : (
-                  <p className="text-2xl font-bold text-red-400">{totalUnusedSeats}</p>
-                )}
-              </div>
-              <Users className="w-8 h-8 text-red-400 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Needs Attention</p>
-                {isLoading ? (
-                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
-                ) : (
-                  <p className="text-2xl font-bold text-orange-400">{toolsNeedingAttention}</p>
-                )}
-              </div>
-              <AlertTriangle className="w-8 h-8 text-orange-400 opacity-50" />
+              <Clock className="w-8 h-8 text-purple-400 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -1646,6 +1837,44 @@ export default function ToolsPage() {
                                     : "border-white/10 bg-black/50 text-white border"
                                 }`}
                                 onClick={() => startHubSpotOAuth(integration.id)}
+                                disabled={reconnectingId === integration.id}
+                              >
+                                {reconnectingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
+                              </Button>
+                            )}
+                            {integration.tool_name === "QuickBooks" && (
+                              <Button
+                                size="sm"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
+                                onClick={() => startQuickBooksOAuth(integration.id)}
+                                disabled={reconnectingId === integration.id}
+                              >
+                                {reconnectingId === integration.id ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
+                              </Button>
+                            )}
+                            {integration.tool_name === "Shopify" && (
+                              <Button
+                                size="sm"
+                                className={`h-7 px-2 text-xs ${
+                                  tool.status === "expired" || tool.status === "error"
+                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
+                                    : "border-white/10 bg-black/50 text-white border"
+                                }`}
+                                onClick={() => startShopifyOAuth(integration.id)}
                                 disabled={reconnectingId === integration.id}
                               >
                                 {reconnectingId === integration.id ? (

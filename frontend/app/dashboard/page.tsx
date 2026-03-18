@@ -70,6 +70,9 @@ const defaultCostSummary = {
   potentialSavings: 0,
   efficiencyScore: 0,
   toolsAnalyzed: 0,
+  highSeverity: 0,
+  mediumSeverity: 0,
+  lowSeverity: 0,
 }
 
 const defaultTools = [
@@ -133,6 +136,9 @@ export default function UserDashboard() {
         toolsAnalyzed: dashboardData!.summary!.analyzedTools,
         connectedTools: dashboardData!.summary!.connectedTools,
         totalFindings: dashboardData!.summary!.totalFindings,
+        highSeverity: dashboardData!.summary!.highSeverity,
+        mediumSeverity: dashboardData!.summary!.mediumSeverity,
+        lowSeverity: dashboardData!.summary!.lowSeverity,
       }
     : defaultCostSummary
 
@@ -342,16 +348,60 @@ export default function UserDashboard() {
             <Card className="bg-black/80 backdrop-blur-xl border-white/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-400">
-                  Issues Found
+                  Findings Breakdown
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-400 mb-1">
-                  {costSummary.totalFindings || 0}
-                </div>
-                <p className="text-xs text-gray-500">
-                  {hasRealData ? "Across all integrations" : "Run analysis to find issues"}
-                </p>
+                {hasRealData ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                        <span className="text-sm text-gray-300">High</span>
+                      </div>
+                      <span className="text-sm font-bold text-red-400">{costSummary.highSeverity}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span className="text-sm text-gray-300">Medium</span>
+                      </div>
+                      <span className="text-sm font-bold text-yellow-400">{costSummary.mediumSeverity}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-sm text-gray-300">Low</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-400">{costSummary.lowSeverity}</span>
+                    </div>
+                    <div className="flex gap-1 mt-1">
+                      {costSummary.highSeverity > 0 && (
+                        <div
+                          className="h-1.5 rounded-full bg-red-500"
+                          style={{ flex: costSummary.highSeverity }}
+                        />
+                      )}
+                      {costSummary.mediumSeverity > 0 && (
+                        <div
+                          className="h-1.5 rounded-full bg-yellow-500"
+                          style={{ flex: costSummary.mediumSeverity }}
+                        />
+                      )}
+                      {costSummary.lowSeverity > 0 && (
+                        <div
+                          className="h-1.5 rounded-full bg-blue-500"
+                          style={{ flex: costSummary.lowSeverity }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-gray-500 mb-1">--</div>
+                    <p className="text-xs text-gray-500">Run analysis to see breakdown</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

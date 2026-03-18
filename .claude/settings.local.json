@@ -6,7 +6,15 @@
       "Bash(ls:*)",
       "Bash(npm install:*)",
       "Bash(node:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(nvm version:*)",
+      "Bash(nvm install:*)",
+      "Bash(grep -r \"analyzeCostLeaks\\\\|analyzeM365\\\\|analyzeHubSpot\" /c/Users/tayaw/Desktop/effycionv2/backend/src/controllers/ --include=*.js)",
+      "Bash(grep -r \"setPricingInfo\\\\|setHubSpotPricing\\\\|pricing.*hub_type\" /c/Users/tayaw/Desktop/effycionv2/frontend/app --include=*.tsx --include=*.ts --include=*.jsx --include=*.js)",
+      "Bash(grep:*)",
+      "Bash(cd:*)",
+      "Bash(for file:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
