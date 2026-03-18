@@ -404,6 +404,7 @@ const {
   triggerAnalysis,
   listAnalyses,
   getAnalysis,
+  deleteAnalysis: deleteTestAnalysis,
   scoreAnalysis,
   autoScoreAnalysis,
   getWorkspaceLogs,
@@ -466,6 +467,7 @@ router.post("/api/test/uploads/:uploadId/validate", requireAuth, requireAdmin, r
 router.post("/api/test/workspaces/:id/analyze", requireAuth, requireAdmin, triggerAnalysis)
 router.get("/api/test/workspaces/:id/analyses", requireAuth, requireAdmin, listAnalyses)
 router.get("/api/test/analyses/:analysisId", requireAuth, requireAdmin, getAnalysis)
+router.delete("/api/test/analyses/:analysisId", requireAuth, requireAdmin, deleteTestAnalysis)
 router.post("/api/test/analyses/:analysisId/score", requireAuth, requireAdmin, scoreAnalysis)
 router.post("/api/test/analyses/:analysisId/auto-score", requireAuth, requireAdmin, autoScoreAnalysis)
 

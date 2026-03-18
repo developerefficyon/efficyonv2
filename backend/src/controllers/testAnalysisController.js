@@ -602,10 +602,34 @@ Audit each finding in the analysis output. Classify it and explain your reasonin
   }
 }
 
+/**
+ * Delete a test analysis
+ */
+async function deleteAnalysis(req, res) {
+  try {
+    const { analysisId } = req.params
+
+    const { error } = await supabase
+      .from("test_analyses")
+      .delete()
+      .eq("id", analysisId)
+
+    if (error) {
+      return res.status(500).json({ error: error.message })
+    }
+
+    res.json({ message: "Analysis deleted" })
+  } catch (err) {
+    console.error("deleteAnalysis error:", err)
+    res.status(500).json({ error: "Internal server error" })
+  }
+}
+
 module.exports = {
   triggerAnalysis,
   listAnalyses,
   getAnalysis,
+  deleteAnalysis,
   scoreAnalysis,
   autoScoreAnalysis,
   getWorkspaceLogs,

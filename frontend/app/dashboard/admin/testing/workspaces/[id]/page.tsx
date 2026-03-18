@@ -165,6 +165,30 @@ export default function WorkspaceDetailPage() {
     }
   }
 
+  async function deleteAnalysis(analysisId: string) {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) return
+
+      const res = await fetch(`${apiBase}/api/test/analyses/${analysisId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        setAnalyses((prev) => prev.filter((a) => a.id !== analysisId))
+        if (selectedAnalysis?.id === analysisId) setSelectedAnalysis(null)
+        toast.success("Analysis deleted")
+      } else {
+        const err = await res.json()
+        toast.error(`Failed to delete: ${err.error}`)
+      }
+    } catch (err) {
+      toast.error("Failed to delete analysis")
+    }
+  }
+
   async function deleteUpload(uploadId: string) {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -283,23 +307,41 @@ export default function WorkspaceDetailPage() {
       {/* Step 3: Results */}
       {analyses.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Results</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Results</h2>
+            {selectedAnalysis && (
+              <button
+                onClick={() => deleteAnalysis(selectedAnalysis.id)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            )}
+          </div>
 
           {/* Analysis selector (if multiple) */}
           {analyses.length > 1 && (
             <div className="flex gap-2 flex-wrap">
               {analyses.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => viewAnalysis(a.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs transition-colors border ${
-                    selectedAnalysis?.id === a.id
-                      ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
-                      : "border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  Run {analyses.length - i} &middot; {new Date(a.created_at).toLocaleString()}
-                </button>
+                <div key={a.id} className="flex items-center gap-1">
+                  <button
+                    onClick={() => viewAnalysis(a.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-colors border ${
+                      selectedAnalysis?.id === a.id
+                        ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
+                        : "border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    Run {analyses.length - i} &middot; {new Date(a.created_at).toLocaleString()}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id) }}
+                    className="p-1 rounded hover:bg-red-500/20 text-gray-600 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
           )}
