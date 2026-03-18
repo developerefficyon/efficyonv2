@@ -418,6 +418,14 @@ function extractFindings(result: any): any[] {
   if (result.fortnox?.supplierInvoiceAnalysis?.findings) {
     findings.push(...result.fortnox.supplierInvoiceAnalysis.findings.map((f: any) => ({ ...f, platform: "Fortnox" })))
   }
+  if (result.fortnox?.customerInvoiceAnalysis?.findings) {
+    findings.push(...result.fortnox.customerInvoiceAnalysis.findings.map((f: any) => ({ ...f, platform: "Fortnox" })))
+  }
+
+  // SaaS analysis findings (license utilization, usage, price drift)
+  if (result.saasAnalysis?.findings) {
+    findings.push(...result.saasAnalysis.findings.map((f: any) => ({ ...f, platform: f.platform || "SaaS" })))
+  }
 
   // M365 findings
   if (result.microsoft365?.licenseAnalysis?.findings) {

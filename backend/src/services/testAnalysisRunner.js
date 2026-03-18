@@ -22,6 +22,7 @@ function assembleDataFromUploads(uploads) {
     m365: null,
     hubspot: null,
     profitLoss: null,
+    saas: null, // SaaS CSV data (invoices, licenses, usage, users, company)
   }
 
   // Group uploads by integration
@@ -36,14 +37,73 @@ function assembleDataFromUploads(uploads) {
   // Assemble Fortnox data (matches costLeakAnalysis.analyzeCostLeaks input)
   if (byIntegration.Fortnox) {
     const f = byIntegration.Fortnox
-    data.fortnox = {
-      supplierInvoices: f.supplier_invoices || [],
-      invoices: f.invoices || [],
-      customers: f.customers || [],
-      expenses: f.expenses || [],
-      vouchers: f.vouchers || [],
-      accounts: f.accounts || [],
-      articles: f.articles || [],
+
+    // Detect SaaS CSV data (has fields like vendor, amount_sek instead of SupplierNumber, Total)
+    const hasSaasInvoices = Array.isArray(f.invoices) && f.invoices.length > 0 &&
+      f.invoices[0] && (f.invoices[0].vendor || f.invoices[0].amount_sek)
+    const hasSaasLicenses = Array.isArray(f.licenses) && f.licenses.length > 0 &&
+      f.licenses[0] && (f.licenses[0].price_per_seat_sek || f.licenses[0].licensed_seats)
+    const hasSaasUsage = Array.isArray(f.usage_reports) && f.usage_reports.length > 0 &&
+      f.usage_reports[0] && (f.usage_reports[0].has_license !== undefined || f.usage_reports[0].active_last_30d !== undefined)
+    const hasSaasUsers = Array.isArray(f.users) && f.users.length > 0 &&
+      f.users[0] && (f.users[0].employee_id || f.users[0].first_name)
+    const hasSaasCompany = f.accounts && !Array.isArray(f.accounts) && f.accounts.company_id ||
+      (Array.isArray(f.accounts) && f.accounts.length === 1 && f.accounts[0]?.company_id)
+
+    const isSaasData = hasSaasInvoices || hasSaasLicenses || hasSaasUsage
+
+    if (isSaasData) {
+      // Transform SaaS CSV invoices → supplier invoices format for costLeakAnalysis
+      const supplierInvoices = hasSaasInvoices
+        ? f.invoices.map((inv) => ({
+            SupplierNumber: inv.vendor || "",
+            SupplierName: inv.vendor || "Unknown",
+            InvoiceDate: inv.invoice_date || null,
+            DueDate: null,
+            Total: parseFloat(inv.amount_sek) || 0,
+            Balance: 0,
+            InvoiceNumber: inv.invoice_id || "",
+            GivenNumber: inv.invoice_id || "",
+            Booked: inv.payment_status === "paid",
+            // Preserve original fields for SaaS analysis
+            _plan: inv.plan,
+            _costCenter: inv.cost_center,
+            _costCenterName: inv.cost_center_name,
+            _currency: inv.currency,
+          }))
+        : []
+
+      data.fortnox = {
+        supplierInvoices,
+        invoices: [],
+        customers: [],
+        expenses: [],
+        vouchers: [],
+        accounts: [],
+        articles: [],
+      }
+
+      // Store SaaS-specific data for deeper analysis
+      data.saas = {
+        invoices: f.invoices || [],
+        licenses: f.licenses || [],
+        usage: f.usage_reports || [],
+        users: f.users || [],
+        company: hasSaasCompany
+          ? (Array.isArray(f.accounts) ? f.accounts[0] : f.accounts)
+          : null,
+      }
+    } else {
+      // Standard Fortnox API data
+      data.fortnox = {
+        supplierInvoices: f.supplier_invoices || [],
+        invoices: f.invoices || [],
+        customers: f.customers || [],
+        expenses: f.expenses || [],
+        vouchers: f.vouchers || [],
+        accounts: f.accounts || [],
+        articles: f.articles || [],
+      }
     }
   }
 
@@ -68,24 +128,193 @@ function assembleDataFromUploads(uploads) {
 
   // Assemble Profit & Loss data (from Fortnox Resultatrapport uploads)
   if (byIntegration.Fortnox?.profit_loss) {
-    const pl = byIntegration.Fortnox.profit_loss
-    // Handle both wrapped { lineItems, metadata } and raw array formats
-    data.profitLoss = pl
+    data.profitLoss = byIntegration.Fortnox.profit_loss
   }
 
   return data
 }
 
 /**
+ * Analyze SaaS-specific data (licenses, usage, users) for cost optimization findings
+ * Cross-references subscriptions with actual usage to find waste.
+ */
+function analyzeSaasData(saas) {
+  const findings = []
+  const { invoices, licenses, usage, users, company } = saas
+
+  // 1. Analyze license utilization from usage data
+  if (usage.length > 0) {
+    // Group usage by tool
+    const byTool = {}
+    usage.forEach((row) => {
+      const tool = row.tool || "Unknown"
+      if (!byTool[tool]) byTool[tool] = []
+      byTool[tool].push(row)
+    })
+
+    for (const [tool, records] of Object.entries(byTool)) {
+      const licensed = records.filter((r) => String(r.has_license).toLowerCase() === "true")
+      const inactive = licensed.filter((r) => String(r.active_last_30d).toLowerCase() === "false")
+      const neverLoggedIn = licensed.filter((r) => !r.last_login || r.last_login === "")
+
+      // Find the license cost for this tool
+      const license = licenses.find((l) =>
+        l.vendor?.toLowerCase() === tool.toLowerCase() ||
+        l.plan?.toLowerCase().includes(tool.toLowerCase())
+      )
+      const costPerSeat = parseFloat(license?.price_per_seat_sek) || 0
+
+      // Inactive users with licenses
+      if (inactive.length > 0 && licensed.length > 0) {
+        const wastePerMonth = inactive.length * costPerSeat
+        findings.push({
+          type: "inactive_licenses",
+          severity: inactive.length >= 3 ? "high" : "medium",
+          title: `${tool}: ${inactive.length} inactive user${inactive.length !== 1 ? "s" : ""} with active licenses`,
+          description: `${inactive.length} of ${licensed.length} licensed users have been inactive for 30+ days. ${inactive.map((r) => r.email || r.employee_id).slice(0, 5).join(", ")}${inactive.length > 5 ? ` and ${inactive.length - 5} more` : ""}`,
+          potentialSavings: wastePerMonth,
+          platform: "Fortnox",
+        })
+      }
+
+      // Never logged in
+      if (neverLoggedIn.length > 0) {
+        const wastePerMonth = neverLoggedIn.length * costPerSeat
+        findings.push({
+          type: "never_activated",
+          severity: "high",
+          title: `${tool}: ${neverLoggedIn.length} user${neverLoggedIn.length !== 1 ? "s" : ""} never logged in`,
+          description: `License provisioned but never activated for: ${neverLoggedIn.map((r) => r.email || r.employee_id).slice(0, 5).join(", ")}${neverLoggedIn.length > 5 ? ` and ${neverLoggedIn.length - 5} more` : ""}`,
+          potentialSavings: wastePerMonth,
+          platform: "Fortnox",
+        })
+      }
+
+      // Low usage (has license, active but < 3 logins)
+      const lowUsage = licensed.filter((r) =>
+        String(r.active_last_30d).toLowerCase() === "true" &&
+        parseInt(r.logins_last_30d) > 0 &&
+        parseInt(r.logins_last_30d) < 3
+      )
+      if (lowUsage.length > 0) {
+        findings.push({
+          type: "low_usage",
+          severity: "low",
+          title: `${tool}: ${lowUsage.length} user${lowUsage.length !== 1 ? "s" : ""} with very low usage`,
+          description: `Users with fewer than 3 logins in 30 days: ${lowUsage.map((r) => r.email || r.employee_id).slice(0, 5).join(", ")}`,
+          potentialSavings: lowUsage.length * costPerSeat * 0.5, // Partial savings estimate
+          platform: "Fortnox",
+        })
+      }
+    }
+  }
+
+  // 2. Analyze license costs — find overpriced or redundant subscriptions
+  if (licenses.length > 0) {
+    const totalMonthly = licenses.reduce((sum, l) => sum + (parseFloat(l.total_monthly_sek) || 0), 0)
+    const totalSeats = licenses.reduce((sum, l) => sum + (parseInt(l.licensed_seats) || 0), 0)
+
+    // Check for tools with high per-seat cost
+    licenses.forEach((lic) => {
+      const perSeat = parseFloat(lic.price_per_seat_sek) || 0
+      if (perSeat > 500) {
+        // Find usage for this tool
+        const toolUsage = usage.filter((u) =>
+          u.tool?.toLowerCase() === lic.vendor?.toLowerCase()
+        )
+        const activeUsers = toolUsage.filter((u) => String(u.active_last_30d).toLowerCase() === "true").length
+        const totalLicensed = parseInt(lic.licensed_seats) || 0
+
+        if (totalLicensed > 0 && activeUsers < totalLicensed * 0.5) {
+          findings.push({
+            type: "underutilized_subscription",
+            severity: "medium",
+            title: `${lic.vendor}: Only ${activeUsers} of ${totalLicensed} seats actively used`,
+            description: `${lic.vendor} (${lic.plan}) costs ${perSeat} SEK/seat/month with ${totalLicensed} seats, but only ${activeUsers} are actively used. Consider downsizing.`,
+            potentialSavings: (totalLicensed - activeUsers) * perSeat,
+            platform: "Fortnox",
+          })
+        }
+      }
+    })
+  }
+
+  // 3. Detect price increases from invoice data
+  if (invoices.length > 0) {
+    const byVendor = {}
+    invoices.forEach((inv) => {
+      const vendor = inv.vendor || "Unknown"
+      if (!byVendor[vendor]) byVendor[vendor] = []
+      byVendor[vendor].push(inv)
+    })
+
+    for (const [vendor, vendorInvoices] of Object.entries(byVendor)) {
+      const sorted = vendorInvoices
+        .filter((inv) => inv.invoice_date)
+        .sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))
+
+      if (sorted.length >= 3) {
+        // Compare early vs late invoices
+        const earlyAvg = sorted.slice(0, 3).reduce((s, i) => s + (parseFloat(i.amount_sek) || 0), 0) / 3
+        const lateAvg = sorted.slice(-3).reduce((s, i) => s + (parseFloat(i.amount_sek) || 0), 0) / 3
+
+        if (earlyAvg > 0 && lateAvg > earlyAvg * 1.1) {
+          const increase = ((lateAvg - earlyAvg) / earlyAvg * 100).toFixed(0)
+          const monthlyIncrease = Math.round(lateAvg - earlyAvg)
+          findings.push({
+            type: "price_increase",
+            severity: monthlyIncrease > 500 ? "high" : "medium",
+            title: `${vendor}: Price increased ${increase}%`,
+            description: `${vendor} monthly cost went from ~${Math.round(earlyAvg)} SEK to ~${Math.round(lateAvg)} SEK (+${monthlyIncrease} SEK/month, ~${monthlyIncrease * 12} SEK/year)`,
+            potentialSavings: monthlyIncrease,
+            platform: "Fortnox",
+          })
+        }
+      }
+
+      // Detect billing gaps (missing months)
+      if (sorted.length >= 4) {
+        const dates = sorted.map((i) => new Date(i.invoice_date))
+        let gaps = 0
+        for (let i = 1; i < dates.length; i++) {
+          const daysDiff = (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24)
+          if (daysDiff > 45) gaps++ // More than 45 days between invoices = missed month
+        }
+        if (gaps > 0) {
+          const totalMonths = Math.round((dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24 * 30))
+          findings.push({
+            type: "billing_inconsistency",
+            severity: "medium",
+            title: `${vendor}: Inconsistent billing (${sorted.length} invoices over ${totalMonths} months)`,
+            description: `${vendor} has ${gaps} gap${gaps !== 1 ? "s" : ""} in billing — ${sorted.length} invoices found over ~${totalMonths} months. Investigate missing invoices or billing errors.`,
+            potentialSavings: 0,
+            platform: "Fortnox",
+          })
+        }
+      }
+    }
+  }
+
+  // Sort by severity
+  const order = { high: 0, medium: 1, low: 2 }
+  findings.sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
+
+  // Build summary
+  const totalSavings = findings.reduce((s, f) => s + (f.potentialSavings || 0), 0)
+  return {
+    findings,
+    summary: {
+      totalFindings: findings.length,
+      totalPotentialSavings: totalSavings,
+      highSeverity: findings.filter((f) => f.severity === "high").length,
+      mediumSeverity: findings.filter((f) => f.severity === "medium").length,
+      lowSeverity: findings.filter((f) => f.severity === "low").length,
+    },
+  }
+}
+
+/**
  * Run analysis on a test workspace
- * @param {string} workspaceId - test_workspaces.id
- * @param {Object} params - Analysis parameters
- * @param {string} params.analysisType - 'standard', 'deep', 'cross_platform'
- * @param {string[]} params.integrationLabels - Which integrations to include
- * @param {Object} params.options - Extra options (inactivityDays, startDate, endDate, etc.)
- * @param {Object|null} params.template - analysis_templates row (optional)
- * @param {string} params.userId - Who triggered it
- * @returns {Object} { analysisId, result }
  */
 async function runTestAnalysis(workspaceId, params) {
   const { analysisType, integrationLabels, uploadIds = null, options = {}, template = null, userId } = params
@@ -98,7 +327,6 @@ async function runTestAnalysis(workspaceId, params) {
     .eq("workspace_id", workspaceId)
     .in("integration_label", integrationLabels)
 
-  // If specific upload IDs provided, filter to only those
   if (uploadIds && uploadIds.length > 0) {
     uploadQuery = uploadQuery.in("id", uploadIds)
   }
@@ -140,10 +368,16 @@ async function runTestAnalysis(workspaceId, params) {
     let result = {}
 
     if (analysisType === "standard" || analysisType === "deep") {
-      // Run individual platform analyses
+      // Run Fortnox invoice analysis (works for both API data and SaaS CSV data)
       if (assembledData.fortnox && integrationLabels.includes("Fortnox")) {
         result.fortnox = analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })
       }
+
+      // Run SaaS-specific analysis (license utilization, usage, price drift)
+      if (assembledData.saas) {
+        result.saasAnalysis = analyzeSaasData(assembledData.saas)
+      }
+
       if (assembledData.m365 && integrationLabels.includes("Microsoft365")) {
         result.microsoft365 = analyzeM365CostLeaks(assembledData.m365, {
           inactivityDays: options.inactivityDays || 30,
@@ -162,7 +396,6 @@ async function runTestAnalysis(workspaceId, params) {
     }
 
     if (analysisType === "cross_platform") {
-      // Prepare data in the format comparisonAnalysisService expects
       const fortnoxCompData = assembledData.fortnox
         ? {
             supplierInvoices: assembledData.fortnox.supplierInvoices,
@@ -192,6 +425,11 @@ async function runTestAnalysis(workspaceId, params) {
         : null
 
       result.crossPlatform = calculateCrossplatformMetrics(fortnoxCompData, m365CompData, hubspotCompData)
+
+      // Also run SaaS analysis in cross_platform mode
+      if (assembledData.saas) {
+        result.saasAnalysis = analyzeSaasData(assembledData.saas)
+      }
     }
 
     // Build overall summary
@@ -214,7 +452,6 @@ async function runTestAnalysis(workspaceId, params) {
       console.error("Failed to update analysis record:", updateError.message)
     }
 
-    // Log completion
     await logTestRun(workspaceId, analysis.id, "info", "Analysis completed", {
       duration_ms: durationMs,
       integrations: integrationLabels,
@@ -223,7 +460,6 @@ async function runTestAnalysis(workspaceId, params) {
 
     return { analysisId: analysis.id, result, durationMs }
   } catch (error) {
-    // Mark as failed
     await supabase
       .from("test_analyses")
       .update({
@@ -261,6 +497,16 @@ function buildOverallSummary(result) {
     summary.mediumSeverity += s.mediumSeverity || 0
     summary.lowSeverity += s.lowSeverity || 0
     summary.platformResults.fortnox = s
+  }
+
+  if (result.saasAnalysis?.summary) {
+    const s = result.saasAnalysis.summary
+    summary.totalFindings += s.totalFindings || 0
+    summary.totalPotentialSavings += s.totalPotentialSavings || 0
+    summary.highSeverity += s.highSeverity || 0
+    summary.mediumSeverity += s.mediumSeverity || 0
+    summary.lowSeverity += s.lowSeverity || 0
+    summary.platformResults.saas = s
   }
 
   if (result.microsoft365?.overallSummary) {
@@ -320,4 +566,4 @@ async function logTestRun(workspaceId, analysisId, level, message, details = nul
   }
 }
 
-module.exports = { runTestAnalysis, assembleDataFromUploads, logTestRun }
+module.exports = { runTestAnalysis, assembleDataFromUploads, analyzeSaasData, logTestRun }
