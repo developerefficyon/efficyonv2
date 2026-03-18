@@ -644,9 +644,9 @@ async function analyzeMicrosoft365CostLeaks(req, res) {
 
     log("log", endpoint, `Analysis completed, ${analysis.overallSummary?.totalFindings || 0} findings`)
 
-    // Enhance with AI if available
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-    if (OPENAI_API_KEY && analysis.overallSummary?.totalFindings > 0) {
+    // Enhance with AI
+    const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY
+    if (OPENROUTER_KEY) {
       try {
         const openaiService = require("../services/openaiService")
 

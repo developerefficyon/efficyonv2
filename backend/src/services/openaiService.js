@@ -2,7 +2,7 @@ const axios = require("axios")
 const { formatCurrencyForIntegration, getCurrencyForIntegration } = require("../utils/currency")
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "openai/gpt-4o-mini"
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "anthropic/claude-sonnet-4-5"
 const OPENAI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 /**

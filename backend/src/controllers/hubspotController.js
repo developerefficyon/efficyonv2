@@ -712,6 +712,42 @@ async function analyzeHubSpotCostLeaksEndpoint(req, res) {
 
     log("log", endpoint, `Analysis completed, ${analysis.summary?.issuesFound || 0} findings, potential savings: $${analysis.summary?.potentialMonthlySavings || 0}/month`)
 
+    // Enhance with AI
+    const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY
+    if (OPENROUTER_KEY) {
+      try {
+        const openaiService = require("../services/openaiService")
+
+        const aiSummary = await openaiService.generateAnalysisSummary({
+          summary: {
+            totalUsers: users.length,
+            issuesFound: analysis.summary?.issuesFound || 0,
+            potentialMonthlySavings: analysis.summary?.potentialMonthlySavings || 0,
+            healthScore: analysis.summary?.healthScore || 0,
+          },
+          findings: analysis.findings || [],
+        })
+
+        if (aiSummary) {
+          analysis.aiSummary = aiSummary
+        }
+
+        const findings = analysis.findings || []
+        if (findings.length > 0) {
+          const enhancedFindings = await openaiService.enhanceFindingsWithAI(findings)
+          if (enhancedFindings && Array.isArray(enhancedFindings) && enhancedFindings.length > 0) {
+            analysis.findings = enhancedFindings
+          }
+        }
+
+        analysis.aiEnhanced = true
+        analysis.enhancedAt = new Date().toISOString()
+      } catch (aiError) {
+        log("error", endpoint, "AI enhancement failed:", aiError.message)
+        analysis.aiError = aiError.message
+      }
+    }
+
     return res.json(analysis)
   } catch (error) {
     log("error", endpoint, `Error: ${error.message}`)

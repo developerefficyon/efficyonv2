@@ -1102,9 +1102,9 @@ async function analyzeFortnoxCostLeaks(req, res) {
     log("log", endpoint, `Supplier invoices analyzed: ${analysis.supplierInvoiceAnalysis?.summary?.totalInvoices || 0}, total amount: $${analysis.supplierInvoiceAnalysis?.summary?.totalAmount || 0}`)
     log("log", endpoint, `Customer invoices analyzed: ${analysis.customerInvoiceAnalysis?.summary?.totalInvoices || 0}, unpaid: ${analysis.customerInvoiceAnalysis?.summary?.unpaidInvoices?.length || 0}`)
 
-    // Enhance with AI if available
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-    if (OPENAI_API_KEY) {
+    // Enhance with AI
+    const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY
+    if (OPENROUTER_KEY) {
       try {
         const openaiService = require("../services/openaiService")
 
