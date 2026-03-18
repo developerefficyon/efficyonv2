@@ -332,8 +332,25 @@ export default function WorkspaceDetailPage() {
             </div>
           )}
 
-          {findings.length === 0 && selectedAnalysis && (
+          {findings.length === 0 && selectedAnalysis && !selectedAnalysis.analysis_result?.aiAnalysis && (
             <p className="text-gray-400 text-sm py-4 text-center">No findings detected.</p>
+          )}
+
+          {/* AI Analysis */}
+          {selectedAnalysis?.analysis_result?.aiAnalysis && (
+            <Card className="bg-white/5 border-white/10">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <span className="text-[10px] text-purple-400 font-bold">AI</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">AI Analysis</h3>
+                </div>
+                <div className="prose prose-invert prose-sm max-w-none text-gray-300 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_strong]:text-white [&_table]:text-sm [&_th]:text-gray-400 [&_td]:border-white/10 [&_th]:border-white/10 [&_tr]:border-white/5">
+                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(selectedAnalysis.analysis_result.aiAnalysis) }} />
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Raw JSON toggle */}
@@ -447,4 +464,41 @@ function extractFindings(result: any): any[] {
   findings.sort((a, b) => (order[a.severity as keyof typeof order] ?? 3) - (order[b.severity as keyof typeof order] ?? 3))
 
   return findings
+}
+
+/** Simple markdown to HTML renderer for AI analysis output */
+function renderMarkdown(md: string): string {
+  return md
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold and italic
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Tables
+    .replace(/^\|(.+)\|$/gm, (match) => {
+      const cells = match.split('|').filter(Boolean).map((c) => c.trim())
+      if (cells.every((c) => /^[-:]+$/.test(c))) return '' // separator row
+      const tag = match.includes('---') ? 'th' : 'td'
+      return `<tr>${cells.map((c) => `<${tag}>${c}</${tag}>`).join('')}</tr>`
+    })
+    .replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>')
+    // Lists
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Paragraphs
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br/>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    // Clean up empty elements
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p><h/g, '<h')
+    .replace(/<\/h(\d)><\/p>/g, '</h$1>')
+    .replace(/<p><table>/g, '<table>')
+    .replace(/<\/table><\/p>/g, '</table>')
+    .replace(/<p><ul>/g, '<ul>')
+    .replace(/<\/ul><\/p>/g, '</ul>')
 }

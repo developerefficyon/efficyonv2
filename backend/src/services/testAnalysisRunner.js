@@ -4,12 +4,16 @@
  * Reuses production analysis logic without modification.
  */
 
+const axios = require("axios")
 const { supabase } = require("../config/supabase")
 const { analyzeCostLeaks } = require("./costLeakAnalysis")
 const { analyzeM365CostLeaks } = require("./microsoft365CostLeakAnalysis")
 const { analyzeHubSpotCostLeaks } = require("./hubspotCostLeakAnalysis")
 const { calculateCrossplatformMetrics } = require("./comparisonAnalysisService")
 const { analyzeProfitLoss } = require("./profitLossAnalysis")
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const AI_MODEL = process.env.ANALYSIS_MODEL || "anthropic/claude-sonnet-4-5"
 
 /**
  * Assemble uploaded test data into the structures expected by existing analysis services
@@ -314,6 +318,103 @@ function analyzeSaasData(saas) {
 }
 
 /**
+ * Run LLM-powered deep analysis on the assembled data.
+ * Sends a data summary + rule-based findings to Claude/GPT for deeper insights.
+ */
+async function runLlmAnalysis(saasData, ruleBasedFindings) {
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[LLM] API key not configured, skipping AI analysis")
+    return null
+  }
+
+  try {
+    // Build a concise data summary for the LLM
+    const { invoices, licenses, usage, users, company } = saasData
+
+    // Summarize invoices by vendor
+    const invoiceSummary = {}
+    invoices.forEach((inv) => {
+      const v = inv.vendor || "Unknown"
+      if (!invoiceSummary[v]) invoiceSummary[v] = { count: 0, total: 0, amounts: [] }
+      invoiceSummary[v].count++
+      invoiceSummary[v].total += parseFloat(inv.amount_sek) || 0
+      invoiceSummary[v].amounts.push(parseFloat(inv.amount_sek) || 0)
+    })
+
+    // Summarize usage by tool
+    const usageSummary = {}
+    usage.forEach((row) => {
+      const tool = row.tool || "Unknown"
+      if (!usageSummary[tool]) usageSummary[tool] = { total: 0, active: 0, inactive: 0, neverLoggedIn: 0 }
+      usageSummary[tool].total++
+      if (String(row.active_last_30d).toLowerCase() === "true") usageSummary[tool].active++
+      else usageSummary[tool].inactive++
+      if (!row.last_login || row.last_login === "") usageSummary[tool].neverLoggedIn++
+    })
+
+    const dataContext = `
+COMPANY: ${company?.name || "Unknown"} (${company?.industry || "Unknown industry"}, ${company?.employees || "?"} employees)
+CURRENCY: SEK
+
+SaaS SUBSCRIPTIONS (${licenses.length} tools):
+${licenses.map((l) => `- ${l.vendor} (${l.plan}): ${l.price_per_seat_sek} SEK/seat × ${l.licensed_seats} seats = ${l.total_monthly_sek} SEK/month | Contract: ${l.contract_start} to ${l.contract_end}`).join("\n")}
+
+INVOICE SUMMARY (${invoices.length} invoices over ~${invoices.length > 0 ? Math.round((new Date(invoices[invoices.length - 1]?.invoice_date) - new Date(invoices[0]?.invoice_date)) / (1000 * 60 * 60 * 24 * 30)) : 0} months):
+${Object.entries(invoiceSummary).map(([v, d]) => `- ${v}: ${d.count} invoices, total ${Math.round(d.total)} SEK, avg ${Math.round(d.total / d.count)} SEK/month`).join("\n")}
+
+USER & LICENSE USAGE (${users.length} employees):
+${Object.entries(usageSummary).map(([tool, d]) => `- ${tool}: ${d.active} active / ${d.inactive} inactive / ${d.neverLoggedIn} never logged in (${d.total} total)`).join("\n")}
+
+EMPLOYEE ROSTER:
+${users.map((u) => `- ${u.employee_id} ${u.first_name} ${u.last_name} (${u.department}, ${u.role}) - ${u.status}`).join("\n")}
+
+RULE-BASED FINDINGS (${ruleBasedFindings.length} found):
+${ruleBasedFindings.map((f) => `- [${f.severity.toUpperCase()}] ${f.title}: ${f.description} ${f.potentialSavings ? `(${f.potentialSavings} SEK/month)` : ""}`).join("\n")}
+`.trim()
+
+    const systemPrompt = `You are an expert SaaS cost optimization analyst. Analyze this company's software spending data and provide a comprehensive cost analysis report.
+
+Focus on:
+1. **Wasted spend** — inactive licenses, unused seats, over-provisioned plans
+2. **Price anomalies** — price increases, billing gaps, inconsistent charges
+3. **Optimization opportunities** — downgrade options, consolidation, renegotiation
+4. **Security risks** — tools without SSO, unmanaged access, offboarding gaps
+5. **Cross-tool insights** — redundant tools, overlapping functionality
+
+Be specific with numbers. Reference actual employees, tools, and amounts from the data.
+Format with markdown headers, tables, and bold amounts. Use SEK as currency.
+End with a prioritized action plan with estimated annual savings for each action.`
+
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Analyze this company's SaaS spending:\n\n${dataContext}` },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
+        },
+      }
+    )
+
+    const aiResponse = response.data.choices[0].message.content
+    console.log(`[LLM] AI analysis generated (${aiResponse.length} chars)`)
+    return aiResponse
+  } catch (error) {
+    console.error("[LLM] AI analysis failed:", error.message)
+    return null
+  }
+}
+
+/**
  * Run analysis on a test workspace
  */
 async function runTestAnalysis(workspaceId, params) {
@@ -376,6 +477,12 @@ async function runTestAnalysis(workspaceId, params) {
       // Run SaaS-specific analysis (license utilization, usage, price drift)
       if (assembledData.saas) {
         result.saasAnalysis = analyzeSaasData(assembledData.saas)
+        // Run LLM deep analysis
+        const allFindings = [
+          ...(result.fortnox?.supplierInvoiceAnalysis?.findings || []),
+          ...(result.saasAnalysis?.findings || []),
+        ]
+        result.aiAnalysis = await runLlmAnalysis(assembledData.saas, allFindings)
       }
 
       if (assembledData.m365 && integrationLabels.includes("Microsoft365")) {
@@ -429,6 +536,11 @@ async function runTestAnalysis(workspaceId, params) {
       // Also run SaaS analysis in cross_platform mode
       if (assembledData.saas) {
         result.saasAnalysis = analyzeSaasData(assembledData.saas)
+        const allFindings = [
+          ...(result.fortnox?.supplierInvoiceAnalysis?.findings || []),
+          ...(result.saasAnalysis?.findings || []),
+        ]
+        result.aiAnalysis = await runLlmAnalysis(assembledData.saas, allFindings)
       }
     }
 
