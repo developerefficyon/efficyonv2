@@ -24,6 +24,7 @@ import {
   File,
   ChevronRight,
   RotateCcw,
+  FolderOpen,
 } from "lucide-react"
 import { toast } from "sonner"
 import { getBackendToken } from "@/lib/auth-hooks"
@@ -35,6 +36,13 @@ interface Props {
 }
 
 type UploadState = "idle" | "hover" | "uploading" | "success" | "error"
+
+interface FileResult {
+  file: File
+  status: "pending" | "uploading" | "success" | "error"
+  result?: any
+  error?: string
+}
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf", ".jpeg", ".jpg", ".png"]
 const ACCEPT_STRING = ".csv,.xlsx,.xls,.pdf,.jpeg,.jpg,.png,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf,image/jpeg,image/png"
@@ -70,14 +78,15 @@ const DATA_TYPES: Record<string, { label: string; types: { value: string; label:
   },
 }
 
-function getFileIcon(name: string) {
+function getFileIcon(name: string, size?: "sm" | "md") {
+  const cls = size === "sm" ? "w-4 h-4" : "w-8 h-8"
   const ext = name.substring(name.lastIndexOf(".")).toLowerCase()
   if ([".csv", ".xlsx", ".xls"].includes(ext))
-    return <FileSpreadsheet className="w-8 h-8 text-green-400" />
-  if (ext === ".pdf") return <FileText className="w-8 h-8 text-red-400" />
+    return <FileSpreadsheet className={`${cls} text-green-400`} />
+  if (ext === ".pdf") return <FileText className={`${cls} text-red-400`} />
   if ([".jpeg", ".jpg", ".png"].includes(ext))
-    return <FileImage className="w-8 h-8 text-purple-400" />
-  return <File className="w-8 h-8 text-gray-400" />
+    return <FileImage className={`${cls} text-purple-400`} />
+  return <File className={`${cls} text-gray-400`} />
 }
 
 function formatFileSize(bytes: number) {
@@ -86,24 +95,62 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** Recursively read all files from a dropped directory entry */
+async function readAllEntries(entry: FileSystemEntry): Promise<File[]> {
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      (entry as FileSystemFileEntry).file((f) => resolve([f]))
+    })
+  }
+  if (entry.isDirectory) {
+    const dirReader = (entry as FileSystemDirectoryEntry).createReader()
+    const files: File[] = []
+    // readEntries may return partial results, so loop until empty
+    const readBatch = (): Promise<FileSystemEntry[]> =>
+      new Promise((resolve) => dirReader.readEntries((entries) => resolve(entries)))
+    let batch = await readBatch()
+    while (batch.length > 0) {
+      for (const child of batch) {
+        const childFiles = await readAllEntries(child)
+        files.push(...childFiles)
+      }
+      batch = await readBatch()
+    }
+    return files
+  }
+  return []
+}
+
+function isAcceptedFile(file: File): boolean {
+  const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase()
+  return ACCEPTED_EXTENSIONS.includes(ext) && file.size <= 15 * 1024 * 1024
+}
+
 export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
   const [state, setState] = useState<UploadState>("idle")
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusText, setStatusText] = useState("")
-  const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Single-file result (legacy)
+  const [result, setResult] = useState<any>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  // Multi-file batch state
+  const [fileResults, setFileResults] = useState<FileResult[]>([])
+  const [isBatchMode, setIsBatchMode] = useState(false)
+  const [batchCurrentIndex, setBatchCurrentIndex] = useState(0)
 
   // Pre-upload tool hint
   const [hintIntegration, setHintIntegration] = useState("")
   const [hintDataType, setHintDataType] = useState("")
 
   // Override controls (post-upload)
-  const [showOverride, setShowOverride] = useState(false)
   const [overrideIntegration, setOverrideIntegration] = useState("")
   const [overrideDataType, setOverrideDataType] = useState("")
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -118,17 +165,57 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     })
   }
 
+  const uploadSingleFile = async (
+    file: File,
+    integrationHint?: string,
+    dataTypeHint?: string
+  ): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const base64 = await fileToBase64(file)
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) throw new Error("Authentication required")
+
+      const body: Record<string, string | undefined> = {
+        fileData: base64,
+        fileName: file.name,
+        mimeType: file.type,
+      }
+      if (integrationHint) body.integrationHint = integrationHint
+      if (dataTypeHint) body.dataTypeHint = dataTypeHint
+
+      const res = await fetch(
+        `${apiBase}/api/test/workspaces/${workspaceId}/upload-file`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+      if (res.ok) {
+        const data = await res.json()
+        return { success: true, data }
+      } else {
+        const err = await res.json().catch(() => ({}))
+        return { success: false, error: err.error || "Upload failed" }
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message || "Upload failed" }
+    }
+  }
+
   const processFile = useCallback(
     async (file: File, integrationHint?: string, dataTypeHint?: string) => {
-      // Validate extension
       const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase()
       if (!ACCEPTED_EXTENSIONS.includes(ext)) {
         setError(`Unsupported file type: ${ext}. Allowed: ${ACCEPTED_EXTENSIONS.join(", ")}`)
         setState("error")
         return
       }
-
-      // Validate size (15MB)
       if (file.size > 15 * 1024 * 1024) {
         setError("File too large. Maximum: 15MB")
         setState("error")
@@ -136,65 +223,33 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
       }
 
       setSelectedFile(file)
+      setIsBatchMode(false)
       setState("uploading")
       setUploadProgress(10)
       setStatusText("Reading file...")
       setError(null)
       setResult(null)
 
-      try {
-        setUploadProgress(25)
-        setStatusText("Encoding file...")
-        const base64 = await fileToBase64(file)
+      setUploadProgress(25)
+      setStatusText("Encoding file...")
+      setUploadProgress(45)
+      setStatusText("Uploading and parsing...")
+      setUploadProgress(60)
+      setStatusText("Detecting schema...")
 
-        setUploadProgress(45)
-        setStatusText("Uploading and parsing...")
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const token = await getBackendToken()
-        if (!token) throw new Error("Authentication required")
+      const res = await uploadSingleFile(file, integrationHint, dataTypeHint)
 
-        const body: Record<string, string | undefined> = {
-          fileData: base64,
-          fileName: file.name,
-          mimeType: file.type,
-        }
-        if (integrationHint) body.integrationHint = integrationHint
-        if (dataTypeHint) body.dataTypeHint = dataTypeHint
-
-        setUploadProgress(60)
-        setStatusText("Detecting schema...")
-
-        const res = await fetch(
-          `${apiBase}/api/test/workspaces/${workspaceId}/upload-file`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(body),
-          }
-        )
-
-        setUploadProgress(85)
-        setStatusText("Storing data...")
-
-        if (res.ok) {
-          const data = await res.json()
-          setResult(data)
-          setState("success")
-          setUploadProgress(100)
-          setStatusText("")
-          toast.success("File uploaded successfully", {
-            description: `${data.detection.schema} detected (${(data.detection.confidence * 100).toFixed(0)}% confidence, ${data.detection.rowCount} rows)`,
-          })
-          onUploadComplete()
-        } else {
-          const err = await res.json().catch(() => ({}))
-          throw new Error(err.error || "Upload failed")
-        }
-      } catch (err: any) {
-        setError(err.message || "Upload failed")
+      if (res.success) {
+        setResult(res.data)
+        setState("success")
+        setUploadProgress(100)
+        setStatusText("")
+        toast.success("File uploaded successfully", {
+          description: `${res.data.detection.schema} detected (${(res.data.detection.confidence * 100).toFixed(0)}% confidence, ${res.data.detection.rowCount} rows)`,
+        })
+        onUploadComplete()
+      } else {
+        setError(res.error || "Upload failed")
         setState("error")
         setUploadProgress(0)
         setStatusText("")
@@ -203,15 +258,87 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     [workspaceId, onUploadComplete]
   )
 
-  const handleFiles = useCallback(
-    (files: FileList | File[]) => {
-      const file = files[0]
-      if (!file) return
+  const processBatch = useCallback(
+    async (files: File[]) => {
+      const accepted = files.filter(isAcceptedFile)
+      if (accepted.length === 0) {
+        setError("No supported files found in folder. Allowed: " + ACCEPTED_EXTENSIONS.join(", "))
+        setState("error")
+        return
+      }
+
+      setIsBatchMode(true)
+      setState("uploading")
+      setError(null)
+      setResult(null)
+
+      const initial: FileResult[] = accepted.map((f) => ({
+        file: f,
+        status: "pending" as const,
+      }))
+      setFileResults(initial)
+
       const integration = hintIntegration && hintIntegration !== "auto" ? hintIntegration : undefined
       const dataType = hintDataType && hintDataType !== "auto" ? hintDataType : undefined
-      processFile(file, integration, dataType)
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (let i = 0; i < accepted.length; i++) {
+        setBatchCurrentIndex(i)
+        setUploadProgress(Math.round(((i) / accepted.length) * 100))
+        setStatusText(`Uploading ${i + 1} of ${accepted.length}: ${accepted[i].name}`)
+
+        // Mark current file as uploading
+        setFileResults((prev) =>
+          prev.map((fr, idx) => (idx === i ? { ...fr, status: "uploading" } : fr))
+        )
+
+        const res = await uploadSingleFile(accepted[i], integration, dataType)
+
+        if (res.success) {
+          successCount++
+          setFileResults((prev) =>
+            prev.map((fr, idx) =>
+              idx === i ? { ...fr, status: "success", result: res.data } : fr
+            )
+          )
+        } else {
+          errorCount++
+          setFileResults((prev) =>
+            prev.map((fr, idx) =>
+              idx === i ? { ...fr, status: "error", error: res.error } : fr
+            )
+          )
+        }
+      }
+
+      setUploadProgress(100)
+      setStatusText("")
+      setState("success")
+      onUploadComplete()
+
+      if (errorCount === 0) {
+        toast.success(`All ${successCount} files uploaded successfully`)
+      } else {
+        toast.warning(`${successCount} uploaded, ${errorCount} failed`)
+      }
     },
-    [processFile, hintIntegration, hintDataType]
+    [workspaceId, onUploadComplete, hintIntegration, hintDataType]
+  )
+
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return
+      if (files.length === 1) {
+        const integration = hintIntegration && hintIntegration !== "auto" ? hintIntegration : undefined
+        const dataType = hintDataType && hintDataType !== "auto" ? hintDataType : undefined
+        processFile(files[0], integration, dataType)
+      } else {
+        processBatch(files)
+      }
+    },
+    [processFile, processBatch, hintIntegration, hintDataType]
   )
 
   // Drag event handlers
@@ -231,10 +358,40 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
       if (state === "hover") setState("idle")
     }
   }
-  const handleDrop = (e: React.DragEvent) => {
+
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    handleFiles(e.dataTransfer.files)
+
+    const items = e.dataTransfer.items
+    const allFiles: File[] = []
+
+    if (items && items.length > 0) {
+      // Check if any item is a directory
+      const entries: FileSystemEntry[] = []
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry?.()
+        if (entry) entries.push(entry)
+      }
+
+      if (entries.length > 0) {
+        setState("uploading")
+        setStatusText("Scanning folder...")
+        setUploadProgress(5)
+
+        for (const entry of entries) {
+          const files = await readAllEntries(entry)
+          allFiles.push(...files)
+        }
+
+        handleFiles(allFiles)
+        return
+      }
+    }
+
+    // Fallback: plain file list
+    const fileList = Array.from(e.dataTransfer.files)
+    handleFiles(fileList)
   }
 
   const handleReset = () => {
@@ -246,15 +403,16 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
     setStatusText("")
     setHintIntegration("")
     setHintDataType("")
-    setShowOverride(false)
     setOverrideIntegration("")
     setOverrideDataType("")
+    setFileResults([])
+    setIsBatchMode(false)
+    setBatchCurrentIndex(0)
   }
 
   const handleReuploadWithOverride = () => {
     if (!selectedFile) return
     processFile(selectedFile, overrideIntegration || undefined, overrideDataType || undefined)
-    setShowOverride(false)
   }
 
   const schemaLabels: Record<string, string> = {
@@ -341,15 +499,26 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
                 ref={fileInputRef}
                 type="file"
                 accept={ACCEPT_STRING}
-                onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                multiple
+                onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))}
+                className="hidden"
+              />
+              <input
+                ref={folderInputRef}
+                type="file"
+                // @ts-ignore - webkitdirectory is valid but not in TS types
+                webkitdirectory=""
+                directory=""
+                multiple
+                onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))}
                 className="hidden"
               />
               <FileUp className="w-10 h-10 text-gray-500 mx-auto mb-3" />
               <p className="text-sm text-white mb-1">
-                Drop CSV, Excel, PDF, or JPEG files here
+                Drop files or a folder here
               </p>
               <p className="text-xs text-gray-500 mb-3">
-                or click to browse &middot; Max 15MB
+                or click to browse &middot; Max 15MB per file
               </p>
               <div className="flex gap-2 justify-center flex-wrap">
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.csv</Badge>
@@ -358,6 +527,18 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.jpeg</Badge>
               </div>
             </div>
+
+            {/* Browse folder button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                folderInputRef.current?.click()
+              }}
+              className="w-full flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-cyan-400 transition-colors py-1.5"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Browse folder instead
+            </button>
           </div>
         )}
 
@@ -377,7 +558,7 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
         )}
 
         {/* UPLOADING STATE */}
-        {state === "uploading" && (
+        {state === "uploading" && !isBatchMode && (
           <div className="border border-white/10 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
               {selectedFile && getFileIcon(selectedFile.name)}
@@ -394,8 +575,129 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
           </div>
         )}
 
-        {/* SUCCESS STATE */}
-        {state === "success" && result && (
+        {/* BATCH UPLOADING STATE */}
+        {state === "uploading" && isBatchMode && (
+          <div className="border border-white/10 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-white font-medium">Uploading files...</p>
+              <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+            </div>
+            <Progress value={uploadProgress} className="h-2" />
+            <p className="text-xs text-gray-400 text-center">{statusText}</p>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {fileResults.map((fr, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${
+                    fr.status === "uploading"
+                      ? "bg-cyan-500/10"
+                      : fr.status === "success"
+                      ? "bg-green-500/5"
+                      : fr.status === "error"
+                      ? "bg-red-500/5"
+                      : "bg-white/5"
+                  }`}
+                >
+                  {fr.status === "uploading" && <Loader2 className="w-3 h-3 text-cyan-400 animate-spin shrink-0" />}
+                  {fr.status === "success" && <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />}
+                  {fr.status === "error" && <XCircle className="w-3 h-3 text-red-400 shrink-0" />}
+                  {fr.status === "pending" && <div className="w-3 h-3 rounded-full border border-white/20 shrink-0" />}
+                  <span className="text-gray-300 truncate flex-1">{fr.file.name}</span>
+                  <span className="text-gray-500 shrink-0">{formatFileSize(fr.file.size)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* BATCH SUCCESS STATE */}
+        {state === "success" && isBatchMode && (
+          <div className="border border-green-500/30 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <div>
+                  <p className="text-sm text-white font-medium">
+                    Batch upload complete
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {fileResults.filter((f) => f.status === "success").length} succeeded,{" "}
+                    {fileResults.filter((f) => f.status === "error").length} failed
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="text-xs border-white/10 text-gray-400 hover:text-white"
+              >
+                Upload More
+              </Button>
+            </div>
+
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {fileResults.map((fr, i) => (
+                <div
+                  key={i}
+                  className={`rounded-lg border p-3 ${
+                    fr.status === "success"
+                      ? "border-green-500/20 bg-green-500/5"
+                      : "border-red-500/20 bg-red-500/5"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {getFileIcon(fr.file.name, "sm")}
+                    {fr.status === "success" ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    )}
+                    <span className="text-sm text-white truncate flex-1">{fr.file.name}</span>
+                    {fr.result && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge className="text-[10px] bg-white/5 text-gray-300 border-white/10">
+                          {schemaLabels[fr.result.detection.schema] || fr.result.detection.schema}
+                        </Badge>
+                        <span className={`text-[10px] font-medium ${confidenceColor(fr.result.detection.confidence)}`}>
+                          {(fr.result.detection.confidence * 100).toFixed(0)}%
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          {fr.result.detection.rowCount} rows
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {fr.error && (
+                    <p className="text-xs text-red-400 mt-1 ml-6">{fr.error}</p>
+                  )}
+                  {fr.result && (
+                    <div className="flex items-center gap-2 mt-1.5 ml-6">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          fr.result.upload.validation_status === "valid"
+                            ? "border-green-500/30 text-green-400"
+                            : fr.result.upload.validation_status === "partial"
+                            ? "border-yellow-500/30 text-yellow-400"
+                            : "border-red-500/30 text-red-400"
+                        }`}
+                      >
+                        {fr.result.upload.validation_status}
+                      </Badge>
+                      <span className="text-[10px] text-gray-500">
+                        {fr.result.upload.integration_label} &mdash; {fr.result.upload.data_type}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SINGLE FILE SUCCESS STATE */}
+        {state === "success" && !isBatchMode && result && (
           <div className="border border-green-500/30 rounded-lg p-4 space-y-4">
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 shrink-0" />
