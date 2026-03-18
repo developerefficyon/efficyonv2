@@ -232,7 +232,7 @@ async function uploadFile(req, res) {
 
     // Validate file extension
     const ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase()
-    const ALLOWED = [".csv", ".xlsx", ".xls", ".pdf", ".jpeg", ".jpg", ".png"]
+    const ALLOWED = [".csv", ".xlsx", ".xls", ".pdf", ".jpeg", ".jpg", ".png", ".json"]
     if (!ALLOWED.includes(ext)) {
       return res.status(400).json({
         error: `Unsupported file type: ${ext}. Allowed: ${ALLOWED.join(", ")}`,
@@ -283,6 +283,11 @@ async function uploadFile(req, res) {
     // 3. Map schema to integration_label and data_type for test_uploads
     const schemaToIntegration = {
       fortnox: "Fortnox",
+      fortnox_invoices_csv: "Fortnox",
+      fortnox_licenses_csv: "Fortnox",
+      fortnox_usage_csv: "Fortnox",
+      fortnox_users_csv: "Fortnox",
+      fortnox_company_json: "Fortnox",
       m365: "Microsoft365",
       hubspot: "HubSpot",
       profit_loss: "Fortnox",
@@ -290,6 +295,11 @@ async function uploadFile(req, res) {
     }
     const schemaToDataType = {
       fortnox: dataTypeHint || "supplier_invoices",
+      fortnox_invoices_csv: "invoices",
+      fortnox_licenses_csv: "licenses",
+      fortnox_usage_csv: "usage_reports",
+      fortnox_users_csv: "users",
+      fortnox_company_json: "accounts",
       m365: dataTypeHint || "licenses",
       hubspot: dataTypeHint || "hubspot_users",
       profit_loss: "profit_loss",
@@ -333,6 +343,8 @@ async function uploadFile(req, res) {
       }
     } else if (finalSchema === "hubspot" && mappedData) {
       fileDataToStore = mappedData.users?.length > 0 ? mappedData.users : rows
+    } else if (finalSchema.startsWith("fortnox_") && mappedData) {
+      fileDataToStore = mappedData
     } else {
       fileDataToStore = rows
     }

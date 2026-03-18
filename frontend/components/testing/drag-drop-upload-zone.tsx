@@ -44,8 +44,8 @@ interface FileResult {
   error?: string
 }
 
-const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf", ".jpeg", ".jpg", ".png"]
-const ACCEPT_STRING = ".csv,.xlsx,.xls,.pdf,.jpeg,.jpg,.png,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf,image/jpeg,image/png"
+const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf", ".jpeg", ".jpg", ".png", ".json"]
+const ACCEPT_STRING = ".csv,.xlsx,.xls,.pdf,.jpeg,.jpg,.png,.json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf,image/jpeg,image/png,application/json"
 
 const DATA_TYPES: Record<string, { label: string; types: { value: string; label: string }[] }> = {
   Fortnox: {
@@ -86,6 +86,7 @@ function getFileIcon(name: string, size?: "sm" | "md") {
   if (ext === ".pdf") return <FileText className={`${cls} text-red-400`} />
   if ([".jpeg", ".jpg", ".png"].includes(ext))
     return <FileImage className={`${cls} text-purple-400`} />
+  if (ext === ".json") return <FileText className={`${cls} text-cyan-400`} />
   return <File className={`${cls} text-gray-400`} />
 }
 
@@ -523,6 +524,7 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
               <div className="flex gap-2 justify-center flex-wrap">
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.csv</Badge>
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.xlsx</Badge>
+                <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.json</Badge>
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.pdf</Badge>
                 <Badge variant="outline" className="text-[10px] border-white/10 text-gray-400">.jpeg</Badge>
               </div>

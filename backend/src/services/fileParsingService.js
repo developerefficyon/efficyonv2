@@ -43,6 +43,10 @@ function parseUploadedFile(fileBase64, fileName, mimeType) {
     return parseImageFile(fileBase64, fileName, mimeType)
   }
 
+  if (ext === ".json" || mimeType === "application/json") {
+    return { type: "json", ...parseJsonFile(buffer) }
+  }
+
   return { type: "unknown", error: `Unsupported file type: ${ext}` }
 }
 
@@ -191,6 +195,50 @@ function parseCsvFile(buffer) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  JSON Parsing                                                       */
+/* ------------------------------------------------------------------ */
+
+function parseJsonFile(buffer) {
+  try {
+    const text = buffer.toString("utf-8")
+    const parsed = JSON.parse(text)
+
+    // If it's an array of objects, treat like a CSV with rows
+    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
+      const rows = parsed.slice(0, MAX_ROWS_PER_SHEET)
+      const headers = Object.keys(rows[0])
+      return {
+        sheets: [{
+          name: "JSON",
+          headers,
+          rows,
+          rowCount: parsed.length,
+          truncated: parsed.length > MAX_ROWS_PER_SHEET,
+        }],
+      }
+    }
+
+    // If it's a single object (like company.json), wrap in array
+    if (typeof parsed === "object" && parsed !== null) {
+      const headers = Object.keys(parsed)
+      return {
+        sheets: [{
+          name: "JSON",
+          headers,
+          rows: [parsed],
+          rowCount: 1,
+          truncated: false,
+        }],
+      }
+    }
+
+    return { error: "JSON file must contain an object or array of objects" }
+  } catch (err) {
+    return { error: `Invalid JSON: ${err.message}` }
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Image Parsing (via Vision API)                                     */
 /* ------------------------------------------------------------------ */
 
@@ -296,6 +344,37 @@ const SCHEMA_KEYWORDS = {
     exclusive: ["accountcode", "accountname", "previousyear", "groupkey"],
     strong: ["accountcode", "accountname", "accumulated", "previousyear", "groupkey", "category"],
     medium: ["period", "accumulated"],
+    weak: [],
+  },
+  // Fortnox folder CSV formats (SaaS cost optimization test data)
+  fortnox_invoices_csv: {
+    exclusive: ["amountsek", "costcentername", "paymentstatus"],
+    strong: ["amountsek", "invoicedate", "paymentstatus", "costcenter", "invoiceid"],
+    medium: ["vendor", "plan", "currency"],
+    weak: [],
+  },
+  fortnox_licenses_csv: {
+    exclusive: ["priceperseatsek", "licensedseats", "flatmonthlyfeesek", "totalmonthlysek"],
+    strong: ["priceperseatsek", "licensedseats", "flatmonthlyfeesek", "billingcycle", "contractstart", "contractend"],
+    medium: ["vendor", "plan", "category", "admincontact"],
+    weak: [],
+  },
+  fortnox_usage_csv: {
+    exclusive: ["haslicense", "activelast30d", "loginslast30d", "actionslast30d", "datacreatedmb"],
+    strong: ["haslicense", "activelast30d", "loginslast30d", "actionslast30d", "datacreatedmb"],
+    medium: ["employeeid", "department", "tool"],
+    weak: [],
+  },
+  fortnox_users_csv: {
+    exclusive: [],
+    strong: ["employeeid", "firstname", "lastname", "startdate", "enddate", "office"],
+    medium: ["email", "department", "role", "status"],
+    weak: [],
+  },
+  fortnox_company_json: {
+    exclusive: ["companyid"],
+    strong: ["companyid", "activeemployees", "saastools", "erpsystems"],
+    medium: ["industry", "employees", "offices", "departments"],
     weak: [],
   },
   generic: {
@@ -430,6 +509,68 @@ const COLUMN_MAPS = {
     Category: ["category", "kategori", "type", "group"],
     GroupKey: ["groupkey", "group key", "group_key"],
   },
+  // Fortnox folder CSV formats
+  fortnox_invoices_csv: {
+    invoice_date: ["invoice_date", "invoicedate"],
+    vendor: ["vendor"],
+    plan: ["plan"],
+    amount_sek: ["amount_sek", "amountsek"],
+    currency: ["currency"],
+    cost_center: ["cost_center", "costcenter"],
+    cost_center_name: ["cost_center_name", "costcentername"],
+    payment_status: ["payment_status", "paymentstatus"],
+    invoice_id: ["invoice_id", "invoiceid"],
+  },
+  fortnox_licenses_csv: {
+    vendor: ["vendor"],
+    plan: ["plan"],
+    category: ["category"],
+    price_per_seat_sek: ["price_per_seat_sek", "priceperseatsek"],
+    licensed_seats: ["licensed_seats", "licensedseats"],
+    flat_monthly_fee_sek: ["flat_monthly_fee_sek", "flatmonthlyfeesek"],
+    total_monthly_sek: ["total_monthly_sek", "totalmonthlysek"],
+    billing_cycle: ["billing_cycle", "billingcycle"],
+    contract_start: ["contract_start", "contractstart"],
+    contract_end: ["contract_end", "contractend"],
+    admin_contact: ["admin_contact", "admincontact"],
+  },
+  fortnox_usage_csv: {
+    employee_id: ["employee_id", "employeeid"],
+    email: ["email"],
+    department: ["department"],
+    tool: ["tool"],
+    has_license: ["has_license", "haslicense"],
+    active_last_30d: ["active_last_30d", "activelast30d"],
+    last_login: ["last_login", "lastlogin"],
+    logins_last_30d: ["logins_last_30d", "loginslast30d"],
+    actions_last_30d: ["actions_last_30d", "actionslast30d"],
+    data_created_mb: ["data_created_mb", "datacreatedmb"],
+  },
+  fortnox_users_csv: {
+    employee_id: ["employee_id", "employeeid"],
+    first_name: ["first_name", "firstname"],
+    last_name: ["last_name", "lastname"],
+    email: ["email"],
+    department: ["department"],
+    role: ["role"],
+    office: ["office"],
+    status: ["status"],
+    start_date: ["start_date", "startdate"],
+    end_date: ["end_date", "enddate"],
+  },
+  fortnox_company_json: {
+    company_id: ["company_id", "companyid"],
+    name: ["name"],
+    industry: ["industry"],
+    employees: ["employees"],
+    active_employees: ["active_employees", "activeemployees"],
+    offices: ["offices"],
+    departments: ["departments"],
+    erp_systems: ["erp_systems", "erpsystems"],
+    saas_tools: ["saas_tools", "saastools"],
+    saas_tools_count: ["saas_tools_count", "saastoolscount"],
+    currency: ["currency"],
+  },
   generic: {
     vendor: ["vendor", "supplier", "company", "merchant", "payee", "leverantör"],
     amount: ["amount", "total", "cost", "price", "sum", "belopp", "summa", "value"],
@@ -482,6 +623,12 @@ function mapToAnalysisFormat(rows, schema, columnMapping) {
       return mapToHubSpot(rows, columnMapping)
     case "profit_loss":
       return mapToProfitLoss(rows, columnMapping)
+    case "fortnox_invoices_csv":
+    case "fortnox_licenses_csv":
+    case "fortnox_usage_csv":
+    case "fortnox_users_csv":
+    case "fortnox_company_json":
+      return mapFortnoxCsv(rows, columnMapping)
     case "generic":
       return mapToGeneric(rows, columnMapping)
     default:
@@ -640,6 +787,23 @@ function mapToGeneric(rows, mapping) {
     category: getField(row, mapping.category) || "",
     _original: row,
   }))
+}
+
+/**
+ * Map Fortnox folder CSV/JSON data — pass through with field names preserved.
+ * These files are already in a clean format; just apply the column mapping.
+ */
+function mapFortnoxCsv(rows, columnMapping) {
+  return rows.map((row) => {
+    const mapped = {}
+    for (const [targetField, sourceColumn] of Object.entries(columnMapping)) {
+      const val = getField(row, sourceColumn)
+      if (val !== null && val !== undefined) {
+        mapped[targetField] = val
+      }
+    }
+    return mapped
+  })
 }
 
 /* ------------------------------------------------------------------ */
@@ -966,6 +1130,7 @@ module.exports = {
   parseUploadedFile,
   parseExcelFile,
   parseCsvFile,
+  parseJsonFile,
   parsePdfFile,
   parseImageFile,
   detectDataSchema,

@@ -12,9 +12,9 @@ const SCHEMAS = {
       optional: ["TotalToPay", "GrossValue", "InvoiceTotal", "Booked", "FinalPayDate", "SupplierInvoiceRows"],
     },
     invoices: {
-      required: ["Total"],
-      recommended: ["CustomerName", "DueDate", "Balance", "DocumentNumber"],
-      optional: ["InvoiceDate", "Booked"],
+      required: [],
+      recommended: ["vendor", "amount_sek", "invoice_date"],
+      optional: ["Total", "CustomerName", "DueDate", "Balance", "DocumentNumber", "InvoiceDate", "Booked", "plan", "currency", "cost_center", "cost_center_name", "payment_status", "invoice_id"],
     },
     customers: {
       required: ["CustomerNumber"],
@@ -32,9 +32,24 @@ const SCHEMAS = {
       optional: ["VoucherRows"],
     },
     accounts: {
-      required: ["Number"],
-      recommended: ["Description"],
-      optional: ["Active", "BalanceBroughtForward"],
+      required: [],
+      recommended: ["company_id", "name", "industry"],
+      optional: ["Number", "Description", "Active", "BalanceBroughtForward", "employees", "active_employees", "offices", "departments", "erp_systems", "saas_tools", "currency"],
+    },
+    licenses: {
+      required: ["vendor", "plan"],
+      recommended: ["price_per_seat_sek", "licensed_seats", "total_monthly_sek"],
+      optional: ["flat_monthly_fee_sek", "billing_cycle", "contract_start", "contract_end", "admin_contact", "category"],
+    },
+    users: {
+      required: ["employee_id", "email"],
+      recommended: ["first_name", "last_name", "department", "status"],
+      optional: ["role", "office", "start_date", "end_date"],
+    },
+    usage_reports: {
+      required: ["employee_id", "tool"],
+      recommended: ["has_license", "active_last_30d", "last_login"],
+      optional: ["logins_last_30d", "actions_last_30d", "data_created_mb", "email", "department"],
     },
     articles: {
       required: ["ArticleNumber"],
