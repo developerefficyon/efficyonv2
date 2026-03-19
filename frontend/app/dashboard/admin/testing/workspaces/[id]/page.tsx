@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 const DragDropUploadZone = dynamic(
   () => import("@/components/testing/drag-drop-upload-zone").then((m) => m.DragDropUploadZone),
@@ -427,6 +428,7 @@ export default function WorkspaceDetailPage() {
                 </div>
                 <div className="ai-analysis-content text-sm text-gray-300 leading-relaxed space-y-3">
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => <h1 className="text-base font-bold text-white mt-4 mb-2">{children}</h1>,
                       h2: ({ children }) => <h2 className="text-sm font-semibold text-white mt-4 mb-1.5">{children}</h2>,
