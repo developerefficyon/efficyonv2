@@ -328,11 +328,23 @@ const SCHEMA_KEYWORDS = {
     medium: ["supplier", "faktura", "leverant", "invoice", "duedate", "due date", "balance", "booked", "invoicedate", "förfallodatum", "fakturadatum"],
     weak: ["total", "amount", "date"],
   },
-  m365: {
-    exclusive: ["skupartnumber", "skuid", "consumedunits", "prepaidunits", "assignedlicenses", "signinactivity", "userprincipalname"],
-    strong: ["skupartnumber", "skuid", "consumedunits", "prepaidunits", "assignedlicenses", "signinactivity"],
-    medium: ["license", "licens", "sku", "signin", "sign in", "accountenabled", "userprincipalname"],
-    weak: ["displayname"],
+  m365_licenses: {
+    exclusive: ["skupartnumber", "skuid", "consumedunits", "prepaidunits"],
+    strong: ["skupartnumber", "skuid", "consumedunits", "prepaidunits"],
+    medium: ["license", "licens", "sku", "appliesto", "capabilitystatus"],
+    weak: [],
+  },
+  m365_users: {
+    exclusive: ["assignedlicenses", "signinactivity", "userprincipalname"],
+    strong: ["assignedlicenses", "signinactivity", "userprincipalname", "accountenabled"],
+    medium: ["displayname", "jobtitle", "createddatetime"],
+    weak: ["department", "mail"],
+  },
+  m365_usage: {
+    exclusive: ["reportrefreshdate", "lastactivitydate", "exchangelastactivitydate", "teamslastactivitydate"],
+    strong: ["reportrefreshdate", "lastactivitydate", "exchangelastactivitydate", "teamslastactivitydate"],
+    medium: ["userprincipalname", "reportperiod"],
+    weak: [],
   },
   hubspot: {
     exclusive: ["userprovisioningstate", "superadmin", "roleids", "primaryteamid", "lastloginat"],
@@ -492,6 +504,23 @@ const COLUMN_MAPS = {
     accountEnabled: ["accountenabled", "account enabled", "enabled", "active", "status"],
     lastSignInDateTime: ["lastsignindatetime", "last sign in", "last signin", "last login", "lastlogin", "last activity"],
   },
+  m365_licenses: {
+    skuPartNumber: ["skupartnumber", "sku part number", "sku_part_number", "sku", "license name", "license type", "plan"],
+    consumedUnits: ["consumedunits", "consumed units", "consumed_units", "assigned", "used"],
+    prepaidUnitsEnabled: ["prepaidunits", "prepaid units", "total licenses", "total_licenses", "purchased", "enabled"],
+  },
+  m365_users: {
+    displayName: ["displayname", "display name", "name", "user name", "username", "full name"],
+    userPrincipalName: ["userprincipalname", "user principal name", "upn", "email", "mail"],
+    accountEnabled: ["accountenabled", "account enabled", "enabled", "active", "status"],
+    lastSignInDateTime: ["lastsignindatetime", "last sign in", "last signin", "last login", "lastlogin", "last activity"],
+    assignedLicenses: ["assignedlicenses", "assigned licenses", "assigned_licenses"],
+  },
+  m365_usage: {
+    userPrincipalName: ["userprincipalname", "user principal name", "upn", "email", "mail"],
+    lastActivityDate: ["lastactivitydate", "last activity date", "last_activity_date", "last activity"],
+    reportRefreshDate: ["reportrefreshdate", "report refresh date", "report_refresh_date"],
+  },
   hubspot: {
     email: ["email", "e-mail", "mail", "user email", "useremail"],
     displayName: ["displayname", "display name", "name", "user name", "username"],
@@ -618,6 +647,9 @@ function mapToAnalysisFormat(rows, schema, columnMapping) {
     case "fortnox":
       return mapToFortnox(rows, columnMapping)
     case "m365":
+    case "m365_licenses":
+    case "m365_users":
+    case "m365_usage":
       return mapToM365(rows, columnMapping)
     case "hubspot":
       return mapToHubSpot(rows, columnMapping)

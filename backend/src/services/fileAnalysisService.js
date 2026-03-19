@@ -51,8 +51,11 @@ async function analyzeUploadedFile(parsedFile, fileName, userHint) {
         break
       }
 
-      case "m365": {
-        const mapped = mapToAnalysisFormat(rows, "m365", columnMapping)
+      case "m365":
+      case "m365_licenses":
+      case "m365_users":
+      case "m365_usage": {
+        const mapped = mapToAnalysisFormat(rows, detectedSchema, columnMapping)
         if (mapped) {
           analysis = analyzeM365CostLeaks(mapped)
         }
