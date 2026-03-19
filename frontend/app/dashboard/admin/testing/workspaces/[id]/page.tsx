@@ -340,41 +340,11 @@ export default function WorkspaceDetailPage() {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm text-white truncate">{upload.filename}</p>
-                  <div className="flex items-center gap-1.5">
-                    <select
-                      value={`${upload.integration_label}::${upload.data_type}`}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        const [integ, dt] = e.target.value.split("::")
-                        reclassifyUpload(upload.id, integ, dt)
-                      }}
-                      className="text-xs text-gray-500 bg-transparent border-none cursor-pointer hover:text-cyan-400 focus:outline-none appearance-none pr-4"
-                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
-                    >
-                      <optgroup label="Fortnox">
-                        <option value="Fortnox::supplier_invoices">Fortnox · supplier_invoices</option>
-                        <option value="Fortnox::invoices">Fortnox · invoices</option>
-                        <option value="Fortnox::licenses">Fortnox · licenses</option>
-                        <option value="Fortnox::users">Fortnox · users</option>
-                        <option value="Fortnox::usage_reports">Fortnox · usage_reports</option>
-                        <option value="Fortnox::accounts">Fortnox · accounts</option>
-                        <option value="Fortnox::customers">Fortnox · customers</option>
-                        <option value="Fortnox::expenses">Fortnox · expenses</option>
-                        <option value="Fortnox::articles">Fortnox · articles</option>
-                        <option value="Fortnox::profit_loss">Fortnox · profit_loss</option>
-                      </optgroup>
-                      <optgroup label="Microsoft 365">
-                        <option value="Microsoft365::licenses">Microsoft365 · licenses</option>
-                        <option value="Microsoft365::users">Microsoft365 · users</option>
-                        <option value="Microsoft365::usage_reports">Microsoft365 · usage_reports</option>
-                      </optgroup>
-                      <optgroup label="HubSpot">
-                        <option value="HubSpot::hubspot_users">HubSpot · hubspot_users</option>
-                        <option value="HubSpot::hubspot_account">HubSpot · hubspot_account</option>
-                      </optgroup>
-                    </select>
-                  </div>
+                  <UploadClassificationSelect
+                    uploadId={upload.id}
+                    value={`${upload.integration_label}::${upload.data_type}`}
+                    onReclassify={reclassifyUpload}
+                  />
                 </div>
               </div>
               <button
@@ -540,6 +510,85 @@ export default function WorkspaceDetailPage() {
 }
 
 /** Auto-loads the latest analysis on mount */
+const CLASSIFICATION_OPTIONS = [
+  { group: "Fortnox", items: [
+    { value: "Fortnox::supplier_invoices", label: "Supplier Invoices" },
+    { value: "Fortnox::invoices", label: "Invoices" },
+    { value: "Fortnox::licenses", label: "Licenses" },
+    { value: "Fortnox::users", label: "Users" },
+    { value: "Fortnox::usage_reports", label: "Usage Reports" },
+    { value: "Fortnox::accounts", label: "Accounts" },
+    { value: "Fortnox::customers", label: "Customers" },
+    { value: "Fortnox::expenses", label: "Expenses" },
+    { value: "Fortnox::articles", label: "Articles" },
+    { value: "Fortnox::profit_loss", label: "Profit & Loss" },
+  ]},
+  { group: "Microsoft 365", items: [
+    { value: "Microsoft365::licenses", label: "Licenses" },
+    { value: "Microsoft365::users", label: "Users" },
+    { value: "Microsoft365::usage_reports", label: "Usage Reports" },
+  ]},
+  { group: "HubSpot", items: [
+    { value: "HubSpot::hubspot_users", label: "Users" },
+    { value: "HubSpot::hubspot_account", label: "Account" },
+  ]},
+]
+
+function UploadClassificationSelect({
+  uploadId, value, onReclassify,
+}: {
+  uploadId: string
+  value: string
+  onReclassify: (id: string, integration: string, dataType: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const current = CLASSIFICATION_OPTIONS.flatMap((g) => g.items).find((i) => i.value === value)
+  const [integ, dt] = value.split("::")
+  const displayLabel = current ? `${integ} · ${current.label}` : value.replace("::", " · ")
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        className="flex items-center gap-1 text-xs text-gray-500 hover:text-cyan-400 transition-colors"
+      >
+        {displayLabel}
+        <Pencil className="w-2.5 h-2.5" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false) }} />
+          <div className="absolute top-full left-0 mt-1 z-50 bg-gray-900 border border-white/10 rounded-lg shadow-xl py-1 min-w-[200px] max-h-64 overflow-y-auto">
+            {CLASSIFICATION_OPTIONS.map((group) => (
+              <div key={group.group}>
+                <p className="px-3 py-1 text-[10px] text-gray-500 uppercase font-medium">{group.group}</p>
+                {group.items.map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const [i, d] = item.value.split("::")
+                      onReclassify(uploadId, i, d)
+                      setOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                      item.value === value
+                        ? "text-cyan-400 bg-cyan-500/10"
+                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function AutoLoadAnalysis({ analysisId, onLoad }: { analysisId: string; onLoad: (id: string) => void }) {
   useEffect(() => {
     onLoad(analysisId)
