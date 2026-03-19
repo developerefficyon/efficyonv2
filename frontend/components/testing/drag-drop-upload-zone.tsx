@@ -628,14 +628,12 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={handleReset}
-                className="text-xs border-white/10 text-gray-400 hover:text-white"
+                className="text-xs text-gray-500 hover:text-cyan-400 transition-colors"
               >
-                Upload More
-              </Button>
+                + Upload More
+              </button>
             </div>
 
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
@@ -707,14 +705,12 @@ export function DragDropUploadZone({ workspaceId, onUploadComplete }: Props) {
                 <p className="text-sm text-white font-medium">Upload successful</p>
                 <p className="text-xs text-gray-400 mt-0.5">{result.upload.filename}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={handleReset}
-                className="text-xs border-white/10 text-gray-400 hover:text-white"
+                className="text-xs text-gray-500 hover:text-cyan-400 transition-colors"
               >
-                Upload Another
-              </Button>
+                + Upload Another
+              </button>
             </div>
 
             {/* Detection summary */}
