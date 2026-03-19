@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from "lucide-react"
 import { toast } from "sonner"
+import ReactMarkdown from "react-markdown"
 
 const DragDropUploadZone = dynamic(
   () => import("@/components/testing/drag-drop-upload-zone").then((m) => m.DragDropUploadZone),
@@ -424,8 +425,8 @@ export default function WorkspaceDetailPage() {
                   </div>
                   <h3 className="text-sm font-semibold text-white">AI Analysis</h3>
                 </div>
-                <div className="prose prose-invert prose-sm max-w-none text-gray-300 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_strong]:text-white [&_table]:text-sm [&_th]:text-gray-400 [&_td]:border-white/10 [&_th]:border-white/10 [&_tr]:border-white/5">
-                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(selectedAnalysis.analysis_result.aiAnalysis) }} />
+                <div className="prose prose-invert prose-sm max-w-none text-gray-300 [&_h1]:text-white [&_h1]:text-base [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-white [&_h2]:text-sm [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-white [&_h3]:text-sm [&_h3]:mt-2 [&_h3]:mb-1 [&_strong]:text-white [&_p]:my-1.5 [&_p]:leading-relaxed [&_ul]:my-1.5 [&_ul]:pl-4 [&_ol]:my-1.5 [&_ol]:pl-4 [&_li]:my-0.5 [&_table]:text-xs [&_table]:my-2 [&_table]:w-full [&_th]:text-left [&_th]:text-gray-400 [&_th]:px-3 [&_th]:py-1.5 [&_th]:border [&_th]:border-white/10 [&_th]:bg-white/5 [&_td]:px-3 [&_td]:py-1.5 [&_td]:border [&_td]:border-white/10 [&_tr]:border-white/5 [&_hr]:my-3 [&_hr]:border-white/10">
+                  <ReactMarkdown>{selectedAnalysis.analysis_result.aiAnalysis}</ReactMarkdown>
                 </div>
               </CardContent>
             </Card>
@@ -544,39 +545,3 @@ function extractFindings(result: any): any[] {
   return findings
 }
 
-/** Simple markdown to HTML renderer for AI analysis output */
-function renderMarkdown(md: string): string {
-  return md
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold and italic
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Tables
-    .replace(/^\|(.+)\|$/gm, (match) => {
-      const cells = match.split('|').filter(Boolean).map((c) => c.trim())
-      if (cells.every((c) => /^[-:]+$/.test(c))) return '' // separator row
-      const tag = match.includes('---') ? 'th' : 'td'
-      return `<tr>${cells.map((c) => `<${tag}>${c}</${tag}>`).join('')}</tr>`
-    })
-    .replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>')
-    // Lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Paragraphs
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br/>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-    // Clean up empty elements
-    .replace(/<p><\/p>/g, '')
-    .replace(/<p><h/g, '<h')
-    .replace(/<\/h(\d)><\/p>/g, '</h$1>')
-    .replace(/<p><table>/g, '<table>')
-    .replace(/<\/table><\/p>/g, '</table>')
-    .replace(/<p><ul>/g, '<ul>')
-    .replace(/<\/ul><\/p>/g, '</ul>')
-}
