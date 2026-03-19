@@ -425,8 +425,31 @@ export default function WorkspaceDetailPage() {
                   </div>
                   <h3 className="text-sm font-semibold text-white">AI Analysis</h3>
                 </div>
-                <div className="prose prose-invert prose-sm max-w-none text-gray-300 [&_h1]:text-white [&_h1]:text-base [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-white [&_h2]:text-sm [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-white [&_h3]:text-sm [&_h3]:mt-2 [&_h3]:mb-1 [&_strong]:text-white [&_p]:my-1.5 [&_p]:leading-relaxed [&_ul]:my-1.5 [&_ul]:pl-4 [&_ol]:my-1.5 [&_ol]:pl-4 [&_li]:my-0.5 [&_table]:text-xs [&_table]:my-2 [&_table]:w-full [&_th]:text-left [&_th]:text-gray-400 [&_th]:px-3 [&_th]:py-1.5 [&_th]:border [&_th]:border-white/10 [&_th]:bg-white/5 [&_td]:px-3 [&_td]:py-1.5 [&_td]:border [&_td]:border-white/10 [&_tr]:border-white/5 [&_hr]:my-3 [&_hr]:border-white/10">
-                  <ReactMarkdown>{selectedAnalysis.analysis_result.aiAnalysis}</ReactMarkdown>
+                <div className="ai-analysis-content text-sm text-gray-300 leading-relaxed space-y-3">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => <h1 className="text-base font-bold text-white mt-4 mb-2">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-sm font-semibold text-white mt-4 mb-1.5">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-medium text-white mt-3 mb-1">{children}</h3>,
+                      p: ({ children }) => <p className="my-1.5">{children}</p>,
+                      strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+                      li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                      hr: () => <hr className="border-white/10 my-3" />,
+                      table: ({ children }) => (
+                        <div className="overflow-x-auto my-3">
+                          <table className="w-full text-xs border-collapse border border-white/10">{children}</table>
+                        </div>
+                      ),
+                      thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+                      th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border border-white/10 whitespace-nowrap">{children}</th>,
+                      td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border border-white/10">{children}</td>,
+                      tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                    }}
+                  >
+                    {selectedAnalysis.analysis_result.aiAnalysis}
+                  </ReactMarkdown>
                 </div>
               </CardContent>
             </Card>
