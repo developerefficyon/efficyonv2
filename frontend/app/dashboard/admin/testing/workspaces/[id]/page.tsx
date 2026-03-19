@@ -70,6 +70,7 @@ export default function WorkspaceDetailPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisRecord | null>(null)
   const [showRawJson, setShowRawJson] = useState(false)
+  const [selectedUploadIds, setSelectedUploadIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) {
@@ -92,6 +93,7 @@ export default function WorkspaceDetailPage() {
         setWorkspace(data.workspace)
         setUploads(data.uploads)
         setAnalyses(data.analyses)
+        setSelectedUploadIds(new Set(data.uploads.map((u: UploadRecord) => u.id)))
       }
     } catch (err) {
       console.error("Failed to fetch workspace:", err)
@@ -107,7 +109,8 @@ export default function WorkspaceDetailPage() {
   }, [user, workspaceId])
 
   async function runAnalysis() {
-    if (uploads.length === 0) return
+    const selected = uploads.filter((u) => selectedUploadIds.has(u.id))
+    if (selected.length === 0) return
     setAnalyzing(true)
 
     try {
@@ -115,7 +118,7 @@ export default function WorkspaceDetailPage() {
       const token = await getBackendToken()
       if (!token) return
 
-      const integrations = [...new Set(uploads.map((u) => u.integration_label))]
+      const integrations = [...new Set(selected.map((u) => u.integration_label))]
       const effectiveType = integrations.length >= 2 ? "cross_platform" : "standard"
 
       const res = await fetch(`${apiBase}/api/test/workspaces/${workspaceId}/analyze`, {
@@ -127,7 +130,7 @@ export default function WorkspaceDetailPage() {
         body: JSON.stringify({
           analysis_type: effectiveType,
           integration_labels: integrations,
-          upload_ids: uploads.map((u) => u.id),
+          upload_ids: selected.map((u) => u.id),
         }),
       })
 
@@ -202,6 +205,7 @@ export default function WorkspaceDetailPage() {
 
       if (res.ok) {
         setUploads((prev) => prev.filter((u) => u.id !== uploadId))
+        setSelectedUploadIds((prev) => { const next = new Set(prev); next.delete(uploadId); return next })
         toast.success("Upload deleted")
       } else {
         const err = await res.json()
@@ -256,14 +260,46 @@ export default function WorkspaceDetailPage() {
       {uploads.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">{uploads.length} file{uploads.length !== 1 ? "s" : ""} uploaded</p>
+            <p className="text-sm text-gray-400">
+              {selectedUploadIds.size} of {uploads.length} file{uploads.length !== 1 ? "s" : ""} selected
+            </p>
+            <button
+              onClick={() => {
+                if (selectedUploadIds.size === uploads.length) {
+                  setSelectedUploadIds(new Set())
+                } else {
+                  setSelectedUploadIds(new Set(uploads.map((u) => u.id)))
+                }
+              }}
+              className="text-xs text-gray-500 hover:text-cyan-400 transition-colors"
+            >
+              {selectedUploadIds.size === uploads.length ? "Deselect all" : "Select all"}
+            </button>
           </div>
           {uploads.map((upload) => (
             <div
               key={upload.id}
-              className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg border border-white/5"
+              onClick={() => {
+                setSelectedUploadIds((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(upload.id)) next.delete(upload.id)
+                  else next.add(upload.id)
+                  return next
+                })
+              }}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                selectedUploadIds.has(upload.id)
+                  ? "bg-cyan-500/10 border-cyan-500/20"
+                  : "bg-white/5 border-white/5 opacity-60"
+              }`}
             >
               <div className="flex items-center gap-3 min-w-0">
+                <input
+                  type="checkbox"
+                  checked={selectedUploadIds.has(upload.id)}
+                  onChange={() => {}}
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-cyan-500 shrink-0 cursor-pointer accent-cyan-500"
+                />
                 {upload.validation_status === "valid" ? (
                   <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
                 ) : upload.validation_status === "partial" ? (
@@ -279,7 +315,7 @@ export default function WorkspaceDetailPage() {
                 </div>
               </div>
               <button
-                onClick={() => deleteUpload(upload.id)}
+                onClick={(e) => { e.stopPropagation(); deleteUpload(upload.id) }}
                 className="p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors shrink-0"
               >
                 <Trash2 className="w-4 h-4" />
@@ -290,7 +326,7 @@ export default function WorkspaceDetailPage() {
           {/* Step 2: Analyze */}
           <Button
             onClick={runAnalysis}
-            disabled={analyzing || uploads.length === 0}
+            disabled={analyzing || selectedUploadIds.size === 0}
             className="w-full bg-cyan-600 hover:bg-cyan-700 text-white mt-2"
             size="lg"
           >
@@ -299,7 +335,7 @@ export default function WorkspaceDetailPage() {
             ) : (
               <Play className="w-4 h-4 mr-2" />
             )}
-            {analyzing ? "Analyzing..." : `Analyze ${uploads.length} file${uploads.length !== 1 ? "s" : ""}`}
+            {analyzing ? "Analyzing..." : `Analyze ${selectedUploadIds.size} file${selectedUploadIds.size !== 1 ? "s" : ""}`}
           </Button>
         </div>
       )}
