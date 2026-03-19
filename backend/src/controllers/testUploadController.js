@@ -424,6 +424,55 @@ function getRowsFromParsed(parsedFile) {
   return []
 }
 
+/**
+ * Update integration_label and data_type for an upload, then re-validate
+ */
+async function patchUpload(req, res) {
+  try {
+    const { uploadId } = req.params
+    const { integration_label, data_type } = req.body
+
+    if (!integration_label || !data_type) {
+      return res.status(400).json({ error: "Missing integration_label or data_type" })
+    }
+
+    // Fetch existing upload
+    const { data: upload, error: fetchError } = await supabase
+      .from("test_uploads")
+      .select("*")
+      .eq("id", uploadId)
+      .single()
+
+    if (fetchError || !upload) {
+      return res.status(404).json({ error: "Upload not found" })
+    }
+
+    // Re-validate against the new schema
+    const validationReport = validateData(integration_label, data_type, upload.file_data)
+
+    const { data, error } = await supabase
+      .from("test_uploads")
+      .update({
+        integration_label,
+        data_type,
+        validation_status: validationReport.status,
+        validation_report: validationReport,
+      })
+      .eq("id", uploadId)
+      .select("id, workspace_id, filename, integration_label, data_type, validation_status, validation_report, uploaded_by, created_at")
+      .single()
+
+    if (error) {
+      return res.status(500).json({ error: error.message })
+    }
+
+    res.json({ upload: data })
+  } catch (err) {
+    console.error("patchUpload error:", err)
+    res.status(500).json({ error: "Internal server error" })
+  }
+}
+
 module.exports = {
   uploadData,
   uploadFile,
@@ -431,5 +480,6 @@ module.exports = {
   getUpload,
   deleteUpload,
   revalidateUpload,
+  patchUpload,
   getSchemaInfo,
 }

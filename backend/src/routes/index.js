@@ -396,6 +396,7 @@ const {
   getUpload,
   deleteUpload,
   revalidateUpload,
+  patchUpload,
   getSchemaInfo,
 } = require("../controllers/testUploadController")
 
@@ -461,6 +462,7 @@ router.post("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, uploa
 router.get("/api/test/workspaces/:id/uploads", requireAuth, requireAdmin, listUploads)
 router.get("/api/test/uploads/:uploadId", requireAuth, requireAdmin, getUpload)
 router.delete("/api/test/uploads/:uploadId", requireAuth, requireAdmin, deleteUpload)
+router.patch("/api/test/uploads/:uploadId", requireAuth, requireAdmin, patchUpload)
 router.post("/api/test/uploads/:uploadId/validate", requireAuth, requireAdmin, revalidateUpload)
 
 // Analyses

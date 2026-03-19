@@ -19,6 +19,7 @@ import {
   DollarSign,
   ChevronDown,
   ChevronUp,
+  Pencil,
 } from "lucide-react"
 import { toast } from "sonner"
 import ReactMarkdown from "react-markdown"
@@ -194,6 +195,34 @@ export default function WorkspaceDetailPage() {
     }
   }
 
+  async function reclassifyUpload(uploadId: string, integration_label: string, data_type: string) {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const token = await getBackendToken()
+      if (!token) return
+
+      const res = await fetch(`${apiBase}/api/test/uploads/${uploadId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ integration_label, data_type }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setUploads((prev) => prev.map((u) => (u.id === uploadId ? { ...u, ...data.upload } : u)))
+        toast.success(`Reclassified as ${integration_label} / ${data_type}`)
+      } else {
+        const err = await res.json()
+        toast.error(`Failed: ${err.error}`)
+      }
+    } catch (err) {
+      toast.error("Failed to reclassify")
+    }
+  }
+
   async function deleteUpload(uploadId: string) {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -311,9 +340,41 @@ export default function WorkspaceDetailPage() {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm text-white truncate">{upload.filename}</p>
-                  <p className="text-xs text-gray-500">
-                    {upload.integration_label} &middot; {upload.data_type}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={`${upload.integration_label}::${upload.data_type}`}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        const [integ, dt] = e.target.value.split("::")
+                        reclassifyUpload(upload.id, integ, dt)
+                      }}
+                      className="text-xs text-gray-500 bg-transparent border-none cursor-pointer hover:text-cyan-400 focus:outline-none appearance-none pr-4"
+                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
+                    >
+                      <optgroup label="Fortnox">
+                        <option value="Fortnox::supplier_invoices">Fortnox · supplier_invoices</option>
+                        <option value="Fortnox::invoices">Fortnox · invoices</option>
+                        <option value="Fortnox::licenses">Fortnox · licenses</option>
+                        <option value="Fortnox::users">Fortnox · users</option>
+                        <option value="Fortnox::usage_reports">Fortnox · usage_reports</option>
+                        <option value="Fortnox::accounts">Fortnox · accounts</option>
+                        <option value="Fortnox::customers">Fortnox · customers</option>
+                        <option value="Fortnox::expenses">Fortnox · expenses</option>
+                        <option value="Fortnox::articles">Fortnox · articles</option>
+                        <option value="Fortnox::profit_loss">Fortnox · profit_loss</option>
+                      </optgroup>
+                      <optgroup label="Microsoft 365">
+                        <option value="Microsoft365::licenses">Microsoft365 · licenses</option>
+                        <option value="Microsoft365::users">Microsoft365 · users</option>
+                        <option value="Microsoft365::usage_reports">Microsoft365 · usage_reports</option>
+                      </optgroup>
+                      <optgroup label="HubSpot">
+                        <option value="HubSpot::hubspot_users">HubSpot · hubspot_users</option>
+                        <option value="HubSpot::hubspot_account">HubSpot · hubspot_account</option>
+                      </optgroup>
+                    </select>
+                  </div>
                 </div>
               </div>
               <button
