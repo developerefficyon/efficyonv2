@@ -2563,88 +2563,12 @@ export default function ToolDetailPage() {
                   </div>
                 )}
 
-                {/* Summary Insights */}
-                {costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0 && (
-                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 bg-cyan-500/10 rounded-xl shrink-0">
-                          <Sparkles className="w-6 h-6 text-cyan-400" />
-                        </div>
-                        <div className="space-y-4 flex-1">
-                          <div>
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-white font-semibold text-lg">AI Analysis Summary</h3>
-                              {/* Show analysis parameters */}
-                              {costLeakAnalysis.dateRange?.filtered && (
-                                <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {costLeakAnalysis.dateRange.startDate && costLeakAnalysis.dateRange.endDate
-                                    ? `${costLeakAnalysis.dateRange.startDate} - ${costLeakAnalysis.dateRange.endDate}`
-                                    : costLeakAnalysis.dateRange.startDate
-                                      ? `From ${costLeakAnalysis.dateRange.startDate}`
-                                      : `Until ${costLeakAnalysis.dateRange.endDate}`}
-                                </Badge>
-                              )}
-                              {costLeakAnalysis.inactivityThreshold && (
-                                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
-                                  <Timer className="w-3 h-3 mr-1" />
-                                  {costLeakAnalysis.inactivityThreshold} days inactive
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-gray-300 text-sm leading-relaxed">
-                              We identified <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> potential issues
-                              with approximately <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0"} USD</span> in potential savings and revenue at risk.
-                            </p>
-                          </div>
-
-                          <div className="grid sm:grid-cols-3 gap-3">
-                            {costLeakAnalysis.overallSummary.highSeverity > 0 && (
-                              <div className="flex items-start gap-3 bg-red-500/5 border border-red-500/20 rounded-lg p-3">
-                                <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-red-400 font-medium text-sm">Urgent Action</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">{costLeakAnalysis.overallSummary.highSeverity} high-priority issues need immediate review</p>
-                                </div>
-                              </div>
-                            )}
-                            {costLeakAnalysis.overallSummary.mediumSeverity > 0 && (
-                              <div className="flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
-                                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-amber-400 font-medium text-sm">Review Needed</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">{costLeakAnalysis.overallSummary.mediumSeverity} items could improve cash flow</p>
-                                </div>
-                              </div>
-                            )}
-                            {costLeakAnalysis.overallSummary.totalRevenueAtRisk > 0 && (
-                              <div className="flex items-start gap-3 bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
-                                <DollarSign className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-orange-400 font-medium text-sm">Revenue at Risk</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">${costLeakAnalysis.overallSummary.totalRevenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"} in overdue customer invoices</p>
-                                </div>
-                              </div>
-                            )}
-                            {(costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length > 0 || costLeakAnalysis.billAnalysis?.findings?.length > 0) && (
-                              <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
-                                <Zap className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-cyan-400 font-medium text-sm">Quick Win</p>
-                                  <p className="text-gray-400 text-xs mt-0.5">
-                                    {costLeakAnalysis.overallSummary?.recommendationsSummary?.lowEffort > 0
-                                      ? `${costLeakAnalysis.overallSummary.recommendationsSummary.lowEffort} low-effort recommendations to start with`
-                                      : "Start with duplicate payments for immediate savings"}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Summary one-liner */}
+                {costLeakAnalysis.overallSummary && costLeakAnalysis.overallSummary.totalFindings > 0 && !costLeakAnalysis.aiSummary && (
+                  <p className="text-gray-300 text-sm">
+                    Found <span className="text-white font-semibold">{costLeakAnalysis.overallSummary.totalFindings}</span> issues
+                    with <span className="text-emerald-400 font-semibold">${costLeakAnalysis.overallSummary.totalPotentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) || "0"} USD</span> in potential savings.
+                  </p>
                 )}
 
                 {/* AI-Generated Summary */}
