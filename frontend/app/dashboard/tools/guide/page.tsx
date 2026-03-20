@@ -1,10 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
+
+const INTEGRATIONS = [
+  { id: "fortnox", label: "Fortnox", icon: "F" },
+  { id: "microsoft365", label: "Microsoft 365", icon: "M" },
+  { id: "hubspot", label: "HubSpot", icon: "H" },
+  { id: "quickbooks", label: "QuickBooks", icon: "Q" },
+  { id: "shopify", label: "Shopify", icon: "S" },
+] as const
 
 function StepNumber({ n }: { n: number }) {
   return (
@@ -24,22 +32,17 @@ function ScopeBadge({ children }: { children: React.ReactNode }) {
 
 export default function SetupGuidePage() {
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<string>("fortnox")
 
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash) {
-      const timer = setTimeout(() => {
-        const el = document.querySelector(hash)
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" })
-        }
-      }, 100)
-      return () => clearTimeout(timer)
+    const hash = window.location.hash?.replace("#", "")
+    if (hash && INTEGRATIONS.some((i) => i.id === hash)) {
+      setActiveTab(hash)
     }
   }, [])
 
   return (
-    <div className="space-y-8 w-full max-w-3xl mx-auto">
+    <div className="space-y-6 w-full max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
@@ -53,12 +56,34 @@ export default function SetupGuidePage() {
         </Button>
         <div>
           <h2 className="text-2xl font-bold text-white">Integration Setup Guide</h2>
-          <p className="text-sm text-gray-400">Step-by-step instructions for connecting your tools</p>
+          <p className="text-sm text-gray-400">Select an integration to see setup instructions</p>
         </div>
       </div>
 
+      {/* Tab selector */}
+      <div className="flex gap-2 flex-wrap">
+        {INTEGRATIONS.map((i) => (
+          <button
+            key={i.id}
+            onClick={() => setActiveTab(i.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+              activeTab === i.id
+                ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/5"
+                : "border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
+              activeTab === i.id ? "bg-cyan-500/20 text-cyan-400" : "bg-white/10 text-gray-500"
+            }`}>
+              {i.icon}
+            </span>
+            {i.label}
+          </button>
+        ))}
+      </div>
+
       {/* Fortnox Section */}
-      <section id="fortnox" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+      <section id="fortnox" className={`rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5 ${activeTab !== "fortnox" ? "hidden" : ""}`}>
         <h3 className="text-xl font-semibold text-white">Fortnox</h3>
 
         <div>
@@ -155,7 +180,7 @@ export default function SetupGuidePage() {
       </section>
 
       {/* Microsoft 365 Section */}
-      <section id="microsoft365" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+      <section id="microsoft365" className={`rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5 ${activeTab !== "microsoft365" ? "hidden" : ""}`}>
         <h3 className="text-xl font-semibold text-white">Microsoft 365</h3>
 
         <div>
@@ -287,7 +312,7 @@ export default function SetupGuidePage() {
       </section>
 
       {/* HubSpot Section */}
-      <section id="hubspot" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+      <section id="hubspot" className={`rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5 ${activeTab !== "hubspot" ? "hidden" : ""}`}>
         <h3 className="text-xl font-semibold text-white">HubSpot</h3>
 
         <div>
@@ -384,7 +409,7 @@ export default function SetupGuidePage() {
         </div>
       </section>
       {/* QuickBooks Section */}
-      <section id="quickbooks" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+      <section id="quickbooks" className={`rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5 ${activeTab !== "quickbooks" ? "hidden" : ""}`}>
         <h3 className="text-xl font-semibold text-white">QuickBooks</h3>
 
         <div>
@@ -507,7 +532,7 @@ export default function SetupGuidePage() {
       </section>
 
       {/* Shopify Section */}
-      <section id="shopify" className="scroll-mt-8 rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5">
+      <section id="shopify" className={`rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl p-6 space-y-5 ${activeTab !== "shopify" ? "hidden" : ""}`}>
         <h3 className="text-xl font-semibold text-white">Shopify</h3>
 
         <div>
