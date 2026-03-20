@@ -32,12 +32,17 @@ import {
   Calendar,
   Target,
   Sparkles,
+  ChevronRight,
+  ChevronDown,
+  Eye,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
 import { useApiCache } from "@/lib/use-api-cache"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { toast } from "sonner"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface AnalysisReport {
   id: string
@@ -72,6 +77,9 @@ export default function ReportsPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [exportFormat, setExportFormat] = useState("pdf")
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedData, setExpandedData] = useState<any>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -363,6 +371,31 @@ export default function ReportsPage() {
     }
   }
 
+  const toggleExpand = async (analysisId: string) => {
+    if (expandedId === analysisId) {
+      setExpandedId(null)
+      setExpandedData(null)
+      return
+    }
+
+    setExpandedId(analysisId)
+    setLoadingDetail(true)
+    try {
+      const token = await getBackendToken()
+      const res = await fetch(`${apiBase}/api/analysis-history/${analysisId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedData(data.analysis)
+      }
+    } catch (err) {
+      console.error("Failed to load analysis detail:", err)
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
   const openExportDialog = (analysis: AnalysisReport) => {
     setSelectedAnalysis(analysis)
     setShowExportDialog(true)
@@ -490,86 +523,129 @@ export default function ReportsPage() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {analyses.map((analysis) => (
-                <div
-                  key={analysis.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-cyan-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <p className="text-sm font-medium text-white">
-                        {analysis.provider} Cost Analysis
-                      </p>
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Ready
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {analysis.summary?.totalFindings || 0} findings
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-green-400">
-                        <DollarSign className="w-3 h-3" />
-                        ${Math.round(analysis.summary?.totalPotentialSavings || 0).toLocaleString()} savings
-                      </span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="hidden sm:inline flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatRelativeTime(analysis.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 sm:hidden">
-                      {formatRelativeTime(analysis.created_at)}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openExportDialog(analysis)}
-                      className="border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300"
+            <div className="space-y-2">
+              {analyses.map((analysis) => {
+                const isExpanded = expandedId === analysis.id
+                return (
+                  <div key={analysis.id} className="rounded-lg border border-white/5 overflow-hidden">
+                    {/* Row */}
+                    <div className="flex items-center gap-3 p-4 bg-white/5 hover:bg-white/[0.08] transition-colors cursor-pointer"
+                      onClick={() => toggleExpand(analysis.id)}
                     >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export
-                    </Button>
+                      <ChevronRight className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {analysis.provider} Cost Analysis
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-400 mt-0.5">
+                          <span>{analysis.summary?.totalFindings || 0} findings</span>
+                          <span className="text-green-400">
+                            ${Math.round(analysis.summary?.totalPotentialSavings || 0).toLocaleString()} savings
+                          </span>
+                          <span className="hidden sm:inline">{formatRelativeTime(analysis.created_at)}</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); openExportDialog(analysis) }}
+                        className="border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 shrink-0"
+                      >
+                        <Download className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Export</span>
+                      </Button>
+                    </div>
+
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div className="border-t border-white/5 bg-black/40 p-4 space-y-4">
+                        {loadingDetail ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                          </div>
+                        ) : expandedData ? (
+                          <>
+                            {/* Stat row */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                <p className="text-xs text-gray-400">Findings</p>
+                                <p className="text-lg font-bold text-white">{expandedData.summary?.totalFindings || 0}</p>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                <p className="text-xs text-gray-400">Savings</p>
+                                <p className="text-lg font-bold text-emerald-400">
+                                  ${Math.round(expandedData.summary?.totalPotentialSavings || 0).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                <p className="text-xs text-gray-400">High</p>
+                                <p className="text-lg font-bold text-red-400">{expandedData.summary?.highSeverity || 0}</p>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                <p className="text-xs text-gray-400">Medium</p>
+                                <p className="text-lg font-bold text-amber-400">{expandedData.summary?.mediumSeverity || 0}</p>
+                              </div>
+                            </div>
+
+                            {/* AI Summary */}
+                            {expandedData.analysis_result?.aiSummary && (
+                              <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Sparkles className="w-4 h-4 text-purple-400" />
+                                  <h4 className="text-sm font-semibold text-white">AI Summary</h4>
+                                  <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10">AI</Badge>
+                                </div>
+                                <div className="prose prose-invert prose-sm max-w-none
+                                  [&_p]:text-gray-300 [&_p]:text-sm [&_p]:leading-relaxed [&_p]:mb-2
+                                  [&_strong]:text-white [&_strong]:font-semibold
+                                  [&_ul]:text-gray-300 [&_ul]:text-sm [&_ul]:space-y-1 [&_ul]:mb-3
+                                  [&_ol]:text-gray-300 [&_ol]:text-sm [&_ol]:space-y-1 [&_ol]:mb-3
+                                  [&_li]:text-gray-300
+                                  [&_h1]:text-white [&_h1]:text-base [&_h1]:font-semibold [&_h1]:mb-2 [&_h1]:mt-4
+                                  [&_h2]:text-white [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3
+                                  [&_h3]:text-white [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-1.5 [&_h3]:mt-2
+                                  [&_hr]:border-white/10 [&_hr]:my-3
+                                ">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      table: ({ children }) => (
+                                        <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+                                          <table className="w-full text-xs border-collapse">{children}</table>
+                                        </div>
+                                      ),
+                                      thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+                                      th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border-b border-white/10 whitespace-nowrap">{children}</th>,
+                                      td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/5">{children}</td>,
+                                      tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                                    }}
+                                  >
+                                    {expandedData.analysis_result.aiSummary}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* No AI summary fallback */}
+                            {!expandedData.analysis_result?.aiSummary && (
+                              <p className="text-sm text-gray-500 text-center py-4">
+                                No AI summary available for this analysis. Re-run the analysis to generate one.
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-sm text-gray-500 text-center py-4">Failed to load analysis details.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Quick Tips */}
-      {analyses.length > 0 && (
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-cyan-500/10">
-                <Sparkles className="w-6 h-6 text-cyan-400" />
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-white mb-2">Report Formats</h4>
-                <ul className="space-y-1 text-sm text-gray-300">
-                  <li>
-                    <span className="text-cyan-400">PDF</span> - Professional format for sharing with stakeholders
-                  </li>
-                  <li>
-                    <span className="text-cyan-400">CSV</span> - Import into spreadsheets for further analysis
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Export Dialog */}
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
