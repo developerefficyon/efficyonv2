@@ -3215,6 +3215,45 @@ export default function ToolDetailPage() {
                         </div>
                       )}
 
+                      {/* AI Summary */}
+                      {selectedHistoricalAnalysis.analysis_data?.aiSummary && (
+                        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Sparkles className="w-4 h-4 text-purple-400" />
+                            <h4 className="text-sm font-semibold text-white">AI Summary</h4>
+                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10">AI</Badge>
+                          </div>
+                          <div className="prose prose-invert prose-sm max-w-none
+                            [&_p]:text-gray-300 [&_p]:text-sm [&_p]:leading-relaxed [&_p]:mb-2
+                            [&_strong]:text-white [&_strong]:font-semibold
+                            [&_ul]:text-gray-300 [&_ul]:text-sm [&_ul]:space-y-1 [&_ul]:mb-3
+                            [&_ol]:text-gray-300 [&_ol]:text-sm [&_ol]:space-y-1 [&_ol]:mb-3
+                            [&_li]:text-gray-300
+                            [&_h1]:text-white [&_h1]:text-base [&_h1]:font-semibold [&_h1]:mb-2 [&_h1]:mt-4
+                            [&_h2]:text-white [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3
+                            [&_h3]:text-white [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-1.5 [&_h3]:mt-2
+                            [&_hr]:border-white/10 [&_hr]:my-3
+                          ">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                table: ({ children }) => (
+                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+                                    <table className="w-full text-xs border-collapse">{children}</table>
+                                  </div>
+                                ),
+                                thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+                                th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border-b border-white/10 whitespace-nowrap">{children}</th>,
+                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/5">{children}</td>,
+                                tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                              }}
+                            >
+                              {selectedHistoricalAnalysis.analysis_data.aiSummary}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Findings Preview */}
                       {(() => {
                         const findings = selectedHistoricalAnalysis.analysis_data?.supplierInvoiceAnalysis?.findings ||
@@ -3223,37 +3262,33 @@ export default function ToolDetailPage() {
                         if (findings.length === 0) return null
 
                         return (
-                          <div>
-                            <p className="text-sm text-gray-400 mb-2">Top Findings</p>
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
-                              {findings.slice(0, 5).map((finding: any, idx: number) => (
-                                <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
-                                  <div className="flex items-start gap-2">
-                                    <Badge
-                                      className={
-                                        finding.severity === "high"
-                                          ? "bg-red-500/20 text-red-400 border-red-500/30"
-                                          : finding.severity === "medium"
-                                            ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                                            : "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                      }
-                                    >
-                                      {finding.severity}
-                                    </Badge>
-                                    <div>
-                                      <p className="text-white text-sm font-medium">{finding.title}</p>
-                                      <p className="text-gray-400 text-xs mt-1">{finding.description}</p>
-                                    </div>
-                                  </div>
+                          <details className="group">
+                            <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300 flex items-center gap-1.5">
+                              <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                              {findings.length} findings
+                            </summary>
+                            <div className="mt-2 space-y-1 max-h-64 overflow-y-auto">
+                              {findings.slice(0, 10).map((finding: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-2 py-1.5 px-2 rounded bg-white/[0.02]">
+                                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                    finding.severity === "high" ? "bg-red-500" :
+                                    finding.severity === "medium" ? "bg-amber-500" : "bg-slate-500"
+                                  }`} />
+                                  <span className="text-sm text-white truncate flex-1">{finding.title}</span>
+                                  {finding.potentialSavings > 0 && (
+                                    <span className="text-xs text-emerald-400 shrink-0">
+                                      ${finding.potentialSavings?.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
-                              {findings.length > 5 && (
-                                <p className="text-center text-gray-500 text-sm py-2">
-                                  +{findings.length - 5} more findings
+                              {findings.length > 10 && (
+                                <p className="text-center text-gray-500 text-xs py-1">
+                                  +{findings.length - 10} more
                                 </p>
                               )}
                             </div>
-                          </div>
+                          </details>
                         )
                       })()}
                     </div>
