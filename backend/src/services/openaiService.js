@@ -28,8 +28,21 @@ async function generateAnalysisSummary(analysisData, options = {}) {
         messages: [
           {
             role: "system",
-            content:
-              "You are a financial analysis expert specializing in cost optimization. Provide concise, actionable insights based on cost leak analysis data. Be direct and focus on the biggest savings opportunities.",
+            content: `You are a senior financial analyst specializing in SaaS cost optimization.
+Write a detailed, well-structured markdown report based on the cost leak analysis data provided.
+
+Your report MUST include:
+1. **Executive Summary** — total spend, waste identified, potential annual savings
+2. **Key Findings** — use markdown tables where appropriate to show data clearly
+3. **Priority Actions** — numbered list of specific, actionable recommendations ranked by impact
+4. **Risk Assessment** — what happens if these issues go unaddressed
+
+Formatting rules:
+- Use markdown headers (##, ###), bold, bullet points, and tables
+- Use tables for comparisons (e.g. supplier costs, duplicate amounts)
+- Keep tables properly formatted with | separators and --- header rows
+- Include specific numbers, percentages, and SEK/USD amounts
+- Be thorough but concise — no filler text`,
           },
           {
             role: "user",
@@ -37,7 +50,7 @@ async function generateAnalysisSummary(analysisData, options = {}) {
           },
         ],
         temperature: 0.7,
-        max_tokens: 500,
+        max_tokens: 2000,
       },
       {
         headers: {
@@ -240,27 +253,62 @@ Help the user understand their cost leaks and provide actionable insights. Be fr
  * Build prompt for analysis summary
  */
 function buildAnalysisPrompt(data) {
+  const s = data.summary || {}
+
+  const duplicates = (s.duplicatePayments || []).slice(0, 10)
+    .map(d => `| ${d.supplierName || "Unknown"} | ${d.duplicates?.length || 0} duplicates | ${d.totalAmount || d.amount || "N/A"} |`)
+    .join("\n")
+
+  const anomalies = (s.unusualAmounts || []).slice(0, 10)
+    .map(u => `| ${u.supplierName || "Unknown"} | ${u.amount || "N/A"} | ${u.reason || u.deviation || "Anomaly"} |`)
+    .join("\n")
+
+  const subs = (s.recurringSubscriptions || []).slice(0, 10)
+    .map(r => `| ${r.supplierName || "Unknown"} | ${r.frequency || "N/A"} | ${r.amount || r.averageAmount || "N/A"} |`)
+    .join("\n")
+
+  const priceInc = (s.priceIncreases || []).slice(0, 10)
+    .map(p => `| ${p.supplierName || "Unknown"} | ${p.percentageIncrease || 0}% | ${p.previousAmount || "N/A"} → ${p.currentAmount || "N/A"} |`)
+    .join("\n")
+
+  const overdue = (s.overdueInvoices || []).slice(0, 10)
+    .map(o => `| ${o.supplierName || o.CustomerName || "Unknown"} | ${o.amount || o.Balance || "N/A"} | ${o.daysOverdue || "N/A"} days |`)
+    .join("\n")
+
   return `
-Analyze this cost leak data and provide a brief executive summary with the top 3 priorities:
+Analyze this cost data and generate a detailed markdown report:
 
-Total Invoices: ${data.summary?.totalInvoices || 0}
-Total Amount: ${data.summary?.totalAmount || 0}
+## Overview
+- Total Invoices: ${s.totalInvoices || 0}
+- Total Amount: ${s.totalAmount || 0}
+- Currency: ${s.currency || "SEK"}
 
-Duplicate Payments Found: ${data.summary?.duplicatePayments?.length || 0}
-${data.summary?.duplicatePayments?.slice(0, 3).map((d) => `- ${d.supplierName}: ${d.duplicates?.length || 0} duplicates`).join("\n") || "None"}
+## Duplicate Payments (${(s.duplicatePayments || []).length} found)
+| Supplier | Duplicates | Amount |
+|----------|-----------|--------|
+${duplicates || "| None found | - | - |"}
 
-Unusual Amounts (Anomalies): ${data.summary?.unusualAmounts?.length || 0}
-${data.summary?.unusualAmounts?.slice(0, 3).map((u) => `- ${u.supplierName}: ${u.amount}`).join("\n") || "None"}
+## Unusual Amounts / Anomalies (${(s.unusualAmounts || []).length} found)
+| Supplier | Amount | Reason |
+|----------|--------|--------|
+${anomalies || "| None found | - | - |"}
 
-Recurring Subscriptions: ${data.summary?.recurringSubscriptions?.length || 0}
-${data.summary?.recurringSubscriptions?.slice(0, 3).map((r) => `- ${r.supplierName}: ${r.frequency}`).join("\n") || "None"}
+## Recurring Subscriptions (${(s.recurringSubscriptions || []).length} found)
+| Supplier | Frequency | Amount |
+|----------|-----------|--------|
+${subs || "| None found | - | - |"}
 
-Overdue Invoices: ${data.summary?.overdueInvoices?.length || 0}
+## Price Increases (${(s.priceIncreases || []).length} found)
+| Supplier | Increase | Change |
+|----------|----------|--------|
+${priceInc || "| None found | - | - |"}
 
-Price Increases: ${data.summary?.priceIncreases?.length || 0}
-${data.summary?.priceIncreases?.slice(0, 3).map((p) => `- ${p.supplierName}: ${p.percentageIncrease}% increase`).join("\n") || "None"}
+## Overdue Invoices (${(s.overdueInvoices || []).length} found)
+| Supplier/Customer | Amount | Days Overdue |
+|-------------------|--------|-------------|
+${overdue || "| None found | - | - |"}
 
-Provide actionable insights and priority recommendations.
+Generate a comprehensive cost optimization report with executive summary, key findings with tables, priority actions, and risk assessment.
 `
 }
 
