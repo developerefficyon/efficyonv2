@@ -56,6 +56,8 @@ import {
   Copy,
   Settings,
 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
@@ -2638,6 +2640,56 @@ export default function ToolDetailPage() {
                                 </div>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI-Generated Summary */}
+                {costLeakAnalysis.aiSummary && (
+                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="p-2.5 bg-purple-500/10 rounded-xl shrink-0">
+                          <Sparkles className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="text-white font-semibold">AI Summary</h3>
+                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+                              AI
+                            </Badge>
+                          </div>
+                          <div className="prose prose-invert prose-sm max-w-none
+                            [&_p]:text-gray-300 [&_p]:text-sm [&_p]:leading-relaxed [&_p]:mb-2
+                            [&_strong]:text-white [&_strong]:font-semibold
+                            [&_ul]:text-gray-300 [&_ul]:text-sm [&_ul]:space-y-1 [&_ul]:mb-3
+                            [&_ol]:text-gray-300 [&_ol]:text-sm [&_ol]:space-y-1 [&_ol]:mb-3
+                            [&_li]:text-gray-300
+                            [&_h1]:text-white [&_h1]:text-base [&_h1]:font-semibold [&_h1]:mb-2 [&_h1]:mt-4
+                            [&_h2]:text-white [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3
+                            [&_h3]:text-white [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-1.5 [&_h3]:mt-2
+                            [&_hr]:border-white/10 [&_hr]:my-3
+                            [&_code]:text-cyan-400 [&_code]:bg-white/5 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs
+                          ">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                table: ({ children }) => (
+                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+                                    <table className="w-full text-xs border-collapse">{children}</table>
+                                  </div>
+                                ),
+                                thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+                                th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border-b border-white/10 whitespace-nowrap">{children}</th>,
+                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/5">{children}</td>,
+                                tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                              }}
+                            >
+                              {costLeakAnalysis.aiSummary}
+                            </ReactMarkdown>
                           </div>
                         </div>
                       </div>
