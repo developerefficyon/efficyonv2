@@ -126,6 +126,7 @@ export default function ToolDetailPage() {
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
   const [isAnalysisVisible, setIsAnalysisVisible] = useState(true)
   const [findingsFilter, setFindingsFilter] = useState<"all" | "high" | "medium" | "low">("all")
+  const [findingsLimit, setFindingsLimit] = useState(10)
   const [findingsSearch, setFindingsSearch] = useState("")
 
   // Date range for Fortnox analysis
@@ -2735,406 +2736,183 @@ export default function ToolDetailPage() {
                       </div>
                     </CardHeader>
 
-                    <CardContent className="space-y-4">
-                      {/* Grouped Findings */}
-                      {groupedFindings.map(([groupKey, group]) => (
-                        <div key={groupKey} className="border border-slate-700/50 rounded-xl overflow-hidden">
-                          {/* Group Header */}
-                          <button
-                            onClick={() => toggleGroup(groupKey)}
-                            className={`w-full flex items-center justify-between p-4 transition-all ${
-                              group.color === "red"
-                                ? "bg-gradient-to-r from-red-950/50 to-slate-900/50 hover:from-red-950/70"
-                                : group.color === "amber"
-                                ? "bg-gradient-to-r from-amber-950/50 to-slate-900/50 hover:from-amber-950/70"
-                                : group.color === "orange"
-                                ? "bg-gradient-to-r from-orange-950/50 to-slate-900/50 hover:from-orange-950/70"
-                                : "bg-gradient-to-r from-slate-800/50 to-slate-900/50 hover:from-slate-800/70"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${
-                                group.color === "red" ? "bg-red-500/20" :
-                                group.color === "amber" ? "bg-amber-500/20" :
-                                group.color === "orange" ? "bg-orange-500/20" :
-                                "bg-slate-500/20"
-                              }`}>
-                                <group.icon className={`w-4 h-4 ${
-                                  group.color === "red" ? "text-red-400" :
-                                  group.color === "amber" ? "text-amber-400" :
-                                  group.color === "orange" ? "text-orange-400" :
-                                  "text-slate-400"
+                    <CardContent className="p-0">
+                      {/* Compact table view */}
+                      <div className="divide-y divide-slate-800/50">
+                        {activeFindings.slice(0, findingsLimit).map((finding: any, idx: number) => {
+                          const recStatus = finding.findingHash ? recommendationStatuses[finding.findingHash] : null
+                          const isApplied = recStatus?.status === "applied"
+                          const isDismissedRec = recStatus?.status === "dismissed"
+                          const isSnoozed = recStatus?.status === "snoozed"
+                          const isExpanded = expandedGroups.has(`finding-${finding.originalIdx}`)
+
+                          return (
+                            <div key={idx} className={`${
+                              isApplied ? 'opacity-60' : isDismissedRec ? 'opacity-40' : ''
+                            }`}>
+                              {/* Compact row */}
+                              <button
+                                onClick={() => toggleGroup(`finding-${finding.originalIdx}`)}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+                              >
+                                {/* Severity dot */}
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                  isApplied ? "bg-emerald-500" :
+                                  finding.severity === "high" ? "bg-red-500" :
+                                  finding.severity === "medium" ? "bg-amber-500" :
+                                  "bg-slate-500"
                                 }`} />
-                              </div>
-                              <div className="text-left">
-                                <p className="text-white font-medium">{group.title}</p>
-                                <p className="text-gray-500 text-xs">{group.findings.length} issue{group.findings.length !== 1 ? 's' : ''} found</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline" className={`${
-                                group.color === "red" ? "border-red-500/30 text-red-400" :
-                                group.color === "amber" ? "border-amber-500/30 text-amber-400" :
-                                group.color === "orange" ? "border-orange-500/30 text-orange-400" :
-                                "border-slate-500/30 text-slate-400"
-                              }`}>
-                                {group.findings.length}
-                              </Badge>
-                              {expandedGroups.has(groupKey) ? (
-                                <ChevronDown className="w-5 h-5 text-gray-400" />
-                              ) : (
-                                <ChevronRight className="w-5 h-5 text-gray-400" />
-                              )}
-                            </div>
-                          </button>
 
-                          {/* Group Content */}
-                          {expandedGroups.has(groupKey) && (
-                            <div className="divide-y divide-slate-800/50">
-                              {getPagedFindings(group.findings, groupKey).map((finding: any, idx: number) => {
-                                const recStatus = finding.findingHash ? recommendationStatuses[finding.findingHash] : null
-                                const isRecExpanded = finding.findingHash ? expandedRecommendations.has(finding.findingHash) : false
-                                const isApplied = recStatus?.status === "applied"
-                                const isDismissedRec = recStatus?.status === "dismissed"
-                                const isSnoozed = recStatus?.status === "snoozed"
+                                {/* Title */}
+                                <span className="flex-1 text-sm text-white truncate">{finding.title}</span>
 
-                                return (
-                                <div
-                                  key={idx}
-                                  className={`p-4 bg-slate-900/50 hover:bg-slate-800/50 transition-all ${
-                                    isApplied ? 'opacity-60 border-l-2 border-l-emerald-500' :
-                                    isDismissedRec ? 'opacity-40' :
-                                    resolvedFindings.has(finding.originalIdx) ? 'opacity-50' : ''
-                                  }`}
-                                >
-                                  <div className="flex items-start gap-4">
-                                    {/* Severity Indicator */}
-                                    <div className={`w-1 h-full min-h-[60px] rounded-full shrink-0 ${
-                                      isApplied ? "bg-emerald-500" :
-                                      finding.severity === "high" ? "bg-red-500" :
-                                      finding.severity === "medium" ? "bg-amber-500" :
-                                      "bg-slate-500"
-                                    }`} />
+                                {/* Status badge */}
+                                {isApplied && <span className="text-[10px] text-emerald-400 shrink-0">Done</span>}
+                                {isDismissedRec && <span className="text-[10px] text-gray-500 shrink-0">Dismissed</span>}
+                                {isSnoozed && <span className="text-[10px] text-blue-400 shrink-0">Snoozed</span>}
 
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                            <Badge
-                                              className={`text-[10px] px-1.5 py-0 ${
-                                                finding.severity === "high"
-                                                  ? "bg-red-500/10 text-red-400 border-red-500/30"
-                                                  : finding.severity === "medium"
-                                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                                                  : "bg-slate-500/10 text-slate-400 border-slate-500/30"
-                                              }`}
-                                              variant="outline"
-                                            >
-                                              {finding.severity?.toUpperCase()}
-                                            </Badge>
-                                            {finding.effort && (
-                                              <Badge
-                                                className={`text-[10px] px-1.5 py-0 ${
-                                                  finding.effort === "low"
-                                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                                                    : finding.effort === "medium"
-                                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/30"
-                                                    : "bg-purple-500/10 text-purple-400 border-purple-500/30"
-                                                }`}
-                                                variant="outline"
-                                              >
-                                                {finding.effort} effort
-                                              </Badge>
-                                            )}
-                                            {isApplied && (
-                                              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
-                                                <CheckCircle className="w-3 h-3 mr-0.5" />
-                                                DONE
-                                              </Badge>
-                                            )}
-                                            {isDismissedRec && (
-                                              <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/30 text-[10px] px-1.5 py-0" variant="outline">
-                                                DISMISSED
-                                              </Badge>
-                                            )}
-                                            {isSnoozed && (
-                                              <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0" variant="outline">
-                                                <Clock className="w-3 h-3 mr-0.5" />
-                                                SNOOZED
-                                              </Badge>
-                                            )}
-                                            {resolvedFindings.has(finding.originalIdx) && !isApplied && (
-                                              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" variant="outline">
-                                                RESOLVED
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <h4 className="font-medium text-white text-sm mb-1">{finding.title}</h4>
-                                          <p className="text-gray-400 text-xs leading-relaxed">{finding.description}</p>
+                                {/* Savings */}
+                                {finding.potentialSavings > 0 && (
+                                  <span className="text-xs text-emerald-400 font-medium shrink-0">
+                                    ${finding.potentialSavings?.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
+                                )}
+                                {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
+                                  <span className="text-xs text-amber-400 font-medium shrink-0">
+                                    ${finding.revenueAtRisk?.toLocaleString('en-US', { maximumFractionDigits: 0 })} risk
+                                  </span>
+                                )}
 
-                                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                            {finding.potentialSavings > 0 && (
-                                              <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md">
-                                                <DollarSign className="w-3 h-3" />
-                                                <span className="text-xs font-medium">
-                                                  Save ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                                </span>
-                                              </div>
-                                            )}
-                                            {finding.revenueAtRisk > 0 && !finding.potentialSavings && (
-                                              <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 px-2 py-1 rounded-md">
-                                                <AlertTriangle className="w-3 h-3" />
-                                                <span className="text-xs font-medium">
-                                                  ${finding.revenueAtRisk?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} at risk
-                                                </span>
-                                              </div>
-                                            )}
-                                          </div>
+                                <ChevronRight className={`w-4 h-4 text-gray-600 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                              </button>
 
-                                          {/* Recommendation text */}
-                                          {finding.recommendation && (
-                                            <div className="mt-3 p-2.5 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
-                                              <div className="flex items-start gap-2">
-                                                <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                                                <p className="text-xs text-cyan-300 leading-relaxed">{finding.recommendation}</p>
-                                              </div>
-                                            </div>
-                                          )}
+                              {/* Expanded details */}
+                              {isExpanded && (
+                                <div className="px-4 pb-4 pt-1 ml-5 border-l border-slate-800 space-y-3">
+                                  <p className="text-xs text-gray-400 leading-relaxed">{finding.description}</p>
 
-                                          {/* Invoice Details */}
-                                          {finding.invoices?.length > 0 && (
-                                            <details className="mt-3 group/details">
-                                              <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
-                                                <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
-                                                {finding.invoices.length} related invoice{finding.invoices.length !== 1 ? 's' : ''}
-                                              </summary>
-                                              <div className="mt-2 space-y-1.5 ml-4">
-                                                {finding.invoices.slice(0, 3).map((inv: any, invIdx: number) => (
-                                                  <div key={invIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
-                                                    <div className="flex items-center gap-2">
-                                                      <Receipt className="w-3 h-3 text-gray-500" />
-                                                      <span className="text-gray-300">#{inv.GivenNumber || inv.DocumentNumber}</span>
-                                                      {inv.SupplierName && (
-                                                        <span className="text-gray-500">• {inv.SupplierName}</span>
-                                                      )}
-                                                    </div>
-                                                    <span className="text-emerald-400 font-medium">
-                                                      ${inv.calculatedTotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
-                                                    </span>
-                                                  </div>
-                                                ))}
-                                                {finding.invoices.length > 3 && (
-                                                  <p className="text-gray-500 text-xs ml-5">+{finding.invoices.length - 3} more</p>
-                                                )}
-                                              </div>
-                                            </details>
-                                          )}
-
-                                          {/* Bill Details (for QuickBooks duplicate payments) */}
-                                          {finding.bills?.length > 0 && (
-                                            <details className="mt-3 group/details">
-                                              <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
-                                                <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
-                                                {finding.bills.length} related bill{finding.bills.length !== 1 ? 's' : ''}
-                                              </summary>
-                                              <div className="mt-2 space-y-1.5 ml-4">
-                                                {finding.bills.slice(0, 5).map((bill: any, billIdx: number) => (
-                                                  <div key={billIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
-                                                    <div className="flex items-center gap-2">
-                                                      <FileText className="w-3 h-3 text-gray-500" />
-                                                      <span className="text-gray-300">{bill.TxnDate || "N/A"}</span>
-                                                      {bill.VendorRef?.name && (
-                                                        <span className="text-gray-500">• {bill.VendorRef.name}</span>
-                                                      )}
-                                                    </div>
-                                                    <span className="text-emerald-400 font-medium">
-                                                      ${(bill.TotalAmt || bill.calculatedTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </details>
-                                          )}
-
-                                          {/* Action Steps Checklist (expandable) */}
-                                          {finding.actionSteps?.length > 0 && finding.findingHash && (
-                                            <div className="mt-3">
-                                              <button
-                                                onClick={() => toggleRecommendationExpanded(finding.findingHash)}
-                                                className="text-xs text-purple-400 cursor-pointer hover:text-purple-300 font-medium flex items-center gap-1.5"
-                                              >
-                                                <ChevronRight className={`w-3 h-3 transition-transform ${isRecExpanded ? 'rotate-90' : ''}`} />
-                                                {finding.actionSteps.length} action steps
-                                                {(recStatus?.completedSteps?.length ?? 0) > 0 && (
-                                                  <span className="text-emerald-400">
-                                                    ({recStatus?.completedSteps?.length ?? 0}/{finding.actionSteps.length} done)
-                                                  </span>
-                                                )}
-                                              </button>
-                                              {isRecExpanded && (
-                                                <div className="mt-2 space-y-1.5 ml-4">
-                                                  {finding.actionSteps.map((step: string, stepIdx: number) => {
-                                                    const isCompleted = recStatus?.completedSteps?.includes(stepIdx)
-                                                    return (
-                                                      <button
-                                                        key={stepIdx}
-                                                        onClick={() => handleToggleStep(finding, stepIdx)}
-                                                        className={`w-full flex items-start gap-2.5 text-xs p-2 rounded-lg border transition-all text-left ${
-                                                          isCompleted
-                                                            ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
-                                                            : 'bg-black/20 border-slate-800 text-gray-300 hover:border-slate-700'
-                                                        }`}
-                                                      >
-                                                        <div className={`w-4 h-4 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
-                                                          isCompleted
-                                                            ? 'bg-emerald-500 border-emerald-500'
-                                                            : 'border-slate-600'
-                                                        }`}>
-                                                          {isCompleted && <CheckCheck className="w-3 h-3 text-white" />}
-                                                        </div>
-                                                        <span className={isCompleted ? 'line-through opacity-70' : ''}>{step}</span>
-                                                      </button>
-                                                    )
-                                                  })}
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex flex-col items-end gap-1 shrink-0">
-                                          {/* Mark as Done/Dismiss/Snooze buttons for findings with recommendations */}
-                                          {finding.findingHash && finding.recommendation && (
-                                            <div className="flex items-center gap-1">
-                                              {!isApplied && !isDismissedRec && (
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => handleApplyRecommendation(finding, "applied")}
-                                                  className="h-7 px-2.5 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                  title="Mark as done"
-                                                >
-                                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                                  Done
-                                                </Button>
-                                              )}
-                                              {!isDismissedRec && !isApplied && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => handleApplyRecommendation(finding, "snoozed")}
-                                                  className="h-7 px-2 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                                                  title="Snooze - remind later"
-                                                >
-                                                  <Clock className="w-3 h-3" />
-                                                </Button>
-                                              )}
-                                              {!isDismissedRec && !isApplied && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => handleApplyRecommendation(finding, "dismissed")}
-                                                  className="h-7 px-2 text-[10px] text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                                                  title="Dismiss finding"
-                                                >
-                                                  <X className="w-3 h-3" />
-                                                </Button>
-                                              )}
-                                              {(isApplied || isDismissedRec || isSnoozed) && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => handleApplyRecommendation(finding, "pending")}
-                                                  className="h-7 px-2.5 text-[10px] text-gray-400 hover:text-white hover:bg-slate-700"
-                                                  title="Reset to pending"
-                                                >
-                                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                                  Undo
-                                                </Button>
-                                              )}
-                                            </div>
-                                          )}
-
-                                          {/* Fallback resolve/dismiss for findings without recommendation tracking */}
-                                          {!finding.findingHash && (
-                                            <div className="flex items-center gap-1">
-                                              {!resolvedFindings.has(finding.originalIdx) && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => handleResolve(finding.originalIdx)}
-                                                  className="h-8 w-8 p-0 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10"
-                                                  title="Mark as resolved"
-                                                >
-                                                  <CheckCheck className="w-4 h-4" />
-                                                </Button>
-                                              )}
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleDismiss(finding.originalIdx)}
-                                                className="h-8 w-8 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                                                title="Dismiss"
-                                              >
-                                                <X className="w-4 h-4" />
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
+                                  {finding.recommendation && (
+                                    <div className="p-2.5 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+                                      <div className="flex items-start gap-2">
+                                        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                                        <p className="text-xs text-cyan-300 leading-relaxed">{finding.recommendation}</p>
                                       </div>
                                     </div>
-                                  </div>
-                                </div>
-                              )})}
-                              {/* Pagination */}
-                              {group.findings.length > ITEMS_PER_PAGE && (
-                                <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-900/50 via-slate-800/30 to-slate-900/50 border-t border-slate-700/30 flex flex-col sm:flex-row items-center justify-between gap-3">
-                                  <p className="text-xs text-gray-500 order-2 sm:order-1">
-                                    <span className="hidden sm:inline">Showing </span>
-                                    <span className="text-gray-400 font-medium">{getGroupPage(groupKey) * ITEMS_PER_PAGE + 1}-{Math.min((getGroupPage(groupKey) + 1) * ITEMS_PER_PAGE, group.findings.length)}</span>
-                                    <span className="text-gray-500"> of </span>
-                                    <span className="text-gray-400 font-medium">{group.findings.length}</span>
-                                  </p>
-                                  <div className="flex items-center gap-2 sm:gap-3 order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-end">
-                                    <button
-                                      onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) - 1)}
-                                      disabled={getGroupPage(groupKey) === 0}
-                                      className="group relative flex items-center justify-center gap-1 sm:gap-1.5 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
-                                        bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600
-                                        border border-slate-600/50 hover:border-slate-500/70
-                                        text-gray-300 hover:text-white
-                                        shadow-md hover:shadow-lg hover:shadow-slate-500/10
-                                        disabled:hover:from-slate-800 disabled:hover:to-slate-700 disabled:hover:border-slate-600/50 disabled:hover:shadow-md"
-                                    >
-                                      <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-                                      <span className="hidden sm:inline">Previous</span>
-                                    </button>
-                                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/30 min-w-[70px] sm:min-w-[90px] justify-center">
-                                      <span className="text-sm font-semibold text-cyan-400">{getGroupPage(groupKey) + 1}</span>
-                                      <span className="text-xs text-gray-500">/</span>
-                                      <span className="text-sm font-semibold text-gray-300">{getTotalPages(group.findings.length)}</span>
-                                    </div>
-                                    <button
-                                      onClick={() => setGroupPage(groupKey, getGroupPage(groupKey) + 1)}
-                                      disabled={getGroupPage(groupKey) >= getTotalPages(group.findings.length) - 1}
-                                      className="group relative flex items-center justify-center gap-1 sm:gap-1.5 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium rounded-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
-                                        bg-gradient-to-r from-cyan-600/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-500
-                                        border border-cyan-500/30 hover:border-cyan-400/50
-                                        text-white
-                                        shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30
-                                        disabled:hover:from-cyan-600/80 disabled:hover:to-blue-600/80 disabled:hover:border-cyan-500/30 disabled:hover:shadow-md disabled:hover:shadow-cyan-500/20"
-                                    >
-                                      <span className="hidden sm:inline">Next</span>
-                                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                                    </button>
+                                  )}
+
+                                  {/* Invoice/Bill details */}
+                                  {finding.invoices?.length > 0 && (
+                                    <details className="group/details">
+                                      <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                        <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
+                                        {finding.invoices.length} related invoice{finding.invoices.length !== 1 ? 's' : ''}
+                                      </summary>
+                                      <div className="mt-2 space-y-1.5 ml-4">
+                                        {finding.invoices.slice(0, 3).map((inv: any, invIdx: number) => (
+                                          <div key={invIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
+                                            <div className="flex items-center gap-2">
+                                              <Receipt className="w-3 h-3 text-gray-500" />
+                                              <span className="text-gray-300">#{inv.GivenNumber || inv.DocumentNumber}</span>
+                                              {inv.SupplierName && <span className="text-gray-500">• {inv.SupplierName}</span>}
+                                            </div>
+                                            <span className="text-emerald-400 font-medium">
+                                              ${inv.calculatedTotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {finding.invoices.length > 3 && (
+                                          <p className="text-gray-500 text-xs ml-5">+{finding.invoices.length - 3} more</p>
+                                        )}
+                                      </div>
+                                    </details>
+                                  )}
+
+                                  {finding.bills?.length > 0 && (
+                                    <details className="group/details">
+                                      <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                        <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
+                                        {finding.bills.length} related bill{finding.bills.length !== 1 ? 's' : ''}
+                                      </summary>
+                                      <div className="mt-2 space-y-1.5 ml-4">
+                                        {finding.bills.slice(0, 5).map((bill: any, billIdx: number) => (
+                                          <div key={billIdx} className="flex items-center justify-between text-xs bg-black/30 px-3 py-2 rounded-lg border border-slate-800">
+                                            <div className="flex items-center gap-2">
+                                              <FileText className="w-3 h-3 text-gray-500" />
+                                              <span className="text-gray-300">{bill.TxnDate || "N/A"}</span>
+                                              {bill.VendorRef?.name && <span className="text-gray-500">• {bill.VendorRef.name}</span>}
+                                            </div>
+                                            <span className="text-emerald-400 font-medium">
+                                              ${(bill.TotalAmt || bill.calculatedTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </details>
+                                  )}
+
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-1.5 pt-1">
+                                    {finding.findingHash && finding.recommendation ? (
+                                      <>
+                                        {!isApplied && !isDismissedRec && (
+                                          <>
+                                            <Button size="sm" onClick={() => handleApplyRecommendation(finding, "applied")} className="h-7 px-2.5 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white">
+                                              <CheckCircle className="w-3 h-3 mr-1" /> Done
+                                            </Button>
+                                            <Button size="sm" variant="ghost" onClick={() => handleApplyRecommendation(finding, "snoozed")} className="h-7 px-2 text-[10px] text-blue-400 hover:bg-blue-500/10">
+                                              <Clock className="w-3 h-3" />
+                                            </Button>
+                                            <Button size="sm" variant="ghost" onClick={() => handleApplyRecommendation(finding, "dismissed")} className="h-7 px-2 text-[10px] text-gray-400 hover:text-red-400 hover:bg-red-500/10">
+                                              <X className="w-3 h-3" />
+                                            </Button>
+                                          </>
+                                        )}
+                                        {(isApplied || isDismissedRec || isSnoozed) && (
+                                          <Button size="sm" variant="ghost" onClick={() => handleApplyRecommendation(finding, "pending")} className="h-7 px-2.5 text-[10px] text-gray-400 hover:text-white hover:bg-slate-700">
+                                            <RefreshCw className="w-3 h-3 mr-1" /> Undo
+                                          </Button>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {!resolvedFindings.has(finding.originalIdx) && (
+                                          <Button size="sm" variant="ghost" onClick={() => handleResolve(finding.originalIdx)} className="h-7 px-2 text-[10px] text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10">
+                                            <CheckCheck className="w-3 h-3 mr-1" /> Resolve
+                                          </Button>
+                                        )}
+                                        <Button size="sm" variant="ghost" onClick={() => handleDismiss(finding.originalIdx)} className="h-7 px-2 text-[10px] text-gray-400 hover:text-red-400 hover:bg-red-500/10">
+                                          <X className="w-3 h-3 mr-1" /> Dismiss
+                                        </Button>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}
                             </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Show more / less */}
+                      {activeFindings.length > 10 && (
+                        <div className="p-3 border-t border-slate-800/50 flex justify-center">
+                          {findingsLimit < activeFindings.length ? (
+                            <button
+                              onClick={() => setFindingsLimit((prev: number) => prev + 20)}
+                              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+                            >
+                              Show more ({activeFindings.length - findingsLimit} remaining)
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setFindingsLimit(10)}
+                              className="text-xs text-gray-500 hover:text-gray-300 font-medium"
+                            >
+                              Show less
+                            </button>
                           )}
                         </div>
-                      ))}
+                      )}
 
                       {/* No Results */}
                       {activeFindings.length === 0 && (
