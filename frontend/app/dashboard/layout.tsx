@@ -212,20 +212,19 @@ function SidebarNavigation({
   // Show skeleton placeholders while role is loading (non-admin only)
   if (isRoleLoading && !isAdmin) {
     return (
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="px-3 py-5">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+          <SidebarGroupLabel className="text-white/30 text-[10px] font-medium uppercase tracking-[0.15em] px-3 mb-3">
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu className="space-y-0.5">
               {Array.from({ length: 6 }).map((_, i) => (
                 <SidebarMenuItem key={i}>
-                  <div className="flex items-center gap-3 h-11 px-3">
-                    <div className="w-7 h-7 rounded-md bg-white/5 animate-pulse" />
+                  <div className="flex items-center gap-3 h-10 px-3">
+                    <div className="w-5 h-5 rounded bg-white/5 animate-pulse" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
-                      <div className="h-2 w-28 bg-white/[0.03] rounded animate-pulse" />
                     </div>
                   </div>
                 </SidebarMenuItem>
@@ -238,16 +237,15 @@ function SidebarNavigation({
   }
 
   return (
-    <SidebarContent className="px-3 py-4">
+    <SidebarContent className="px-3 py-5">
       <SidebarGroup>
-        <SidebarGroupLabel className="text-white/40 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+        <SidebarGroupLabel className="text-white/30 text-[10px] font-medium uppercase tracking-[0.15em] px-3 mb-3">
           {isAdmin ? "Administration" : "Navigation"}
         </SidebarGroupLabel>
         <SidebarGroupContent>
-          <SidebarMenu className="space-y-1">
+          <SidebarMenu className="space-y-0.5">
             {filteredItems.map((item) => {
               const Icon = item.icon
-              // Use exact match for main dashboard routes, startsWith for others (to match sub-routes)
               const isDashboardRoot = item.href === "/dashboard" || item.href === "/dashboard/admin"
               const isActive = isDashboardRoot
                 ? pathname === item.href
@@ -258,52 +256,38 @@ function SidebarNavigation({
                     asChild
                     isActive={isActive}
                     className={cn(
-                      "group relative h-11 px-3 rounded-lg transition-all duration-200",
-                      "text-gray-300 hover:text-white",
-                      "hover:bg-gradient-to-r hover:from-cyan-600/30 hover:to-blue-700/30",
-                      "hover:border-l-2 hover:border-cyan-500/50",
-                      "hover:shadow-md hover:shadow-cyan-500/10",
-                      "data-[active=true]:bg-gradient-to-r data-[active=true]:from-cyan-600/30 data-[active=true]:to-blue-700/30",
-                      "data-[active=true]:text-cyan-400 data-[active=true]:font-semibold",
-                      "data-[active=true]:shadow-lg data-[active=true]:shadow-cyan-500/10",
-                      "data-[active=true]:border-l-2 data-[active=true]:border-cyan-500"
+                      "group relative h-10 px-3 rounded-lg transition-all duration-200",
+                      "text-white/50 hover:text-white/90",
+                      "hover:bg-white/[0.04]",
+                      "data-[active=true]:bg-white/[0.06]",
+                      "data-[active=true]:text-white data-[active=true]:font-medium",
                     )}
                   >
                     <Link href={item.href} onClick={handleNavClick} className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-1.5 rounded-md transition-all",
-                          isActive
-                            ? "bg-cyan-600/30 text-cyan-400"
-                            : "bg-white/5 text-gray-400 group-hover:bg-cyan-600/30 group-hover:text-cyan-400 group-hover:scale-105"
-                        )}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{item.title}</p>
-                          {item.description && (
-                            <p className="text-[10px] text-gray-500 truncate">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
+                        {/* Active indicator bar */}
+                        {isActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full bg-emerald-400 sidebar-active-bar" />
+                        )}
+                        <Icon className={cn(
+                          "w-[18px] h-[18px] transition-colors",
+                          isActive ? "text-emerald-400" : "text-white/40 group-hover:text-white/70"
+                        )} />
+                        <span className="text-[13px]">{item.title}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {item.badge && (
                           <Badge
                             variant={item.badge === "New" ? "default" : "secondary"}
                             className={cn(
-                              "h-5 px-1.5 text-[10px] font-semibold",
+                              "h-[18px] px-1.5 text-[9px] font-semibold rounded-full",
                               item.badge === "New"
-                                ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                                : "bg-white/10 text-white/60 border-white/10"
                             )}
                           >
                             {item.badge}
                           </Badge>
-                        )}
-                        {isActive && (
-                          <ChevronRight className="w-3 h-3 text-cyan-400" />
                         )}
                       </div>
                     </Link>
@@ -437,25 +421,25 @@ export default function DashboardLayout({
     <TeamRoleProvider>
     <TokenProvider>
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-black overflow-x-hidden">
-        <Sidebar className="border-r border-white/10 !bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl [&>div]:!bg-transparent [&_[data-sidebar=sidebar]]:!bg-transparent [&_[data-sidebar=sidebar]]:!text-white shrink-0">
+      <div className="flex min-h-screen w-full bg-[#0a0a0b] overflow-x-hidden">
+        <Sidebar className="border-r border-white/[0.06] !bg-[#0a0a0b] [&>div]:!bg-transparent [&_[data-sidebar=sidebar]]:!bg-transparent [&_[data-sidebar=sidebar]]:!text-white shrink-0">
           {/* Sidebar Header with Logo */}
-          <SidebarHeader className="p-6 border-b border-white/10">
+          <SidebarHeader className="px-5 py-5 border-b border-white/[0.06]">
             <Link href="/" className="flex items-center gap-3 group">
               <Image
                 src="/logo.png"
                 alt="Efficyon"
-                width={56}
-                height={56}
-                className="h-14 w-auto object-contain"
+                width={40}
+                height={40}
+                className="h-10 w-auto object-contain"
                 priority
               />
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-white bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-[15px] font-semibold text-white tracking-tight">
                   Efficyon
                 </h2>
-                <p className="text-xs text-gray-400">
-                  {isAdmin ? "Admin Portal" : "Customer Portal"}
+                <p className="text-[10px] text-white/30 uppercase tracking-[0.1em] font-medium">
+                  {isAdmin ? "Admin" : "Cost Intelligence"}
                 </p>
               </div>
             </Link>
@@ -464,33 +448,26 @@ export default function DashboardLayout({
           <SidebarNavigation menuItems={menuItems} pathname={pathname} isAdmin={isAdmin} />
 
           {/* Footer with User Profile */}
-          <div className="p-4 border-t border-white/10 bg-black/50 backdrop-blur-sm">
+          <div className="p-4 border-t border-white/[0.06]">
             {/* User Profile */}
-            <div className="p-3 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10 mb-3">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                    <span className="text-white text-sm font-bold">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
+            <div className="flex items-center gap-3 px-2 mb-3">
+              <div className="relative">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
+                  <span className="text-white text-xs font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                {user.role === "admin" && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0a0a0b] flex items-center justify-center">
+                    <Shield className="w-2 h-2 text-white" />
                   </div>
-                  {user.role === "admin" && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-cyan-500 border-2 border-black flex items-center justify-center">
-                      <Shield className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                  {user.role === "admin" && (
-                    <Badge className="mt-1 h-4 px-1.5 text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                      Admin
-                    </Badge>
-                  )}
-                </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-white/90 truncate">
+                  {user.name}
+                </p>
+                <p className="text-[11px] text-white/30 truncate">{user.email}</p>
               </div>
             </div>
 
@@ -505,64 +482,72 @@ export default function DashboardLayout({
                 } catch (error) {
                   console.error("Logout error:", error)
                   clearAllCache()
-                  // Force redirect even if logout fails
                   router.push("/login")
                 }
               }}
-              className="w-full h-9 px-3 text-gray-300 hover:text-white hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/30 transition-all cursor-pointer"
+              className="w-full h-8 px-3 text-white/30 hover:text-white/70 hover:bg-white/[0.04] rounded-lg transition-all cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Logout</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="text-[12px]">Sign out</span>
             </SidebarMenuButton>
           </div>
         </Sidebar>
         <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-10 border-b border-white/10 bg-black/80 backdrop-blur-xl shrink-0">
-            <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6 max-w-full">
-              <SidebarTrigger className="text-white shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h1 className="text-base sm:text-xl font-semibold text-white truncate">
-                  {isAdmin ? "Admin Dashboard" : "Dashboard"}
-                </h1>
+          <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#0a0a0b]/90 backdrop-blur-xl shrink-0">
+            <div className="flex h-14 items-center gap-3 px-4 sm:px-6 max-w-full">
+              <SidebarTrigger className="text-white/50 hover:text-white shrink-0" />
+
+              {/* Breadcrumb-style page title */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="text-[13px] text-white/30">
+                  {isAdmin ? "Admin" : "Efficyon"}
+                </span>
+                <span className="text-white/15">/</span>
+                <span className="text-[13px] text-white/80 font-medium truncate">
+                  {isAdmin ? "Overview" : "Dashboard"}
+                </span>
               </div>
-              {/* Trial Days Remaining - Only for trial users */}
+
+              {/* Trial Days Remaining */}
               {!isAdmin && trialStatus?.isTrialActive && (
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-xs font-medium text-amber-400">
-                    {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} left
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/8 border border-amber-500/15 shrink-0">
+                  <Clock className="w-3 h-3 text-amber-400/80" />
+                  <span className="text-[11px] font-medium text-amber-400/80">
+                    {trialStatus.daysRemaining}d left
                   </span>
                 </div>
               )}
-              {/* Token Balance Display - Only for non-admin users */}
+
+              {/* Token Balance */}
               {!isAdmin && (
                 <div className="hidden sm:block shrink-0">
                   <TokenBalanceDisplay variant="header" />
                 </div>
               )}
-              <div className="relative hidden sm:block w-48 lg:w-64 shrink-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+              {/* Search */}
+              <div className="relative hidden sm:block w-44 lg:w-56 shrink-0">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
                 <Input
-                  placeholder="Quick search..."
-                  className="pl-9 h-9 bg-black/50 border-white/10 text-white placeholder:text-gray-500 text-sm focus:border-cyan-500/50 w-full"
+                  placeholder="Search..."
+                  className="pl-8 h-8 bg-white/[0.03] border-white/[0.06] text-white/80 placeholder:text-white/20 text-[12px] rounded-lg focus:border-emerald-500/30 focus:bg-white/[0.05] w-full transition-all"
                 />
               </div>
+
               {/* Notifications */}
               <div className="relative shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-gray-300 hover:text-white hover:bg-white/5 relative"
+                  className="h-8 w-8 p-0 text-white/30 hover:text-white/70 hover:bg-white/[0.04] relative"
                 >
                   <Bell className="w-4 h-4" />
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
-                    2
-                  </Badge>
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </Button>
               </div>
             </div>
           </header>
-          <div className="flex-1 p-3 sm:p-4 lg:p-6 min-w-0 overflow-x-hidden">{children}</div>
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-x-hidden premium-scrollbar">{children}</div>
         </main>
       </div>
       {/* Low Token Warning Modal - Only for non-admin users */}

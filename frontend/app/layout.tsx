@@ -2,9 +2,25 @@ import type React from "react"
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
+import { DM_Sans, Instrument_Serif } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
 import "./globals.css"
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700"],
+})
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+  weight: "400",
+  style: ["normal", "italic"],
+})
 
 const siteUrl = "https://efficyon.com"
 
@@ -52,7 +68,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${dmSans.variable} ${instrumentSerif.variable}`}>
         <Providers>
           {children}
         </Providers>
