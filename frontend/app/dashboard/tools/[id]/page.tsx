@@ -2344,24 +2344,21 @@ export default function ToolDetailPage() {
           {/* Cost Analysis Tab - Redesigned */}
           <TabsContent value="analysis" className="mt-0 space-y-6">
             {/* Header Card */}
-            <Card className="bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
 
               <CardHeader className="relative">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg shadow-amber-500/25">
-                        <Sparkles className="w-5 h-5 text-white" />
+                      <div className="p-2.5 bg-cyan-500/10 rounded-xl">
+                        <Sparkles className="w-5 h-5 text-cyan-400" />
                       </div>
                       <CardTitle className="text-white text-xl sm:text-2xl font-bold">
                         Cost Leak Analysis
                       </CardTitle>
                     </div>
                     <p className="text-gray-400 text-sm flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-400" />
+                      <Zap className="w-4 h-4 text-cyan-500/60" />
                       AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
@@ -2437,7 +2434,7 @@ export default function ToolDetailPage() {
                             onClick={openPdfPreview}
                             variant="outline"
                             size="sm"
-                            className="group relative border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-cyan-500/20 h-8 sm:h-9 px-2 sm:px-3"
+                            className="group relative border-slate-600/50 bg-slate-800/50 text-gray-300 hover:bg-slate-700/50 hover:text-white transition-all h-8 sm:h-9 px-2 sm:px-3"
                             title="Export PDF"
                           >
                             <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
@@ -2457,7 +2454,7 @@ export default function ToolDetailPage() {
                       <Button
                         onClick={handleAnalyzeCostLeaks}
                         disabled={isLoadingAnalysis}
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40 h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm"
+                        className="bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20 transition-all h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium"
                       >
                         {isLoadingAnalysis ? (
                           <>
@@ -3018,14 +3015,13 @@ export default function ToolDetailPage() {
 
           {/* History Tab */}
           <TabsContent value="history" className="mt-0 space-y-6">
-            <Card className="bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
 
               <CardHeader className="relative">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg shadow-purple-500/25">
-                      <Clock className="w-5 h-5 text-white" />
+                    <div className="p-2.5 bg-purple-500/10 rounded-xl">
+                      <Clock className="w-5 h-5 text-purple-400" />
                     </div>
                     <div>
                       <CardTitle className="text-white text-xl font-bold">Analysis History</CardTitle>
@@ -3037,7 +3033,7 @@ export default function ToolDetailPage() {
                     variant="outline"
                     size="sm"
                     disabled={isLoadingHistory}
-                    className="border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+                    className="border-slate-600/50 text-gray-400 hover:text-white hover:bg-white/10"
                   >
                     {isLoadingHistory ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -3051,7 +3047,7 @@ export default function ToolDetailPage() {
               <CardContent className="relative">
                 {isLoadingHistory ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
                   </div>
                 ) : analysisHistory.length === 0 ? (
                   <div className="text-center py-12">
@@ -3068,7 +3064,7 @@ export default function ToolDetailPage() {
                         key={analysis.id}
                         className={`p-4 rounded-lg border transition-all cursor-pointer ${
                           selectedHistoricalAnalysis?.id === analysis.id
-                            ? "bg-purple-500/20 border-purple-500/50"
+                            ? "bg-white/10 border-white/20"
                             : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                         }`}
                         onClick={() => loadHistoricalAnalysis(analysis.id)}
@@ -3089,16 +3085,6 @@ export default function ToolDetailPage() {
                                   minute: "2-digit",
                                 })}
                               </span>
-                              {analysis.parameters?.startDate && (
-                                <Badge variant="outline" className="text-xs bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
-                                  {analysis.parameters.startDate} - {analysis.parameters.endDate || "now"}
-                                </Badge>
-                              )}
-                              {analysis.parameters?.inactivityDays && (
-                                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
-                                  {analysis.parameters.inactivityDays} days
-                                </Badge>
-                              )}
                             </div>
                             <div className="flex items-center gap-4 text-sm">
                               <span className="text-gray-400">
@@ -3107,7 +3093,7 @@ export default function ToolDetailPage() {
                               </span>
                               <span className="text-emerald-400">
                                 <DollarSign className="w-4 h-4 inline mr-1" />
-                                ${(analysis.summary?.totalPotentialSavings || 0).toLocaleString()}
+                                {(analysis.summary?.totalPotentialSavings || 0).toLocaleString()}
                               </span>
                               {analysis.summary?.highSeverity > 0 && (
                                 <span className="text-red-400">
@@ -3140,7 +3126,7 @@ export default function ToolDetailPage() {
 
             {/* Selected Historical Analysis Display */}
             {selectedHistoricalAnalysis && (
-              <Card className="bg-black/80 backdrop-blur-xl border-purple-500/30">
+              <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -3165,7 +3151,7 @@ export default function ToolDetailPage() {
                 <CardContent>
                   {isLoadingHistoricalAnalysis ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                      <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -3190,30 +3176,6 @@ export default function ToolDetailPage() {
                           <p className="text-xl font-bold text-amber-400">{selectedHistoricalAnalysis.summary?.mediumSeverity || 0}</p>
                         </div>
                       </div>
-
-                      {/* Parameters Used */}
-                      {selectedHistoricalAnalysis.parameters && Object.keys(selectedHistoricalAnalysis.parameters).length > 0 && (
-                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                          <p className="text-xs text-gray-500 mb-2">Analysis Parameters</p>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedHistoricalAnalysis.parameters.startDate && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                                Start: {selectedHistoricalAnalysis.parameters.startDate}
-                              </Badge>
-                            )}
-                            {selectedHistoricalAnalysis.parameters.endDate && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                                End: {selectedHistoricalAnalysis.parameters.endDate}
-                              </Badge>
-                            )}
-                            {selectedHistoricalAnalysis.parameters.inactivityDays && (
-                              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
-                                Inactivity: {selectedHistoricalAnalysis.parameters.inactivityDays} days
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {/* AI Summary */}
                       {selectedHistoricalAnalysis.analysis_data?.aiSummary && (
