@@ -20,10 +20,13 @@ import {
   ChevronDown,
   ChevronUp,
   Pencil,
+  Download,
 } from "lucide-react"
 import { toast } from "sonner"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const DragDropUploadZone = dynamic(
   () => import("@/components/testing/drag-drop-upload-zone").then((m) => m.DragDropUploadZone),
@@ -263,6 +266,179 @@ export default function WorkspaceDetailPage() {
   const findings = selectedAnalysis ? extractFindings(selectedAnalysis.analysis_result) : []
   const summary = selectedAnalysis?.analysis_result?.overallSummary
 
+  function exportAiAnalysisPDF() {
+    const aiText = selectedAnalysis?.analysis_result?.aiAnalysis
+    if (!aiText) {
+      toast.error("No AI analysis to export")
+      return
+    }
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 15
+    const maxWidth = pageWidth - margin * 2
+    let y = margin
+
+    const checkPage = (needed: number = 12) => {
+      if (y > pageHeight - needed - 10) {
+        doc.addPage()
+        y = margin
+      }
+    }
+
+    const renderText = (text: string, x: number, fontSize: number, style: string, color: [number, number, number], width: number) => {
+      doc.setFont("helvetica", style)
+      doc.setFontSize(fontSize)
+      doc.setTextColor(...color)
+      const clean = text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`(.*?)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      const lines = doc.splitTextToSize(clean, width)
+      for (const line of lines) {
+        checkPage()
+        doc.text(line, x, y)
+        y += fontSize * 0.45 + 1
+      }
+    }
+
+    // Header bar
+    doc.setFillColor(15, 23, 42)
+    doc.rect(0, 0, pageWidth, 32, "F")
+    doc.setDrawColor(52, 211, 153)
+    doc.setLineWidth(1.5)
+    doc.line(0, 32, pageWidth, 32)
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(16)
+    doc.setTextColor(255, 255, 255)
+    doc.text("AI Cost Analysis Summary", margin, 18)
+
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9)
+    doc.setTextColor(148, 163, 184)
+    const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+    doc.text(`${workspace?.name || "Test Workspace"} | ${dateStr}`, margin, 26)
+
+    y = 42
+
+    // Summary stats bar
+    if (summary) {
+      checkPage(20)
+      const stats = [
+        { label: "Findings", value: String(summary.totalFindings || 0) },
+        { label: "Savings", value: `${Math.round(summary.totalPotentialSavings || 0).toLocaleString()} SEK` },
+        { label: "High", value: String(summary.highSeverity || 0) },
+        { label: "Medium", value: String(summary.mediumSeverity || 0) },
+      ]
+      const colW = maxWidth / stats.length
+      doc.setFillColor(245, 247, 250)
+      doc.roundedRect(margin, y, maxWidth, 16, 2, 2, "F")
+      stats.forEach((s, idx) => {
+        const cx = margin + colW * idx + colW / 2
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(10)
+        doc.setTextColor(30, 30, 30)
+        doc.text(s.value, cx, y + 7, { align: "center" })
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(7)
+        doc.setTextColor(120, 120, 120)
+        doc.text(s.label, cx, y + 13, { align: "center" })
+      })
+      y += 22
+    }
+
+    // Parse markdown
+    const lines = aiText.split("\n")
+    let i = 0
+
+    while (i < lines.length) {
+      const line = lines[i]
+
+      if (!line.trim()) { y += 3; i++; continue }
+
+      // Table
+      if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+        const tableLines: string[] = []
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          tableLines.push(lines[i].trim())
+          i++
+        }
+        if (tableLines.length >= 2) {
+          const parseRow = (row: string) =>
+            row.split("|").filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim())
+          const headerCells = parseRow(tableLines[0])
+          const bodyRows: string[][] = []
+          for (let r = 1; r < tableLines.length; r++) {
+            if (/^[\s|:-]+$/.test(tableLines[r].replace(/\|/g, "").trim())) continue
+            bodyRows.push(parseRow(tableLines[r]))
+          }
+          checkPage(20 + bodyRows.length * 8)
+          autoTable(doc, {
+            startY: y,
+            head: [headerCells],
+            body: bodyRows,
+            theme: "striped",
+            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+            bodyStyles: { fontSize: 8, textColor: [60, 60, 60] },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            styles: { cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.2 },
+            margin: { left: margin, right: margin },
+          })
+          y = (doc as any).lastAutoTable.finalY + 6
+          continue
+        }
+      }
+
+      // Headings
+      const h1 = line.match(/^#\s+(.+)/)
+      const h2 = line.match(/^##\s+(.+)/)
+      const h3 = line.match(/^###\s+(.+)/)
+      if (h1) { y += 4; checkPage(); renderText(h1[1], margin, 14, "bold", [30, 30, 30], maxWidth); y += 2; i++; continue }
+      if (h2) { y += 3; checkPage(); renderText(h2[1], margin, 12, "bold", [40, 40, 40], maxWidth); y += 1; i++; continue }
+      if (h3) { y += 2; checkPage(); renderText(h3[1], margin, 10, "bold", [50, 50, 50], maxWidth); y += 1; i++; continue }
+
+      // HR
+      if (/^---+$/.test(line.trim()) || /^\*\*\*+$/.test(line.trim())) {
+        checkPage(); doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3)
+        doc.line(margin, y, pageWidth - margin, y); y += 4; i++; continue
+      }
+
+      // Bullets
+      const bullet = line.match(/^(\s*)[-*]\s+(.+)/)
+      if (bullet) {
+        const indent = Math.min(Math.floor((bullet[1]?.length || 0) / 2), 3) * 5
+        checkPage(); doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60, 60, 60)
+        doc.text("•", margin + indent, y)
+        renderText(bullet[2], margin + indent + 5, 9, "normal", [60, 60, 60], maxWidth - indent - 5)
+        i++; continue
+      }
+
+      // Numbered list
+      const num = line.match(/^(\s*)(\d+)\.\s+(.+)/)
+      if (num) {
+        const indent = Math.min(Math.floor((num[1]?.length || 0) / 2), 3) * 5
+        checkPage(); doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60, 60, 60)
+        doc.text(`${num[2]}.`, margin + indent, y)
+        renderText(num[3], margin + indent + 7, 9, "normal", [60, 60, 60], maxWidth - indent - 7)
+        i++; continue
+      }
+
+      // Paragraph
+      checkPage()
+      renderText(line, margin, 9, "normal", [60, 60, 60], maxWidth)
+      y += 1; i++
+    }
+
+    // Footer
+    const footerY = pageHeight - 10
+    doc.setFontSize(7)
+    doc.setTextColor(150, 150, 150)
+    doc.text("Generated by Efficyon — AI-Powered Cost Optimization", pageWidth / 2, footerY, { align: "center" })
+
+    const filename = `AI_Analysis_${(workspace?.name || "workspace").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+    doc.save(filename)
+    toast.success("PDF exported", { description: filename })
+  }
+
   return (
     <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
@@ -422,11 +598,20 @@ export default function WorkspaceDetailPage() {
           {/* AI Analysis - shown first */}
           {selectedAnalysis?.analysis_result?.aiAnalysis && (
             <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <span className="text-[10px] text-purple-400 font-bold">AI</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <span className="text-[10px] text-purple-400 font-bold">AI</span>
+                  </div>
+                  <h3 className="text-[13px] font-medium text-white/70">AI Analysis</h3>
                 </div>
-                <h3 className="text-[13px] font-medium text-white/70">AI Analysis</h3>
+                <button
+                  onClick={exportAiAnalysisPDF}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export PDF
+                </button>
               </div>
               <div className="ai-analysis-content text-[13px] text-white/50 leading-relaxed space-y-3">
                 <ReactMarkdown
