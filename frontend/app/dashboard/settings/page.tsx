@@ -109,7 +109,10 @@ export default function SettingsPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+          <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+        </div>
       </div>
     }>
       <SettingsContent />
@@ -377,314 +380,244 @@ function SettingsContent() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h2>
-        <p className="text-sm sm:text-base text-gray-400">Manage your account, billing, and preferences</p>
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* ── Header ── */}
+      <div className="animate-slide-up delay-0">
+        <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+          Sett<span className="italic text-emerald-400/90">ings</span>
+        </h2>
+        <p className="text-[14px] text-white/35">Manage your account, billing, and preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up delay-1">
         <div className="lg:col-span-2">
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-              <TabsTrigger 
-                value="profile" 
-                className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+            <TabsList className="bg-white/[0.02] border border-white/[0.06] mb-6 w-full sm:w-auto flex-wrap sm:flex-nowrap rounded-lg p-1">
+              <TabsTrigger
+                value="profile"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
               >
-                <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
                 Profile
               </TabsTrigger>
               {isOwner && (
                 <TabsTrigger
                   value="billing"
-                  className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+                  className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
                 >
-                  <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
                   Billing
                 </TabsTrigger>
               )}
-              <TabsTrigger 
+              <TabsTrigger
                 value="notifications"
-                className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
               >
-                <Bell className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <Bell className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
                 Notifications
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="security"
-                className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+                className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
               >
-                <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
                 Security
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile" className="mt-0">
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-cyan-400" />
-                    <CardTitle className="text-white">Profile</CardTitle>
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <User className="w-4 h-4 text-white/30" />
+                    <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Profile</span>
                   </div>
-                  <CardDescription className="text-gray-400">
-                    Your account information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-gray-300">
-                      Full Name
-                    </Label>
-                    <Input
-                      id="name"
-                      defaultValue={user?.name}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-white/60 text-[13px]">Full Name</Label>
+                      <Input id="name" defaultValue={user?.name} className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-white/60 text-[13px]">Email</Label>
+                      <Input id="email" type="email" defaultValue={user?.email} className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company" className="text-white/60 text-[13px]">Company Name</Label>
+                      <Input id="company" className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30 placeholder:text-white/20" placeholder="Your Company" />
+                    </div>
+                    <Button className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-4 text-[13px] rounded-lg">
+                      <Save className="w-3.5 h-3.5 mr-1.5" />
+                      Save Changes
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-300">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      defaultValue={user?.email}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company" className="text-gray-300">
-                      Company Name
-                    </Label>
-                    <Input
-                      id="company"
-                      className="bg-black/50 border-white/10 text-white"
-                      placeholder="Your Company"
-                    />
-                  </div>
-                  <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {isOwner && <TabsContent value="billing" className="mt-0">
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-cyan-400" />
-                    <CardTitle className="text-white">Billing</CardTitle>
+            {isOwner && <TabsContent value="billing" className="mt-0 space-y-4">
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <CreditCard className="w-4 h-4 text-white/30" />
+                    <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Subscription</span>
                   </div>
-                  <CardDescription className="text-gray-400">
-                    Manage your subscription and payment
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Trial Status Banner */}
-                  {trialStatus?.isTrialActive && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30">
-                          <Clock className="w-4 h-4 text-amber-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-amber-400">Free Trial Active</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} remaining
-                            {trialStatus.trialEndsAt && (
-                              <span> (expires {new Date(trialStatus.trialEndsAt).toLocaleDateString()})</span>
-                            )}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-white hover:border-amber-500/50"
-                          onClick={() => setIsChangePlanModalOpen(true)}
-                        >
-                          <Sparkles className="w-3 h-3 mr-2" />
-                          Upgrade Now
-                        </Button>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-amber-500/20">
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-400/70" />
-                          <span>Upgrade before your trial ends to keep full access to all features</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
-                  <div className="p-5 rounded-xl bg-gradient-to-br from-white/5 via-white/5 to-transparent border border-white/10 hover:border-white/20 transition-all">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
-                          <CreditCard className="w-4 h-4 text-cyan-400" />
+                  <div className="space-y-4">
+                    {/* Trial Banner */}
+                    {trialStatus?.isTrialActive && (
+                      <div className="p-4 rounded-lg bg-amber-500/[0.04] border border-amber-500/10">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                            <Clock className="w-3.5 h-3.5 text-amber-400/70" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[13px] font-medium text-amber-400/90">Free Trial Active</p>
+                            <p className="text-[11px] text-white/25 mt-0.5">
+                              {trialStatus.daysRemaining} {trialStatus.daysRemaining === 1 ? "day" : "days"} remaining
+                              {trialStatus.trialEndsAt && <span> — expires {new Date(trialStatus.trialEndsAt).toLocaleDateString()}</span>}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="bg-amber-500/90 hover:bg-amber-400 text-black font-medium h-7 px-3 text-[11px] rounded-md"
+                            onClick={() => setIsChangePlanModalOpen(true)}
+                          >
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Upgrade
+                          </Button>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">Current Plan</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {trialStatus?.isTrialActive ? "Free Trial" : `${billing.plan} Plan`}
-                          </p>
-                        </div>
-                      </div>
-                      {!trialStatus?.isTrialActive && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-cyan-500/50 bg-cyan-500/20 text-white hover:bg-cyan-500/30 hover:border-cyan-400 hover:text-white w-full sm:w-auto transition-all"
-                          onClick={() => setIsChangePlanModalOpen(true)}
-                        >
-                          <Sparkles className="w-3 h-3 mr-2" />
-                          Change Plan
-                        </Button>
-                      )}
-                    </div>
-                    {!trialStatus?.isTrialActive && (
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50" />
-                        <span>Next billing: {billing.nextBilling}</span>
                       </div>
                     )}
-                  </div>
-                  <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-white">Payment Method</p>
-                        <p className="text-xs text-gray-400">{billing.paymentMethod}</p>
+
+                    {/* Current Plan */}
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <CreditCard className="w-3.5 h-3.5 text-emerald-400/70" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-medium text-white/80">
+                              {trialStatus?.isTrialActive ? "Free Trial" : `${billing.plan} Plan`}
+                            </p>
+                            {!trialStatus?.isTrialActive && (
+                              <p className="text-[11px] text-white/25">Next billing: {billing.nextBilling}</p>
+                            )}
+                          </div>
+                        </div>
+                        {!trialStatus?.isTrialActive && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.04] h-7 px-3 text-[11px] rounded-md"
+                            onClick={() => setIsChangePlanModalOpen(true)}
+                          >
+                            Change Plan
+                          </Button>
+                        )}
                       </div>
-                      <Button variant="outline" size="sm" className="border-white/10 bg-black/50 text-white w-full sm:w-auto">
-                        Update
-                      </Button>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="text-[13px] font-medium text-white/80">Payment Method</p>
+                          <p className="text-[11px] text-white/25">{billing.paymentMethod}</p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.04] h-7 px-3 text-[11px] rounded-md">
+                          Update
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Token Top-Up Section */}
-              <div className="mt-6">
-                <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 via-cyan-500/5 to-transparent border border-purple-500/20 hover:border-purple-500/30 transition-all">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30">
-                        <Coins className="w-4 h-4 text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">Need More Tokens?</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Buy additional tokens without changing your plan
-                        </p>
-                      </div>
+              {/* Token Top-Up */}
+              <div className="p-4 rounded-xl bg-violet-500/[0.03] border border-violet-500/10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                      <Coins className="w-3.5 h-3.5 text-violet-400/60" />
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-purple-500/50 bg-purple-500/20 text-white hover:bg-purple-500/30 hover:border-purple-400 hover:text-white w-full sm:w-auto transition-all"
-                      onClick={() => setIsTopUpModalOpen(true)}
-                    >
-                      <Plus className="w-3 h-3 mr-2" />
-                      Buy More Tokens
-                    </Button>
+                    <div>
+                      <p className="text-[13px] font-medium text-white/80">Need More Tokens?</p>
+                      <p className="text-[11px] text-white/25">One-time purchase, no plan change</p>
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="border border-violet-500/15 text-violet-400/70 hover:text-violet-400 hover:bg-violet-500/[0.06] h-7 px-3 text-[11px] rounded-md"
+                    onClick={() => setIsTopUpModalOpen(true)}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Buy Tokens
+                  </Button>
                 </div>
               </div>
 
               {/* AI Model Selection */}
-              <div className="mt-6">
-                <AiModelSelector />
-              </div>
+              <AiModelSelector />
 
-              {/* Token Balance Section */}
-              <div className="mt-6 space-y-6">
-                <h3 className="text-lg font-semibold text-white">Token Balance</h3>
+              {/* Token Balance */}
+              <div className="space-y-4">
+                <span className="text-[14px] text-white/60 font-medium">Token Balance</span>
                 <TokenBalanceDisplay variant="card" showUpgrade={true} />
                 <TokenUsageHistory />
               </div>
             </TabsContent>}
 
             <TabsContent value="notifications" className="mt-0">
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-cyan-400" />
-                    <CardTitle className="text-white">Notifications</CardTitle>
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Bell className="w-4 h-4 text-white/30" />
+                    <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Notifications</span>
                   </div>
-                  <CardDescription className="text-gray-400">
-                    Configure your notification preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-white">Email Alerts</Label>
-                      <p className="text-sm text-gray-400">Receive email notifications</p>
-                    </div>
-                    <Switch
-                      checked={notifications.emailAlerts}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, emailAlerts: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-white">Weekly Reports</Label>
-                      <p className="text-sm text-gray-400">Automated weekly summaries</p>
-                    </div>
-                    <Switch
-                      checked={notifications.weeklyReports}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, weeklyReports: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-white">Renewal Reminders</Label>
-                      <p className="text-sm text-gray-400">Get notified before renewals</p>
-                    </div>
-                    <Switch
-                      checked={notifications.renewalReminders}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, renewalReminders: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-white">Recommendations</Label>
-                      <p className="text-sm text-gray-400">New optimization suggestions</p>
-                    </div>
-                    <Switch
-                      checked={notifications.recommendations}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, recommendations: checked })
-                      }
-                    />
+                  <div className="space-y-5">
+                    {[
+                      { key: "emailAlerts" as const, title: "Email Alerts", desc: "Receive email notifications" },
+                      { key: "weeklyReports" as const, title: "Weekly Reports", desc: "Automated weekly summaries" },
+                      { key: "renewalReminders" as const, title: "Renewal Reminders", desc: "Get notified before renewals" },
+                      { key: "recommendations" as const, title: "Recommendations", desc: "New optimization suggestions" },
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-[13px] text-white/80">{item.title}</Label>
+                          <p className="text-[11px] text-white/25">{item.desc}</p>
+                        </div>
+                        <Switch
+                          checked={notifications[item.key]}
+                          onCheckedChange={(checked) =>
+                            setNotifications({ ...notifications, [item.key]: checked })
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="security" className="mt-0">
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-cyan-400" />
-                    <CardTitle className="text-white">Security</CardTitle>
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Shield className="w-4 h-4 text-white/30" />
+                    <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Security</span>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button variant="outline" className="w-full border-white/10 bg-black/50 text-white">
-                    <Key className="w-4 h-4 mr-2" />
-                    Change Password
-                  </Button>
-                  <Button variant="outline" className="w-full border-white/10 bg-black/50 text-white">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Enable Two-Factor Authentication
-                  </Button>
+                  <div className="space-y-3">
+                    <Button variant="ghost" className="w-full justify-start border border-white/[0.06] bg-white/[0.02] text-white/60 hover:text-white hover:bg-white/[0.04] h-10 text-[13px] rounded-lg">
+                      <Key className="w-3.5 h-3.5 mr-2" />
+                      Change Password
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start border border-white/[0.06] bg-white/[0.02] text-white/60 hover:text-white hover:bg-white/[0.04] h-10 text-[13px] rounded-lg">
+                      <Shield className="w-3.5 h-3.5 mr-2" />
+                      Enable Two-Factor Authentication
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -692,26 +625,26 @@ function SettingsContent() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white text-sm">Quick Links</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-white/5"
-              >
-                <Building2 className="w-4 h-4 mr-2" />
-                Company Profile
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-white/5"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Contact Support
-              </Button>
+        <div className="space-y-4">
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+            <CardContent className="p-4">
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Quick Links</span>
+              <div className="space-y-1 mt-3">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-white/40 hover:text-white/70 hover:bg-white/[0.04] h-9 text-[12px] rounded-lg"
+                >
+                  <Building2 className="w-3.5 h-3.5 mr-2" />
+                  Company Profile
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-white/40 hover:text-white/70 hover:bg-white/[0.04] h-9 text-[12px] rounded-lg"
+                >
+                  <Mail className="w-3.5 h-3.5 mr-2" />
+                  Contact Support
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -725,21 +658,21 @@ function SettingsContent() {
           setIsTopUpProcessing(false)
         }
       }}>
-        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[96vw] sm:max-w-2xl max-h-[95vh] overflow-hidden p-0 gap-0 flex flex-col">
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] w-[96vw] sm:max-w-2xl max-h-[95vh] overflow-hidden p-0 gap-0 flex flex-col rounded-xl">
           {/* Header */}
-          <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/10 shrink-0">
+          <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/[0.06] shrink-0">
             <button
               onClick={() => setIsTopUpModalOpen(false)}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-all z-10"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/70 transition-all z-10"
             >
               <X className="w-4 h-4" />
             </button>
             <div className="text-center space-y-1">
-              <DialogTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              <DialogTitle className="text-xl sm:text-2xl font-display text-white tracking-tight">
                 Buy More Tokens
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-400">
-                One-time purchase. Tokens are added to your current balance and reset with your billing cycle.
+              <DialogDescription className="text-[13px] text-white/35">
+                One-time purchase. Added to your balance, resets with billing cycle.
               </DialogDescription>
             </div>
           </div>
@@ -756,21 +689,21 @@ function SettingsContent() {
                     onClick={() => setSelectedPackage(pkg.id)}
                     className={cn(
                       "relative p-4 rounded-xl border-2 text-left transition-all duration-300",
-                      "hover:scale-[1.02] hover:shadow-lg",
+                      "hover:scale-[1.01]",
                       isSelected
-                        ? "border-purple-400 bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-transparent shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-2 ring-purple-500/20"
-                        : "border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent hover:border-white/20"
+                        ? "border-emerald-400/50 bg-emerald-500/[0.05] ring-1 ring-emerald-500/20"
+                        : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]"
                     )}
                   >
                     {isSelected && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-cyan-500 flex items-center justify-center shadow-lg z-10">
-                        <Check className="w-3.5 h-3.5 text-white" />
+                      <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center z-10">
+                        <Check className="w-3 h-3 text-black" />
                       </div>
                     )}
 
                     {pkg.savings && (
                       <div className="absolute top-3 right-3">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400/80 border border-emerald-500/15">
                           {pkg.savings}
                         </span>
                       </div>
@@ -780,8 +713,8 @@ function SettingsContent() {
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold",
                         isSelected
-                          ? "bg-gradient-to-br from-purple-500/40 to-cyan-500/40 border border-purple-400/50 text-white"
-                          : "bg-white/10 border border-white/20 text-gray-300"
+                          ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                          : "bg-white/[0.04] border border-white/[0.06] text-white/50"
                       )}>
                         {pkg.tokens}
                       </div>
@@ -804,41 +737,43 @@ function SettingsContent() {
 
             {tokenPackages.length === 0 && (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                <div className="relative w-8 h-8">
+                  <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+                  <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+                </div>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-black/80">
+          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/[0.06] bg-[#0e0e10]">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-gray-400 order-2 sm:order-1">
-                <Shield className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-gray-300">Secure checkout</span>
-                <span className="text-gray-500">powered by Stripe</span>
+              <div className="flex items-center gap-2 text-[11px] text-white/20 order-2 sm:order-1">
+                <Shield className="w-3 h-3 text-emerald-400/60" />
+                <span>Secure checkout powered by Stripe</span>
               </div>
-              <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
+              <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setIsTopUpModalOpen(false)}
-                  className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:border-white/20 px-5 h-9 w-full sm:w-auto text-sm"
+                  className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] h-9 px-4 w-full sm:w-auto text-[13px] rounded-lg"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handlePurchaseTokens}
                   disabled={!selectedPackage || isTopUpProcessing}
-                  className="bg-gradient-to-r from-purple-500 via-cyan-500 to-purple-500 hover:from-purple-400 hover:via-cyan-400 hover:to-purple-400 text-white font-bold text-sm px-6 h-9 shadow-xl shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-w-0 sm:min-w-[180px] transition-all duration-300"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-[13px] px-5 h-9 disabled:opacity-50 w-full sm:w-auto sm:min-w-[160px] rounded-lg"
                 >
                   {isTopUpProcessing ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     <>
                       Purchase Tokens
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                     </>
                   )}
                 </Button>
@@ -850,22 +785,22 @@ function SettingsContent() {
 
       {/* Change Plan Modal */}
       <Dialog open={isChangePlanModalOpen} onOpenChange={setIsChangePlanModalOpen}>
-        <DialogContent className="bg-black border-white/10 backdrop-blur-2xl w-[96vw] sm:max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0 flex flex-col">
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] w-[96vw] sm:max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0 flex flex-col rounded-xl">
           {/* Header Section */}
-          <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/10 shrink-0">
+          <div className="relative px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/[0.06] shrink-0">
             <button
               onClick={() => setIsChangePlanModalOpen(false)}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-all z-10"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/70 transition-all z-10"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="text-center space-y-1">
-              <DialogTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              <DialogTitle className="text-xl sm:text-2xl font-display text-white tracking-tight">
                 Choose Your Plan
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-400">
-                Select the perfect plan for your business. Upgrade or downgrade anytime.
+              <DialogDescription className="text-[13px] text-white/35">
+                Select the perfect plan for your business. Change anytime.
               </DialogDescription>
             </div>
           </div>
@@ -891,8 +826,8 @@ function SettingsContent() {
                     {/* Popular Badge */}
                     {isPopular && (
                       <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20">
-                        <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow-lg shadow-blue-500/40 whitespace-nowrap">
-                          MOST POPULAR
+                        <div className="bg-emerald-500 text-black text-[9px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap uppercase tracking-wider">
+                          Most Popular
                         </div>
                       </div>
                     )}
@@ -902,88 +837,57 @@ function SettingsContent() {
                       onClick={() => setSelectedPlan(plan.id)}
                       className={cn(
                         "relative w-full h-full p-4 sm:p-5 rounded-xl border-2 text-left transition-all duration-300",
-                        "hover:scale-[1.01] hover:shadow-xl",
+                        "hover:scale-[1.01]",
                         isSelected
-                          ? "border-cyan-400 bg-gradient-to-br from-cyan-500/15 via-cyan-500/5 to-transparent shadow-[0_0_30px_rgba(34,211,238,0.3)] ring-2 ring-cyan-500/20"
-                          : "border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent hover:border-white/20 hover:bg-white/10",
-                        isPopular && !isSelected && "border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent"
+                          ? "border-emerald-400/50 bg-emerald-500/[0.05] ring-1 ring-emerald-500/20"
+                          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]",
+                        isPopular && !isSelected && "border-emerald-500/15 bg-emerald-500/[0.02]"
                       )}
                     >
-                      {/* Selected Checkmark */}
                       {isSelected && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/50 z-10">
-                          <Check className="w-3.5 h-3.5 text-white" />
+                        <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center z-10">
+                          <Check className="w-3 h-3 text-black" />
                         </div>
                       )}
 
                       <div className="relative z-10">
-                        {/* Icon + Plan Name Row */}
                         <div className="flex items-center gap-2.5 mb-3">
                           <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
-                            isSelected
-                              ? "bg-gradient-to-br from-cyan-500/40 to-blue-500/40 border border-cyan-400/50"
-                              : "bg-white/10 border border-white/20"
+                            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                            isSelected ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-white/[0.04] border border-white/[0.06]"
                           )}>
-                            <Icon className={cn(
-                              "w-4 h-4 transition-all duration-300",
-                              isSelected ? "text-cyan-300" : "text-gray-400 group-hover:text-cyan-400"
-                            )} />
+                            <Icon className={cn("w-4 h-4", isSelected ? "text-emerald-400" : "text-white/30")} />
                           </div>
-                          <h3 className="text-lg font-bold text-white tracking-tight">
-                            {plan.name}
-                          </h3>
+                          <h3 className="text-[15px] font-semibold text-white tracking-tight">{plan.name}</h3>
                         </div>
 
-                        {/* Price */}
                         <div className="flex items-baseline gap-1 mb-0.5">
-                          <span className="text-2xl sm:text-3xl font-extrabold text-white">
-                            {plan.price}
-                          </span>
-                          <span className="text-gray-500 text-sm">/{plan.period}</span>
+                          <span className="text-2xl sm:text-3xl font-semibold text-white">{plan.price}</span>
+                          <span className="text-white/25 text-[12px]">/{plan.period}</span>
                         </div>
 
-                        {/* Description */}
-                        <p className="text-gray-400 mb-3 text-xs leading-relaxed">
-                          {plan.description}
-                        </p>
+                        <p className="text-white/30 mb-3 text-[11px] leading-relaxed">{plan.description}</p>
 
-                        {/* Features List */}
                         <ul className="space-y-1.5 mb-3">
                           {plan.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-2 group/item">
-                              <Check className={cn(
-                                "w-3.5 h-3.5 flex-shrink-0 transition-all duration-300",
-                                isSelected ? "text-cyan-400" : "text-gray-500"
-                              )} strokeWidth={2.5} />
-                              <span className={cn(
-                                "text-xs sm:text-sm leading-snug transition-colors duration-300",
-                                isSelected ? "text-gray-200" : "text-gray-400"
-                              )}>
-                                {feature}
-                              </span>
+                            <li key={idx} className="flex items-center gap-2">
+                              <Check className={cn("w-3 h-3 flex-shrink-0", isSelected ? "text-emerald-400" : "text-white/20")} strokeWidth={2.5} />
+                              <span className={cn("text-[11px] sm:text-[12px] leading-snug", isSelected ? "text-white/70" : "text-white/35")}>{feature}</span>
                             </li>
                           ))}
                         </ul>
 
-                        {/* CTA Section */}
-                        <div className={cn(
-                          "pt-3 border-t transition-all duration-300",
-                          isSelected ? "border-cyan-400/30" : "border-white/10"
-                        )}>
-                          <div className={cn(
-                            "flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-300",
-                            isSelected ? "text-cyan-300" : "text-gray-400 group-hover:text-white"
-                          )}>
+                        <div className={cn("pt-3 border-t", isSelected ? "border-emerald-500/15" : "border-white/[0.04]")}>
+                          <div className={cn("flex items-center justify-center gap-1.5 text-[12px] font-medium", isSelected ? "text-emerald-400" : "text-white/30")}>
                             {isSelected ? (
                               <>
-                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                                <span>Currently Selected</span>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Selected
                               </>
                             ) : (
                               <>
-                                <span>Select This Plan</span>
-                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                                Select Plan
+                                <ArrowRight className="w-3 h-3" />
                               </>
                             )}
                           </div>
@@ -997,36 +901,35 @@ function SettingsContent() {
           </div>
 
           {/* Action Footer */}
-          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-black/80">
+          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/[0.06] bg-[#0e0e10]">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-gray-400 order-2 sm:order-1">
-                <Shield className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-gray-300">Secure checkout</span>
-                <span className="text-gray-500">powered by Stripe</span>
+              <div className="flex items-center gap-2 text-[11px] text-white/20 order-2 sm:order-1">
+                <Shield className="w-3 h-3 text-emerald-400/60" />
+                <span>Secure checkout powered by Stripe</span>
               </div>
 
-              <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
+              <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setIsChangePlanModalOpen(false)}
-                  className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:border-white/20 px-5 h-9 w-full sm:w-auto text-sm"
+                  className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] h-9 px-4 w-full sm:w-auto text-[13px] rounded-lg"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleChangePlan}
                   disabled={!selectedPlan || isProcessing}
-                  className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 hover:from-cyan-400 hover:via-blue-400 hover:to-cyan-400 text-white font-bold text-sm px-6 h-9 shadow-xl shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-w-0 sm:min-w-[180px] transition-all duration-300"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-[13px] px-5 h-9 disabled:opacity-50 w-full sm:w-auto sm:min-w-[160px] rounded-lg"
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     <>
                       Continue to Checkout
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                     </>
                   )}
                 </Button>
