@@ -1868,7 +1868,7 @@ export default function ToolsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-[10px] text-white/25 hover:text-white/60 rounded-md"
+                          className="h-6 px-2 text-[10px] text-white/25 hover:text-white/60 hover:bg-white/[0.04] rounded-md"
                         >
                           Details <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
                         </Button>
