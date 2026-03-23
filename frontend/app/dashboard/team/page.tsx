@@ -98,9 +98,9 @@ interface TeamLimits {
 }
 
 const ROLE_CONFIG = {
-  owner: { label: "Owner", icon: Crown, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  editor: { label: "Editor", icon: Pencil, color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
-  viewer: { label: "View Only", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  owner: { label: "Owner", icon: Crown, color: "bg-violet-500/10 text-violet-400/80 border-violet-500/15" },
+  editor: { label: "Editor", icon: Pencil, color: "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" },
+  viewer: { label: "View Only", icon: Eye, color: "bg-white/[0.04] text-white/40 border-white/[0.06]" },
 }
 
 export default function TeamPage() {
@@ -351,133 +351,131 @@ export default function TeamPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Team Management</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage team members and permissions</p>
+      <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+        <div className="animate-slide-up delay-0">
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+            Team <span className="italic text-emerald-400/90">Management</span>
+          </h2>
+          <p className="text-[14px] text-white/35">Manage team members and permissions</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse bg-white/5 rounded-xl h-24 border border-white/10" />
+            <div key={i} className="animate-pulse bg-white/[0.02] rounded-xl h-24 border border-white/[0.06]" />
           ))}
         </div>
-        <div className="animate-pulse bg-white/5 rounded-xl h-64 border border-white/10" />
+        <div className="animate-pulse bg-white/[0.02] rounded-xl h-64 border border-white/[0.06]" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up delay-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Team Management</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage team members and permissions</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+            Team <span className="italic text-emerald-400/90">Management</span>
+          </h2>
+          <p className="text-[14px] text-white/35">Manage team members and permissions</p>
         </div>
         {isOwner && (
           <Button
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white w-full sm:w-auto"
+            className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-4 text-[13px] rounded-lg w-full sm:w-auto disabled:opacity-50"
             onClick={() => setIsInviteModalOpen(true)}
             disabled={!limits?.canAddMore}
           >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Invite Team Member
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Invite Member
           </Button>
         )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
-                <Users className="w-4 h-4 text-cyan-400" />
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-slide-up delay-1">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-emerald-400/70" />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Total Members</p>
-                <p className="text-2xl font-bold text-white">{members.length}</p>
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Members</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">{members.length}</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30">
-                <Clock className="w-4 h-4 text-amber-400" />
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                <Clock className="w-3.5 h-3.5 text-amber-400/70" />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Pending Invitations</p>
-                <p className="text-2xl font-bold text-amber-400">{invitations.length}</p>
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Pending</span>
             </div>
+            <p className={`text-3xl font-semibold tracking-tight ${invitations.length > 0 ? "text-amber-400" : "text-white/40"}`}>{invitations.length}</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
-                <Shield className="w-4 h-4 text-purple-400" />
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-violet-400/70" />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Seats Used</p>
-                <p className="text-2xl font-bold text-white">
-                  {limits ? `${limits.current}` : "0"}
-                  <span className="text-sm font-normal text-gray-400"> / {limits?.max || 0}</span>
-                </p>
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Seats</span>
             </div>
-            {limits && limits.max < 999 && (
-              <div className="mt-2">
-                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div>
+              <p className="text-3xl font-semibold text-white tracking-tight">
+                {limits ? limits.current : 0}
+                <span className="text-lg text-white/20 font-normal">/{limits?.max || 0}</span>
+              </p>
+              {limits && limits.max < 999 && (
+                <div className="mt-2 w-full h-1 bg-white/[0.04] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-cyan-500 rounded-full transition-all"
+                    className="h-full bg-emerald-400/60 rounded-full transition-all"
                     style={{ width: `${Math.min(100, (limits.current / limits.max) * 100)}%` }}
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardContent className="p-4">
-          <div className="relative">
-            <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search team members..."
-              className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Search ── */}
+      <div className="animate-slide-up delay-2">
+        <div className="relative">
+          <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+          <Input
+            placeholder="Search team members..."
+            className="pl-9 h-9 bg-white/[0.03] border-white/[0.06] text-white/80 placeholder:text-white/20 text-[12px] rounded-lg focus:border-emerald-500/30 focus:bg-white/[0.05] transition-all"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-      {/* Team Members Table */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white">Team Members</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* ── Team Members ── */}
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-3">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Users className="w-4 h-4 text-white/30" />
+            <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Team Members</span>
+          </div>
+
           {filteredMembers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">No team members found</p>
+            <div className="text-center py-10">
+              <Users className="w-8 h-8 mx-auto mb-2 text-white/10" />
+              <p className="text-[12px] text-white/25">No team members found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-gray-400 font-medium">Member</TableHead>
-                    <TableHead className="text-gray-400 font-medium">Role</TableHead>
-                    <TableHead className="text-gray-400 font-medium hidden md:table-cell">Joined</TableHead>
+                  <TableRow className="border-white/[0.04] hover:bg-transparent">
+                    <TableHead className="text-white/30 text-[11px] font-medium uppercase tracking-wider">Member</TableHead>
+                    <TableHead className="text-white/30 text-[11px] font-medium uppercase tracking-wider">Role</TableHead>
+                    <TableHead className="text-white/30 text-[11px] font-medium uppercase tracking-wider hidden md:table-cell">Joined</TableHead>
                     {isOwner && (
-                      <TableHead className="text-gray-400 font-medium text-right">Actions</TableHead>
+                      <TableHead className="text-white/30 text-[11px] font-medium uppercase tracking-wider text-right">Actions</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
@@ -486,63 +484,63 @@ export default function TeamPage() {
                     const roleConfig = ROLE_CONFIG[member.role]
                     const RoleIcon = roleConfig.icon
                     return (
-                      <TableRow key={member.id} className="border-white/10 hover:bg-white/5">
+                      <TableRow key={member.id} className="border-white/[0.04] hover:bg-white/[0.02] group">
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-                              <span className="text-white text-sm font-bold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400/80 to-teal-600/80 flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-[10px] font-semibold">
                                 {(member.user?.full_name || member.user?.email || "?").charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-white truncate">
+                              <p className="text-[13px] font-medium text-white/80 truncate">
                                 {member.user?.full_name || "Unknown"}
                                 {member.user?.id === user?.id && (
-                                  <span className="text-xs text-gray-500 ml-1">(you)</span>
+                                  <span className="text-[10px] text-white/20 ml-1">(you)</span>
                                 )}
                               </p>
-                              <p className="text-xs text-gray-400 truncate">{member.user?.email}</p>
+                              <p className="text-[11px] text-white/25 truncate">{member.user?.email}</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("gap-1", roleConfig.color)}>
-                            <RoleIcon className="w-3 h-3" />
+                          <Badge className={cn("gap-1 text-[9px] h-[18px] px-1.5 rounded-full font-medium", roleConfig.color)}>
+                            <RoleIcon className="w-2.5 h-2.5" />
                             {roleConfig.label}
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <span className="text-sm text-gray-400">{formatDate(member.joined_at)}</span>
+                          <span className="text-[11px] text-white/25">{formatDate(member.joined_at)}</span>
                         </TableCell>
                         {isOwner && (
                           <TableCell className="text-right">
                             {member.role !== "owner" && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-white/5">
-                                    <MoreHorizontal className="w-4 h-4" />
+                                  <Button variant="ghost" size="sm" className="text-white/20 hover:text-white/60 hover:bg-white/[0.04] h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <MoreHorizontal className="w-3.5 h-3.5" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-black border-white/10">
+                                <DropdownMenuContent align="end" className="bg-[#141415] border-white/[0.08] rounded-lg">
                                   <DropdownMenuItem
-                                    className="text-gray-300 hover:text-white focus:text-white focus:bg-white/10"
+                                    className="text-white/60 focus:text-white focus:bg-white/[0.06] text-[12px]"
                                     onClick={() => {
                                       setSelectedMember(member)
                                       setNewRole(member.role)
                                       setIsRoleModalOpen(true)
                                     }}
                                   >
-                                    <Pencil className="w-4 h-4 mr-2" />
+                                    <Pencil className="w-3.5 h-3.5 mr-2" />
                                     Change Role
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-500/10"
+                                    className="text-red-400/70 focus:text-red-400 focus:bg-red-500/[0.06] text-[12px]"
                                     onClick={() => {
                                       setMemberToRemove(member)
                                       setIsRemoveDialogOpen(true)
                                     }}
                                   >
-                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" />
                                     Remove
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -560,64 +558,62 @@ export default function TeamPage() {
         </CardContent>
       </Card>
 
-      {/* Pending Invitations */}
+      {/* ── Pending Invitations ── */}
       {isOwner && invitations.length > 0 && (
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-amber-400" />
-              <CardTitle className="text-white">Pending Invitations</CardTitle>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-4">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Mail className="w-4 h-4 text-amber-400/50" />
+              <span className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Pending Invitations</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-1">
               {invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 gap-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 -mx-1 rounded-lg hover:bg-white/[0.03] transition-colors gap-2 group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-4 h-4 text-amber-400" />
+                    <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-3.5 h-3.5 text-amber-400/60" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{inv.email}</p>
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
-                        <Badge className={cn("text-[10px]", ROLE_CONFIG[inv.role as keyof typeof ROLE_CONFIG]?.color || "bg-gray-500/20 text-gray-400")}>
+                      <p className="text-[13px] font-medium text-white/80 truncate">{inv.email}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-white/25">
+                        <Badge className={cn("text-[9px] h-[16px] px-1 rounded-full font-medium", ROLE_CONFIG[inv.role as keyof typeof ROLE_CONFIG]?.color || "bg-white/[0.04] text-white/35")}>
                           {ROLE_CONFIG[inv.role as keyof typeof ROLE_CONFIG]?.label || inv.role}
                         </Badge>
                         <span>Expires {formatDate(inv.expires_at)}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-1.5 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-gray-400 hover:text-white hover:bg-white/5 text-xs"
+                      className="text-white/25 hover:text-white/60 hover:bg-white/[0.04] h-6 px-2 text-[10px] rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleResendInvitation(inv.id)}
                       disabled={resendingId === inv.id || revokingId === inv.id}
                     >
                       {resendingId === inv.id ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        <Loader2 className="w-2.5 h-2.5 mr-0.5 animate-spin" />
                       ) : (
-                        <RefreshCw className="w-3 h-3 mr-1" />
+                        <RefreshCw className="w-2.5 h-2.5 mr-0.5" />
                       )}
-                      {resendingId === inv.id ? "Resending..." : "Resend"}
+                      Resend
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                      className="text-white/15 hover:text-red-400/70 hover:bg-red-500/[0.05] h-6 px-2 text-[10px] rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleRevokeInvitation(inv.id)}
                       disabled={revokingId === inv.id || resendingId === inv.id}
                     >
                       {revokingId === inv.id ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        <Loader2 className="w-2.5 h-2.5 mr-0.5 animate-spin" />
                       ) : (
-                        <X className="w-3 h-3 mr-1" />
+                        <X className="w-2.5 h-2.5 mr-0.5" />
                       )}
-                      {revokingId === inv.id ? "Revoking..." : "Revoke"}
+                      Revoke
                     </Button>
                   </div>
                 </div>
@@ -628,74 +624,75 @@ export default function TeamPage() {
       )}
 
       {/* Invite Modal */}
+      {/* ── Invite Modal ── */}
       <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-        <DialogContent className="bg-black border-white/10 sm:max-w-md" showCloseButton={false}>
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white sm:max-w-md rounded-xl" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle className="text-white">Invite Team Member</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Send an invitation email. They'll need to accept to join your team.
+            <DialogTitle className="text-[16px] font-medium text-white">Invite Team Member</DialogTitle>
+            <DialogDescription className="text-[13px] text-white/35">
+              Send an invitation email. They'll need to accept to join.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-gray-300">Email Address</Label>
+              <Label className="text-white/60 text-[13px]">Email Address</Label>
               <Input
                 type="email"
                 placeholder="colleague@company.com"
-                className="bg-black/50 border-white/10 text-white"
+                className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Role</Label>
+              <Label className="text-white/60 text-[13px]">Role</Label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
-                <SelectTrigger className="bg-black/50 border-white/10 text-white">
+                <SelectTrigger className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-black border-white/10 z-[200]">
-                  <SelectItem value="editor" className="text-gray-300 focus:text-white focus:bg-white/10">
-                    Editor — Can run analyses & manage integrations
+                <SelectContent className="bg-[#141415] border-white/[0.08] rounded-lg z-[200]">
+                  <SelectItem value="editor" className="text-white/60 text-[12px] focus:bg-white/[0.06] focus:text-white">
+                    Editor — Run analyses & manage integrations
                   </SelectItem>
-                  <SelectItem value="viewer" className="text-gray-300 focus:text-white focus:bg-white/10">
-                    View Only — Can view dashboards & reports
+                  <SelectItem value="viewer" className="text-white/60 text-[12px] focus:bg-white/[0.06] focus:text-white">
+                    View Only — View dashboards & reports
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {limits && (
-              <p className="text-xs text-gray-500">
+              <p className="text-[11px] text-white/20">
                 {seatsRemaining > 0
-                  ? `${seatsRemaining} seat(s) remaining on your ${limits.planName} plan`
-                  : `No seats remaining. Upgrade your plan to invite more members.`}
+                  ? `${seatsRemaining} seat(s) remaining on ${limits.planName}`
+                  : `No seats remaining. Upgrade to invite more.`}
               </p>
             )}
           </div>
 
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setIsInviteModalOpen(false)}
-              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+              className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
             >
               Cancel
             </Button>
             <Button
               onClick={handleInvite}
               disabled={isSending || !inviteEmail || seatsRemaining <= 0}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
             >
               {isSending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="w-3.5 h-3.5 mr-1.5" />
                   Send Invitation
                 </>
               )}
@@ -704,26 +701,26 @@ export default function TeamPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Role Change Modal */}
+      {/* ── Role Change Modal ── */}
       <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
-        <DialogContent className="bg-black border-white/10 sm:max-w-sm" showCloseButton={false}>
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white sm:max-w-sm rounded-xl" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle className="text-white">Change Role</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-[16px] font-medium text-white">Change Role</DialogTitle>
+            <DialogDescription className="text-[13px] text-white/35">
               Update the role for {selectedMember?.user?.full_name || selectedMember?.user?.email}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-2">
             <Select value={newRole} onValueChange={setNewRole}>
-              <SelectTrigger className="bg-black/50 border-white/10 text-white">
+              <SelectTrigger className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/10 z-[200]">
-                <SelectItem value="editor" className="text-gray-300 focus:text-white focus:bg-white/10">
+              <SelectContent className="bg-[#141415] border-white/[0.08] rounded-lg z-[200]">
+                <SelectItem value="editor" className="text-white/60 text-[12px] focus:bg-white/[0.06] focus:text-white">
                   Editor
                 </SelectItem>
-                <SelectItem value="viewer" className="text-gray-300 focus:text-white focus:bg-white/10">
+                <SelectItem value="viewer" className="text-white/60 text-[12px] focus:bg-white/[0.06] focus:text-white">
                   View Only
                 </SelectItem>
               </SelectContent>
@@ -732,21 +729,21 @@ export default function TeamPage() {
 
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setIsRoleModalOpen(false)}
               disabled={isSavingRole}
-              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+              className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRoleChange}
               disabled={isSavingRole}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
             >
               {isSavingRole ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Saving...
                 </>
               ) : (
@@ -757,34 +754,34 @@ export default function TeamPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Member Confirmation */}
+      {/* ── Remove Member Confirmation ── */}
       <AlertDialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
-        <AlertDialogContent className="bg-black border-white/10">
+        <AlertDialogContent className="!bg-[#111113] !border-white/[0.08] rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Remove Team Member</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-[16px] font-medium text-white">Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-white/35">
               Are you sure you want to remove{" "}
-              <span className="text-white font-medium">
+              <span className="text-white/70 font-medium">
                 {memberToRemove?.user?.full_name || memberToRemove?.user?.email}
-              </span>{" "}
-              from the team? They will lose access to the company workspace.
+              </span>
+              ? They will lose access to the workspace.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
               disabled={isRemoving}
-              className="border-white/10 bg-black/50 text-white hover:bg-white/10 hover:text-white"
+              className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemoveMember}
               disabled={isRemoving}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-500/90 hover:bg-red-500 text-white font-medium rounded-lg h-9 text-[13px]"
             >
               {isRemoving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Removing...
                 </>
               ) : (
