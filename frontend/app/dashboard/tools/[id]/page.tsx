@@ -2537,7 +2537,7 @@ export default function ToolDetailPage() {
                 {costLeakAnalysis.overallSummary && (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Total Findings */}
-                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 overflow-hidden group hover:border-slate-600/50 transition-all">
+                    <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden group hover:border-slate-600/50 transition-all">
                       <CardContent className="p-4 relative">
                         <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
                         <div className="flex items-start justify-between">
@@ -2980,22 +2980,23 @@ export default function ToolDetailPage() {
 
             {/* Empty State */}
             {!costLeakAnalysis && !isLoadingAnalysis && (
-              <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50">
-                <CardContent className="py-16 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/10 mb-6">
-                    <BarChart3 className="w-10 h-10 text-amber-400" />
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden relative">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/[0.04] rounded-full blur-3xl" />
+                <CardContent className="py-16 text-center relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-6">
+                    <BarChart3 className="w-7 h-7 text-white/20" />
                   </div>
-                  <h3 className="text-white font-bold text-xl mb-2">Ready to Analyze</h3>
-                  <p className="text-gray-400 max-w-md mx-auto mb-6">
+                  <h3 className="text-xl font-display text-white mb-2">Ready to Analyze</h3>
+                  <p className="text-[13px] text-white/30 max-w-md mx-auto mb-6 leading-relaxed">
                     {isMicrosoft365
-                      ? "Our AI will analyze your Microsoft 365 licenses to identify inactive users, orphaned licenses, over-provisioning, and cost optimization opportunities."
-                      : "Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and other cost optimization opportunities."}
+                      ? "Our AI will analyze your Microsoft 365 licenses to identify inactive users, orphaned licenses, and cost optimization opportunities."
+                      : "Our AI will scan your supplier invoices to identify duplicate payments, price anomalies, and savings opportunities."}
                   </p>
                   <Button
                     onClick={handleAnalyzeCostLeaks}
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-5 text-[13px] rounded-lg"
                   >
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="w-3.5 h-3.5 mr-1.5" />
                     Start Analysis
                   </Button>
                 </CardContent>
@@ -3004,14 +3005,15 @@ export default function ToolDetailPage() {
 
             {/* Loading State */}
             {isLoadingAnalysis && (
-              <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50">
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                 <CardContent className="py-16 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-6">
-                    <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
+                  <div className="relative w-14 h-14 mx-auto mb-6">
+                    <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+                    <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
                   </div>
-                  <h3 className="text-white font-bold text-xl mb-2">Analyzing Your Data</h3>
-                  <p className="text-gray-400 max-w-md mx-auto">
-                    Our AI is scanning your invoices for cost optimization opportunities. This usually takes a few seconds...
+                  <h3 className="text-[16px] font-medium text-white mb-2">Analyzing Your Data</h3>
+                  <p className="text-[13px] text-white/30 max-w-md mx-auto">
+                    Scanning for cost optimization opportunities. This usually takes a few seconds...
                   </p>
                 </CardContent>
               </Card>
