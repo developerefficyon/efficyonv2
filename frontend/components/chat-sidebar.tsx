@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Plus,
   PanelLeftClose,
-  PanelLeft,
   MoreHorizontal,
   Trash2,
   Pencil,
@@ -249,63 +248,36 @@ export function ChatSidebar({
     </div>
   )
 
-  // Mobile: Use Sheet (drawer)
+  // Mobile: Use Sheet (drawer) — toggle button is handled by the parent page's top bar
   if (isMobile) {
     return (
-      <>
-        {/* Mobile toggle button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="fixed top-20 left-4 z-50 h-10 w-10 bg-black/80 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 lg:hidden"
+      <Sheet open={isOpen} onOpenChange={onToggle}>
+        <SheetContent
+          side="left"
+          className="w-[280px] p-0 bg-black border-r border-white/10"
         >
-          <PanelLeft className="h-5 w-5" />
-        </Button>
-
-        <Sheet open={isOpen} onOpenChange={onToggle}>
-          <SheetContent
-            side="left"
-            className="w-[280px] p-0 bg-black border-r border-white/10"
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Chat History</SheetTitle>
-            </SheetHeader>
-            {sidebarContent}
-          </SheetContent>
-        </Sheet>
-      </>
+          <SheetHeader className="sr-only">
+            <SheetTitle>Chat History</SheetTitle>
+          </SheetHeader>
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
     )
   }
 
-  // Desktop: Inline sidebar (not fixed, flows with content)
+  // Desktop: Inline sidebar — toggle button is handled by the parent page's top bar
   return (
-    <>
-      {/* Desktop toggle button (when sidebar is closed) */}
-      {!isOpen && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="absolute top-8 left-8 z-40 h-10 w-10 bg-black/80 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10"
-        >
-          <PanelLeft className="h-5 w-5" />
-        </Button>
+    <div
+      className={cn(
+        "h-full transition-all duration-300 ease-in-out shrink-0 border-r border-white/10",
+        isOpen ? "block" : "hidden"
       )}
-
-      {/* Desktop sidebar - inline with Card styling */}
-      <div
-        className={cn(
-          "h-full transition-all duration-300 ease-in-out shrink-0 py-3 sm:py-4 lg:py-6 pl-3 sm:pl-4 lg:pl-6",
-          isOpen ? "block" : "hidden"
-        )}
-        style={{ width: isOpen ? "304px" : "0px" }}
-      >
-        <div className="h-full w-[280px] rounded-xl border border-white/10 overflow-hidden">
-          {sidebarContent}
-        </div>
+      style={{ width: isOpen ? "280px" : "0px" }}
+    >
+      <div className="h-full w-[280px] overflow-hidden">
+        {sidebarContent}
       </div>
-    </>
+    </div>
   )
 }
 

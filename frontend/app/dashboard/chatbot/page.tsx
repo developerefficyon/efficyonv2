@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, type ChangeEvent } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   AlertDialog,
@@ -16,7 +15,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  MessageSquare,
   Send,
   Loader2,
   Bot,
@@ -32,6 +30,7 @@ import {
   Brain,
   ChevronDown,
   Check,
+  PanelLeft,
 } from "lucide-react"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTokens } from "@/lib/token-context"
@@ -57,27 +56,23 @@ const suggestedQuestions = {
     "How can I reduce my software subscription costs?",
     "Which tools have unused seats?",
     "Show me my monthly spending trends",
-    "What integrations need attention?",
   ],
   fortnox: [
     "Show me all overdue invoices",
     "What's my total outstanding amount?",
     "Analyze my spending patterns",
-    "Show supplier invoice breakdown",
     "Find potential duplicate payments",
   ],
   microsoft365: [
     "Show license utilization",
     "Which users haven't signed in recently?",
     "How many unused licenses do I have?",
-    "Analyze user activity patterns",
     "What's my license cost optimization potential?",
   ],
   hubspot: [
     "Show HubSpot seat utilization",
     "Which HubSpot users are inactive?",
     "How many unused HubSpot seats do I have?",
-    "Analyze HubSpot user activity",
     "What's my HubSpot cost optimization potential?",
   ],
   quickbooks: [
@@ -85,28 +80,23 @@ const suggestedQuestions = {
     "Analyze vendor payment patterns",
     "Find potential duplicate vendor payments",
     "Show expense category breakdown",
-    "What are my recurring subscriptions?",
   ],
   shopify: [
     "Show my top-selling products",
     "Which apps cost the most per month?",
     "Find dead inventory items",
     "Analyze product margins",
-    "Show order volume and revenue trends",
   ],
   comparison: [
     "Run a deep analysis across all platforms",
     "Show cost vs. activity gap analysis",
     "What's my cost per active user?",
-    "Compare software spending with user productivity",
     "Find combined optimization opportunities",
-    "Which software has the lowest utilization?",
   ],
   default: [
     "Show me a summary of the data",
     "What insights can you find?",
     "Analyze cost optimization opportunities",
-    "Show me key metrics",
     "What actions do you recommend?",
   ],
   fileUpload: [
@@ -114,7 +104,6 @@ const suggestedQuestions = {
     "Find duplicate or unusual payments",
     "Show spending trends over time",
     "Which vendors have the highest spend?",
-    "Are there any anomalies in this data?",
   ],
 }
 
@@ -240,10 +229,9 @@ export default function ChatbotPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showTokenConfirmation, setShowTokenConfirmation] = useState(false)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
-  // Cache for research data - cleared when switching conversations or tabs
   const [researchCache, setResearchCache] = useState<ResearchCache>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // File upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -253,7 +241,6 @@ export default function ChatbotPage() {
   // Get connected tools
   const { tools, refreshTools } = useConnectedTools()
 
-  // Get current tool info and chat type
   // Determine chatType based on activeTab
   const chatType: "general" | "comparison" | "tool" =
     activeTab === "general" ? "general" :
@@ -262,7 +249,7 @@ export default function ChatbotPage() {
   const currentTool = chatType === "tool" ? tools.find((t) => t.id === activeTab) : null
   const currentToolId = chatType === "tool" ? activeTab : null
 
-  // Chat conversations hook - filtered by chat type and tool
+  // Chat conversations hook
   const {
     conversations,
     activeConversationId,
@@ -308,7 +295,7 @@ export default function ChatbotPage() {
   const handleSelectConversation = async (id: string) => {
     setActiveConversationId(id)
     setError(null)
-    setResearchCache({}) // Clear research cache for new conversation
+    setResearchCache({})
 
     const conversation = await loadConversation(id)
     if (conversation?.messages) {
@@ -323,7 +310,6 @@ export default function ChatbotPage() {
       setMessages(loadedMessages)
     }
 
-    // Close sidebar on mobile after selection
     if (isMobile) {
       setSidebarOpen(false)
     }
@@ -335,48 +321,36 @@ export default function ChatbotPage() {
     if (newId) {
       setMessages([])
       setError(null)
-      setResearchCache({}) // Clear research cache for new conversation
-      // Close sidebar on mobile after creating new chat
+      setResearchCache({})
       if (isMobile) {
         setSidebarOpen(false)
       }
     }
   }
 
-  // Token cost for deep research (base=1, multiplied by AI model tier)
+  // Token cost for deep research
   const modelMultiplier = aiModel?.multiplier || 1
   const DEEP_RESEARCH_TOKEN_COST = 1 * modelMultiplier
 
-  // Classify whether a prompt needs actual data fetching (heavy) or can be answered for free (basic)
+  // Classify whether a prompt needs actual data fetching
   const isHeavyPrompt = useCallback((text: string): boolean => {
     const q = text.toLowerCase().trim()
-
-    // Heavy keywords — anything that asks for actual data from connected tools
     const heavyPatterns = [
-      // Data fetch triggers
       /\b(show|list|display|get|fetch|pull|retrieve|export)\b.*\b(invoice|bill|expense|payment|license|user|seat|subscription|supplier|vendor|customer|data|report|metric|number|amount|record|transaction|receipt)\b/,
-      // Analysis triggers requiring real data
       /\b(analyze|analyse|audit|scan|check|review|inspect|examine)\b.*\b(my|our|the|this|company|account|spending|spend|cost|usage|utilization|activity|invoice|license|tool|subscription|platform)\b/,
-      // Specific data questions
       /\b(how (much|many)|what('s| is| are) (my|our|the)|total|average|sum|count|breakdown|trend|top|highest|lowest|most|least)\b.*\b(spend|cost|invoice|license|user|seat|payment|expense|subscription|vendor|supplier|tool)\b/,
-      // Direct commands for data
       /\b(find|detect|identify|spot|flag)\b.*\b(duplicate|unused|inactive|overdue|anomal|waste|saving|optimization|opportunity|leak|overlap|redundant)\b/,
-      // Comparison data requests
       /\b(compare|cross-reference|correlate|match|gap analysis|cost per)\b/,
-      // Specific tool references asking for their data
       /\b(fortnox|microsoft 365|m365|hubspot|quickbooks|qbo|shopify)\b.*\b(data|invoice|bill|license|user|seat|report|dashboard|order|product|app|inventory|vendor|expense)\b/,
-      // Run/execute actions
       /\b(run|execute|perform|do|start)\b.*\b(analysis|audit|scan|research|deep dive|report)\b/,
     ]
-
     return heavyPatterns.some((pattern) => pattern.test(q))
   }, [])
 
-  // Check if this chat type requires deep research (tool or comparison, not general)
   const requiresResearch = activeTab !== "general"
 
   // File upload helpers
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const MAX_FILE_SIZE = 10 * 1024 * 1024
   const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".pdf"]
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -410,17 +384,15 @@ export default function ChatbotPage() {
       const reader = new FileReader()
       reader.onload = () => {
         const result = reader.result as string
-        resolve(result.split(",")[1]) // Remove data:... prefix
+        resolve(result.split(",")[1])
       }
       reader.onerror = reject
       reader.readAsDataURL(file)
     })
   }
 
-  // Check if we have cached research data for the current chat type
   const hasCachedResearch = () => {
     if (activeTab === "comparison") {
-      // For comparison, check if at least 2 platforms have data
       const hasFortnox = !!researchCache.fortnoxData
       const hasM365 = !!researchCache.m365Data
       const hasHubSpot = !!researchCache.hubspotData
@@ -429,14 +401,13 @@ export default function ChatbotPage() {
     } else if (activeTab !== "general") {
       return !!researchCache.toolData
     }
-    return true // General chat doesn't need research
+    return true
   }
 
   const sendMessage = async (messageText?: string, skipConfirmation = false) => {
     const text = messageText || input.trim()
     if ((!text && !selectedFile) || isLoading) return
 
-    // File upload token confirmation (new file without cached analysis)
     const requiresFileToken = !!selectedFile && !researchCache.fileAnalysis
     if (requiresFileToken && !skipConfirmation) {
       const availableTokens = tokenBalance?.available ?? 0
@@ -451,10 +422,7 @@ export default function ChatbotPage() {
       return
     }
 
-    // For tool/comparison chat without cached research, show confirmation for token usage
-    // But only if the prompt actually needs data fetching (heavy prompt)
     if (!selectedFile && requiresResearch && !hasCachedResearch() && !skipConfirmation && isHeavyPrompt(text)) {
-      // Check if user has enough tokens
       const availableTokens = tokenBalance?.available ?? 0
       if (availableTokens < DEEP_RESEARCH_TOKEN_COST) {
         toast.error("Insufficient tokens", {
@@ -462,13 +430,11 @@ export default function ChatbotPage() {
         })
         return
       }
-      // Store the message and show confirmation
       setPendingMessage(text)
       setShowTokenConfirmation(true)
       return
     }
 
-    // Create conversation if none exists
     let conversationId = activeConversationId
     if (!conversationId) {
       conversationId = await createConversation()
@@ -488,7 +454,6 @@ export default function ChatbotPage() {
     setInput("")
     setIsLoading(true)
 
-    // Save user message to database
     addMessageToConversation(conversationId, "user", text)
 
     try {
@@ -503,7 +468,6 @@ export default function ChatbotPage() {
       let data: any
 
       if (selectedFile || researchCache.fileAnalysis) {
-        // File upload chat
         const messageText = userMessage.content
         let fileData: string | undefined
         let fileName: string | undefined
@@ -537,7 +501,6 @@ export default function ChatbotPage() {
 
         data = await response.json()
 
-        // Cache file analysis for follow-ups
         if (data.fileAnalysis) {
           setResearchCache((prev) => ({ ...prev, fileAnalysis: data.fileAnalysis }))
         }
@@ -548,7 +511,6 @@ export default function ChatbotPage() {
 
         clearFile()
       } else if (activeTab === "general") {
-        // General chat - use existing endpoint (always free)
         response = await fetch(`${apiBase}/api/ai/chat`, {
           method: "POST",
           headers: {
@@ -568,7 +530,6 @@ export default function ChatbotPage() {
 
         data = await response.json()
       } else if (activeTab !== "general" && !isHeavyPrompt(text)) {
-        // Basic/general question on a tool or comparison tab — route to free endpoint
         response = await fetch(`${apiBase}/api/ai/chat`, {
           method: "POST",
           headers: {
@@ -588,7 +549,6 @@ export default function ChatbotPage() {
 
         data = await response.json()
       } else if (activeTab === "comparison") {
-        // Cross-platform comparison - send cached data if available (needs at least 2 platforms)
         const hasFortnox = !!researchCache.fortnoxData
         const hasM365 = !!researchCache.m365Data
         const hasHubSpot = !!researchCache.hubspotData
@@ -624,7 +584,6 @@ export default function ChatbotPage() {
 
         data = await response.json()
 
-        // Cache the research data for follow-up questions
         if (data.researchData) {
           setResearchCache({
             fortnoxData: data.researchData.fortnoxData,
@@ -633,12 +592,10 @@ export default function ChatbotPage() {
           })
         }
 
-        // Refresh token balance if tokens were used
         if (data.tokensUsed > 0) {
           await refreshTokenBalance()
         }
       } else {
-        // Tool-specific chat - send cached data if available
         const dataType = detectDataType(text)
         const cachedData = researchCache.toolData ? researchCache.toolData : undefined
 
@@ -668,7 +625,6 @@ export default function ChatbotPage() {
 
         data = await response.json()
 
-        // Cache the tool data for follow-up questions
         if (data.toolData) {
           setResearchCache({
             toolData: data.toolData,
@@ -676,7 +632,6 @@ export default function ChatbotPage() {
           })
         }
 
-        // Refresh token balance if tokens were used
         if (data.tokensUsed > 0) {
           await refreshTokenBalance()
         }
@@ -690,64 +645,46 @@ export default function ChatbotPage() {
       }
 
       setMessages((prev) => [...prev, assistantMessage])
-
-      // Save assistant message to database
       addMessageToConversation(conversationId, "assistant", assistantMessage.content)
     } catch (err) {
       console.error("Chat error:", err)
       const errMsg = err instanceof Error ? err.message : "An error occurred"
       setError(errMsg)
       if (errMsg.includes("expired") && errMsg.includes("Tools page")) {
-        toast.error("Connection expired", {
-          description: errMsg,
-        })
+        toast.error("Connection expired", { description: errMsg })
       } else {
-        toast.error("Failed to send message", {
-          description: errMsg,
-        })
+        toast.error("Failed to send message", { description: errMsg })
       }
     } finally {
       setIsLoading(false)
-      inputRef.current?.focus()
+      textareaRef.current?.focus()
     }
   }
 
-  // Detect data type from question for tool-specific queries
   const detectDataType = (question: string): string => {
     const q = question.toLowerCase()
-
-    // Fortnox data types
     if (q.includes("invoice") && !q.includes("supplier")) return "invoices"
     if (q.includes("supplier invoice") || q.includes("vendor invoice") || q.includes("bill")) return "supplier-invoices"
     if (q.includes("customer")) return "customers"
     if (q.includes("supplier") || q.includes("vendor")) return "suppliers"
     if (q.includes("expense")) return "expenses"
     if (q.includes("cost leak") || q.includes("saving") || q.includes("optimize") || q.includes("duplicate")) return "cost-leaks"
-
-    // Microsoft 365 data types
     if (q.includes("license") || q.includes("subscription")) return "licenses"
     if (q.includes("user") || q.includes("sign in") || q.includes("login") || q.includes("inactive")) return "users"
     if (q.includes("usage") || q.includes("activity") || q.includes("teams") || q.includes("mailbox")) return "usage"
-
-    // HubSpot data types
     if (q.includes("seat") || q.includes("hubspot user")) return "users"
     if (q.includes("hubspot account") || q.includes("portal")) return "account"
-
-    // QuickBooks data types
     if (q.includes("bill") || q.includes("vendor payment")) return "bills"
     if (q.includes("quickbooks expense") || q.includes("purchase")) return "expenses"
     if (q.includes("quickbooks vendor") || q.includes("qbo vendor")) return "vendors"
     if (q.includes("chart of accounts") || q.includes("account list")) return "accounts"
-
-    // Shopify data types
     if (q.includes("order") || q.includes("revenue") || q.includes("fulfillment")) return "orders"
     if (q.includes("product") || q.includes("catalog") || q.includes("inventory")) return "products"
     if (q.includes("app charge") || q.includes("app subscription") || q.includes("installed app")) return "app-charges"
-
     return "general"
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -760,11 +697,9 @@ export default function ChatbotPage() {
     await handleNewConversation()
   }
 
-  // Handle token confirmation for comparison chat
   const handleConfirmTokenUsage = () => {
     setShowTokenConfirmation(false)
     if (pendingMessage) {
-      // Send with skipConfirmation flag to avoid infinite loop
       sendMessage(pendingMessage, true)
       setPendingMessage(null)
     }
@@ -775,7 +710,6 @@ export default function ChatbotPage() {
     setPendingMessage(null)
   }
 
-  // Get suggested questions for current tab
   const getSuggestedQuestions = () => {
     if (selectedFile || researchCache.fileAnalysis) return suggestedQuestions.fileUpload
     if (activeTab === "general") return suggestedQuestions.general
@@ -788,7 +722,6 @@ export default function ChatbotPage() {
     return suggestedQuestions.default
   }
 
-  // Get title for current tab
   const getTabTitle = () => {
     if (activeTab === "general") return "General Assistant"
     if (activeTab === "comparison") return "Cross-Platform Analysis"
@@ -796,38 +729,47 @@ export default function ChatbotPage() {
     return tool ? `${getToolDisplayName(tool.provider)} Assistant` : "Tool Assistant"
   }
 
-  // Get description for current tab
-  const getTabDescription = () => {
-    if (activeTab === "general") {
-      return "Ask questions about your tools, costs, and optimizations"
-    }
-    if (activeTab === "comparison") {
-      return "Cross-reference data from connected platforms for unified insights"
-    }
-    const tool = tools.find((t) => t.id === activeTab)
-    if (tool) {
-      const provider = tool.provider.toLowerCase()
-      if (provider === "fortnox") {
-        return "Ask about invoices, expenses, customers, and financial analysis"
-      }
-      if (provider === "microsoft365" || provider === "microsoft 365") {
-        return "Ask about licenses, users, usage, and optimization opportunities"
-      }
-      if (provider === "hubspot") {
-        return "Ask about HubSpot seats, users, activity, and cost optimization"
-      }
-      if (provider === "quickbooks") {
-        return "Ask about invoices, bills, vendors, expenses, and financial analysis"
-      }
-      if (provider === "shopify") {
-        return "Ask about orders, products, app subscriptions, inventory, and margins"
-      }
-    }
-    return "Ask questions about this tool's data and get insights"
+  const getPlaceholder = () => {
+    if (filePreview) return `Ask about ${filePreview.name}...`
+    if (activeTab === "general") return "Ask anything about your tools, costs, or optimizations..."
+    if (activeTab === "comparison") return "Ask about cross-platform insights..."
+    return `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
   }
 
+  // Token info line
+  const getTokenInfo = () => {
+    if (selectedFile && !researchCache.fileAnalysis) {
+      return {
+        text: `File analysis costs ${DEEP_RESEARCH_TOKEN_COST} token${DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}${modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free`,
+        icon: <Coins className="w-3 h-3" />,
+        color: "text-gray-500",
+        balance: tokenBalance ? `${tokenBalance.available} available` : null,
+      }
+    }
+    if (researchCache.fileAnalysis) {
+      return { text: "File data loaded — follow-up questions are free", icon: <Sparkles className="w-3 h-3" />, color: "text-green-400", balance: null }
+    }
+    if (activeTab === "general") {
+      return { text: "Unlimited — no credits required", icon: null, color: "text-gray-500", balance: null }
+    }
+    if (hasCachedResearch()) {
+      return { text: "Research data loaded — follow-ups are free", icon: <Sparkles className="w-3 h-3" />, color: "text-green-400", balance: null }
+    }
+    if (input.trim() && !isHeavyPrompt(input)) {
+      return { text: "General question — free", icon: <Sparkles className="w-3 h-3" />, color: "text-green-400", balance: null }
+    }
+    return {
+      text: `Data analysis costs ${DEEP_RESEARCH_TOKEN_COST} token${DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}${modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, general questions are free`,
+      icon: <Coins className="w-3 h-3" />,
+      color: "text-gray-500",
+      balance: tokenBalance ? `${tokenBalance.available} available` : null,
+    }
+  }
+
+  const tokenInfo = getTokenInfo()
+
   return (
-    <div className="flex h-[calc(100vh-10rem)] -mx-3 sm:-mx-4 lg:-mx-6 -mb-3 sm:-mb-4 lg:-mb-6 relative">
+    <div className="flex h-[calc(100vh-3.5rem)] -mx-3 sm:-mx-4 lg:-mx-6 -mb-3 sm:-mb-4 lg:-mb-6 -mt-3 sm:-mt-4 lg:-mt-6 relative">
       {/* Chat Sidebar */}
       <ChatSidebar
         conversations={conversations}
@@ -844,298 +786,264 @@ export default function ChatbotPage() {
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="mb-4 pt-3 sm:pt-4 lg:pt-6 px-3 sm:px-4 lg:px-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Chatbot</h2>
-          <p className="text-sm sm:text-base text-gray-400 mb-4">
-            AI-powered assistant to help you optimize your SaaS costs
-          </p>
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Slim Top Bar — toggle + tabs + model + new chat */}
+        <div className="shrink-0 flex items-center gap-2 px-3 sm:px-4 lg:px-5 py-2 border-b border-white/10 bg-black/40 backdrop-blur-sm">
+          {/* Sidebar toggle — always visible when sidebar is closed */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Show conversations"
+            >
+              <PanelLeft className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* Tool Tabs */}
-          <ToolChatTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          {/* Tab area (scrollable) */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <ToolChatTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          </div>
+
+          {/* Right controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <InlineModelSelector />
+            {messages.length > 0 && !isViewer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearChat}
+                className="h-8 px-2.5 text-gray-400 hover:text-white hover:bg-white/10 text-xs gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">New Chat</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Chat Card - Takes remaining height */}
-        <div className="flex-1 min-h-0 px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10 h-full flex flex-col">
-            <CardHeader className="border-b border-white/10 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
-                    <Bot className="w-5 h-5 text-cyan-400" />
+        {/* Messages Area — fills remaining space */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
+              {messages.length === 0 ? (
+                /* Empty State */
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center mb-5">
+                    <Bot className="w-7 h-7 text-cyan-400" />
                   </div>
-                  <div>
-                    <CardTitle className="text-white">{getTabTitle()}</CardTitle>
-                    <CardDescription className="text-gray-400">
-                      {getTabDescription()}
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <InlineModelSelector />
-                  {messages.length > 0 && !isViewer && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearChat}
-                      className="border-white/10 bg-black/50 text-gray-300 hover:text-white hover:bg-white/10"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      New Chat
-                    </Button>
+                  <h3 className="text-xl font-semibold text-white mb-1.5">
+                    {getTabTitle()}
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-8 max-w-sm">
+                    {isViewer
+                      ? "Select a conversation from the sidebar to review past analyses."
+                      : activeTab === "general"
+                      ? "Ask about your connected tools, subscription costs, or optimization opportunities."
+                      : activeTab === "comparison"
+                      ? "Cross-reference data from connected platforms to find cost optimizations."
+                      : `Analyze your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data for insights and cost savings.`}
+                  </p>
+                  {!isViewer && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+                      {getSuggestedQuestions().map((question, index) => (
+                        <button
+                          key={index}
+                          onClick={() => sendMessage(question)}
+                          className="group text-left p-3 rounded-xl border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] hover:border-cyan-500/30 transition-all duration-200"
+                        >
+                          <p className="text-sm text-gray-300 group-hover:text-white transition-colors leading-snug">
+                            {question}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Chat Messages Area - Flexible height */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full p-4">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center mb-4">
-                      <Sparkles className="w-8 h-8 text-cyan-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">
-                      How can I help you today?
-                    </h3>
-                    <p className="text-sm text-gray-400 mb-6 max-w-md">
-                      {isViewer
-                        ? "You can view conversation history. Select a conversation from the sidebar to review past analyses."
-                        : activeTab === "general"
-                        ? "Ask me anything about your connected tools, subscription costs, optimization opportunities, or general SaaS management questions."
-                        : activeTab === "comparison"
-                        ? "I'll cross-reference data from your connected platforms to find cost optimization opportunities, activity gaps, and prioritized recommendations."
-                        : `Ask me anything about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data. I can analyze invoices, find cost savings, and provide insights.`}
-                    </p>
-                    {!isViewer && (
-                      <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-                        {getSuggestedQuestions().map((question, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => sendMessage(question)}
-                            className="border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-cyan-500/20 hover:border-cyan-500/30 text-xs"
-                          >
-                            {question}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "flex gap-3",
-                          message.role === "user" ? "justify-end" : "justify-start"
-                        )}
-                      >
-                        {message.role === "assistant" && (
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-cyan-400" />
-                          </div>
-                        )}
-                        <div
-                          className={cn(
-                            "max-w-[85%] rounded-2xl px-4 py-3",
-                            message.role === "user"
-                              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                              : "bg-white/5 border border-white/10 text-gray-100"
-                          )}
-                        >
-                          {message.role === "assistant" ? (
-                            <ChatMessageRenderer content={message.content} />
-                          ) : (
-                            <>
-                              {message.fileName && (
-                                <div className="flex items-center gap-1.5 mb-1.5 text-xs text-white/80">
-                                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                                  <span>{message.fileName}</span>
-                                </div>
-                              )}
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                            </>
-                          )}
-                          <p
-                            className={cn(
-                              "text-[10px] mt-2",
-                              message.role === "user" ? "text-white/60" : "text-gray-500"
-                            )}
-                          >
-                            {message.timestamp.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        {message.role === "user" && (
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-                            <User className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {isLoading && (
-                      <div className="flex gap-3 justify-start">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
+              ) : (
+                /* Message List */
+                <div className="space-y-5">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "flex gap-3",
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      )}
+                    >
+                      {message.role === "assistant" && (
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <Bot className="w-4 h-4 text-cyan-400" />
                         </div>
-                        <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-                            <span className="text-sm text-gray-400">
-                              {researchCache.fileAnalysis || selectedFile
-                                ? "Parsing and analyzing your file..."
-                                : activeTab === "general"
-                                ? "Thinking..."
-                                : activeTab === "comparison"
-                                ? "Analyzing both platforms..."
-                                : "Fetching data and analyzing..."}
-                            </span>
+                      )}
+                      <div
+                        className={cn(
+                          "max-w-[85%] rounded-2xl px-4 py-3",
+                          message.role === "user"
+                            ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                            : "bg-white/5 border border-white/10 text-gray-100"
+                        )}
+                      >
+                        {message.role === "assistant" ? (
+                          <ChatMessageRenderer content={message.content} />
+                        ) : (
+                          <>
+                            {message.fileName && (
+                              <div className="flex items-center gap-1.5 mb-1.5 text-xs text-white/80">
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                                <span>{message.fileName}</span>
+                              </div>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          </>
+                        )}
+                        <p
+                          className={cn(
+                            "text-[10px] mt-2",
+                            message.role === "user" ? "text-white/60" : "text-gray-500"
+                          )}
+                        >
+                          {message.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      {message.role === "user" && (
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex gap-3 justify-start">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce [animation-delay:300ms]" />
                           </div>
+                          <span className="text-sm text-gray-400">
+                            {researchCache.fileAnalysis || selectedFile
+                              ? "Analyzing your file..."
+                              : activeTab === "general"
+                              ? "Thinking..."
+                              : activeTab === "comparison"
+                              ? "Analyzing platforms..."
+                              : "Fetching & analyzing..."}
+                          </span>
                         </div>
                       </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-                </ScrollArea>
-              </div>
-
-              {/* Error Display */}
-              {error && (
-                <div className="mx-4 mb-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2 shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
+            </div>
+          </ScrollArea>
+        </div>
 
-              {/* Input Area - Fixed at bottom */}
-              <div className="p-4 border-t border-white/10 shrink-0 bg-black/40">
-                {isViewer ? (
-                  <p className="text-sm text-gray-500 text-center py-1">
-                    View-only access — select a conversation from the sidebar to review past analyses
-                  </p>
-                ) : (
-                  <>
-                    {/* File preview banner */}
-                    {filePreview && (
-                      <div className="mb-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
-                        <FileSpreadsheet className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white truncate">{filePreview.name}</p>
-                          <p className="text-[10px] text-gray-400">{filePreview.size} &middot; {filePreview.type}</p>
-                        </div>
-                        <button
-                          onClick={clearFile}
-                          className="text-gray-400 hover:text-white p-1 rounded transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+        {/* Error Display */}
+        {error && (
+          <div className="mx-3 sm:mx-4 lg:mx-5 mb-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2 shrink-0">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-400 flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 p-0.5">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
-                    {/* Hidden file input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls,.pdf"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-
-                    <div className="flex gap-2">
-                      {/* File attachment button */}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isLoading || !!filePreview}
-                        className="border-white/10 bg-black/50 text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/30 shrink-0 h-10 w-10"
-                        title="Upload Excel or PDF file"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </Button>
-
-                      <Input
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={
-                          filePreview
-                            ? `Ask about ${filePreview.name}...`
-                            : activeTab === "general"
-                            ? "Type your message..."
-                            : activeTab === "comparison"
-                            ? "Ask about cross-platform insights..."
-                            : `Ask about your ${currentTool ? getToolDisplayName(currentTool.provider) : "tool"} data...`
-                        }
-                        disabled={isLoading}
-                        className="flex-1 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500/50"
-                      />
-                      <Button
-                        onClick={() => sendMessage()}
-                        disabled={(!input.trim() && !selectedFile) || isLoading}
-                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </Button>
+        {/* Input Area — pinned at bottom */}
+        <div className="shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-sm">
+          <div className="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+            {isViewer ? (
+              <p className="text-sm text-gray-500 text-center py-1">
+                View-only access — select a conversation from the sidebar to review past analyses
+              </p>
+            ) : (
+              <>
+                {/* File preview banner */}
+                {filePreview && (
+                  <div className="mb-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{filePreview.name}</p>
+                      <p className="text-[10px] text-gray-400">{filePreview.size} &middot; {filePreview.type}</p>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-2 text-center">
-                      {selectedFile && !researchCache.fileAnalysis ? (
-                        <span className="flex items-center justify-center gap-1">
-                          <Coins className="w-3 h-3" />
-                          File analysis costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, follow-ups are free
-                          {tokenBalance && (
-                            <span className="text-cyan-400 ml-1">
-                              ({tokenBalance.available} available)
-                            </span>
-                          )}
-                        </span>
-                      ) : researchCache.fileAnalysis ? (
-                        <span className="flex items-center justify-center gap-1 text-green-400">
-                          <Sparkles className="w-3 h-3" />
-                          File data loaded - follow-up questions are free
-                        </span>
-                      ) : activeTab === "general" ? (
-                        "Chat is unlimited - no credits required"
-                      ) : hasCachedResearch() ? (
-                        <span className="flex items-center justify-center gap-1 text-green-400">
-                          <Sparkles className="w-3 h-3" />
-                          Research data loaded - follow-up questions are free
-                        </span>
-                      ) : input.trim() && !isHeavyPrompt(input) ? (
-                        <span className="flex items-center justify-center gap-1 text-green-400">
-                          <Sparkles className="w-3 h-3" />
-                          General question - free
-                        </span>
-                      ) : (
-                        <span className="flex items-center justify-center gap-1">
-                          <Coins className="w-3 h-3" />
-                          Data analysis costs {DEEP_RESEARCH_TOKEN_COST} token{DEEP_RESEARCH_TOKEN_COST > 1 ? "s" : ""}{modelMultiplier > 1 && aiModel ? ` (${aiModel.label})` : ""}, general questions are free
-                          {tokenBalance && (
-                            <span className="text-cyan-400 ml-1">
-                              ({tokenBalance.available} available)
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </p>
-                  </>
+                    <button
+                      onClick={clearFile}
+                      className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {/* Composer */}
+                <div className="relative flex items-end gap-2 rounded-xl border border-white/10 bg-white/[0.03] focus-within:border-cyan-500/40 focus-within:bg-white/[0.05] transition-all duration-200">
+                  {/* File attach */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading || !!filePreview}
+                    className="self-end p-2.5 text-gray-500 hover:text-cyan-400 disabled:opacity-40 transition-colors"
+                    title="Upload Excel or PDF"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+
+                  {/* Auto-growing textarea */}
+                  <Textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={getPlaceholder()}
+                    disabled={isLoading}
+                    rows={1}
+                    className="flex-1 min-h-0 max-h-32 border-0 bg-transparent text-white placeholder:text-gray-500 resize-none py-2.5 px-0 text-sm focus-visible:ring-0 focus-visible:border-0 shadow-none"
+                    style={{ fieldSizing: "content" } as React.CSSProperties}
+                  />
+
+                  {/* Send button */}
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={(!input.trim() && !selectedFile) || isLoading}
+                    className="self-end p-2.5 text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Token info line */}
+                <p className={cn("text-[10px] mt-1.5 text-center flex items-center justify-center gap-1", tokenInfo.color)}>
+                  {tokenInfo.icon}
+                  <span>{tokenInfo.text}</span>
+                  {tokenInfo.balance && (
+                    <span className="text-cyan-400 ml-0.5">({tokenInfo.balance})</span>
+                  )}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

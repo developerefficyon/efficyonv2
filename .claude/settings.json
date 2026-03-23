@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git push:*)",
       "Bash(find /c/Users/tayaw/Desktop/effycionv2 -path */node_modules -prune -o -type f \\\\\\(-name *recommendation* -o -name *fortnox* -o -name *analysis* \\\\\\) -print)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
