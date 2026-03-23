@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 const TemplateEditor = dynamic(
   () => import("@/components/testing/template-editor").then((m) => m.TemplateEditor),
-  { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+  { loading: () => <div className="flex justify-center py-8"><div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-violet-400/60 animate-spin" /></div> }
 )
 
 interface Template {
@@ -127,24 +127,27 @@ export default function TemplatesPage() {
   if (authLoading || !user || user.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-violet-400/60 animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <Link href="/dashboard/admin/testing">
-          <Button size="sm" className="bg-transparent text-gray-400 hover:text-white hover:bg-white/5">
-            <ArrowLeft className="w-4 h-4 mr-1" />
+          <Button size="sm" className="bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.06] rounded-lg h-8 text-[12px] shadow-none">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
             Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Analysis Templates</h1>
-          <p className="text-sm text-gray-400">
+          <p className="text-[13px] text-white/30 font-medium mb-1">Template Management</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+            Analysis <span className="italic text-violet-400/90">Templates</span>
+          </h2>
+          <p className="text-[14px] text-white/35 mt-1">
             Versioned templates with AI prompts, targeting scope, and KPIs
           </p>
         </div>
@@ -152,46 +155,69 @@ export default function TemplatesPage() {
 
       {/* Template List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 animate-pulse">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-40 bg-white/[0.06] rounded" />
+                    <div className="h-5 w-12 bg-white/[0.04] rounded-full" />
+                  </div>
+                  <div className="h-4 w-64 bg-white/[0.04] rounded" />
+                </div>
+                <div className="h-8 w-16 bg-white/[0.04] rounded-lg" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04] h-16" />
+                <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04] h-16" />
+                <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04] h-16" />
+              </div>
+              <div className="mt-4 bg-white/[0.02] rounded-lg p-3 border border-white/[0.04] h-20" />
+            </div>
+          ))}
         </div>
       ) : Object.keys(templatesBySlug).length === 0 ? (
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-12 text-center">
-            <BookTemplate className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl">
+          <div className="p-12 text-center">
+            <BookTemplate className="w-12 h-12 text-white/10 mx-auto mb-4" />
+            <p className="text-white/25 text-[14px]">
               No templates found. Run the seed script to populate initial templates.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
-          {Object.entries(templatesBySlug).map(([slug, versions]) => {
+          {Object.entries(templatesBySlug).map(([slug, versions], idx) => {
             const active = versions.find((v) => v.is_active) || versions[0]
             return (
-              <Card key={slug} className="bg-white/5 border-white/10">
-                <CardContent className="p-5">
+              <div
+                key={slug}
+                className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up"
+                style={{ animationDelay: `${idx * 60}ms` }}
+              >
+                <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-white font-semibold text-lg">
+                        <h3 className="text-[15px] font-medium text-white/80">
                           {active.name}
                         </h3>
-                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                        <Badge className="bg-cyan-500/10 text-cyan-400/80 border border-cyan-500/15 text-[10px] shadow-none">
                           v{active.version}
                         </Badge>
                         {versions.length > 1 && (
-                          <Badge variant="outline" className="border-white/20 text-gray-400">
+                          <Badge variant="outline" className="border-white/[0.06] text-white/30 text-[10px] shadow-none">
                             <History className="w-3 h-3 mr-1" />
                             {versions.length} versions
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">{active.objective}</p>
+                      <p className="text-[13px] text-white/35 mt-1">{active.objective}</p>
                     </div>
                     <Button
                       size="sm"
-                      className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md"
+                      className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80 rounded-lg h-8 text-[12px] shadow-none"
                       onClick={() => handleEdit(active)}
                     >
                       <Edit className="w-3.5 h-3.5 mr-1" />
@@ -200,35 +226,35 @@ export default function TemplatesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Primary KPI</p>
-                      <p className="text-sm text-white font-medium mt-1">{active.primary_kpi}</p>
+                    <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
+                      <p className="text-[10px] text-white/25 uppercase tracking-wider">Primary KPI</p>
+                      <p className="text-[13px] text-white/70 font-medium mt-1">{active.primary_kpi}</p>
                       {active.kpi_description && (
-                        <p className="text-xs text-gray-500 mt-0.5">{active.kpi_description}</p>
+                        <p className="text-[11px] text-white/25 mt-0.5">{active.kpi_description}</p>
                       )}
                     </div>
 
-                    <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Integrations</p>
+                    <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
+                      <p className="text-[10px] text-white/25 uppercase tracking-wider">Integrations</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {active.applicable_integrations.map((i) => (
-                          <Badge key={i} variant="outline" className="border-white/10 text-gray-300 text-xs">
+                          <Badge key={i} variant="outline" className="border-white/[0.06] text-white/40 text-[10px] shadow-none">
                             {i}
                           </Badge>
                         ))}
                       </div>
                     </div>
 
-                    <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Targets</p>
+                    <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
+                      <p className="text-[10px] text-white/25 uppercase tracking-wider">Targets</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {active.targeting_scope?.targets?.slice(0, 3).map((t: string) => (
-                          <Badge key={t} variant="outline" className="border-white/10 text-gray-300 text-xs">
+                          <Badge key={t} variant="outline" className="border-white/[0.06] text-white/40 text-[10px] shadow-none">
                             {t.replace(/_/g, " ")}
                           </Badge>
                         ))}
                         {(active.targeting_scope?.targets?.length || 0) > 3 && (
-                          <Badge variant="outline" className="border-white/10 text-gray-500 text-xs">
+                          <Badge variant="outline" className="border-white/[0.06] text-white/25 text-[10px] shadow-none">
                             +{active.targeting_scope.targets.length - 3}
                           </Badge>
                         )}
@@ -236,14 +262,14 @@ export default function TemplatesPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 bg-black/30 rounded-lg p-3 border border-white/5">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">AI Prompt</p>
-                    <p className="text-sm text-gray-300 line-clamp-3 font-mono">
+                  <div className="mt-4 bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
+                    <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">AI Prompt</p>
+                    <p className="text-[12px] text-white/40 line-clamp-3 font-mono">
                       {active.ai_prompt_logic}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -251,9 +277,9 @@ export default function TemplatesPage() {
 
       {/* Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-gray-900 border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#0a0a0a] border-white/[0.08] text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-white/80 font-medium">
               Edit Template — {editingTemplate?.name}
             </DialogTitle>
           </DialogHeader>

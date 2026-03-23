@@ -4,15 +4,13 @@ import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   FlaskConical,
   FolderOpen,
   FileBarChart,
   BookTemplate,
-  Loader2,
   Plus,
   ArrowRight,
   Clock,
@@ -95,28 +93,28 @@ export default function TestingDashboard() {
   if (authLoading || !user || user.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+          <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-slide-up delay-0">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <FlaskConical className="w-6 h-6 text-cyan-400" />
-            Testing System
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Internal AI agent testing — workspaces, templates, and analysis runs
-          </p>
+          <p className="text-[13px] text-white/30 font-medium mb-1">Internal QA</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+            Testing <span className="italic text-cyan-400/90">System</span>
+          </h2>
+          <p className="text-[14px] text-white/35 mt-1">Workspaces, templates, and analysis runs</p>
         </div>
         <Link href="/dashboard/admin/testing/workspaces">
-          <Button className="bg-cyan-600 hover:bg-cyan-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            New Workspace
+          <Button className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80 rounded-lg h-8 text-[12px] gap-1.5 px-3">
+            <Plus className="w-3.5 h-3.5" /> New Workspace
           </Button>
         </Link>
       </div>
@@ -124,63 +122,63 @@ export default function TestingDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link href="/dashboard/admin/testing/workspaces">
-          <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Workspaces</p>
-                  <p className="text-3xl font-bold text-white mt-1">
-                    {loading ? "—" : stats?.workspaceCount || 0}
-                  </p>
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-1">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                  <FolderOpen className="w-3.5 h-3.5 text-cyan-400/70" />
                 </div>
-                <FolderOpen className="w-10 h-10 text-cyan-400/30" />
+                <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Workspaces</span>
               </div>
+              <p className="text-3xl font-semibold text-white tracking-tight">
+                {loading ? "\u2014" : stats?.workspaceCount || 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Analyses Run</p>
-                <p className="text-3xl font-bold text-white mt-1">
-                  {loading ? "—" : stats?.analysisCount || 0}
-                </p>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-2">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center">
+                <FileBarChart className="w-3.5 h-3.5 text-blue-400/70" />
               </div>
-              <FileBarChart className="w-10 h-10 text-blue-400/30" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Analyses Run</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">
+              {loading ? "\u2014" : stats?.analysisCount || 0}
+            </p>
           </CardContent>
         </Card>
 
         <Link href="/dashboard/admin/testing/templates">
-          <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Templates</p>
-                  <p className="text-3xl font-bold text-white mt-1">
-                    {loading ? "—" : stats?.templateCount || 0}
-                  </p>
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-3">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-md bg-purple-500/10 flex items-center justify-center">
+                  <BookTemplate className="w-3.5 h-3.5 text-purple-400/70" />
                 </div>
-                <BookTemplate className="w-10 h-10 text-purple-400/30" />
+                <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Templates</span>
               </div>
+              <p className="text-3xl font-semibold text-white tracking-tight">
+                {loading ? "\u2014" : stats?.templateCount || 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/dashboard/admin/testing/schedules">
-          <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Schedules</p>
-                  <p className="text-3xl font-bold text-white mt-1">
-                    {loading ? "—" : stats?.scheduleCount || 0}
-                  </p>
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-4">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5 text-amber-400/70" />
                 </div>
-                <Clock className="w-10 h-10 text-amber-400/30" />
+                <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Schedules</span>
               </div>
+              <p className="text-3xl font-semibold text-white tracking-tight">
+                {loading ? "\u2014" : stats?.scheduleCount || 0}
+              </p>
             </CardContent>
           </Card>
         </Link>
@@ -188,52 +186,52 @@ export default function TestingDashboard() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white text-lg">Workspaces</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-gray-400">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[14px] font-medium text-white/80">Workspaces</span>
+            </div>
+            <p className="text-[12px] text-white/30 mb-4">
               Create test workspaces representing simulated companies. Upload data, run analyses, and evaluate results.
             </p>
             <Link href="/dashboard/admin/testing/workspaces">
-              <Button className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md text-sm font-medium">
+              <Button className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] rounded-lg h-8 text-[12px] gap-1.5 px-3">
                 Manage Workspaces
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white text-lg">Analysis Templates</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-gray-400">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[14px] font-medium text-white/80">Analysis Templates</span>
+            </div>
+            <p className="text-[12px] text-white/30 mb-4">
               Manage and version analysis templates — Cleanup Crew, Compliance Guard, Growth Scaler, Deep-Dive Forensic.
             </p>
             <Link href="/dashboard/admin/testing/templates">
-              <Button className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md text-sm font-medium">
+              <Button className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] rounded-lg h-8 text-[12px] gap-1.5 px-3">
                 Manage Templates
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white text-lg">Agent Schedules</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-gray-400">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-5">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[14px] font-medium text-white/80">Agent Schedules</span>
+            </div>
+            <p className="text-[12px] text-white/30 mb-4">
               Schedule automated improvement cycles, analyses, and stress tests to run on a cron schedule.
             </p>
             <Link href="/dashboard/admin/testing/schedules">
-              <Button className="border border-white/10 bg-transparent text-white hover:bg-white/10 rounded-md text-sm font-medium">
+              <Button className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] rounded-lg h-8 text-[12px] gap-1.5 px-3">
                 Manage Schedules
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </CardContent>

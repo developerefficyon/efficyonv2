@@ -59,28 +59,30 @@ function getStatusBadge(status: string | null) {
   switch (status) {
     case "completed":
       return (
-        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+        <Badge className="bg-green-500/10 text-green-400/80 border-green-500/15">
           <CheckCircle2 className="w-3 h-3 mr-1" />
           Completed
         </Badge>
       )
     case "failed":
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+        <Badge className="bg-red-500/10 text-red-400/80 border-red-500/15">
           <XCircle className="w-3 h-3 mr-1" />
           Failed
         </Badge>
       )
     case "running":
       return (
-        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+        <Badge className="bg-amber-500/10 text-amber-400/80 border-amber-500/15">
+          <div className="relative w-3 h-3 mr-1">
+            <div className="absolute inset-0 rounded-full border border-amber-400/30 border-t-transparent animate-spin" />
+          </div>
           Running
         </Badge>
       )
     default:
       return (
-        <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+        <Badge className="bg-white/[0.04] text-white/40 border-white/[0.06]">
           {status}
         </Badge>
       )
@@ -263,38 +265,41 @@ export default function SchedulesPage() {
   if (authLoading || !user || user.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+          <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <Link href="/dashboard/admin/testing">
             <Button
               size="sm"
-              className="bg-transparent text-gray-400 hover:text-white hover:bg-white/5"
+              className="bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.06] rounded-lg h-8 text-[12px]"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Testing
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-cyan-400" />
-              Agent Schedules
-            </h1>
-            <p className="text-sm text-gray-400">
+            <p className="text-[13px] text-white/30 font-medium mb-1">Automation</p>
+            <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+              Agent <span className="italic text-amber-400/90">Schedules</span>
+            </h2>
+            <p className="text-[14px] text-white/35 mt-1">
               Manage cron-based automated agent runs
             </p>
           </div>
         </div>
 
         <Button
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] rounded-lg"
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -304,41 +309,41 @@ export default function SchedulesPage() {
 
       {/* Create Form */}
       {showCreateForm && (
-        <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">New Schedule</h2>
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 space-y-4">
+          <h2 className="text-[14px] font-medium text-white/80">New Schedule</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Name</label>
+              <label className="text-[12px] text-white/40 block mb-1">Name</label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Nightly Improvement Cycle"
-                className="bg-black/50 border-[#2a2a4a] text-white"
+                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="text-[12px] text-white/40 block mb-1">
                 Workspace ID
               </label>
               <Input
                 value={newWorkspaceId}
                 onChange={(e) => setNewWorkspaceId(e.target.value)}
                 placeholder="Enter workspace UUID"
-                className="bg-black/50 border-[#2a2a4a] text-white"
+                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="text-[12px] text-white/40 block mb-1">
                 Cron Expression
               </label>
               <Input
                 value={newCron}
                 onChange={(e) => setNewCron(e.target.value)}
                 placeholder="0 2 * * *"
-                className="bg-black/50 border-[#2a2a4a] text-white"
+                className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
               />
               <div className="flex flex-wrap gap-2 mt-2">
                 {CRON_PRESETS.map((preset) => (
@@ -348,8 +353,8 @@ export default function SchedulesPage() {
                     onClick={() => setNewCron(preset.value)}
                     className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                       newCron === preset.value
-                        ? "bg-blue-600/30 border-blue-500/50 text-blue-300"
-                        : "bg-[#0a0a1a] border-[#2a2a4a] text-gray-400 hover:border-gray-500 hover:text-gray-300"
+                        ? "bg-white/[0.06] border-white/[0.08] text-white/70"
+                        : "bg-white/[0.02] border-white/[0.06] text-white/30 hover:text-white/50"
                     }`}
                   >
                     {preset.label}
@@ -359,14 +364,14 @@ export default function SchedulesPage() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 block mb-1">
+              <label className="text-[12px] text-white/40 block mb-1">
                 Schedule Type
               </label>
               <Select value={newType} onValueChange={setNewType}>
-                <SelectTrigger className="bg-black/50 border-[#2a2a4a] text-white">
+                <SelectTrigger className="bg-white/[0.03] border-white/[0.06] text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-white/10 z-[200]">
+                <SelectContent className="bg-[#0a0a0a] border-white/[0.08] z-[200]">
                   {SCHEDULE_TYPES.map((type) => (
                     <SelectItem
                       key={type}
@@ -382,7 +387,7 @@ export default function SchedulesPage() {
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 block mb-1">
+            <label className="text-[12px] text-white/40 block mb-1">
               Config (JSON)
             </label>
             <textarea
@@ -390,7 +395,7 @@ export default function SchedulesPage() {
               onChange={(e) => setNewConfig(e.target.value)}
               placeholder="{}"
               rows={3}
-              className="w-full bg-black/50 border border-[#2a2a4a] text-white rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+              className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-white/10"
             />
           </div>
 
@@ -403,14 +408,18 @@ export default function SchedulesPage() {
                 !newWorkspaceId.trim() ||
                 !newCron.trim()
               }
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded-lg"
             >
-              {creating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {creating && (
+                <div className="relative w-4 h-4 mr-2">
+                  <div className="absolute inset-0 rounded-full border-2 border-emerald-400/30 border-t-transparent animate-spin" />
+                </div>
+              )}
               Create Schedule
             </Button>
             <Button
               onClick={() => setShowCreateForm(false)}
-              className="bg-transparent border border-[#2a2a4a] text-gray-400 hover:text-white hover:bg-white/5"
+              className="bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/60 hover:bg-white/[0.06] rounded-lg"
             >
               Cancel
             </Button>
@@ -420,13 +429,21 @@ export default function SchedulesPage() {
 
       {/* Schedule List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-32 bg-white/[0.04] rounded animate-pulse" />
+                <div className="h-5 w-16 bg-white/[0.04] rounded-full animate-pulse" />
+              </div>
+              <div className="h-3 w-48 bg-white/[0.03] rounded animate-pulse mt-3" />
+            </div>
+          ))}
         </div>
       ) : schedules.length === 0 ? (
-        <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg p-12 text-center">
-          <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-12 text-center">
+          <Clock className="w-12 h-12 text-white/10 mx-auto mb-4" />
+          <p className="text-white/25">
             No schedules found. Create one to automate agent runs.
           </p>
         </div>
@@ -435,31 +452,31 @@ export default function SchedulesPage() {
           {schedules.map((schedule) => (
             <div
               key={schedule.id}
-              className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg p-5"
+              className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-white font-semibold text-lg">
+                    <h3 className="text-[15px] font-medium text-white/80">
                       {schedule.name}
                     </h3>
                     <Badge
                       className={
                         schedule.enabled
-                          ? "bg-green-500/20 text-green-400 border-green-500/30"
-                          : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                          ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
+                          : "bg-white/[0.04] text-white/30 border-white/[0.06]"
                       }
                     >
                       {schedule.enabled ? "Enabled" : "Disabled"}
                     </Badge>
                     {schedule.active_in_memory && (
-                      <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                      <Badge className="bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15">
                         <AlertCircle className="w-3 h-3 mr-1" />
                         Active in Memory
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-400 flex-wrap">
+                  <div className="flex items-center gap-4 mt-1 text-[12px] text-white/30 flex-wrap">
                     <span
                       className="font-mono"
                       title={schedule.workspace_id}
@@ -480,15 +497,17 @@ export default function SchedulesPage() {
                     size="sm"
                     onClick={() => toggleSchedule(schedule.id)}
                     disabled={!!actionLoading[schedule.id]}
-                    className={`h-8 ${
+                    className={`h-8 rounded-lg text-[12px] ${
                       schedule.enabled
-                        ? "bg-transparent border border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-                        : "bg-transparent border border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        ? "bg-transparent border border-amber-500/15 text-amber-400/80 hover:bg-amber-500/10"
+                        : "bg-transparent border border-emerald-500/15 text-emerald-400/80 hover:bg-emerald-500/10"
                     }`}
                     title={schedule.enabled ? "Disable" : "Enable"}
                   >
                     {actionLoading[schedule.id] ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <div className="relative w-3.5 h-3.5">
+                        <div className="absolute inset-0 rounded-full border border-white/20 border-t-transparent animate-spin" />
+                      </div>
                     ) : schedule.enabled ? (
                       <ToggleRight className="w-3.5 h-3.5 mr-1" />
                     ) : (
@@ -501,11 +520,13 @@ export default function SchedulesPage() {
                     size="sm"
                     onClick={() => runNow(schedule.id)}
                     disabled={!!actionLoading[`run-${schedule.id}`]}
-                    className="h-8 bg-transparent border border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                    className="h-8 rounded-lg text-[12px] bg-transparent border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
                     title="Run now"
                   >
                     {actionLoading[`run-${schedule.id}`] ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                      <div className="relative w-3.5 h-3.5 mr-1">
+                        <div className="absolute inset-0 rounded-full border border-white/20 border-t-transparent animate-spin" />
+                      </div>
                     ) : (
                       <Play className="w-3.5 h-3.5 mr-1" />
                     )}
@@ -516,11 +537,13 @@ export default function SchedulesPage() {
                     size="sm"
                     onClick={() => deleteSchedule(schedule.id)}
                     disabled={!!actionLoading[`del-${schedule.id}`]}
-                    className="h-8 w-8 p-0 bg-transparent text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                    className="h-8 w-8 p-0 rounded-lg bg-transparent text-white/20 hover:text-red-400/80 hover:bg-red-500/10 border border-transparent hover:border-red-500/15"
                     title="Delete schedule"
                   >
                     {actionLoading[`del-${schedule.id}`] ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <div className="relative w-3.5 h-3.5">
+                        <div className="absolute inset-0 rounded-full border border-white/20 border-t-transparent animate-spin" />
+                      </div>
                     ) : (
                       <Trash2 className="w-3.5 h-3.5" />
                     )}
@@ -529,18 +552,18 @@ export default function SchedulesPage() {
               </div>
 
               {/* Run stats */}
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#2a2a4a] text-sm flex-wrap">
-                <span className="text-gray-400">
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/[0.04] text-[12px] flex-wrap">
+                <span className="text-white/30">
                   Runs:{" "}
-                  <span className="text-white font-medium">
+                  <span className="text-white/60 font-medium">
                     {schedule.run_count}
                   </span>
                 </span>
 
                 {schedule.last_run_at && (
-                  <span className="text-gray-400">
+                  <span className="text-white/30">
                     Last run:{" "}
-                    <span className="text-white">
+                    <span className="text-white/50">
                       {new Date(schedule.last_run_at).toLocaleString()}
                     </span>
                   </span>
@@ -549,7 +572,7 @@ export default function SchedulesPage() {
                 {schedule.last_run_status &&
                   getStatusBadge(schedule.last_run_status)}
 
-                <span className="text-gray-500 text-xs ml-auto">
+                <span className="text-white/20 text-[11px] ml-auto">
                   Created {new Date(schedule.created_at).toLocaleDateString()}
                 </span>
               </div>

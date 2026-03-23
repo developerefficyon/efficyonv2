@@ -27,7 +27,7 @@ import remarkGfm from "remark-gfm"
 
 const DragDropUploadZone = dynamic(
   () => import("@/components/testing/drag-drop-upload-zone").then((m) => m.DragDropUploadZone),
-  { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div> }
+  { loading: () => <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-white/30" /></div> }
 )
 
 interface Workspace {
@@ -250,13 +250,13 @@ export default function WorkspaceDetailPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <div className="w-8 h-8 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
       </div>
     )
   }
 
   if (!workspace) {
-    return <div className="text-center py-20 text-gray-400">Workspace not found.</div>
+    return <div className="text-center py-20 text-white/25">Workspace not found.</div>
   }
 
   // Collect all findings from the selected analysis
@@ -264,19 +264,19 @@ export default function WorkspaceDetailPage() {
   const summary = selectedAnalysis?.analysis_result?.overallSummary
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <Link href="/dashboard/admin/testing/workspaces">
-          <Button size="sm" className="bg-transparent text-gray-400 hover:text-white hover:bg-white/5">
-            <ArrowLeft className="w-4 h-4 mr-1" />
+          <button className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70 rounded-lg h-8 px-3 text-[12px] transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
             Back
-          </Button>
+          </button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">{workspace.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-display text-white tracking-tight">{workspace.name}</h1>
           {workspace.description && (
-            <p className="text-sm text-gray-400">{workspace.description}</p>
+            <p className="text-[13px] text-white/35 mt-0.5">{workspace.description}</p>
           )}
         </div>
       </div>
@@ -291,7 +291,7 @@ export default function WorkspaceDetailPage() {
       {uploads.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
+            <p className="text-[13px] text-white/35">
               {selectedUploadIds.size} of {uploads.length} file{uploads.length !== 1 ? "s" : ""} selected
             </p>
             <button
@@ -302,7 +302,7 @@ export default function WorkspaceDetailPage() {
                   setSelectedUploadIds(new Set(uploads.map((u) => u.id)))
                 }
               }}
-              className="text-xs text-gray-500 hover:text-cyan-400 transition-colors"
+              className="text-[11px] text-white/25 hover:text-emerald-400/80 transition-colors"
             >
               {selectedUploadIds.size === uploads.length ? "Deselect all" : "Select all"}
             </button>
@@ -318,10 +318,10 @@ export default function WorkspaceDetailPage() {
                   return next
                 })
               }}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border cursor-pointer transition-all ${
                 selectedUploadIds.has(upload.id)
-                  ? "bg-cyan-500/10 border-cyan-500/20"
-                  : "bg-white/5 border-white/5 opacity-60"
+                  ? "bg-white/[0.03] border-white/[0.08]"
+                  : "bg-white/[0.01] border-white/[0.04] opacity-60"
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -329,17 +329,17 @@ export default function WorkspaceDetailPage() {
                   type="checkbox"
                   checked={selectedUploadIds.has(upload.id)}
                   onChange={() => {}}
-                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-cyan-500 shrink-0 cursor-pointer accent-cyan-500"
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-emerald-500 shrink-0 cursor-pointer accent-emerald-500"
                 />
                 {upload.validation_status === "valid" ? (
-                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-emerald-400/70 shrink-0" />
                 ) : upload.validation_status === "partial" ? (
-                  <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-yellow-400/70 shrink-0" />
                 ) : (
-                  <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <XCircle className="w-4 h-4 text-red-400/70 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm text-white truncate">{upload.filename}</p>
+                  <p className="text-[13px] text-white/80 truncate">{upload.filename}</p>
                   <UploadClassificationSelect
                     uploadId={upload.id}
                     value={`${upload.integration_label}::${upload.data_type}`}
@@ -349,7 +349,7 @@ export default function WorkspaceDetailPage() {
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); deleteUpload(upload.id) }}
-                className="p-1 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors shrink-0"
+                className="p-1 rounded hover:bg-red-500/10 text-white/20 hover:text-red-400/80 transition-colors shrink-0"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -357,19 +357,18 @@ export default function WorkspaceDetailPage() {
           ))}
 
           {/* Step 2: Analyze */}
-          <Button
+          <button
             onClick={runAnalysis}
             disabled={analyzing || selectedUploadIds.size === 0}
-            className="w-full bg-cyan-600 hover:bg-cyan-700 text-white mt-2"
-            size="lg"
+            className="w-full mt-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {analyzing ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Play className="w-4 h-4 mr-2" />
+              <Play className="w-4 h-4" />
             )}
             {analyzing ? "Analyzing..." : `Analyze ${selectedUploadIds.size} file${selectedUploadIds.size !== 1 ? "s" : ""}`}
-          </Button>
+          </button>
         </div>
       )}
 
@@ -377,11 +376,11 @@ export default function WorkspaceDetailPage() {
       {analyses.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Results</h2>
+            <h2 className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Results</h2>
             {selectedAnalysis && (
               <button
                 onClick={() => deleteAnalysis(selectedAnalysis.id)}
-                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-white/20 hover:text-red-400/80 hover:bg-red-500/10 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete
@@ -396,17 +395,17 @@ export default function WorkspaceDetailPage() {
                 <div key={a.id} className="flex items-center gap-1">
                   <button
                     onClick={() => viewAnalysis(a.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs transition-colors border ${
+                    className={`px-3 py-1.5 rounded-lg text-[11px] transition-colors border ${
                       selectedAnalysis?.id === a.id
-                        ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
-                        : "border-white/10 bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                        ? "bg-white/[0.06] border-white/[0.08] text-white/70"
+                        : "bg-white/[0.02] border-white/[0.06] text-white/30 hover:text-white/50 hover:bg-white/[0.04]"
                     }`}
                   >
                     Run {analyses.length - i} &middot; {new Date(a.created_at).toLocaleString()}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteAnalysis(a.id) }}
-                    className="p-1 rounded hover:bg-red-500/20 text-gray-600 hover:text-red-400 transition-colors"
+                    className="p-1 rounded hover:bg-red-500/10 text-white/20 hover:text-red-400/80 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -422,43 +421,41 @@ export default function WorkspaceDetailPage() {
 
           {/* AI Analysis - shown first */}
           {selectedAnalysis?.analysis_result?.aiAnalysis && (
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <span className="text-[10px] text-purple-400 font-bold">AI</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">AI Analysis</h3>
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <span className="text-[10px] text-purple-400 font-bold">AI</span>
                 </div>
-                <div className="ai-analysis-content text-sm text-gray-300 leading-relaxed space-y-3">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => <h1 className="text-base font-bold text-white mt-4 mb-2">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-sm font-semibold text-white mt-4 mb-1.5">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-sm font-medium text-white mt-3 mb-1">{children}</h3>,
-                      p: ({ children }) => <p className="my-1.5">{children}</p>,
-                      strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                      ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
-                      li: ({ children }) => <li className="text-gray-300">{children}</li>,
-                      hr: () => <hr className="border-white/10 my-3" />,
-                      table: ({ children }) => (
-                        <div className="overflow-x-auto my-3">
-                          <table className="w-full text-xs border-collapse border border-white/10">{children}</table>
-                        </div>
-                      ),
-                      thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
-                      th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border border-white/10 whitespace-nowrap">{children}</th>,
-                      td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border border-white/10">{children}</td>,
-                      tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
-                    }}
-                  >
-                    {selectedAnalysis.analysis_result.aiAnalysis}
-                  </ReactMarkdown>
-                </div>
-              </CardContent>
-            </Card>
+                <h3 className="text-[13px] font-medium text-white/70">AI Analysis</h3>
+              </div>
+              <div className="ai-analysis-content text-[13px] text-white/50 leading-relaxed space-y-3">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-sm font-semibold text-white/80 mt-4 mb-1.5">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-medium text-white/70 mt-3 mb-1">{children}</h3>,
+                    p: ({ children }) => <p className="my-1.5">{children}</p>,
+                    strong: ({ children }) => <strong className="text-white/80 font-semibold">{children}</strong>,
+                    ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+                    li: ({ children }) => <li className="text-white/50">{children}</li>,
+                    hr: () => <hr className="border-white/[0.06] my-3" />,
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto my-3">
+                        <table className="w-full text-xs border-collapse border border-white/[0.06]">{children}</table>
+                      </div>
+                    ),
+                    thead: ({ children }) => <thead className="bg-white/[0.03]">{children}</thead>,
+                    th: ({ children }) => <th className="text-left text-white/40 font-medium px-3 py-2 border border-white/[0.06] whitespace-nowrap">{children}</th>,
+                    td: ({ children }) => <td className="text-white/50 px-3 py-1.5 border border-white/[0.06]">{children}</td>,
+                    tr: ({ children }) => <tr className="border-b border-white/[0.04]">{children}</tr>,
+                  }}
+                >
+                  {selectedAnalysis.analysis_result.aiAnalysis}
+                </ReactMarkdown>
+              </div>
+            </div>
           )}
 
           {/* Summary stats */}
@@ -468,7 +465,7 @@ export default function WorkspaceDetailPage() {
               <StatCard
                 label="Potential Savings"
                 value={`${Math.round(summary.totalPotentialSavings || 0).toLocaleString()} SEK`}
-                color="text-green-400"
+                color="text-emerald-400"
               />
               <StatCard label="High Severity" value={summary.highSeverity || 0} color="text-red-400" />
               <StatCard label="Medium" value={summary.mediumSeverity || 0} color="text-yellow-400" />
@@ -478,12 +475,12 @@ export default function WorkspaceDetailPage() {
           {/* Findings list - expandable */}
           {findings.length > 0 && (
             <details className="group">
-              <summary className="flex items-center justify-between cursor-pointer p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/[0.07] transition-colors">
+              <summary className="flex items-center justify-between cursor-pointer p-3 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:bg-white/[0.04] transition-colors">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-white">Cost Leak Findings</h3>
-                  <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-full">{findings.length}</span>
+                  <h3 className="text-[13px] font-medium text-white/70">Cost Leak Findings</h3>
+                  <span className="text-[11px] bg-white/[0.04] text-white/30 px-2 py-0.5 rounded-full">{findings.length}</span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" />
+                <ChevronDown className="w-4 h-4 text-white/25 transition-transform group-open:rotate-180" />
               </summary>
               <div className="space-y-2 mt-3">
                 {findings.map((f, i) => (
@@ -494,21 +491,21 @@ export default function WorkspaceDetailPage() {
           )}
 
           {findings.length === 0 && selectedAnalysis && !selectedAnalysis.analysis_result?.aiAnalysis && (
-            <p className="text-gray-400 text-sm py-4 text-center">No findings detected.</p>
+            <p className="text-white/25 text-[13px] py-4 text-center">No findings detected.</p>
           )}
 
           {/* Raw JSON toggle */}
           {selectedAnalysis && (
             <button
               onClick={() => setShowRawJson(!showRawJson)}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-1.5 text-[11px] text-white/20 hover:text-white/40 transition-colors"
             >
               {showRawJson ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               {showRawJson ? "Hide" : "Show"} raw JSON
             </button>
           )}
           {showRawJson && selectedAnalysis && (
-            <pre className="text-xs text-gray-400 bg-black/30 rounded-lg p-3 overflow-auto max-h-64 font-mono border border-white/5">
+            <pre className="text-[11px] text-white/30 font-mono bg-white/[0.01] border border-white/[0.04] rounded-lg p-3 overflow-auto max-h-64">
               {JSON.stringify(selectedAnalysis.analysis_result, null, 2)}
             </pre>
           )}
@@ -559,7 +556,7 @@ function UploadClassificationSelect({
     <div className="relative">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-        className="flex items-center gap-1 text-xs text-gray-500 hover:text-cyan-400 transition-colors"
+        className="flex items-center gap-1 text-[11px] text-white/30 hover:text-emerald-400/80 transition-colors"
       >
         {displayLabel}
         <Pencil className="w-2.5 h-2.5" />
@@ -567,10 +564,10 @@ function UploadClassificationSelect({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false) }} />
-          <div className="absolute top-full left-0 mt-1 z-50 bg-gray-900 border border-white/10 rounded-lg shadow-xl py-1 min-w-[200px] max-h-64 overflow-y-auto">
+          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0a0a0a] border border-white/[0.08] rounded-lg shadow-xl py-1 min-w-[200px] max-h-64 overflow-y-auto">
             {CLASSIFICATION_OPTIONS.map((group) => (
               <div key={group.group}>
-                <p className="px-3 py-1 text-[10px] text-gray-500 uppercase font-medium">{group.group}</p>
+                <p className="px-3 py-1 text-[10px] text-white/25 uppercase font-medium">{group.group}</p>
                 {group.items.map((item) => (
                   <button
                     key={item.value}
@@ -582,8 +579,8 @@ function UploadClassificationSelect({
                     }}
                     className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
                       item.value === value
-                        ? "text-cyan-400 bg-cyan-500/10"
-                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                        ? "text-emerald-400/80 bg-emerald-500/[0.06]"
+                        : "text-white/50 hover:bg-white/[0.04] hover:text-white/70"
                     }`}
                   >
                     {item.label}
@@ -607,39 +604,39 @@ function AutoLoadAnalysis({ analysisId, onLoad }: { analysisId: string; onLoad: 
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div className="bg-white/5 rounded-lg p-3 border border-white/5 text-center">
-      <p className="text-[10px] text-gray-500 uppercase">{label}</p>
-      <p className={`text-xl font-bold mt-1 ${color || "text-white"}`}>{value}</p>
+    <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 text-center">
+      <p className="text-[10px] text-white/25 uppercase">{label}</p>
+      <p className={`text-xl font-semibold mt-1 ${color || "text-white"}`}>{value}</p>
     </div>
   )
 }
 
 function FindingCard({ finding }: { finding: any }) {
   const severityStyles = {
-    high: { border: "border-red-500/20", icon: "text-red-400", badge: "border-red-500/30 text-red-400" },
-    medium: { border: "border-yellow-500/20", icon: "text-yellow-400", badge: "border-yellow-500/30 text-yellow-400" },
-    low: { border: "border-blue-500/20", icon: "text-blue-400", badge: "border-blue-500/30 text-blue-400" },
+    high: { border: "border-red-500/10", icon: "text-red-400/80", badge: "bg-red-500/10 border-red-500/10 text-red-400/80" },
+    medium: { border: "border-yellow-500/10", icon: "text-yellow-400/80", badge: "bg-yellow-500/10 border-yellow-500/10 text-yellow-400/80" },
+    low: { border: "border-blue-500/10", icon: "text-blue-400/80", badge: "bg-blue-500/10 border-blue-500/10 text-blue-400/80" },
   }
   const s = severityStyles[finding.severity as keyof typeof severityStyles] || severityStyles.low
 
   return (
-    <div className={`flex items-start gap-3 p-3 bg-white/5 rounded-lg border ${s.border}`}>
+    <div className={`flex items-start gap-3 p-3 bg-white/[0.02] rounded-lg border ${s.border}`}>
       <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${s.icon}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <p className="text-sm text-white font-medium">{finding.title}</p>
+          <p className="text-[13px] text-white/80 font-medium">{finding.title}</p>
           <Badge variant="outline" className={`text-[10px] ${s.badge}`}>
             {finding.severity}
           </Badge>
           {finding.type && (
-            <Badge variant="outline" className="text-[10px] border-white/10 text-gray-500">
+            <Badge variant="outline" className="text-[10px] border-white/[0.06] text-white/30">
               {finding.type}
             </Badge>
           )}
         </div>
-        <p className="text-sm text-gray-400">{finding.description}</p>
+        <p className="text-[12px] text-white/35">{finding.description}</p>
         {finding.potentialSavings > 0 && (
-          <p className="text-sm text-green-400 mt-1 flex items-center gap-1">
+          <p className="text-[12px] text-emerald-400/80 mt-1 flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5" />
             {Math.round(finding.potentialSavings).toLocaleString()} SEK potential savings
           </p>
@@ -688,4 +685,3 @@ function extractFindings(result: any): any[] {
 
   return findings
 }
-
