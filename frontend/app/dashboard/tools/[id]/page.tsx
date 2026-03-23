@@ -937,7 +937,7 @@ export default function ToolDetailPage() {
 
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
-      return <CheckCircle className="w-5 h-5 text-green-400" />
+      return <CheckCircle className="w-5 h-5 text-emerald-400" />
     } else if (status === "error") {
       return <XCircle className="w-5 h-5 text-red-400" />
     }
@@ -2234,7 +2234,7 @@ export default function ToolDetailPage() {
   if (isLoading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
       </div>
     )
   }
@@ -2252,18 +2252,21 @@ export default function ToolDetailPage() {
 
   return (
     <>
-      {/* Full-screen loading overlay during analysis saving */}
+      {/* Full-screen loading overlay */}
       {(isLoadingAnalysis || isSavingAnalysis) && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-black/90 border border-white/10 rounded-xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4">
-            <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4">
+            <div className="relative w-10 h-10">
+              <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+              <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+            </div>
             <div className="text-center">
-              <p className="text-white font-medium text-lg">
+              <p className="text-white font-medium text-[15px]">
                 {isSavingAnalysis ? "Saving Analysis..." : "Analyzing..."}
               </p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-white/30 text-[13px] mt-1">
                 {isSavingAnalysis
-                  ? "Please wait while we save your analysis to the database."
+                  ? "Saving your analysis to the database."
                   : "Please wait while we analyze your data."}
               </p>
             </div>
@@ -2271,31 +2274,33 @@ export default function ToolDetailPage() {
         </div>
       )}
 
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 animate-slide-up delay-0">
           <Button
             variant="ghost"
             onClick={() => router.push("/dashboard/tools")}
-            className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors self-start"
+            className="text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors self-start h-8 px-3 text-[12px] rounded-lg"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Tools
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+            Back
           </Button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 truncate">{integration.tool_name || integration.provider}</h2>
-          <p className="text-sm sm:text-base text-gray-400">Integration Details</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1 truncate">
+            {integration.tool_name || integration.provider}
+          </h2>
+          <p className="text-[14px] text-white/35">Integration Details</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {getStatusIcon(integration.status)}
           <Badge
-            className={
+            className={`text-[10px] h-6 px-2.5 rounded-full font-medium ${
               integration.status === "connected"
-                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
                 : integration.status === "error"
-                  ? "bg-red-500/20 text-red-400 border-red-500/30"
-                  : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-            }
+                  ? "bg-red-500/10 text-red-400/80 border-red-500/15"
+                  : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"
+            }`}
           >
+            {integration.status === "connected" && <CheckCircle className="w-3 h-3 mr-1" />}
             {integration.status}
           </Badge>
         </div>
@@ -2304,39 +2309,39 @@ export default function ToolDetailPage() {
       {/* Tabs for organized sections */}
       {hasFullUI && integration.status === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
-          <TabsList className="bg-black/50 border border-white/10 mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap">
+          <TabsList className="bg-white/[0.02] border border-white/[0.06] mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap rounded-lg p-1">
             <TabsTrigger
               value="analysis"
-              className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+              className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
             >
-              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              Cost Analysis
+              <BarChart3 className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
+              Analysis
             </TabsTrigger>
             <TabsTrigger
               value="history"
-              className="data-[state=active]:bg-purple-600/30 data-[state=active]:text-purple-400 data-[state=active]:border-purple-500/50 text-gray-300 text-xs sm:text-sm"
+              className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
               onClick={() => setActiveAnalysisTab("history")}
             >
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
               History
               {analysisHistory.length > 0 && (
-                <Badge className="ml-1 bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs px-1.5">
+                <Badge className="ml-1 bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[9px] h-[16px] px-1 rounded-full">
                   {analysisHistory.length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+              className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
             >
-              <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
               Overview
             </TabsTrigger>
             <TabsTrigger
               value="data"
-              className="data-[state=active]:bg-cyan-600/30 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/50 text-gray-300 text-xs sm:text-sm"
+              className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white data-[state=active]:shadow-none text-white/40 text-[12px] rounded-md"
             >
-              <Database className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
               Data
             </TabsTrigger>
           </TabsList>
@@ -2344,28 +2349,28 @@ export default function ToolDetailPage() {
           {/* Cost Analysis Tab - Redesigned */}
           <TabsContent value="analysis" className="mt-0 space-y-6">
             {/* Header Card */}
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
+            <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden relative">
 
               <CardHeader className="relative">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2.5 bg-cyan-500/10 rounded-xl">
-                        <Sparkles className="w-5 h-5 text-cyan-400" />
+                      <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+                        <Sparkles className="w-5 h-5 text-emerald-400" />
                       </div>
                       <CardTitle className="text-white text-xl sm:text-2xl font-bold">
                         Cost Leak Analysis
                       </CardTitle>
                     </div>
                     <p className="text-gray-400 text-sm flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-cyan-500/60" />
+                      <Zap className="w-4 h-4 text-emerald-500/60" />
                       AI-powered analysis to identify savings opportunities
                     </p>
                   </div>
                 </div>
 
                 {/* Analysis Parameters */}
-                <div className="px-4 sm:px-6 pb-4 border-t border-white/5 pt-4">
+                <div className="px-4 sm:px-6 pb-4 border-t border-white/[0.04] pt-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 justify-between">
                     {/* Fortnox: Date Range */}
                     {isFortnox && (
@@ -2376,7 +2381,7 @@ export default function ToolDetailPage() {
                             type="date"
                             value={fortnoxStartDate}
                             onChange={(e) => setFortnoxStartDate(e.target.value)}
-                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            className="h-9 w-full sm:w-40 bg-white/[0.03] border-white/[0.06] text-white text-sm"
                             placeholder="Start date"
                           />
                         </div>
@@ -2386,7 +2391,7 @@ export default function ToolDetailPage() {
                             type="date"
                             value={fortnoxEndDate}
                             onChange={(e) => setFortnoxEndDate(e.target.value)}
-                            className="h-9 w-full sm:w-40 bg-black/30 border-white/10 text-white text-sm"
+                            className="h-9 w-full sm:w-40 bg-white/[0.03] border-white/[0.06] text-white text-sm"
                             placeholder="End date"
                           />
                         </div>
@@ -2414,7 +2419,7 @@ export default function ToolDetailPage() {
                         <select
                           value={inactivityDays}
                           onChange={(e) => setInactivityDays(parseInt(e.target.value))}
-                          className="h-9 px-3 rounded-md bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                          className="h-9 px-3 rounded-md bg-black/30 border border-white/[0.06] text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                         >
                           <option value={7}>7 days</option>
                           <option value={14}>14 days</option>
@@ -2434,7 +2439,7 @@ export default function ToolDetailPage() {
                             onClick={openPdfPreview}
                             variant="outline"
                             size="sm"
-                            className="group relative border-slate-600/50 bg-slate-800/50 text-gray-300 hover:bg-slate-700/50 hover:text-white transition-all h-8 sm:h-9 px-2 sm:px-3"
+                            className="group relative border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white transition-all h-8 sm:h-9 px-2 sm:px-3"
                             title="Export PDF"
                           >
                             <Download className="w-4 h-4 sm:mr-2 group-hover:animate-bounce" />
@@ -2444,7 +2449,7 @@ export default function ToolDetailPage() {
                             onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
                             variant="outline"
                             size="sm"
-                            className="border-white/10 bg-black/50 text-white hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
+                            className="border-white/[0.06] bg-white/[0.03] text-white/70 hover:bg-white/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
                             title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
                           >
                             {isAnalysisVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -2454,7 +2459,7 @@ export default function ToolDetailPage() {
                       <Button
                         onClick={handleAnalyzeCostLeaks}
                         disabled={isLoadingAnalysis}
-                        className="bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20 transition-all h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium"
+                        className="bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/10 transition-all h-8 sm:h-9 px-2.5 sm:px-4 text-xs sm:text-sm font-medium"
                       >
                         {isLoadingAnalysis ? (
                           <>
@@ -2480,16 +2485,16 @@ export default function ToolDetailPage() {
               <>
                 {/* AI-Generated Summary - shown first */}
                 {costLeakAnalysis.aiSummary && (
-                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                  <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="p-2.5 bg-purple-500/10 rounded-xl shrink-0">
-                          <Sparkles className="w-5 h-5 text-purple-400" />
+                        <div className="p-2.5 bg-violet-500/10 rounded-xl shrink-0">
+                          <Sparkles className="w-5 h-5 text-violet-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-3">
                             <h3 className="text-white font-semibold">AI Summary</h3>
-                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-violet-400 bg-violet-500/10">
                               AI
                             </Badge>
                           </div>
@@ -2503,20 +2508,20 @@ export default function ToolDetailPage() {
                             [&_h2]:text-white [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3
                             [&_h3]:text-white [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-1.5 [&_h3]:mt-2
                             [&_hr]:border-white/10 [&_hr]:my-3
-                            [&_code]:text-cyan-400 [&_code]:bg-white/5 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs
+                            [&_code]:text-emerald-400 [&_code]:bg-white/5 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs
                           ">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               components={{
                                 table: ({ children }) => (
-                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/[0.06]">
                                     <table className="w-full text-xs border-collapse">{children}</table>
                                   </div>
                                 ),
                                 thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
                                 th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border-b border-white/10 whitespace-nowrap">{children}</th>,
-                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/5">{children}</td>,
-                                tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/[0.04]">{children}</td>,
+                                tr: ({ children }) => <tr className="border-b border-white/[0.04]">{children}</tr>,
                               }}
                             >
                               {costLeakAnalysis.aiSummary}
@@ -2621,7 +2626,7 @@ export default function ToolDetailPage() {
 
                 {/* Recommendation Savings Tracker */}
                 {recommendationSummary && recommendationSummary.total > 0 && (
-                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                  <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 rounded-lg bg-emerald-500/10">
@@ -2633,23 +2638,23 @@ export default function ToolDetailPage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
                           <p className="text-xs text-gray-400 mb-1">Savings Realized</p>
                           <p className="text-lg font-bold text-emerald-400">
                             ${recommendationSummary.totalSavingsRealized.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
                           <p className="text-xs text-gray-400 mb-1">Savings Pending</p>
                           <p className="text-lg font-bold text-amber-400">
                             ${recommendationSummary.totalSavingsPending.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
                           <p className="text-xs text-gray-400 mb-1">Done</p>
-                          <p className="text-lg font-bold text-cyan-400">{recommendationSummary.applied}</p>
+                          <p className="text-lg font-bold text-emerald-400">{recommendationSummary.applied}</p>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
                           <p className="text-xs text-gray-400 mb-1">Pending</p>
                           <p className="text-lg font-bold text-gray-300">{recommendationSummary.pending}</p>
                         </div>
@@ -2680,7 +2685,7 @@ export default function ToolDetailPage() {
                   costLeakAnalysis.billAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.invoiceAnalysis?.findings?.length > 0 ||
                   costLeakAnalysis.categoryAnalysis?.findings?.length > 0) && (
-                  <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+                  <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                     <CardHeader className="pb-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -2791,7 +2796,7 @@ export default function ToolDetailPage() {
                                   {finding.recommendation && (
                                     <div className="p-2.5 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
                                       <div className="flex items-start gap-2">
-                                        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                                        <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                                         <p className="text-xs text-cyan-300 leading-relaxed">{finding.recommendation}</p>
                                       </div>
                                     </div>
@@ -2800,7 +2805,7 @@ export default function ToolDetailPage() {
                                   {/* Invoice/Bill details */}
                                   {finding.invoices?.length > 0 && (
                                     <details className="group/details">
-                                      <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                      <summary className="text-xs text-emerald-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
                                         <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
                                         {finding.invoices.length} related invoice{finding.invoices.length !== 1 ? 's' : ''}
                                       </summary>
@@ -2826,7 +2831,7 @@ export default function ToolDetailPage() {
 
                                   {finding.bills?.length > 0 && (
                                     <details className="group/details">
-                                      <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
+                                      <summary className="text-xs text-emerald-400 cursor-pointer hover:text-cyan-300 font-medium flex items-center gap-1.5">
                                         <ChevronRight className="w-3 h-3 transition-transform group-open/details:rotate-90" />
                                         {finding.bills.length} related bill{finding.bills.length !== 1 ? 's' : ''}
                                       </summary>
@@ -2896,7 +2901,7 @@ export default function ToolDetailPage() {
                           {findingsLimit < activeFindings.length ? (
                             <button
                               onClick={() => setFindingsLimit((prev: number) => prev + 20)}
-                              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+                              className="text-xs text-emerald-400 hover:text-cyan-300 font-medium"
                             >
                               Show more ({activeFindings.length - findingsLimit} remaining)
                             </button>
@@ -3001,8 +3006,8 @@ export default function ToolDetailPage() {
             {isLoadingAnalysis && (
               <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50">
                 <CardContent className="py-16 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-cyan-500/10 mb-6">
-                    <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 mb-6">
+                    <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
                   </div>
                   <h3 className="text-white font-bold text-xl mb-2">Analyzing Your Data</h3>
                   <p className="text-gray-400 max-w-md mx-auto">
@@ -3015,13 +3020,13 @@ export default function ToolDetailPage() {
 
           {/* History Tab */}
           <TabsContent value="history" className="mt-0 space-y-6">
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50 overflow-hidden relative">
+            <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden relative">
 
               <CardHeader className="relative">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-purple-500/10 rounded-xl">
-                      <Clock className="w-5 h-5 text-purple-400" />
+                    <div className="p-2.5 bg-violet-500/10 rounded-xl">
+                      <Clock className="w-5 h-5 text-violet-400" />
                     </div>
                     <div>
                       <CardTitle className="text-white text-xl font-bold">Analysis History</CardTitle>
@@ -3033,7 +3038,7 @@ export default function ToolDetailPage() {
                     variant="outline"
                     size="sm"
                     disabled={isLoadingHistory}
-                    className="border-slate-600/50 text-gray-400 hover:text-white hover:bg-white/10"
+                    className="border-white/[0.06] text-white/30 hover:text-white/60 hover:bg-white/[0.04]"
                   >
                     {isLoadingHistory ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -3126,12 +3131,12 @@ export default function ToolDetailPage() {
 
             {/* Selected Historical Analysis Display */}
             {selectedHistoricalAnalysis && (
-              <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-xl border-slate-700/50">
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-white flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-purple-400" />
+                        <FileText className="w-5 h-5 text-violet-400" />
                         Historical Analysis Details
                       </CardTitle>
                       <p className="text-gray-400 text-sm mt-1">
@@ -3157,7 +3162,7 @@ export default function ToolDetailPage() {
                     <div className="space-y-4">
                       {/* Summary */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                           <p className="text-xs text-gray-500 mb-1">Total Findings</p>
                           <p className="text-xl font-bold text-white">{selectedHistoricalAnalysis.summary?.totalFindings || 0}</p>
                         </div>
@@ -3181,9 +3186,9 @@ export default function ToolDetailPage() {
                       {selectedHistoricalAnalysis.analysis_data?.aiSummary && (
                         <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
                           <div className="flex items-center gap-2 mb-3">
-                            <Sparkles className="w-4 h-4 text-purple-400" />
+                            <Sparkles className="w-4 h-4 text-violet-400" />
                             <h4 className="text-sm font-semibold text-white">AI Summary</h4>
-                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/10">AI</Badge>
+                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-violet-400 bg-violet-500/10">AI</Badge>
                           </div>
                           <div className="prose prose-invert prose-sm max-w-none
                             [&_p]:text-gray-300 [&_p]:text-sm [&_p]:leading-relaxed [&_p]:mb-2
@@ -3200,14 +3205,14 @@ export default function ToolDetailPage() {
                               remarkPlugins={[remarkGfm]}
                               components={{
                                 table: ({ children }) => (
-                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/10">
+                                  <div className="overflow-x-auto my-3 rounded-lg border border-white/[0.06]">
                                     <table className="w-full text-xs border-collapse">{children}</table>
                                   </div>
                                 ),
                                 thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
                                 th: ({ children }) => <th className="text-left text-gray-400 font-medium px-3 py-2 border-b border-white/10 whitespace-nowrap">{children}</th>,
-                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/5">{children}</td>,
-                                tr: ({ children }) => <tr className="border-b border-white/5">{children}</tr>,
+                                td: ({ children }) => <td className="text-gray-300 px-3 py-1.5 border-b border-white/[0.04]">{children}</td>,
+                                tr: ({ children }) => <tr className="border-b border-white/[0.04]">{children}</tr>,
                               }}
                             >
                               {selectedHistoricalAnalysis.analysis_data.aiSummary}
@@ -3263,30 +3268,30 @@ export default function ToolDetailPage() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="mt-0 space-y-6">
             {/* Connection Details Card */}
-            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+            <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-cyan-400" />
+                  <Settings className="w-5 h-5 text-emerald-400" />
                   Connection Details
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
                     <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
-                    <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                    <Badge className={integration.environment === "production" ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"}>
                       {integration.environment || "N/A"}
                     </Badge>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
                     <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
                     <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
                   </div>
@@ -3296,10 +3301,10 @@ export default function ToolDetailPage() {
 
             {/* Token Information Card */}
             {integration.settings?.oauth_data?.tokens && (
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+              <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
-                    <Key className="w-5 h-5 text-cyan-400" />
+                    <Key className="w-5 h-5 text-emerald-400" />
                     Authentication Status
                   </CardTitle>
                 </CardHeader>
@@ -3307,7 +3312,7 @@ export default function ToolDetailPage() {
                   {/* Token Status Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Token Expiry */}
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className="w-4 h-4 text-gray-400" />
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
@@ -3320,14 +3325,14 @@ export default function ToolDetailPage() {
                       {integration.settings.oauth_data.tokens.expires_at && (
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
-                            ? <span className="text-green-400">Active</span>
+                            ? <span className="text-emerald-400">Active</span>
                             : <span className="text-red-400">Expired</span>}
                         </p>
                       )}
                     </div>
 
                     {/* Token Duration */}
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <div className="flex items-center gap-2 mb-2">
                         <Timer className="w-4 h-4 text-gray-400" />
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
@@ -3345,13 +3350,13 @@ export default function ToolDetailPage() {
 
                   {/* Access Token */}
                   {integration.settings.oauth_data.tokens.access_token && (
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-cyan-400" />
+                          <Shield className="w-4 h-4 text-emerald-400" />
                           <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
                         </div>
-                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                        <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30">
                           {integration.settings.oauth_data.tokens.token_type || "bearer"}
                         </Badge>
                       </div>
@@ -3366,7 +3371,7 @@ export default function ToolDetailPage() {
                             navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
                             toast.success("Access token copied to clipboard")
                           }}
-                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                          className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
@@ -3376,13 +3381,13 @@ export default function ToolDetailPage() {
 
                   {/* Refresh Token */}
                   {integration.settings.oauth_data.tokens.refresh_token && (
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <RefreshCw className="w-4 h-4 text-green-400" />
+                          <RefreshCw className="w-4 h-4 text-emerald-400" />
                           <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
                         </div>
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <Badge className="bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15">
                           Available
                         </Badge>
                       </div>
@@ -3397,7 +3402,7 @@ export default function ToolDetailPage() {
                             navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
                             toast.success("Refresh token copied to clipboard")
                           }}
-                          className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                          className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
@@ -3407,7 +3412,7 @@ export default function ToolDetailPage() {
 
                   {/* Scopes */}
                   {integration.settings.oauth_data.tokens.scope && (
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                       <div className="flex items-center gap-2 mb-3">
                         <CheckCircle className="w-4 h-4 text-gray-400" />
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
@@ -3428,7 +3433,7 @@ export default function ToolDetailPage() {
 
           {/* Data Tab */}
           <TabsContent value="data" className="mt-0">
-            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+            <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
@@ -3440,7 +3445,7 @@ export default function ToolDetailPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsInfoVisible(!isInfoVisible)}
-                      className="border-white/10 bg-black/50 text-white"
+                      className="border-white/[0.06] bg-white/[0.03] text-white/70"
                     >
                       {isInfoVisible ? (
                         <>
@@ -3455,7 +3460,7 @@ export default function ToolDetailPage() {
                       )}
                     </Button>
                     {isLoadingInfo && (
-                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                     )}
                   </div>
                 </div>
@@ -3464,7 +3469,7 @@ export default function ToolDetailPage() {
                 <CardContent className="space-y-6">
                   {isLoadingInfo ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                      <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
                     </div>
                   ) : (
                     <>
@@ -3482,12 +3487,12 @@ export default function ToolDetailPage() {
 
                         {/* Data Tab Navigation - Microsoft 365 */}
                         {isMicrosoft365 && (
-                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
                             <button
                               onClick={() => setActiveDataTab("licenses")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "licenses"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3503,7 +3508,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("users")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "users"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3520,12 +3525,12 @@ export default function ToolDetailPage() {
 
                         {/* Data Tab Navigation - HubSpot */}
                         {isHubSpot && (
-                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
                             <button
                               onClick={() => setActiveDataTab("users")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "users"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3541,7 +3546,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("account")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "account"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3553,12 +3558,12 @@ export default function ToolDetailPage() {
 
                         {/* Data Tab Navigation - QuickBooks */}
                         {isQuickBooks && (
-                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
                             <button
                               onClick={() => setActiveDataTab("company")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "company"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3569,7 +3574,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("invoices")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "invoices"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3585,7 +3590,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("bills")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "bills"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3601,7 +3606,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("vendors")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "vendors"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3617,7 +3622,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("accounts")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "accounts"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3634,12 +3639,12 @@ export default function ToolDetailPage() {
 
                         {/* Data Tab Navigation - Shopify */}
                         {isShopify && (
-                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                          <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
                             <button
                               onClick={() => setActiveDataTab("shop")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "shop"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3650,7 +3655,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("orders")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "orders"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3666,7 +3671,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("products")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "products"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3682,7 +3687,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("appCharges")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "appCharges"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3699,12 +3704,12 @@ export default function ToolDetailPage() {
 
                         {/* Data Tab Navigation - Fortnox */}
                         {isFortnox && (
-                        <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                        <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
                           <button
                             onClick={() => setActiveDataTab("company")}
                             className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                               activeDataTab === "company"
-                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                             }`}
                           >
@@ -3716,7 +3721,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("customers")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "customers"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3732,7 +3737,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("invoices")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "invoices"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3748,7 +3753,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("supplierInvoices")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "supplierInvoices"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3764,7 +3769,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("accounts")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "accounts"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3780,7 +3785,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("articles")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "articles"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3796,7 +3801,7 @@ export default function ToolDetailPage() {
                               onClick={() => setActiveDataTab("suppliers")}
                               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                                 activeDataTab === "suppliers"
-                                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-emerald-400 border border-cyan-500/30"
                                   : "text-gray-400 hover:text-white hover:bg-white/5"
                               }`}
                             >
@@ -3815,10 +3820,10 @@ export default function ToolDetailPage() {
                       {isMicrosoft365 && activeDataTab === "licenses" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Key className="w-4 h-4 text-cyan-400" />
+                            <Key className="w-4 h-4 text-emerald-400" />
                             Licenses
                             {microsoft365Info.licenses && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {microsoft365Info.licenses.length}
                               </Badge>
                             )}
@@ -3837,7 +3842,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(microsoft365Info.licenses, infoSearchQuery).map((license: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">
                                         {license.skuPartNumber || license.displayName || "Unknown"}
                                       </td>
@@ -3847,10 +3852,10 @@ export default function ToolDetailPage() {
                                       <td className="py-3 px-4 text-right text-white">
                                         {license.consumedUnits || 0}
                                       </td>
-                                      <td className="py-3 px-4 text-right text-green-400">
+                                      <td className="py-3 px-4 text-right text-emerald-400">
                                         {(license.prepaidUnits?.enabled || 0) - (license.consumedUnits || 0)}
                                       </td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">
+                                      <td className="py-3 px-4 text-right text-emerald-400">
                                         {license.prepaidUnits?.enabled || 0}
                                       </td>
                                     </tr>
@@ -3870,10 +3875,10 @@ export default function ToolDetailPage() {
                       {isMicrosoft365 && activeDataTab === "users" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4 text-cyan-400" />
+                            <Users className="w-4 h-4 text-emerald-400" />
                             Users
                             {microsoft365Info.users && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {microsoft365Info.users.length}
                               </Badge>
                             )}
@@ -3892,7 +3897,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(microsoft365Info.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">
                                         {user.displayName || "Unknown"}
                                       </td>
@@ -3901,13 +3906,13 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="py-3 px-4 text-center">
                                         <Badge className={user.accountEnabled
-                                          ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                          : "bg-red-500/20 text-red-400 border-red-500/30"
+                                          ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
+                                          : "bg-red-500/10 text-red-400/80 border-red-500/15"
                                         }>
                                           {user.accountEnabled ? "Active" : "Disabled"}
                                         </Badge>
                                       </td>
-                                      <td className="py-3 px-4 text-center text-cyan-400">
+                                      <td className="py-3 px-4 text-center text-emerald-400">
                                         {user.assignedLicenses?.length || 0}
                                       </td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">
@@ -3944,10 +3949,10 @@ export default function ToolDetailPage() {
                       {isHubSpot && activeDataTab === "users" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4 text-cyan-400" />
+                            <Users className="w-4 h-4 text-emerald-400" />
                             HubSpot Users
                             {hubspotInfo.users && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {hubspotInfo.users.length}
                               </Badge>
                             )}
@@ -3965,7 +3970,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(hubspotInfo.users, infoSearchQuery).slice(0, 50).map((user: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">
                                         {user.email || "Unknown"}
                                       </td>
@@ -3974,8 +3979,8 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="py-3 px-4 text-center">
                                         <Badge className={user.superAdmin
-                                          ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                                          : "bg-green-500/20 text-green-400 border-green-500/30"
+                                          ? "bg-violet-500/10 text-violet-400/70 border-violet-500/15"
+                                          : "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
                                         }>
                                           {user.superAdmin ? "Super Admin" : "Active"}
                                         </Badge>
@@ -4007,37 +4012,37 @@ export default function ToolDetailPage() {
                       {isHubSpot && activeDataTab === "account" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Settings className="w-4 h-4 text-cyan-400" />
+                            <Settings className="w-4 h-4 text-emerald-400" />
                             Account Information
                           </h3>
                           {hubspotInfo.accountInfo ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                               {hubspotInfo.accountInfo.portalId && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Portal ID</p>
                                   <p className="text-white font-medium">{hubspotInfo.accountInfo.portalId}</p>
                                 </div>
                               )}
                               {hubspotInfo.accountInfo.accountType && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Account Type</p>
                                   <p className="text-white font-medium capitalize">{hubspotInfo.accountInfo.accountType}</p>
                                 </div>
                               )}
                               {hubspotInfo.accountInfo.timeZone && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Timezone</p>
                                   <p className="text-white font-medium">{hubspotInfo.accountInfo.timeZone}</p>
                                 </div>
                               )}
                               {hubspotInfo.accountInfo.currency && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Currency</p>
                                   <p className="text-white font-medium">{hubspotInfo.accountInfo.currency}</p>
                                 </div>
                               )}
                               {hubspotInfo.users && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Seats</p>
                                   <p className="text-white font-medium">{hubspotInfo.users.length}</p>
                                 </div>
@@ -4062,19 +4067,19 @@ export default function ToolDetailPage() {
                       {isQuickBooks && activeDataTab === "company" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Wallet className="w-4 h-4 text-cyan-400" />
+                            <Wallet className="w-4 h-4 text-emerald-400" />
                             Company Information
                           </h3>
                           {quickbooksInfo.company ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                               {(quickbooksInfo.company.CompanyName || quickbooksInfo.company.LegalName) && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
                                   <p className="text-white font-medium">{quickbooksInfo.company.CompanyName || quickbooksInfo.company.LegalName}</p>
                                 </div>
                               )}
                               {quickbooksInfo.company.CompanyAddr && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Address</p>
                                   <p className="text-white font-medium">
                                     {[quickbooksInfo.company.CompanyAddr.Line1, quickbooksInfo.company.CompanyAddr.City, quickbooksInfo.company.CompanyAddr.CountrySubDivisionCode].filter(Boolean).join(", ")}
@@ -4082,19 +4087,19 @@ export default function ToolDetailPage() {
                                 </div>
                               )}
                               {quickbooksInfo.company.FiscalYearStartMonth && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fiscal Year Start</p>
                                   <p className="text-white font-medium">Month {quickbooksInfo.company.FiscalYearStartMonth}</p>
                                 </div>
                               )}
                               {quickbooksInfo.company.Country && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
                                   <p className="text-white font-medium">{quickbooksInfo.company.Country}</p>
                                 </div>
                               )}
                               {quickbooksInfo.company.CompanyEmail?.Address && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email</p>
                                   <p className="text-white font-medium">{quickbooksInfo.company.CompanyEmail.Address}</p>
                                 </div>
@@ -4112,10 +4117,10 @@ export default function ToolDetailPage() {
                       {isQuickBooks && activeDataTab === "invoices" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-cyan-400" />
+                            <FileText className="w-4 h-4 text-emerald-400" />
                             Invoices
                             {quickbooksInfo.invoices && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {quickbooksInfo.invoices.length}
                               </Badge>
                             )}
@@ -4135,10 +4140,10 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(quickbooksInfo.invoices, infoSearchQuery).slice(0, 50).map((inv: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{inv.DocNumber || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400">{inv.CustomerRef?.name || "N/A"}</td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">{inv.TotalAmt ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-emerald-400">{inv.TotalAmt ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-right text-white">{inv.Balance ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">{inv.DueDate || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">{inv.TxnDate || "N/A"}</td>
@@ -4162,10 +4167,10 @@ export default function ToolDetailPage() {
                       {isQuickBooks && activeDataTab === "bills" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Receipt className="w-4 h-4 text-cyan-400" />
+                            <Receipt className="w-4 h-4 text-emerald-400" />
                             Bills
                             {quickbooksInfo.bills && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {quickbooksInfo.bills.length}
                               </Badge>
                             )}
@@ -4185,10 +4190,10 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(quickbooksInfo.bills, infoSearchQuery).slice(0, 50).map((bill: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{bill.DocNumber || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400">{bill.VendorRef?.name || "N/A"}</td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">{bill.TotalAmt ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-emerald-400">{bill.TotalAmt ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-right text-white">{bill.Balance ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">{bill.DueDate || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">{bill.TxnDate || "N/A"}</td>
@@ -4212,10 +4217,10 @@ export default function ToolDetailPage() {
                       {isQuickBooks && activeDataTab === "vendors" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4 text-cyan-400" />
+                            <Users className="w-4 h-4 text-emerald-400" />
                             Vendors
                             {quickbooksInfo.vendors && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {quickbooksInfo.vendors.length}
                               </Badge>
                             )}
@@ -4233,7 +4238,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(quickbooksInfo.vendors, infoSearchQuery).slice(0, 50).map((vendor: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{vendor.DisplayName || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400">{vendor.CompanyName || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400">{vendor.PrimaryPhone?.FreeFormNumber || "N/A"}</td>
@@ -4258,10 +4263,10 @@ export default function ToolDetailPage() {
                       {isQuickBooks && activeDataTab === "accounts" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-cyan-400" />
+                            <BookOpen className="w-4 h-4 text-emerald-400" />
                             Accounts
                             {quickbooksInfo.accounts && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {quickbooksInfo.accounts.length}
                               </Badge>
                             )}
@@ -4278,10 +4283,10 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(quickbooksInfo.accounts, infoSearchQuery).slice(0, 50).map((acct: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{acct.Name || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400">{acct.AccountType || "N/A"}</td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">{acct.CurrentBalance ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-emerald-400">{acct.CurrentBalance ?? "N/A"}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -4309,37 +4314,37 @@ export default function ToolDetailPage() {
                       {isShopify && activeDataTab === "shop" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Settings className="w-4 h-4 text-cyan-400" />
+                            <Settings className="w-4 h-4 text-emerald-400" />
                             Shop Information
                           </h3>
                           {shopifyInfo.shop ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                               {shopifyInfo.shop.name && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shop Name</p>
                                   <p className="text-white font-medium">{shopifyInfo.shop.name}</p>
                                 </div>
                               )}
                               {shopifyInfo.shop.domain && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Domain</p>
                                   <p className="text-white font-medium">{shopifyInfo.shop.domain}</p>
                                 </div>
                               )}
                               {shopifyInfo.shop.plan_name && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Plan</p>
                                   <p className="text-white font-medium capitalize">{shopifyInfo.shop.plan_name}</p>
                                 </div>
                               )}
                               {shopifyInfo.shop.country_name && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
                                   <p className="text-white font-medium">{shopifyInfo.shop.country_name}</p>
                                 </div>
                               )}
                               {shopifyInfo.shop.currency && (
-                                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Currency</p>
                                   <p className="text-white font-medium">{shopifyInfo.shop.currency}</p>
                                 </div>
@@ -4357,10 +4362,10 @@ export default function ToolDetailPage() {
                       {isShopify && activeDataTab === "orders" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-cyan-400" />
+                            <FileText className="w-4 h-4 text-emerald-400" />
                             Orders
                             {shopifyInfo.orders && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {shopifyInfo.orders.length}
                               </Badge>
                             )}
@@ -4379,17 +4384,17 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(shopifyInfo.orders, infoSearchQuery).slice(0, 50).map((order: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{order.name || "N/A"}</td>
                                       <td className="py-3 px-4 text-gray-400 text-xs">
                                         {order.created_at ? new Date(order.created_at).toLocaleDateString() : "N/A"}
                                       </td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">{order.total_price ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-emerald-400">{order.total_price ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-center">
                                         <Badge className={
                                           order.financial_status === "paid"
-                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                            : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                            ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
+                                            : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"
                                         }>
                                           {order.financial_status || "N/A"}
                                         </Badge>
@@ -4397,7 +4402,7 @@ export default function ToolDetailPage() {
                                       <td className="py-3 px-4 text-center">
                                         <Badge className={
                                           order.fulfillment_status === "fulfilled"
-                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                            ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
                                             : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                                         }>
                                           {order.fulfillment_status || "unfulfilled"}
@@ -4423,10 +4428,10 @@ export default function ToolDetailPage() {
                       {isShopify && activeDataTab === "products" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Package className="w-4 h-4 text-cyan-400" />
+                            <Package className="w-4 h-4 text-emerald-400" />
                             Products
                             {shopifyInfo.products && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {shopifyInfo.products.length}
                               </Badge>
                             )}
@@ -4448,18 +4453,18 @@ export default function ToolDetailPage() {
                                     const minPrice = prices.length > 0 ? Math.min(...prices) : null
                                     const maxPrice = prices.length > 0 ? Math.max(...prices) : null
                                     return (
-                                      <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                      <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                         <td className="py-3 px-4 text-white font-medium">{product.title || "N/A"}</td>
                                         <td className="py-3 px-4 text-center">
                                           <Badge className={
                                             product.status === "active"
-                                              ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                              ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
                                               : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                                           }>
                                             {product.status || "N/A"}
                                           </Badge>
                                         </td>
-                                        <td className="py-3 px-4 text-right text-cyan-400">{product.variants?.length || 0}</td>
+                                        <td className="py-3 px-4 text-right text-emerald-400">{product.variants?.length || 0}</td>
                                         <td className="py-3 px-4 text-right text-white">
                                           {minPrice !== null
                                             ? minPrice === maxPrice
@@ -4488,10 +4493,10 @@ export default function ToolDetailPage() {
                       {isShopify && activeDataTab === "appCharges" && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-cyan-400" />
+                            <CreditCard className="w-4 h-4 text-emerald-400" />
                             App Subscriptions
                             {shopifyInfo.appCharges && (
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                              <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                 {shopifyInfo.appCharges.length}
                               </Badge>
                             )}
@@ -4509,13 +4514,13 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {filterData(shopifyInfo.appCharges, infoSearchQuery).slice(0, 50).map((charge: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                    <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/5">
                                       <td className="py-3 px-4 text-white font-medium">{charge.name || "N/A"}</td>
-                                      <td className="py-3 px-4 text-right text-cyan-400">{charge.price ?? "N/A"}</td>
+                                      <td className="py-3 px-4 text-right text-emerald-400">{charge.price ?? "N/A"}</td>
                                       <td className="py-3 px-4 text-center">
                                         <Badge className={
                                           charge.status === "active"
-                                            ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                            ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
                                             : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                                         }>
                                           {charge.status || "N/A"}
@@ -4551,78 +4556,78 @@ export default function ToolDetailPage() {
                       {isFortnox && activeDataTab === "company" && fortnoxInfo.company && (
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                            <Wallet className="w-4 h-4 text-cyan-400" />
+                            <Wallet className="w-4 h-4 text-emerald-400" />
                             Company Information
                           </h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {(fortnoxInfo.company.CompanyName || fortnoxInfo.company.Name) && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.CompanyName || fortnoxInfo.company.Name}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.OrganisationNumber && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Organization Number</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.OrganisationNumber}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.Email && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.Email}</p>
                               </div>
                             )}
                             {(fortnoxInfo.company.Phone1 || fortnoxInfo.company.Phone) && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Phone</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.Phone1 || fortnoxInfo.company.Phone}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.Address && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Address</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.Address}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.City && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">City</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.City}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.ZipCode && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Zip Code</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.ZipCode}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.Country && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.Country}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.CountryCode && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Country Code</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.CountryCode}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.WWW && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Website</p>
-                                <p className="text-cyan-400 font-medium">{fortnoxInfo.company.WWW}</p>
+                                <p className="text-emerald-400 font-medium">{fortnoxInfo.company.WWW}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.VatNumber && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">VAT Number</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.VatNumber}</p>
                               </div>
                             )}
                             {fortnoxInfo.company.DatabaseNumber && (
-                              <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Database Number</p>
                                 <p className="text-white font-medium">{fortnoxInfo.company.DatabaseNumber}</p>
                               </div>
@@ -4633,12 +4638,12 @@ export default function ToolDetailPage() {
                           {fortnoxInfo.settings && Object.keys(fortnoxInfo.settings).length > 0 && (
                             <div className="mt-6">
                               <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
-                                <Settings className="w-4 h-4 text-cyan-400" />
+                                <Settings className="w-4 h-4 text-emerald-400" />
                                 Settings
                               </h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {Object.entries(fortnoxInfo.settings).map(([key, value]) => (
-                                  <div key={key} className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                                  <div key={key} className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
                                       {key.replace(/([A-Z])/g, ' $1').trim()}
                                     </p>
@@ -4665,9 +4670,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <Users className="w-4 h-4 text-cyan-400" />
+                                <Users className="w-4 h-4 text-emerald-400" />
                                 Customers
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredCustomers.length}
                                 </Badge>
                               </h3>
@@ -4678,7 +4683,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setCustomersPage(p => Math.max(1, p - 1))}
                                     disabled={customersPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -4690,14 +4695,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setCustomersPage(p => Math.min(totalCustomerPages, p + 1))}
                                     disabled={customersPage === totalCustomerPages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -4709,7 +4714,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedCustomers.map((customer: any, idx: number) => (
-                                    <tr key={customer.CustomerNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={customer.CustomerNumber || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3">
                                         <p className="text-white font-medium">{customer.Name || 'N/A'}</p>
                                         <p className="text-xs text-gray-500 sm:hidden">{customer.Email || '-'}</p>
@@ -4738,9 +4743,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-cyan-400" />
+                                <FileText className="w-4 h-4 text-emerald-400" />
                                 Invoices
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredInvoices.length}
                                 </Badge>
                               </h3>
@@ -4751,7 +4756,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setInvoicesPage(p => Math.max(1, p - 1))}
                                     disabled={invoicesPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -4763,14 +4768,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setInvoicesPage(p => Math.min(totalInvoicePages, p + 1))}
                                     disabled={invoicesPage === totalInvoicePages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -4783,7 +4788,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedInvoices.map((invoice: any, idx: number) => (
-                                    <tr key={invoice.DocumentNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={invoice.DocumentNumber || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3 text-white font-medium">{invoice.DocumentNumber || '-'}</td>
                                       <td className="p-3">
                                         <p className="text-gray-300">{invoice.CustomerName || '-'}</p>
@@ -4795,9 +4800,9 @@ export default function ToolDetailPage() {
                                       </td>
                                       <td className="p-3 hidden md:table-cell">
                                         <Badge className={
-                                          invoice.Cancelled ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                          invoice.Booked ? "bg-green-500/20 text-green-400 border-green-500/30" :
-                                          "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                          invoice.Cancelled ? "bg-red-500/10 text-red-400/80 border-red-500/15" :
+                                          invoice.Booked ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" :
+                                          "bg-amber-500/10 text-amber-400/80 border-amber-500/15"
                                         }>
                                           {invoice.Cancelled ? 'Cancelled' : invoice.Booked ? 'Booked' : 'Draft'}
                                         </Badge>
@@ -4823,9 +4828,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <Receipt className="w-4 h-4 text-cyan-400" />
+                                <Receipt className="w-4 h-4 text-emerald-400" />
                                 Supplier Invoices
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredSupplierInvoices.length}
                                 </Badge>
                               </h3>
@@ -4836,7 +4841,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setSupplierInvoicesPage(p => Math.max(1, p - 1))}
                                     disabled={supplierInvoicesPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -4848,14 +4853,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setSupplierInvoicesPage(p => Math.min(totalSupplierInvoicePages, p + 1))}
                                     disabled={supplierInvoicesPage === totalSupplierInvoicePages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -4868,7 +4873,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedSupplierInvoices.map((invoice: any, idx: number) => (
-                                    <tr key={invoice.GivenNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={invoice.GivenNumber || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3 text-white font-medium">{invoice.GivenNumber || '-'}</td>
                                       <td className="p-3">
                                         <p className="text-gray-300">{invoice.SupplierName || '-'}</p>
@@ -4900,9 +4905,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <BookOpen className="w-4 h-4 text-cyan-400" />
+                                <BookOpen className="w-4 h-4 text-emerald-400" />
                                 Accounts
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredAccounts.length}
                                 </Badge>
                               </h3>
@@ -4913,7 +4918,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setAccountsPage(p => Math.max(1, p - 1))}
                                     disabled={accountsPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -4925,14 +4930,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setAccountsPage(p => Math.min(totalAccountPages, p + 1))}
                                     disabled={accountsPage === totalAccountPages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -4944,12 +4949,12 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedAccounts.map((account: any, idx: number) => (
-                                    <tr key={account.Number || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={account.Number || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3 text-white font-medium">{account.Number || '-'}</td>
                                       <td className="p-3 text-gray-300">{account.Description || '-'}</td>
                                       <td className="p-3 text-gray-300 hidden sm:table-cell">{account.SRU || '-'}</td>
                                       <td className="p-3 hidden md:table-cell">
-                                        <Badge className={account.Active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}>
+                                        <Badge className={account.Active ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}>
                                           {account.Active ? 'Active' : 'Inactive'}
                                         </Badge>
                                       </td>
@@ -4974,9 +4979,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <Package className="w-4 h-4 text-cyan-400" />
+                                <Package className="w-4 h-4 text-emerald-400" />
                                 Articles
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredArticles.length}
                                 </Badge>
                               </h3>
@@ -4987,7 +4992,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setArticlesPage(p => Math.max(1, p - 1))}
                                     disabled={articlesPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -4999,14 +5004,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setArticlesPage(p => Math.min(totalArticlePages, p + 1))}
                                     disabled={articlesPage === totalArticlePages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -5018,7 +5023,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedArticles.map((article: any, idx: number) => (
-                                    <tr key={article.ArticleNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={article.ArticleNumber || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3 text-white font-medium">{article.ArticleNumber || '-'}</td>
                                       <td className="p-3 text-gray-300">{article.Description || '-'}</td>
                                       <td className="p-3 text-right text-white font-medium hidden sm:table-cell">
@@ -5046,9 +5051,9 @@ export default function ToolDetailPage() {
                           <div>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <Users className="w-4 h-4 text-cyan-400" />
+                                <Users className="w-4 h-4 text-emerald-400" />
                                 Suppliers
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-2">
+                                <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30 ml-2">
                                   {filteredSuppliers.length}
                                 </Badge>
                               </h3>
@@ -5059,7 +5064,7 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setSuppliersPage(p => Math.max(1, p - 1))}
                                     disabled={suppliersPage === 1}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronLeft className="w-4 h-4" />
                                   </Button>
@@ -5071,14 +5076,14 @@ export default function ToolDetailPage() {
                                     size="sm"
                                     onClick={() => setSuppliersPage(p => Math.min(totalSupplierPages, p + 1))}
                                     disabled={suppliersPage === totalSupplierPages}
-                                    className="h-8 w-8 p-0 border-white/10 bg-black/50 text-white disabled:opacity-50"
+                                    className="h-8 w-8 p-0 border-white/[0.06] bg-white/[0.03] text-white/70 disabled:opacity-50"
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="overflow-x-auto rounded-lg border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-white/[0.06]">
                               <table className="w-full">
                                 <thead>
                                   <tr className="bg-white/5 border-b border-white/10">
@@ -5090,7 +5095,7 @@ export default function ToolDetailPage() {
                                 </thead>
                                 <tbody>
                                   {paginatedSuppliers.map((supplier: any, idx: number) => (
-                                    <tr key={supplier.SupplierNumber || idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <tr key={supplier.SupplierNumber || idx} className="border-b border-white/[0.04] hover:bg-white/5 transition-colors">
                                       <td className="p-3">
                                         <p className="text-white font-medium">{supplier.Name || 'N/A'}</p>
                                         <p className="text-xs text-gray-500 sm:hidden">{supplier.Email || '-'}</p>
@@ -5124,30 +5129,30 @@ export default function ToolDetailPage() {
         /* Non-Fortnox or not connected - show only Overview */
         <div className="space-y-6">
           {/* Connection Details Card */}
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-cyan-400" />
+                <Settings className="w-5 h-5 text-emerald-400" />
                 Connection Details
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
                   <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
                 </div>
-                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
-                  <Badge className={integration.environment === "production" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"}>
+                  <Badge className={integration.environment === "production" ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"}>
                     {integration.environment || "N/A"}
                   </Badge>
                 </div>
-                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
                   <p className="text-white font-medium">{formatDate(integration.created_at)}</p>
                 </div>
-                <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Last Updated</p>
                   <p className="text-white font-medium">{formatDate(integration.updated_at)}</p>
                 </div>
@@ -5157,10 +5162,10 @@ export default function ToolDetailPage() {
 
           {/* Token Information Card */}
           {integration.settings?.oauth_data?.tokens && (
-            <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+            <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
-                  <Key className="w-5 h-5 text-cyan-400" />
+                  <Key className="w-5 h-5 text-emerald-400" />
                   Authentication Status
                 </CardTitle>
               </CardHeader>
@@ -5168,7 +5173,7 @@ export default function ToolDetailPage() {
                 {/* Token Status Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Token Expiry */}
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-4 h-4 text-gray-400" />
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Token Expires</p>
@@ -5181,14 +5186,14 @@ export default function ToolDetailPage() {
                     {integration.settings.oauth_data.tokens.expires_at && (
                       <p className="text-xs text-gray-500 mt-1">
                         {new Date(integration.settings.oauth_data.tokens.expires_at * 1000) > new Date()
-                          ? <span className="text-green-400">Active</span>
+                          ? <span className="text-emerald-400">Active</span>
                           : <span className="text-red-400">Expired</span>}
                       </p>
                     )}
                   </div>
 
                   {/* Token Duration */}
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center gap-2 mb-2">
                       <Timer className="w-4 h-4 text-gray-400" />
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Token Duration</p>
@@ -5206,13 +5211,13 @@ export default function ToolDetailPage() {
 
                 {/* Access Token */}
                 {integration.settings.oauth_data.tokens.access_token && (
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-cyan-400" />
+                        <Shield className="w-4 h-4 text-emerald-400" />
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Access Token</p>
                       </div>
-                      <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                      <Badge className="bg-cyan-500/20 text-emerald-400 border-cyan-500/30">
                         {integration.settings.oauth_data.tokens.token_type || "bearer"}
                       </Badge>
                     </div>
@@ -5227,7 +5232,7 @@ export default function ToolDetailPage() {
                           navigator.clipboard.writeText(integration.settings.oauth_data.tokens.access_token)
                           toast.success("Access token copied to clipboard")
                         }}
-                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
@@ -5237,13 +5242,13 @@ export default function ToolDetailPage() {
 
                 {/* Refresh Token */}
                 {integration.settings.oauth_data.tokens.refresh_token && (
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-green-400" />
+                        <RefreshCw className="w-4 h-4 text-emerald-400" />
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Refresh Token</p>
                       </div>
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      <Badge className="bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15">
                         Available
                       </Badge>
                     </div>
@@ -5258,7 +5263,7 @@ export default function ToolDetailPage() {
                           navigator.clipboard.writeText(integration.settings.oauth_data.tokens.refresh_token)
                           toast.success("Refresh token copied to clipboard")
                         }}
-                        className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 shrink-0"
+                        className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
@@ -5268,7 +5273,7 @@ export default function ToolDetailPage() {
 
                 {/* Scopes */}
                 {integration.settings.oauth_data.tokens.scope && (
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
+                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="flex items-center gap-2 mb-3">
                       <CheckCircle className="w-4 h-4 text-gray-400" />
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Authorized Scopes</p>
@@ -5290,7 +5295,7 @@ export default function ToolDetailPage() {
 
       {/* Legacy Cost Leak Analysis Section - Remove this after confirming tabs work */}
       {false && isFortnox && integration.status === "connected" && (
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white flex items-center gap-2">
@@ -5302,7 +5307,7 @@ export default function ToolDetailPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsInfoVisible(!isInfoVisible)}
-                  className="border-white/10 bg-black/50 text-white"
+                  className="border-white/[0.06] bg-white/[0.03] text-white/70"
                 >
                   {isInfoVisible ? (
                     <>
@@ -5317,7 +5322,7 @@ export default function ToolDetailPage() {
                   )}
                 </Button>
                 {isLoadingInfo && (
-                  <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                 )}
               </div>
             </div>
@@ -5326,7 +5331,7 @@ export default function ToolDetailPage() {
             <CardContent className="space-y-6">
               {isLoadingInfo ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
                 </div>
               ) : (
                 <>
@@ -5477,7 +5482,7 @@ export default function ToolDetailPage() {
                   <Button
                     onClick={() => setIsAnalysisVisible(!isAnalysisVisible)}
                     variant="outline"
-                    className="border-white/10 bg-black/50 text-white hover:bg-white/10"
+                    className="border-white/[0.06] bg-white/[0.03] text-white/70 hover:bg-white/10"
                     title={isAnalysisVisible ? "Hide analysis" : "Show analysis"}
                   >
                     {isAnalysisVisible ? (
@@ -5518,28 +5523,28 @@ export default function ToolDetailPage() {
               {/* Summary Cards */}
               {costLeakAnalysis.overallSummary && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-black/40 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors">
+                  <div className="bg-white/[0.01] rounded-lg p-4 border border-white/[0.06] hover:border-white/20 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Total Findings</p>
                     <p className="text-2xl font-bold text-white">
                       {costLeakAnalysis.overallSummary.totalFindings || 0}
                     </p>
                   </div>
-                  <div className="bg-black/40 rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
+                  <div className="bg-white/[0.01] rounded-lg p-4 border border-green-500/30 hover:border-green-500/50 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Potential Savings</p>
-                    <p className="text-2xl font-bold text-green-400">
+                    <p className="text-2xl font-bold text-emerald-400">
                       {formatCurrencyForIntegration(
                         costLeakAnalysis.overallSummary.totalPotentialSavings || 0,
                         integration?.connection_type || 'fortnox'
                       )}
                     </p>
                   </div>
-                  <div className="bg-black/40 rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
+                  <div className="bg-white/[0.01] rounded-lg p-4 border border-red-500/30 hover:border-red-500/50 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">High Priority</p>
                     <p className="text-2xl font-bold text-red-400">
                       {costLeakAnalysis.overallSummary.highSeverity || 0}
                     </p>
                   </div>
-                  <div className="bg-black/40 rounded-lg p-4 border border-amber-500/30 hover:border-amber-500/50 transition-colors">
+                  <div className="bg-white/[0.01] rounded-lg p-4 border border-amber-500/30 hover:border-amber-500/50 transition-colors">
                     <p className="text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Medium Priority</p>
                     <p className="text-2xl font-bold text-amber-400">
                       {costLeakAnalysis.overallSummary.mediumSeverity || 0}
@@ -5565,25 +5570,25 @@ export default function ToolDetailPage() {
                   
                   {costLeakAnalysis.subscriptionAnalysis.summary && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="bg-black/40 rounded-lg p-3 border border-white/10">
+                      <div className="bg-white/[0.01] rounded-lg p-3 border border-white/[0.06]">
                         <p className="text-xs text-gray-400 mb-1">Features Used</p>
                         <p className="text-xl font-bold text-white">
                           {costLeakAnalysis.subscriptionAnalysis.summary.activeFeaturesCount}/{costLeakAnalysis.subscriptionAnalysis.summary.totalFeaturesCount}
                         </p>
                       </div>
-                      <div className="bg-black/40 rounded-lg p-3 border border-white/10">
+                      <div className="bg-white/[0.01] rounded-lg p-3 border border-white/[0.06]">
                         <p className="text-xs text-gray-400 mb-1">Transactions</p>
                         <p className="text-xl font-bold text-white">
                           {costLeakAnalysis.subscriptionAnalysis.summary.transactionVolume}
                         </p>
                       </div>
-                      <div className="bg-black/40 rounded-lg p-3 border border-indigo-500/30">
+                      <div className="bg-white/[0.01] rounded-lg p-3 border border-indigo-500/30">
                         <p className="text-xs text-gray-400 mb-1">Utilization</p>
                         <p className="text-xl font-bold text-indigo-400">
                           {costLeakAnalysis.subscriptionAnalysis.summary.utilizationScore}%
                         </p>
                       </div>
-                      <div className="bg-black/40 rounded-lg p-3 border border-amber-500/30">
+                      <div className="bg-white/[0.01] rounded-lg p-3 border border-amber-500/30">
                         <p className="text-xs text-gray-400 mb-1">Recommendations</p>
                         <p className="text-xl font-bold text-amber-400">
                           {costLeakAnalysis.subscriptionAnalysis.summary.recommendations}
@@ -5598,7 +5603,7 @@ export default function ToolDetailPage() {
                       {costLeakAnalysis.subscriptionAnalysis.findings.map((finding: any, idx: number) => (
                         <div
                           key={idx}
-                          className={`bg-black/40 rounded-lg p-3 border ${
+                          className={`bg-white/[0.01] rounded-lg p-3 border ${
                             finding.severity === "high"
                               ? "border-red-500/40"
                               : finding.severity === "medium"
@@ -5655,7 +5660,7 @@ export default function ToolDetailPage() {
                     {allFindings.slice(0, 20).map((finding: any, idx: number) => (
                       <div
                         key={idx}
-                        className={`bg-black/40 rounded-lg p-4 border transition-all hover:shadow-lg ${
+                        className={`bg-white/[0.01] rounded-lg p-4 border transition-all hover:shadow-lg ${
                           finding.severity === "high"
                             ? "border-red-500/50 hover:border-red-500/70"
                             : finding.severity === "medium"
@@ -5684,7 +5689,7 @@ export default function ToolDetailPage() {
                             {finding.potentialSavings > 0 && (
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xs text-gray-400">Potential Savings:</span>
-                                <span className="text-sm font-semibold text-green-400">
+                                <span className="text-sm font-semibold text-emerald-400">
                                   ${finding.potentialSavings?.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </span>
                               </div>
@@ -5699,13 +5704,13 @@ export default function ToolDetailPage() {
                             )}
                             {finding.invoices && finding.invoices.length > 0 && (
                               <details className="mt-3 group">
-                                <summary className="text-xs text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2">
+                                <summary className="text-xs text-emerald-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2">
                                   <span className="transition-transform group-open:rotate-90">▶</span>
                                   View {finding.invoices.length} invoice{finding.invoices.length !== 1 ? 's' : ''}
                                 </summary>
                                 <div className="mt-3 space-y-2 pl-4 border-l-2 border-white/10">
                                   {finding.invoices.map((inv: any, invIdx: number) => (
-                                    <div key={invIdx} className="text-xs bg-black/30 p-3 rounded border border-white/5 hover:border-white/10 transition-colors">
+                                    <div key={invIdx} className="text-xs bg-black/30 p-3 rounded border border-white/[0.04] hover:border-white/10 transition-colors">
                                       <div className="flex items-center justify-between gap-2 flex-wrap">
                                         <div className="flex items-center gap-2">
                                           <Receipt className="w-3 h-3 text-gray-500" />
@@ -5715,7 +5720,7 @@ export default function ToolDetailPage() {
                                         </div>
                                         <div className="flex items-center gap-3 text-gray-400">
                                           <span>{inv.InvoiceDate || 'N/A'}</span>
-                                          <span className="text-green-400 font-medium">
+                                          <span className="text-emerald-400 font-medium">
                                             {formatCurrencyForIntegration(inv.calculatedTotal || 0, integration?.connection_type || 'fortnox')}
                                           </span>
                                         </div>
@@ -5749,8 +5754,8 @@ export default function ToolDetailPage() {
               {/* No Findings */}
               {(((costLeakAnalysis.supplierInvoiceAnalysis?.findings?.length || 0) + (costLeakAnalysis.customerInvoiceAnalysis?.findings?.length || 0)) === 0) && (
                 <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
-                    <CheckCircle className="w-8 h-8 text-green-400" />
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 mb-4">
+                    <CheckCircle className="w-8 h-8 text-emerald-400" />
                   </div>
                   <p className="text-white font-semibold text-lg mb-1">No cost leaks detected!</p>
                   <p className="text-gray-400 text-sm">
@@ -5761,7 +5766,7 @@ export default function ToolDetailPage() {
 
               {/* Full Analysis JSON */}
               <details className="mt-6">
-                <summary className="text-sm text-cyan-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2 mb-3">
+                <summary className="text-sm text-emerald-400 cursor-pointer hover:text-cyan-300 font-medium list-none flex items-center gap-2 mb-3">
                   <span className="transition-transform group-open:rotate-90">▶</span>
                   View Full Analysis JSON
                 </summary>
@@ -5776,7 +5781,7 @@ export default function ToolDetailPage() {
 
       {/* PDF Preview Dialog */}
       <Dialog open={showPdfPreview} onOpenChange={setShowPdfPreview}>
-        <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl !bg-[#111113] !border-white/[0.08] rounded-xl text-white max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="text-xl font-bold flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
@@ -5959,7 +5964,7 @@ export default function ToolDetailPage() {
             {/* PDF Info */}
             <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
               <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                <Info className="w-4 h-4 text-cyan-400" />
+                <Info className="w-4 h-4 text-emerald-400" />
                 What's included in the PDF
               </h4>
               <ul className="text-xs text-gray-400 space-y-1.5">
