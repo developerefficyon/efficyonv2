@@ -401,21 +401,35 @@ export default function ReportsPage() {
     setShowExportDialog(true)
   }
 
-  // Export AI Summary as PDF
+  // Export AI Summary as PDF with markdown formatting
   const exportAiSummaryPDF = (summary: string, provider?: string) => {
     if (!summary) { toast.error("No AI summary to export"); return }
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 15
+    const maxWidth = pageWidth - margin * 2
     let y = margin
 
+    const checkPage = (needed: number = 12) => {
+      if (y > doc.internal.pageSize.getHeight() - needed - 10) { doc.addPage(); y = margin }
+    }
+
+    const renderText = (text: string, x: number, fontSize: number, style: string, color: [number, number, number], width: number) => {
+      doc.setFont("helvetica", style)
+      doc.setFontSize(fontSize)
+      doc.setTextColor(...color)
+      const clean = text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`(.*?)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      const lines = doc.splitTextToSize(clean, width)
+      for (const line of lines) { checkPage(); doc.text(line, x, y); y += fontSize * 0.45 + 1 }
+    }
+
+    // Header
     doc.setFillColor(15, 23, 42)
     doc.rect(0, 0, pageWidth, 32, "F")
     doc.setDrawColor(52, 211, 153)
     doc.setLineWidth(1.5)
     doc.line(0, 32, pageWidth, 32)
-
     doc.setFont("helvetica", "bold")
     doc.setFontSize(16)
     doc.setTextColor(255, 255, 255)
@@ -423,38 +437,73 @@ export default function ReportsPage() {
     doc.setFont("helvetica", "normal")
     doc.setFontSize(9)
     doc.setTextColor(148, 163, 184)
+    const toolName = provider || "Unknown"
     const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-    doc.text(`${provider || "Unknown"} | ${dateStr}`, margin, 26)
-
+    doc.text(`${toolName} | ${dateStr}`, margin, 26)
     y = 42
 
-    const cleanText = summary
-      .replace(/#{1,6}\s/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
-      .replace(/`(.*?)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/^[-*]\s/gm, "• ").replace(/\|[^|]*\|/g, "").replace(/^---+$/gm, "").replace(/\n{3,}/g, "\n\n")
+    // Parse markdown
+    const mdLines = summary.split("\n")
+    let idx = 0
 
-    doc.setFont("helvetica", "normal")
-    doc.setFontSize(10)
-    doc.setTextColor(60, 60, 60)
-    const maxWidth = pageWidth - margin * 2
+    while (idx < mdLines.length) {
+      const line = mdLines[idx]
 
-    for (const paragraph of cleanText.split("\n")) {
-      if (!paragraph.trim()) { y += 4; continue }
-      const isBullet = paragraph.trim().startsWith("•")
-      const lines = doc.splitTextToSize(paragraph.trim(), isBullet ? maxWidth - 8 : maxWidth)
-      for (const line of lines) {
-        if (y > doc.internal.pageSize.getHeight() - 20) { doc.addPage(); y = margin }
-        doc.text(line, isBullet ? margin + 4 : margin, y)
-        y += 5
+      if (!line.trim()) { y += 3; idx++; continue }
+
+      // Tables
+      if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+        const tableLines: string[] = []
+        while (idx < mdLines.length && mdLines[idx].trim().startsWith("|") && mdLines[idx].trim().endsWith("|")) {
+          tableLines.push(mdLines[idx].trim()); idx++
+        }
+        if (tableLines.length >= 2) {
+          const parseRow = (row: string) => row.split("|").filter((_, i, a) => i > 0 && i < a.length - 1).map(c => c.trim())
+          const headerCells = parseRow(tableLines[0])
+          const bodyRows: string[][] = []
+          for (let r = 1; r < tableLines.length; r++) {
+            if (/^[\s|:-]+$/.test(tableLines[r].replace(/\|/g, "").trim())) continue
+            bodyRows.push(parseRow(tableLines[r]))
+          }
+          checkPage(20 + bodyRows.length * 8)
+          autoTable(doc, {
+            startY: y, head: [headerCells], body: bodyRows, theme: "striped",
+            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+            bodyStyles: { fontSize: 8, textColor: [60, 60, 60] },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            styles: { cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.2 },
+            margin: { left: margin, right: margin },
+          })
+          y = (doc as any).lastAutoTable.finalY + 6
+          continue
+        }
       }
-      y += 2
+
+      // Headings
+      const h1 = line.match(/^#\s+(.+)/); const h2 = line.match(/^##\s+(.+)/); const h3 = line.match(/^###\s+(.+)/)
+      if (h1) { y += 4; checkPage(); renderText(h1[1], margin, 14, "bold", [30, 30, 30], maxWidth); y += 2; idx++; continue }
+      if (h2) { y += 3; checkPage(); renderText(h2[1], margin, 12, "bold", [40, 40, 40], maxWidth); y += 1; idx++; continue }
+      if (h3) { y += 2; checkPage(); renderText(h3[1], margin, 10, "bold", [50, 50, 50], maxWidth); y += 1; idx++; continue }
+
+      // HR
+      if (/^---+$/.test(line.trim())) { checkPage(); doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3); doc.line(margin, y, pageWidth - margin, y); y += 4; idx++; continue }
+
+      // Bullets
+      const bullet = line.match(/^(\s*)[-*]\s+(.+)/)
+      if (bullet) { const indent = Math.min(Math.floor((bullet[1]?.length || 0) / 2), 3) * 5; checkPage(); doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60, 60, 60); doc.text("•", margin + indent, y); renderText(bullet[2], margin + indent + 5, 9, "normal", [60, 60, 60], maxWidth - indent - 5); idx++; continue }
+
+      // Numbered list
+      const num = line.match(/^(\s*)(\d+)\.\s+(.+)/)
+      if (num) { const indent = Math.min(Math.floor((num[1]?.length || 0) / 2), 3) * 5; checkPage(); doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60, 60, 60); doc.text(`${num[2]}.`, margin + indent, y); renderText(num[3], margin + indent + 7, 9, "normal", [60, 60, 60], maxWidth - indent - 7); idx++; continue }
+
+      // Paragraph
+      checkPage(); renderText(line, margin, 9, "normal", [60, 60, 60], maxWidth); y += 1; idx++
     }
 
-    doc.setFontSize(7)
-    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150)
     doc.text("Generated by Efficyon — AI-Powered Cost Optimization", pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" })
 
-    const filename = `AI_Summary_${provider || "Report"}_${new Date().toISOString().split("T")[0]}.pdf`
+    const filename = `AI_Summary_${toolName}_${new Date().toISOString().split("T")[0]}.pdf`
     doc.save(filename)
     toast.success("AI Summary exported", { description: `${filename} saved` })
   }

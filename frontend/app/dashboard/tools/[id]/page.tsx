@@ -1758,7 +1758,7 @@ export default function ToolDetailPage() {
 
   const getTotalPages = (totalItems: number) => Math.ceil(totalItems / ITEMS_PER_PAGE)
 
-  // Export AI Summary as PDF
+  // Export AI Summary as PDF with markdown formatting
   const exportAiSummaryPDF = (summary: string, provider?: string) => {
     if (!summary) {
       toast.error("No AI summary to export")
@@ -1768,9 +1768,31 @@ export default function ToolDetailPage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 15
+    const maxWidth = pageWidth - margin * 2
     let y = margin
 
-    // Header bar
+    const checkPage = (needed: number = 12) => {
+      if (y > doc.internal.pageSize.getHeight() - needed - 10) {
+        doc.addPage()
+        y = margin
+      }
+    }
+
+    // Render wrapped text and return new y
+    const renderText = (text: string, x: number, fontSize: number, style: string, color: [number, number, number], width: number) => {
+      doc.setFont("helvetica", style)
+      doc.setFontSize(fontSize)
+      doc.setTextColor(...color)
+      const cleanLine = text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`(.*?)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      const lines = doc.splitTextToSize(cleanLine, width)
+      for (const line of lines) {
+        checkPage()
+        doc.text(line, x, y)
+        y += fontSize * 0.45 + 1
+      }
+    }
+
+    // ===== HEADER =====
     doc.setFillColor(15, 23, 42)
     doc.rect(0, 0, pageWidth, 32, "F")
     doc.setDrawColor(52, 211, 153)
@@ -1791,48 +1813,153 @@ export default function ToolDetailPage() {
 
     y = 42
 
-    // Clean markdown to plain text for PDF
-    const cleanText = summary
-      .replace(/#{1,6}\s/g, "")
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/`(.*?)`/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/^[-*]\s/gm, "• ")
-      .replace(/^\d+\.\s/gm, (match) => match)
-      .replace(/\|[^|]*\|/g, "")
-      .replace(/^---+$/gm, "")
-      .replace(/\n{3,}/g, "\n\n")
+    // ===== PARSE MARKDOWN BLOCKS =====
+    const lines = summary.split("\n")
+    let i = 0
 
-    // Split into lines with word wrap
-    doc.setFont("helvetica", "normal")
-    doc.setFontSize(10)
-    doc.setTextColor(60, 60, 60)
-    const maxWidth = pageWidth - margin * 2
+    while (i < lines.length) {
+      const line = lines[i]
 
-    const paragraphs = cleanText.split("\n")
-    for (const paragraph of paragraphs) {
-      if (!paragraph.trim()) {
-        y += 4
+      // Skip empty lines
+      if (!line.trim()) {
+        y += 3
+        i++
         continue
       }
 
-      // Check for section headers (lines that were originally ## or ###)
-      const isBullet = paragraph.trim().startsWith("•")
-
-      const lines = doc.splitTextToSize(paragraph.trim(), isBullet ? maxWidth - 8 : maxWidth)
-      for (const line of lines) {
-        if (y > doc.internal.pageSize.getHeight() - 20) {
-          doc.addPage()
-          y = margin
+      // --- Markdown table detection ---
+      if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+        // Collect all table rows
+        const tableLines: string[] = []
+        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+          tableLines.push(lines[i].trim())
+          i++
         }
-        doc.text(line, isBullet ? margin + 4 : margin, y)
-        y += 5
+
+        // Parse table: first row = header, second row = separator (skip), rest = body
+        if (tableLines.length >= 2) {
+          const parseRow = (row: string) =>
+            row.split("|").filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim())
+
+          const headerCells = parseRow(tableLines[0])
+          const bodyRows: string[][] = []
+
+          for (let r = 1; r < tableLines.length; r++) {
+            // Skip separator rows (|---|---|)
+            if (/^[\s|:-]+$/.test(tableLines[r].replace(/\|/g, "").trim())) continue
+            bodyRows.push(parseRow(tableLines[r]))
+          }
+
+          checkPage(20 + bodyRows.length * 8)
+
+          autoTable(doc, {
+            startY: y,
+            head: [headerCells],
+            body: bodyRows,
+            theme: "striped",
+            headStyles: {
+              fillColor: [15, 23, 42],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+              fontSize: 8,
+            },
+            bodyStyles: {
+              fontSize: 8,
+              textColor: [60, 60, 60],
+            },
+            alternateRowStyles: {
+              fillColor: [245, 247, 250],
+            },
+            styles: {
+              cellPadding: 3,
+              lineColor: [220, 220, 220],
+              lineWidth: 0.2,
+            },
+            margin: { left: margin, right: margin },
+          })
+
+          y = (doc as any).lastAutoTable.finalY + 6
+          continue
+        }
       }
-      y += 2
+
+      // --- Headings ---
+      const h1Match = line.match(/^#\s+(.+)/)
+      const h2Match = line.match(/^##\s+(.+)/)
+      const h3Match = line.match(/^###\s+(.+)/)
+
+      if (h1Match) {
+        y += 4
+        checkPage()
+        renderText(h1Match[1], margin, 14, "bold", [30, 30, 30], maxWidth)
+        y += 2
+        i++
+        continue
+      }
+      if (h2Match) {
+        y += 3
+        checkPage()
+        renderText(h2Match[1], margin, 12, "bold", [40, 40, 40], maxWidth)
+        y += 1
+        i++
+        continue
+      }
+      if (h3Match) {
+        y += 2
+        checkPage()
+        renderText(h3Match[1], margin, 10, "bold", [50, 50, 50], maxWidth)
+        y += 1
+        i++
+        continue
+      }
+
+      // --- Horizontal rule ---
+      if (/^---+$/.test(line.trim()) || /^\*\*\*+$/.test(line.trim())) {
+        checkPage()
+        doc.setDrawColor(200, 200, 200)
+        doc.setLineWidth(0.3)
+        doc.line(margin, y, pageWidth - margin, y)
+        y += 4
+        i++
+        continue
+      }
+
+      // --- Bullet points ---
+      const bulletMatch = line.match(/^(\s*)[-*]\s+(.+)/)
+      if (bulletMatch) {
+        const indent = Math.min(Math.floor((bulletMatch[1]?.length || 0) / 2), 3) * 5
+        checkPage()
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        doc.setTextColor(60, 60, 60)
+        doc.text("•", margin + indent, y)
+        renderText(bulletMatch[2], margin + indent + 5, 9, "normal", [60, 60, 60], maxWidth - indent - 5)
+        i++
+        continue
+      }
+
+      // --- Numbered list ---
+      const numMatch = line.match(/^(\s*)(\d+)\.\s+(.+)/)
+      if (numMatch) {
+        const indent = Math.min(Math.floor((numMatch[1]?.length || 0) / 2), 3) * 5
+        checkPage()
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        doc.setTextColor(60, 60, 60)
+        doc.text(`${numMatch[2]}.`, margin + indent, y)
+        renderText(numMatch[3], margin + indent + 7, 9, "normal", [60, 60, 60], maxWidth - indent - 7)
+        i++
+        continue
+      }
+
+      // --- Regular paragraph ---
+      checkPage()
+      renderText(line, margin, 9, "normal", [60, 60, 60], maxWidth)
+      y += 1
+      i++
     }
 
-    // Footer
+    // ===== FOOTER =====
     const footerY = doc.internal.pageSize.getHeight() - 10
     doc.setFontSize(7)
     doc.setTextColor(150, 150, 150)
