@@ -420,34 +420,7 @@ export default function WorkspaceDetailPage() {
             <AutoLoadAnalysis analysisId={analyses[0].id} onLoad={viewAnalysis} />
           )}
 
-          {/* Summary stats */}
-          {summary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard label="Findings" value={summary.totalFindings || 0} />
-              <StatCard
-                label="Potential Savings"
-                value={`${Math.round(summary.totalPotentialSavings || 0).toLocaleString()} SEK`}
-                color="text-green-400"
-              />
-              <StatCard label="High Severity" value={summary.highSeverity || 0} color="text-red-400" />
-              <StatCard label="Medium" value={summary.mediumSeverity || 0} color="text-yellow-400" />
-            </div>
-          )}
-
-          {/* Findings list */}
-          {findings.length > 0 && (
-            <div className="space-y-2">
-              {findings.map((f, i) => (
-                <FindingCard key={i} finding={f} />
-              ))}
-            </div>
-          )}
-
-          {findings.length === 0 && selectedAnalysis && !selectedAnalysis.analysis_result?.aiAnalysis && (
-            <p className="text-gray-400 text-sm py-4 text-center">No findings detected.</p>
-          )}
-
-          {/* AI Analysis */}
+          {/* AI Analysis - shown first */}
           {selectedAnalysis?.analysis_result?.aiAnalysis && (
             <Card className="bg-white/5 border-white/10">
               <CardContent className="p-5">
@@ -486,6 +459,42 @@ export default function WorkspaceDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Summary stats */}
+          {summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard label="Findings" value={summary.totalFindings || 0} />
+              <StatCard
+                label="Potential Savings"
+                value={`${Math.round(summary.totalPotentialSavings || 0).toLocaleString()} SEK`}
+                color="text-green-400"
+              />
+              <StatCard label="High Severity" value={summary.highSeverity || 0} color="text-red-400" />
+              <StatCard label="Medium" value={summary.mediumSeverity || 0} color="text-yellow-400" />
+            </div>
+          )}
+
+          {/* Findings list - expandable */}
+          {findings.length > 0 && (
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/[0.07] transition-colors">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white">Cost Leak Findings</h3>
+                  <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-full">{findings.length}</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-2 mt-3">
+                {findings.map((f, i) => (
+                  <FindingCard key={i} finding={f} />
+                ))}
+              </div>
+            </details>
+          )}
+
+          {findings.length === 0 && selectedAnalysis && !selectedAnalysis.analysis_result?.aiAnalysis && (
+            <p className="text-gray-400 text-sm py-4 text-center">No findings detected.</p>
           )}
 
           {/* Raw JSON toggle */}
