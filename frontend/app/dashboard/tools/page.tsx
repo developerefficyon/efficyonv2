@@ -1432,27 +1432,29 @@ export default function ToolsPage() {
 
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
-      return <CheckCircle className="w-4 h-4 text-green-400" />
+      return (
+        <Badge className="bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15 text-[9px] h-[18px] px-1.5 rounded-full font-medium">
+          Connected
+        </Badge>
+      )
     } else if (status === "error" || status === "expired") {
       return (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
-            {status === "expired" ? "Reconnect needed" : "Error"}
-          </span>
-          <XCircle className="w-4 h-4 text-red-400" />
-        </div>
+        <Badge className="bg-red-500/10 text-red-400/80 border-red-500/15 text-[9px] h-[18px] px-1.5 rounded-full font-medium">
+          {status === "expired" ? "Expired" : "Error"}
+        </Badge>
       )
     } else if (status === "pending") {
       return (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-            Pending
-          </span>
-          <AlertTriangle className="w-4 h-4 text-yellow-400" />
-        </div>
+        <Badge className="bg-amber-500/10 text-amber-400/80 border-amber-500/15 text-[9px] h-[18px] px-1.5 rounded-full font-medium">
+          Pending
+        </Badge>
       )
     }
-    return <AlertTriangle className="w-4 h-4 text-yellow-400" />
+    return (
+      <Badge className="bg-white/[0.04] text-white/30 border-white/[0.06] text-[9px] h-[18px] px-1.5 rounded-full font-medium">
+        Unknown
+      </Badge>
+    )
   }
 
   const categories = ["all", ...Array.from(new Set(tools.map((t) => t.category)))]
@@ -1474,443 +1476,404 @@ export default function ToolsPage() {
     : null
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Tools & Integrations</h2>
-          <div className="flex items-center gap-3">
-            <p className="text-sm sm:text-base text-gray-400">Manage your connected tools and optimize costs</p>
-            <Link
-              href="/dashboard/tools/guide"
-              className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors whitespace-nowrap"
-            >
-              <BookOpen className="w-4 h-4" />
-              Setup Guide
-            </Link>
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* ── Header ── */}
+      <div className="animate-slide-up delay-0">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+              Tools & <span className="italic text-emerald-400/90">Integrations</span>
+            </h2>
+            <div className="flex items-center gap-3">
+              <p className="text-[14px] text-white/35">Manage connections and optimize costs</p>
+              <Link
+                href="/dashboard/tools/guide"
+                className="inline-flex items-center gap-1.5 text-[12px] text-white/30 hover:text-white/60 transition-colors whitespace-nowrap"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Guide
+              </Link>
+            </div>
           </div>
+          {canWrite && (
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                disabled={isLoading}
+                className={`w-full sm:w-auto h-9 px-4 text-[13px] rounded-lg transition-all ${
+                  isLoading || integrationLimits.canAddMore
+                    ? "bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50"
+                    : "bg-white/[0.06] text-white/40 cursor-not-allowed"
+                }`}
+                onClick={() => {
+                  if (!integrationLimits.canAddMore) {
+                    toast.error("Integration limit reached", {
+                      description: `Your ${integrationLimits.planName} plan allows up to ${integrationLimits.max} integrations. Upgrade your plan to connect more tools.`,
+                    })
+                    return
+                  }
+                  setIsConnectModalOpen(true)
+                }}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Plug className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Connect Tool
+              </Button>
+              {!isLoading && !integrationLimits.canAddMore && (
+                <p className="text-[11px] text-amber-400/70">Limit reached — upgrade to add more</p>
+              )}
+            </div>
+          )}
         </div>
-        {canWrite && (
-          <div className="flex flex-col items-end gap-1">
-            <Button
-              disabled={isLoading}
-              className={`w-full sm:w-auto ${
-                isLoading || integrationLimits.canAddMore
-                  ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
-                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
-              }`}
-              onClick={() => {
-                if (!integrationLimits.canAddMore) {
-                  toast.error("Integration limit reached", {
-                    description: `Your ${integrationLimits.planName} plan allows up to ${integrationLimits.max} integrations. Upgrade your plan to connect more tools.`,
-                  })
-                  return
-                }
-                setIsConnectModalOpen(true)
-              }}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <ExternalLink className="w-4 h-4 mr-2" />
-              )}
-              Connect New Tool
-            </Button>
-            {!isLoading && !integrationLimits.canAddMore && (
-              <p className="text-xs text-orange-400">Limit reached - upgrade to add more</p>
+      </div>
+
+      {/* ── Summary Stats ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Connected — with slots display */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-1">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <Plug className="w-3.5 h-3.5 text-emerald-400/70" />
+              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Connected</span>
+            </div>
+            {isLoading ? (
+              <div className="h-8 w-16 bg-white/[0.04] rounded animate-pulse" />
+            ) : (
+              <div>
+                <p className="text-3xl font-semibold text-white tracking-tight">
+                  {integrationLimits.current}
+                  <span className="text-lg text-white/20 font-normal">/{integrationLimits.max === 999 ? "\u221E" : integrationLimits.max}</span>
+                </p>
+                <p className="text-[12px] text-white/25 mt-0.5">{integrationLimits.planName} plan</p>
+              </div>
             )}
-          </div>
-        )}
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Connected</p>
-                {isLoading ? (
-                  <>
-                    <div className="h-8 w-16 bg-white/10 rounded animate-pulse" />
-                    <div className="h-3 w-20 bg-white/5 rounded animate-pulse mt-2" />
-                  </>
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold text-white">
-                      {integrationLimits.current}
-                      <span className="text-lg text-gray-400">/{integrationLimits.max === 999 ? "\u221E" : integrationLimits.max}</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{integrationLimits.planName} plan</p>
-                  </>
-                )}
+        {/* Healthy */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-2">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/70" />
               </div>
-              <Plug className="w-8 h-8 text-cyan-400 opacity-50" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Healthy</span>
             </div>
+            {isLoading ? (
+              <div className="h-8 w-12 bg-white/[0.04] rounded animate-pulse" />
+            ) : (
+              <div>
+                <p className="text-3xl font-semibold text-emerald-400 tracking-tight">{healthyTools}</p>
+                <p className="text-[12px] text-white/25 mt-0.5">
+                  {tools.length > 0 ? `${Math.round((healthyTools / tools.length) * 100)}% uptime` : "No tools yet"}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Healthy</p>
-                {isLoading ? (
-                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold text-green-400">{healthyTools}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {tools.length > 0 ? `${Math.round((healthyTools / tools.length) * 100)}% uptime` : "No tools yet"}
-                    </p>
-                  </>
-                )}
+
+        {/* Issues */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-3">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-7 h-7 rounded-md flex items-center justify-center ${issueTools > 0 ? "bg-red-500/10" : "bg-white/[0.04]"}`}>
+                <AlertTriangle className={`w-3.5 h-3.5 ${issueTools > 0 ? "text-red-400/70" : "text-white/20"}`} />
               </div>
-              <ShieldCheck className="w-8 h-8 text-green-400 opacity-50" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Issues</span>
             </div>
+            {isLoading ? (
+              <div className="h-8 w-12 bg-white/[0.04] rounded animate-pulse" />
+            ) : (
+              <div>
+                <p className={`text-3xl font-semibold tracking-tight ${issueTools > 0 ? "text-red-400" : "text-white/40"}`}>{issueTools}</p>
+                <p className="text-[12px] text-white/25 mt-0.5">
+                  {issueTools > 0 ? "Action required" : "All clear"}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Issues</p>
-                {isLoading ? (
-                  <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
-                ) : (
-                  <>
-                    <p className={`text-2xl font-bold ${issueTools > 0 ? "text-red-400" : "text-white"}`}>{issueTools}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {issueTools > 0 ? "Action required" : "All clear"}
-                    </p>
-                  </>
-                )}
+
+        {/* Last Activity */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-4">
+          <CardContent className="p-5 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-white/[0.04] flex items-center justify-center">
+                <Clock className="w-3.5 h-3.5 text-white/30" />
               </div>
-              <AlertTriangle className={`w-8 h-8 opacity-50 ${issueTools > 0 ? "text-red-400" : "text-gray-600"}`} />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Last Activity</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+            {isLoading ? (
+              <div className="h-8 w-16 bg-white/[0.04] rounded animate-pulse" />
+            ) : (
               <div>
-                <p className="text-sm text-gray-400 mb-1">Last Activity</p>
-                {isLoading ? (
-                  <div className="h-8 w-20 bg-white/10 rounded animate-pulse" />
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold text-white">
-                      {lastActivity ? (() => {
-                        const diffMs = Date.now() - lastActivity.getTime()
-                        const diffMins = Math.floor(diffMs / 60000)
-                        const diffHours = Math.floor(diffMs / 3600000)
-                        const diffDays = Math.floor(diffMs / 86400000)
-                        if (diffMins < 1) return "Just now"
-                        if (diffMins < 60) return `${diffMins}m`
-                        if (diffHours < 24) return `${diffHours}h`
-                        return `${diffDays}d`
-                      })() : "--"}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {lastActivity ? "ago" : "No activity yet"}
-                    </p>
-                  </>
-                )}
+                <p className="text-3xl font-semibold text-white tracking-tight">
+                  {lastActivity ? (() => {
+                    const diffMs = Date.now() - lastActivity.getTime()
+                    const diffMins = Math.floor(diffMs / 60000)
+                    const diffHours = Math.floor(diffMs / 3600000)
+                    const diffDays = Math.floor(diffMs / 86400000)
+                    if (diffMins < 1) return "Now"
+                    if (diffMins < 60) return `${diffMins}m`
+                    if (diffHours < 24) return `${diffHours}h`
+                    return `${diffDays}d`
+                  })() : "—"}
+                </p>
+                <p className="text-[12px] text-white/25 mt-0.5">
+                  {lastActivity ? "ago" : "No activity yet"}
+                </p>
               </div>
-              <Clock className="w-8 h-8 text-purple-400 opacity-50" />
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search tools..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
-              />
-            </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-48 bg-black/50 border-white/10 text-white">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-white/10">
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="text-white">
-                    {cat === "all" ? "All Categories" : cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-48 bg-black/50 border-white/10 text-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-black border-white/10">
-                <SelectItem value="all" className="text-white">All Status</SelectItem>
-                <SelectItem value="connected" className="text-white">Connected</SelectItem>
-                <SelectItem value="error" className="text-white">Error</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* ── Search and Filters ── */}
+      <div className="animate-slide-up delay-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+            <Input
+              placeholder="Search tools..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-white/[0.03] border-white/[0.06] text-white/80 placeholder:text-white/20 text-[12px] rounded-lg focus:border-emerald-500/30 focus:bg-white/[0.05] transition-all"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-full sm:w-40 h-9 bg-white/[0.03] border-white/[0.06] text-white/60 text-[12px] rounded-lg">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#141415] border-white/[0.08] rounded-lg">
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat} className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">
+                  {cat === "all" ? "All Categories" : cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full sm:w-36 h-9 bg-white/[0.03] border-white/[0.06] text-white/60 text-[12px] rounded-lg">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#141415] border-white/[0.08] rounded-lg">
+              <SelectItem value="all" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">All Status</SelectItem>
+              <SelectItem value="connected" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Connected</SelectItem>
+              <SelectItem value="error" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Error</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      {/* Tools Grid */}
+      {/* ── Tools Grid ── */}
       {isLoading ? (
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-12">
-            <div className="text-center">
-              <Loader2 className="w-16 h-16 mx-auto mb-4 text-cyan-400 animate-spin" />
-              <p className="text-gray-400">Loading tools...</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="animate-scale-in">
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl">
+            <CardContent className="p-16">
+              <div className="text-center">
+                <div className="relative mx-auto w-12 h-12 mb-4">
+                  <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+                  <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-[13px] text-white/30">Loading tools...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ) : filteredTools.length === 0 ? (
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-12">
-            <div className="text-center">
-              <Search className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
-              <p className="text-gray-400 mb-4">
-                {integrations.length === 0
-                  ? canWrite
-                    ? "No tools connected yet. Connect your first tool to get started."
-                    : "No tools connected yet. Ask your team owner to connect tools."
-                  : "No tools found matching your filters"}
-              </p>
-              {integrations.length === 0 && canWrite && (
-                <Button
-                  onClick={() => setIsConnectModalOpen(true)}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white mt-4"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Connect Your First Tool
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="animate-slide-up delay-5">
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl" />
+            <CardContent className="p-12 relative z-10">
+              <div className="text-center max-w-md mx-auto">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-5">
+                  <Plug className="w-6 h-6 text-white/15" />
+                </div>
+                <h3 className="text-lg font-display text-white mb-2">
+                  {integrations.length === 0 ? "No tools connected yet" : "No matching tools"}
+                </h3>
+                <p className="text-[13px] text-white/30 leading-relaxed mb-6">
+                  {integrations.length === 0
+                    ? canWrite
+                      ? "Connect your first integration to start analyzing costs."
+                      : "Ask your team owner to connect tools."
+                    : "Try adjusting your search or filters."}
+                </p>
+                {integrations.length === 0 && canWrite && (
+                  <Button
+                    onClick={() => setIsConnectModalOpen(true)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-5 text-[13px] rounded-lg"
+                  >
+                    <Plug className="w-3.5 h-3.5 mr-1.5" />
+                    Connect Your First Tool
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTools.map((tool) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 animate-slide-up delay-6">
+          {filteredTools.map((tool, index) => {
             const usagePercent = tool.seats > 0 ? Math.round((tool.activeSeats / tool.seats) * 100) : 0
             const potentialSavings = tool.seats > 0 ? tool.unusedSeats * (tool.cost / tool.seats) : 0
+            const integration = integrations.find(i => i.id === tool.id)
+
+            // Determine which reconnect handler to use
+            const getReconnectHandler = () => {
+              if (!integration) return null
+              const name = integration.tool_name
+              if (name === "Fortnox") return () => startFortnoxOAuth(integration.id)
+              if (name === "Microsoft365") return () => startMicrosoft365OAuth(integration.id)
+              if (name === "HubSpot") return () => startHubSpotOAuth(integration.id)
+              if (name === "QuickBooks") return () => startQuickBooksOAuth(integration.id)
+              if (name === "Shopify") return () => startShopifyOAuth(integration.id)
+              return null
+            }
+            const reconnectHandler = getReconnectHandler()
 
             return (
               <Card
                 key={tool.id}
-                className="bg-black/80 backdrop-blur-xl border-white/10 hover:border-cyan-500/30 transition-colors"
+                className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift group relative overflow-hidden"
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-white text-lg mb-1">{tool.name}</CardTitle>
-                      <p className="text-xs text-gray-400">{tool.category}</p>
+                {/* Status accent line */}
+                <div className={`absolute top-0 left-0 right-0 h-[2px] ${
+                  tool.status === "connected" ? "bg-emerald-400/40" :
+                  tool.status === "error" || tool.status === "expired" ? "bg-red-400/40" :
+                  tool.status === "pending" ? "bg-amber-400/40" : "bg-white/[0.06]"
+                }`} />
+
+                <CardContent className="p-4 pt-5">
+                  {/* Header row */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        tool.status === "connected" ? "bg-emerald-400" :
+                        tool.status === "error" || tool.status === "expired" ? "bg-red-400" :
+                        tool.status === "pending" ? "bg-amber-400" : "bg-white/15"
+                      }`} />
+                      <div>
+                        <p className="text-[14px] font-medium text-white/85">{tool.name}</p>
+                        <p className="text-[11px] text-white/25">{tool.category}</p>
+                      </div>
                     </div>
                     {getStatusIcon(tool.status)}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
+
+                  {/* Cost & seats */}
+                  <div className="mb-3">
                     {tool.cost > 0 || tool.seats > 0 ? (
                       <>
                         <div className="flex items-baseline gap-1 mb-2">
-                          <span className="text-2xl font-bold text-white">${tool.cost}</span>
-                          <span className="text-sm text-gray-400">/mo</span>
+                          <span className="text-xl font-semibold text-white">${tool.cost}</span>
+                          <span className="text-[11px] text-white/25">/mo</span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-400 mb-2">
+                        <div className="flex items-center gap-3 text-[11px] text-white/35 mb-2">
                           <div className="flex items-center gap-1">
                             <Users className="w-3 h-3" />
                             <span>{tool.activeSeats}/{tool.seats} seats</span>
                           </div>
                           {tool.unusedSeats > 0 && (
-                            <span className="text-red-400">{tool.unusedSeats} unused</span>
+                            <span className="text-red-400/70">{tool.unusedSeats} unused</span>
                           )}
                         </div>
-                        <div className="w-full bg-white/5 rounded-full h-2 mb-1">
+                        <div className="w-full bg-white/[0.04] rounded-full h-1.5 mb-1">
                           <div
-                            className={`h-2 rounded-full transition-all ${
-                              usagePercent >= 80
-                                ? "bg-green-500"
-                                : usagePercent >= 60
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
+                            className={`h-1.5 rounded-full transition-all ${
+                              usagePercent >= 80 ? "bg-emerald-400" :
+                              usagePercent >= 60 ? "bg-amber-400" : "bg-red-400"
                             }`}
                             style={{ width: `${usagePercent}%` }}
                           />
                         </div>
-                        <p className="text-xs text-gray-500">{usagePercent}% utilization</p>
+                        <p className="text-[10px] text-white/20">{usagePercent}% utilization</p>
                       </>
                     ) : (
-                      <div className="text-sm text-gray-400">
-                        <p>Cost and seat information not available</p>
-                        <p className="text-xs text-gray-500 mt-1">Add plan details to see cost optimization</p>
+                      <div className="py-2">
+                        <p className="text-[12px] text-white/25">Cost data not available</p>
+                        <p className="text-[10px] text-white/15 mt-0.5">Add plan details for optimization</p>
                       </div>
                     )}
                   </div>
 
+                  {/* Savings alert */}
                   {tool.unusedSeats > 0 && (
-                    <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <div className="p-2.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/10 mb-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-red-400">Potential Savings</span>
-                        <span className="text-sm font-semibold text-red-400">
+                        <span className="text-[11px] text-emerald-400/70">Potential savings</span>
+                        <span className="text-[13px] font-semibold text-emerald-400">
                           ${Math.round(potentialSavings)}/mo
                         </span>
                       </div>
                     </div>
                   )}
 
+                  {/* Issues */}
                   {tool.issues.length > 0 && (
-                    <div className="space-y-1">
+                    <div className="space-y-1 mb-3">
                       {tool.issues.map((issue, idx) => (
-                        <div
-                          key={idx}
-                          className="text-xs text-orange-400 flex items-center gap-1"
-                        >
-                          <AlertTriangle className="w-3 h-3" />
+                        <div key={idx} className="text-[11px] text-amber-400/60 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3 h-3 flex-shrink-0" />
                           <span>{issue}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                    <Badge className={getWasteBadge(tool.wasteLevel)}>
-                      {tool.wasteLevel} waste
-                    </Badge>
-                    <div className="flex gap-2 flex-wrap">
-                      {(() => {
-                        if (!canWrite) return null
-                        const integration = integrations.find(i => i.id === tool.id)
-                        if (!integration) return null
-
-                        return (
-                          <>
-                            {integration.tool_name === "Fortnox" && (
-                              <Button
-                                size="sm"
-                                className={`h-7 px-2 text-xs ${
-                                  tool.status === "expired" || tool.status === "error"
-                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
-                                    : "border-white/10 bg-black/50 text-white border"
-                                }`}
-                                onClick={() => startFortnoxOAuth(integration.id)}
-                                disabled={reconnectingId === integration.id}
-                              >
-                                {reconnectingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
-                              </Button>
-                            )}
-                            {integration.tool_name === "Microsoft365" && (
-                              <Button
-                                size="sm"
-                                className={`h-7 px-2 text-xs ${
-                                  tool.status === "expired" || tool.status === "error"
-                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
-                                    : "border-white/10 bg-black/50 text-white border"
-                                }`}
-                                onClick={() => startMicrosoft365OAuth(integration.id)}
-                                disabled={reconnectingId === integration.id}
-                              >
-                                {reconnectingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
-                              </Button>
-                            )}
-                            {integration.tool_name === "HubSpot" && (
-                              <Button
-                                size="sm"
-                                className={`h-7 px-2 text-xs ${
-                                  tool.status === "expired" || tool.status === "error"
-                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
-                                    : "border-white/10 bg-black/50 text-white border"
-                                }`}
-                                onClick={() => startHubSpotOAuth(integration.id)}
-                                disabled={reconnectingId === integration.id}
-                              >
-                                {reconnectingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
-                              </Button>
-                            )}
-                            {integration.tool_name === "QuickBooks" && (
-                              <Button
-                                size="sm"
-                                className={`h-7 px-2 text-xs ${
-                                  tool.status === "expired" || tool.status === "error"
-                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
-                                    : "border-white/10 bg-black/50 text-white border"
-                                }`}
-                                onClick={() => startQuickBooksOAuth(integration.id)}
-                                disabled={reconnectingId === integration.id}
-                              >
-                                {reconnectingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
-                              </Button>
-                            )}
-                            {integration.tool_name === "Shopify" && (
-                              <Button
-                                size="sm"
-                                className={`h-7 px-2 text-xs ${
-                                  tool.status === "expired" || tool.status === "error"
-                                    ? "bg-gradient-to-r from-red-500 to-orange-600 text-white"
-                                    : "border-white/10 bg-black/50 text-white border"
-                                }`}
-                                onClick={() => startShopifyOAuth(integration.id)}
-                                disabled={reconnectingId === integration.id}
-                              >
-                                {reconnectingId === integration.id ? (
-                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                )}
-                                {reconnectingId === integration.id ? "Reconnecting..." : "Reconnect"}
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                              onClick={() => handleDeleteClick(integration)}
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
-                            </Button>
-                          </>
-                        )
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/10">
-                    <div className="flex items-center gap-1">
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
+                    <div className="flex items-center gap-1.5 text-[10px] text-white/20">
                       <Activity className="w-3 h-3" />
-                      <span>Last sync: {tool.lastSync}</span>
+                      <span>{tool.lastSync}</span>
                     </div>
-                    <Link
-                      href={`/dashboard/tools/${tool.id}`}
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors"
-                    >
-                      View Details →
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      {canWrite && integration && (
+                        <>
+                          {reconnectHandler && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={`h-6 px-2 text-[10px] rounded-md ${
+                                tool.status === "expired" || tool.status === "error"
+                                  ? "text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
+                                  : "text-white/25 hover:text-white/60 hover:bg-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity"
+                              }`}
+                              onClick={reconnectHandler}
+                              disabled={reconnectingId === integration.id}
+                            >
+                              {reconnectingId === integration.id ? (
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-2.5 h-2.5 mr-0.5" />
+                              )}
+                              {tool.status === "expired" || tool.status === "error" ? "Reconnect" : "Sync"}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px] text-white/15 hover:text-red-400/70 hover:bg-red-500/[0.05] rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteClick(integration)}
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </Button>
+                        </>
+                      )}
+                      <Link href={`/dashboard/tools/${tool.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] text-white/25 hover:text-white/60 rounded-md"
+                        >
+                          Details <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1936,17 +1899,17 @@ export default function ToolsPage() {
           }
         }}
       >
-        <DialogContent className="!bg-black/95 !border-white/10 text-white w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-white/20" style={{ scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto rounded-xl premium-scrollbar" style={{ scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
           <DialogHeader>
-            <DialogTitle>Connect New Tool</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-[16px] font-medium text-white">Connect New Tool</DialogTitle>
+            <DialogDescription className="text-[13px] text-white/35">
               Select a tool to connect to your account
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="tool-select" className="text-gray-300">
+              <Label htmlFor="tool-select" className="text-white/60 text-[13px]">
                 Select Tool
               </Label>
               <Select
@@ -1955,12 +1918,12 @@ export default function ToolsPage() {
               >
                 <SelectTrigger
                   id="tool-select"
-                  className="w-full h-10 !bg-black/95 !border !border-white/10 !text-white"
+                  className="w-full h-10 !bg-white/[0.03] !border !border-white/[0.06] !text-white/80 rounded-lg"
                 >
                   <SelectValue placeholder="Choose a tool..." />
                 </SelectTrigger>
-                <SelectContent 
-                  className="bg-black/95 border border-white/10 backdrop-blur-xl z-[100] shadow-lg"
+                <SelectContent
+                  className="bg-[#141415] border border-white/[0.08] backdrop-blur-xl z-[100] shadow-lg rounded-lg"
                   position="popper"
                   sideOffset={4}
                 >
@@ -1970,19 +1933,19 @@ export default function ToolsPage() {
                     </SelectItem>
                   ) : (
                     <>
-                      <SelectItem value="fortnox" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                      <SelectItem value="fortnox" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
                         Fortnox
                       </SelectItem>
-                      <SelectItem value="microsoft365" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                      <SelectItem value="microsoft365" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
                         Microsoft 365
                       </SelectItem>
-                      <SelectItem value="hubspot" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                      <SelectItem value="hubspot" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
                         HubSpot
                       </SelectItem>
-                      <SelectItem value="quickbooks" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                      <SelectItem value="quickbooks" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
                         QuickBooks
                       </SelectItem>
-                      <SelectItem value="shopify" className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer">
+                      <SelectItem value="shopify" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
                         Shopify
                       </SelectItem>
                       {availableTools.length > 0 && availableTools
@@ -1991,7 +1954,7 @@ export default function ToolsPage() {
                           <SelectItem
                             key={tool.id}
                             value={tool.name.toLowerCase()}
-                            className="text-white hover:bg-cyan-500/30 focus:bg-cyan-500/30 data-[highlighted]:bg-cyan-500/30 data-[highlighted]:text-white cursor-pointer"
+                            className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer"
                           >
                             {tool.name}
                           </SelectItem>
@@ -2006,7 +1969,7 @@ export default function ToolsPage() {
             {selectedTool === "fortnox" && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <Label htmlFor="client-id" className="text-gray-300">
+                  <Label htmlFor="client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2017,12 +1980,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setFortnoxForm({ ...fortnoxForm, clientId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-secret" className="text-gray-300">
+                  <Label htmlFor="client-secret" className="text-white/60 text-[13px]">
                     Client Secret <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2033,12 +1996,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setFortnoxForm({ ...fortnoxForm, clientSecret: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="environment" className="text-gray-300">
+                  <Label htmlFor="environment" className="text-white/60 text-[13px]">
                     Environment
                   </Label>
                   <select
@@ -2047,15 +2010,15 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setFortnoxForm({ ...fortnoxForm, environment: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white rounded-md px-3 py-2 w-full"
+                    className="bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 w-full text-[13px] focus:border-emerald-500/30 outline-none"
                   >
                     <option value="sandbox">Sandbox (Testing)</option>
                     <option value="production">Production</option>
                   </select>
                 </div>
 
-                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Log into developer.fortnox.se and create an app</li>
                     <li>Set the redirect URI provided during onboarding</li>
@@ -2065,7 +2028,7 @@ export default function ToolsPage() {
                   <Link
                     href="/dashboard/tools/guide#fortnox"
                     onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
                   >
                     <BookOpen className="w-3 h-3" />
                     Full setup guide
@@ -2077,7 +2040,7 @@ export default function ToolsPage() {
             {selectedTool === "microsoft365" && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <Label htmlFor="m365-tenant-id" className="text-gray-300">
+                  <Label htmlFor="m365-tenant-id" className="text-white/60 text-[13px]">
                     Tenant ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2088,12 +2051,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, tenantId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="m365-client-id" className="text-gray-300">
+                  <Label htmlFor="m365-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2104,12 +2067,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, clientId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="m365-client-secret" className="text-gray-300">
+                  <Label htmlFor="m365-client-secret" className="text-white/60 text-[13px]">
                     Client Secret <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2120,12 +2083,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, clientSecret: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Go to Azure Portal &gt; App registrations, create a new app</li>
                     <li>Add API permissions: User.Read.All, Directory.Read.All, AuditLog.Read.All, Reports.Read.All</li>
@@ -2135,7 +2098,7 @@ export default function ToolsPage() {
                   <Link
                     href="/dashboard/tools/guide#microsoft365"
                     onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
                   >
                     <BookOpen className="w-3 h-3" />
                     Full setup guide
@@ -2147,7 +2110,7 @@ export default function ToolsPage() {
             {selectedTool === "hubspot" && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <Label htmlFor="hubspot-client-id" className="text-gray-300">
+                  <Label htmlFor="hubspot-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2158,12 +2121,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setHubspotForm({ ...hubspotForm, clientId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="hubspot-client-secret" className="text-gray-300">
+                  <Label htmlFor="hubspot-client-secret" className="text-white/60 text-[13px]">
                     Client Secret <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2174,7 +2137,7 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setHubspotForm({ ...hubspotForm, clientSecret: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
@@ -2184,7 +2147,7 @@ export default function ToolsPage() {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="hubspot-hub-type" className="text-gray-300">
+                      <Label htmlFor="hubspot-hub-type" className="text-white/60 text-[13px]">
                         Primary Hub
                       </Label>
                       <select
@@ -2193,7 +2156,7 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, hubType: e.target.value })
                         }
-                        className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
                       >
                         <option value="starter_platform">Starter Customer Platform (All Hubs)</option>
                         <option value="marketing">Marketing Hub</option>
@@ -2205,7 +2168,7 @@ export default function ToolsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="hubspot-tier" className="text-gray-300">
+                      <Label htmlFor="hubspot-tier" className="text-white/60 text-[13px]">
                         Plan Tier
                       </Label>
                       <select
@@ -2214,7 +2177,7 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, tier: e.target.value })
                         }
-                        className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
                       >
                         <option value="starter">Starter ($15-20/seat)</option>
                         <option value="professional">Professional ($50-100/seat)</option>
@@ -2223,7 +2186,7 @@ export default function ToolsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="hubspot-seats" className="text-gray-300">
+                      <Label htmlFor="hubspot-seats" className="text-white/60 text-[13px]">
                         Number of Paid Seats
                       </Label>
                       <Input
@@ -2235,7 +2198,7 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, paidSeats: e.target.value })
                         }
-                        className="bg-black/50 border-white/10 text-white"
+                        className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                       />
                       <p className="text-xs text-gray-500">
                         Leave blank to auto-detect from your HubSpot account
@@ -2244,8 +2207,8 @@ export default function ToolsPage() {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Go to HubSpot &gt; Settings &gt; Integrations &gt; Private Apps</li>
                     <li>Create app with scopes: settings.users.read, settings.users.write, account-info.security.read, crm.objects.contacts.read</li>
@@ -2255,7 +2218,7 @@ export default function ToolsPage() {
                   <Link
                     href="/dashboard/tools/guide#hubspot"
                     onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
                   >
                     <BookOpen className="w-3 h-3" />
                     Full setup guide
@@ -2267,7 +2230,7 @@ export default function ToolsPage() {
             {selectedTool === "quickbooks" && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <Label htmlFor="qb-client-id" className="text-gray-300">
+                  <Label htmlFor="qb-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2278,12 +2241,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setQuickbooksForm({ ...quickbooksForm, clientId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="qb-client-secret" className="text-gray-300">
+                  <Label htmlFor="qb-client-secret" className="text-white/60 text-[13px]">
                     Client Secret <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2294,12 +2257,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setQuickbooksForm({ ...quickbooksForm, clientSecret: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="qb-environment" className="text-gray-300">
+                  <Label htmlFor="qb-environment" className="text-white/60 text-[13px]">
                     Environment
                   </Label>
                   <select
@@ -2308,15 +2271,15 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setQuickbooksForm({ ...quickbooksForm, environment: e.target.value })
                     }
-                    className="w-full bg-black/50 border border-white/10 text-white rounded-md px-3 py-2"
+                    className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
                   >
                     <option value="sandbox">Sandbox</option>
                     <option value="production">Production</option>
                   </select>
                 </div>
 
-                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Go to developer.intuit.com and create an app</li>
                     <li>Select &quot;Accounting&quot; scope</li>
@@ -2330,7 +2293,7 @@ export default function ToolsPage() {
             {selectedTool === "shopify" && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <Label htmlFor="shopify-shop" className="text-gray-300">
+                  <Label htmlFor="shopify-shop" className="text-white/60 text-[13px]">
                     Shop Domain <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2341,7 +2304,7 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, shopDomain: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                   <p className="text-xs text-gray-500">
                     Your Shopify store URL (e.g., my-store or my-store.myshopify.com)
@@ -2349,7 +2312,7 @@ export default function ToolsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shopify-client-id" className="text-gray-300">
+                  <Label htmlFor="shopify-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2360,12 +2323,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, clientId: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shopify-client-secret" className="text-gray-300">
+                  <Label htmlFor="shopify-client-secret" className="text-white/60 text-[13px]">
                     Client Secret <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -2376,12 +2339,12 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, clientSecret: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                  <p className="text-xs font-medium text-cyan-400 mb-2">Quick Setup</p>
+                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
+                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                     <li>Go to partners.shopify.com and create an app</li>
                     <li>Set redirect URL to your backend callback URL</li>
@@ -2404,7 +2367,7 @@ export default function ToolsPage() {
                 setQuickbooksForm({ clientId: "", clientSecret: "", environment: "sandbox" })
                 setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
               }}
-              className="border-white/10 bg-black/50 text-white"
+              className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
             >
               Cancel
             </Button>
@@ -2431,11 +2394,11 @@ export default function ToolsPage() {
                 (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
                 isConnecting
               }
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white disabled:opacity-50"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
             >
               {isConnecting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Connecting...
                 </>
               ) : (
@@ -2448,10 +2411,10 @@ export default function ToolsPage() {
 
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="!bg-black/95 !border-white/10 text-white">
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white rounded-xl">
           <DialogHeader>
-            <DialogTitle>Delete Integration</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-[16px] font-medium text-white">Delete Integration</DialogTitle>
+            <DialogDescription className="text-[13px] text-white/35">
               Are you sure you want to delete {integrationToDelete?.tool_name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -2462,7 +2425,7 @@ export default function ToolsPage() {
                 setIsDeleteModalOpen(false)
                 setIntegrationToDelete(null)
               }}
-              className="border-white/10 bg-black/50 text-white"
+              className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
               disabled={isDeleting}
             >
               Cancel
@@ -2470,16 +2433,16 @@ export default function ToolsPage() {
             <Button
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-500/90 hover:bg-red-500 text-white font-medium rounded-lg h-9 text-[13px]"
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                   Delete
                 </>
               )}
