@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -213,26 +213,95 @@ export default function AdminUsersPage() {
     setCurrentPage(1)
   }
 
+  // Stats
+  const activeCount = employees.filter((e) => e.status === "active").length
+  const adminCount = employees.filter((e) => e.role.toLowerCase() === "admin").length
+
   return (
-    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up delay-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Users</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage admins and internal users</p>
+          <p className="text-[13px] text-white/30 font-medium mb-1">Team Management</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+            Internal <span className="italic text-violet-400/90">Users</span>
+          </h2>
+          <p className="text-[14px] text-white/35 mt-1">Manage admins and internal team members</p>
         </div>
-        <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/60 hover:text-white/80 rounded-lg h-8 text-[12px] gap-1.5 px-3 w-fit">
+          <Plus className="w-3.5 h-3.5" />
           Add User
         </Button>
       </div>
 
+      {/* KPI Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up delay-1">
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-violet-400/80" />
+              </div>
+              <div>
+                <p className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Total Users</p>
+                <p className="text-xl font-semibold text-white/90 mt-0.5">
+                  {isLoading ? (
+                    <span className="inline-block h-5 w-10 bg-white/[0.04] rounded animate-pulse" />
+                  ) : (
+                    employees.length
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400/80" />
+              </div>
+              <div>
+                <p className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Active</p>
+                <p className="text-xl font-semibold text-white/90 mt-0.5">
+                  {isLoading ? (
+                    <span className="inline-block h-5 w-10 bg-white/[0.04] rounded animate-pulse" />
+                  ) : (
+                    activeCount
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-amber-400/80" />
+              </div>
+              <div>
+                <p className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Admins</p>
+                <p className="text-xl font-semibold text-white/90 mt-0.5">
+                  {isLoading ? (
+                    <span className="inline-block h-5 w-10 bg-white/[0.04] rounded animate-pulse" />
+                  ) : (
+                    adminCount
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardContent className="p-3 sm:p-4">
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-2">
+        <CardContent className="p-5 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="lg:col-span-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/20" />
                 <Input
                   placeholder="Search by name, email, or role..."
                   value={searchQuery}
@@ -240,7 +309,7 @@ export default function AdminUsersPage() {
                     setSearchQuery(e.target.value)
                     handleFilterChange()
                   }}
-                  className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-white/[0.03] border-white/[0.06] text-white/80 placeholder:text-white/20"
                 />
               </div>
             </div>
@@ -251,10 +320,10 @@ export default function AdminUsersPage() {
                 handleFilterChange()
               }}
             >
-              <SelectTrigger className="bg-black/50 border-white/10 text-white">
+              <SelectTrigger className="bg-white/[0.03] border-white/[0.06] text-white/80">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/10">
+              <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -267,10 +336,10 @@ export default function AdminUsersPage() {
                 handleFilterChange()
               }}
             >
-              <SelectTrigger className="bg-black/50 border-white/10 text-white">
+              <SelectTrigger className="bg-white/[0.03] border-white/[0.06] text-white/80">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/10">
+              <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
                 <SelectItem value="all">All Roles</SelectItem>
                 {roles.map((role) => (
                   <SelectItem key={role} value={role}>
@@ -284,36 +353,51 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Table */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-white text-lg sm:text-xl">
-            All Users ({filteredEmployees.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-6">
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-3">
+        <CardContent className="p-5 sm:p-6">
+          {/* Inline section header */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-violet-400/80" />
+              </div>
+              <div>
+                <p className="text-[12px] text-white/40 font-medium uppercase tracking-wider">All Users</p>
+                <p className="text-[13px] text-white/50 mt-0.5">{filteredEmployees.length} members found</p>
+              </div>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-white/5">
-                <TableHead className="text-white font-semibold">Name</TableHead>
-                <TableHead className="text-white font-semibold">Email</TableHead>
-                <TableHead className="text-white font-semibold">Role</TableHead>
-                <TableHead className="text-white font-semibold">Status</TableHead>
-                <TableHead className="text-white font-semibold">Joined</TableHead>
-                <TableHead className="text-white font-semibold text-right">Actions</TableHead>
+              <TableRow className="border-white/[0.06] hover:bg-transparent">
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Name</TableHead>
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Email</TableHead>
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Role</TableHead>
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Status</TableHead>
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Joined</TableHead>
+                <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                    Loading employees...
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i} className="border-white/[0.06]">
+                      <TableCell><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-white/[0.04] animate-pulse" /><div className="h-3 w-24 bg-white/[0.04] rounded animate-pulse" /></div></TableCell>
+                      <TableCell><div className="h-3 w-32 bg-white/[0.04] rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-3 w-16 bg-white/[0.04] rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-5 w-12 bg-white/[0.04] rounded-full animate-pulse" /></TableCell>
+                      <TableCell><div className="h-3 w-16 bg-white/[0.04] rounded animate-pulse" /></TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  ))}
+                </>
               )}
               {!isLoading && paginatedEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                  <TableCell colSpan={6} className="text-center py-8 text-white/25">
                     No users found matching your filters
                   </TableCell>
                 </TableRow>
@@ -321,38 +405,38 @@ export default function AdminUsersPage() {
                 paginatedEmployees.map((employee) => (
                   <TableRow
                     key={employee.id}
-                    className="border-white/10 hover:bg-white/5"
+                    className="border-white/[0.06] hover:bg-white/[0.03] transition-colors"
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400/80 to-violet-600/80 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-[10px] font-semibold">
                             {employee.avatar}
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-white">{employee.name}</p>
+                          <p className="text-[13px] font-medium text-white/80">{employee.name}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[150px]">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300">
-                        <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <div className="flex items-center gap-2 text-[12px] text-white/40">
+                        <Mail className="w-3 h-3 text-white/20 flex-shrink-0" />
                         <span className="truncate">{employee.email}</span>
                         {employee.emailVerified ? (
                           <span title="Email verified">
-                            <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-400/70 flex-shrink-0" />
                           </span>
                         ) : (
                           <span title="Email not verified">
-                            <Clock className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                            <Clock className="w-3.5 h-3.5 text-amber-400/70 flex-shrink-0" />
                           </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[140px]">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-300">
-                        <Briefcase className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <div className="flex items-center gap-2 text-[12px] text-white/40">
+                        <Briefcase className="w-3 h-3 text-white/20 flex-shrink-0" />
                         <span className="truncate">{employee.role}</span>
                       </div>
                     </TableCell>
@@ -360,15 +444,15 @@ export default function AdminUsersPage() {
                       <Badge
                         className={
                           employee.status === "active"
-                            ? "bg-green-500/20 text-green-400 border-green-500/30 text-[10px] sm:text-xs"
-                            : "bg-red-500/20 text-red-400 border-red-500/30 text-[10px] sm:text-xs"
+                            ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15 text-[10px]"
+                            : "bg-red-500/10 text-red-400/80 border-red-500/15 text-[10px]"
                         }
                       >
                         {employee.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="min-w-[100px]">
-                      <span className="text-xs sm:text-sm text-gray-400">{employee.joined}</span>
+                      <span className="text-[11px] text-white/20">{employee.joined}</span>
                     </TableCell>
                     <TableCell className="text-right min-w-[60px]">
                       <DropdownMenu>
@@ -376,25 +460,25 @@ export default function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                            className="h-7 w-7 p-0 text-white/20 hover:text-white/50 hover:bg-white/[0.04]"
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <MoreVertical className="w-3.5 h-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="bg-black border-white/10 text-white"
+                          className="bg-[#0a0a0a] border-white/[0.08] text-white/70"
                         >
-                          <DropdownMenuItem className="hover:bg-white/10">
+                          <DropdownMenuItem className="hover:bg-white/[0.04] text-[12px]">
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-white/10">
+                          <DropdownMenuItem className="hover:bg-white/[0.04] text-[12px]">
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-white/10">
+                          <DropdownMenuItem className="hover:bg-white/[0.04] text-[12px]">
                             {employee.status === "active" ? "Deactivate" : "Activate"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-400 hover:bg-red-500/10">
+                          <DropdownMenuItem className="text-red-400/80 hover:bg-red-500/10 text-[12px]">
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -409,29 +493,29 @@ export default function AdminUsersPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 px-4 sm:px-6 border-t border-white/10">
-              <div className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 pt-5 border-t border-white/[0.06]">
+              <div className="text-[12px] text-white/30 text-center sm:text-left">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredEmployees.length)} of{" "}
                 {filteredEmployees.length} employees
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="border-white/10 bg-black/50 text-white disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="border-white/[0.06] bg-white/[0.02] text-white/60 disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <ChevronsLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <ChevronsLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="border-white/10 bg-black/50 text-white disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="border-white/[0.06] bg-white/[0.02] text-white/60 disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </Button>
                 <div className="flex items-center gap-1 flex-wrap justify-center">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -444,7 +528,7 @@ export default function AdminUsersPage() {
                     .map((page, index, array) => (
                       <div key={page} className="flex items-center gap-1">
                         {index > 0 && array[index - 1] !== page - 1 && (
-                          <span className="text-gray-500 px-1 sm:px-2 text-xs">...</span>
+                          <span className="text-white/20 px-1 sm:px-2 text-[11px]">...</span>
                         )}
                         <Button
                           variant={currentPage === page ? "default" : "outline"}
@@ -452,8 +536,8 @@ export default function AdminUsersPage() {
                           onClick={() => setCurrentPage(page)}
                           className={
                             currentPage === page
-                              ? "bg-cyan-500 text-white hover:bg-cyan-400 h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm"
-                              : "border-white/10 bg-black/50 text-white hover:bg-white/10 h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm"
+                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/15 hover:bg-emerald-500/30 h-7 w-7 sm:h-8 sm:w-8 p-0 text-[11px] sm:text-[12px]"
+                              : "border-white/[0.06] bg-white/[0.02] text-white/60 hover:bg-white/[0.04] h-7 w-7 sm:h-8 sm:w-8 p-0 text-[11px] sm:text-[12px]"
                           }
                         >
                           {page}
@@ -466,18 +550,18 @@ export default function AdminUsersPage() {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="border-white/10 bg-black/50 text-white disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="border-white/[0.06] bg-white/[0.02] text-white/60 disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="border-white/10 bg-black/50 text-white disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="border-white/[0.06] bg-white/[0.02] text-white/60 disabled:opacity-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <ChevronsRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <ChevronsRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </Button>
               </div>
             </div>

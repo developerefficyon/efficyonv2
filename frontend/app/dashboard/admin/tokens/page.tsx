@@ -205,39 +205,38 @@ export default function AdminTokensPage() {
   const getPlanBadgeColor = (planTier: string) => {
     switch (planTier) {
       case "custom":
-        return "bg-purple-500/20 text-purple-400 border-purple-500/30"
+        return "bg-purple-500/10 text-purple-400/80 border-purple-500/15"
       case "growth":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30"
+        return "bg-blue-500/10 text-blue-400/80 border-blue-500/15"
       case "startup":
-        return "bg-green-500/20 text-green-400 border-green-500/30"
+        return "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
       default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30"
+        return "bg-white/[0.04] text-white/40 border-white/[0.08]"
     }
   }
 
   const getUsageColor = (percent: number) => {
-    if (percent >= 90) return "text-red-400"
-    if (percent >= 70) return "text-orange-400"
-    if (percent >= 50) return "text-yellow-400"
-    return "text-green-400"
+    if (percent >= 90) return "text-red-400/80"
+    if (percent >= 70) return "text-orange-400/80"
+    if (percent >= 50) return "text-yellow-400/80"
+    return "text-emerald-400/80"
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 animate-slide-up delay-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">
-            Token Management
+          <p className="text-[13px] text-white/30 font-medium mb-1">Resource Management</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+            Token <span className="italic text-emerald-400/90">Management</span>
           </h2>
-          <p className="text-gray-400 mt-1">
-            Monitor and manage customer token usage
-          </p>
+          <p className="text-[14px] text-white/35 mt-1">Monitor and manage customer token usage</p>
         </div>
         <Button
           onClick={fetchTokenUsage}
           variant="outline"
-          className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
+          className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
@@ -246,87 +245,79 @@ export default function AdminTokensPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Total Customers</p>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-1">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-cyan-400/70" />
               </div>
-              <div className="p-3 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
-                <Users className="w-5 h-5 text-cyan-400" />
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Total Customers</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">{stats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Tokens Allocated</p>
-                <p className="text-2xl font-bold text-white">
-                  {stats.totalTokensAllocated.toLocaleString()}
-                </p>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-2">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center">
+                <Coins className="w-3.5 h-3.5 text-blue-400/70" />
               </div>
-              <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/30">
-                <Coins className="w-5 h-5 text-blue-400" />
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Tokens Allocated</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">
+              {stats.totalTokensAllocated.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Overall Usage</p>
-                <p className="text-2xl font-bold text-white">
-                  {stats.overallUsagePercent}%
-                </p>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-3">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400/70" />
               </div>
-              <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/30">
-                <TrendingUp className="w-5 h-5 text-green-400" />
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Overall Usage</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">
+              {stats.overallUsagePercent}%
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Low Token Alerts</p>
-                <p className="text-2xl font-bold text-white">
-                  {stats.lowTokenCustomers}
-                </p>
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-4">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md bg-orange-500/10 flex items-center justify-center">
+                <AlertTriangle className="w-3.5 h-3.5 text-orange-400/70" />
               </div>
-              <div className="p-3 rounded-lg bg-orange-500/20 border border-orange-500/30">
-                <AlertTriangle className="w-5 h-5 text-orange-400" />
-              </div>
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Low Token Alerts</span>
             </div>
+            <p className="text-3xl font-semibold text-white tracking-tight">
+              {stats.lowTokenCustomers}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-5">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
               <Input
                 placeholder="Search by name, email, or company..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-black/50 border-white/10 text-white"
+                className="pl-9 bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
               />
             </div>
             <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-black/50 border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-[180px] bg-white/[0.03] border-white/[0.06] text-white">
                 <SelectValue placeholder="Filter by plan" />
               </SelectTrigger>
-              <SelectContent className="bg-black border-white/10">
+              <SelectContent className="bg-[#0a0a0a] border-white/[0.08]">
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="startup">Startup</SelectItem>
@@ -339,37 +330,50 @@ export default function AdminTokensPage() {
       </Card>
 
       {/* Token Usage Table */}
-      <Card className="bg-black/80 backdrop-blur-xl border-white/10">
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-6">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Coins className="w-5 h-5 text-cyan-400" />
+          <CardTitle className="text-[12px] text-white/40 font-medium uppercase tracking-wider">
             Customer Token Usage
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 py-3">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-32 bg-white/[0.04] rounded animate-pulse" />
+                    <div className="h-2.5 w-48 bg-white/[0.03] rounded animate-pulse" />
+                  </div>
+                  <div className="h-5 w-16 bg-white/[0.04] rounded-full animate-pulse" />
+                  <div className="h-3 w-20 bg-white/[0.04] rounded animate-pulse" />
+                  <div className="space-y-1.5 w-24">
+                    <div className="h-3 w-12 bg-white/[0.04] rounded animate-pulse mx-auto" />
+                    <div className="h-1.5 w-full bg-white/[0.04] rounded-full animate-pulse" />
+                  </div>
+                  <div className="h-7 w-16 bg-white/[0.04] rounded animate-pulse" />
+                </div>
+              ))}
             </div>
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-12">
-              <Coins className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No customers found</p>
+              <Coins className="w-12 h-12 text-white/10 mx-auto mb-3" />
+              <p className="text-white/30 text-[13px]">No customers found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-gray-400">Customer</TableHead>
-                    <TableHead className="text-gray-400">Plan</TableHead>
-                    <TableHead className="text-gray-400 text-center">
+                  <TableRow className="border-white/[0.06] hover:bg-transparent">
+                    <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Customer</TableHead>
+                    <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium">Plan</TableHead>
+                    <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium text-center">
                       Tokens
                     </TableHead>
-                    <TableHead className="text-gray-400 text-center">
+                    <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium text-center">
                       Usage
                     </TableHead>
-                    <TableHead className="text-gray-400 text-right">
+                    <TableHead className="text-white/40 text-[11px] uppercase tracking-wider font-medium text-right">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -378,23 +382,23 @@ export default function AdminTokensPage() {
                   {filteredCustomers.map((customer) => (
                     <TableRow
                       key={customer.userId}
-                      className="border-white/10 hover:bg-white/5"
+                      className="border-white/[0.06] hover:bg-white/[0.02]"
                     >
                       <TableCell>
                         <div>
-                          <p className="font-medium text-white">
+                          <p className="text-[13px] font-medium text-white/80">
                             {customer.name || "Unknown"}
                           </p>
-                          <p className="text-sm text-gray-400">{customer.email}</p>
+                          <p className="text-[12px] text-white/40">{customer.email}</p>
                           {customer.company && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-[11px] text-white/25">
                               {customer.company}
                             </p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getPlanBadgeColor(customer.planTier)}>
+                        <Badge className={`${getPlanBadgeColor(customer.planTier)} text-[10px]`}>
                           {customer.planTier === "custom"
                             ? "Enterprise"
                             : customer.planTier.charAt(0).toUpperCase() +
@@ -403,28 +407,28 @@ export default function AdminTokensPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center">
-                          <span className="text-white font-medium">
+                          <span className="text-[13px] text-white/70 font-medium">
                             {customer.availableTokens} / {customer.totalTokens}
                           </span>
-                          <span className="text-xs text-gray-500">available</span>
+                          <span className="text-[11px] text-white/25">available</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col items-center gap-1 min-w-[100px]">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`font-medium ${getUsageColor(customer.usagePercent)}`}
+                              className={`text-[13px] font-medium ${getUsageColor(customer.usagePercent)}`}
                             >
                               {customer.usagePercent}%
                             </span>
                             {customer.availableTokens <= 2 &&
                               customer.totalTokens > 0 && (
-                                <AlertTriangle className="w-4 h-4 text-orange-400" />
+                                <AlertTriangle className="w-3.5 h-3.5 text-orange-400/70" />
                               )}
                           </div>
                           <Progress
                             value={customer.usagePercent}
-                            className="h-1.5 w-full bg-white/10"
+                            className="h-1.5 w-full bg-white/[0.04]"
                           />
                         </div>
                       </TableCell>
@@ -432,7 +436,7 @@ export default function AdminTokensPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
+                          className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
                           onClick={() => {
                             setSelectedCustomer(customer)
                             setIsAdjustModalOpen(true)
@@ -452,10 +456,10 @@ export default function AdminTokensPage() {
 
       {/* Adjust Tokens Modal */}
       <Dialog open={isAdjustModalOpen} onOpenChange={setIsAdjustModalOpen}>
-        <DialogContent className="bg-black border-white/10">
+        <DialogContent className="bg-[#0a0a0a] border-white/[0.08]">
           <DialogHeader>
             <DialogTitle className="text-white">Adjust Tokens</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-white/40">
               Add or remove tokens for {selectedCustomer?.name || selectedCustomer?.email}
             </DialogDescription>
           </DialogHeader>
@@ -463,28 +467,28 @@ export default function AdminTokensPage() {
           {selectedCustomer && (
             <div className="space-y-6 py-4">
               {/* Current Balance */}
-              <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400">Current Balance</span>
-                  <span className="text-white font-semibold">
+                  <span className="text-white/40 text-[13px]">Current Balance</span>
+                  <span className="text-white font-semibold text-[13px]">
                     {selectedCustomer.availableTokens} / {selectedCustomer.totalTokens}
                   </span>
                 </div>
                 <Progress
                   value={selectedCustomer.usagePercent}
-                  className="h-2 bg-white/10"
+                  className="h-2 bg-white/[0.04]"
                 />
               </div>
 
               {/* Adjustment Amount */}
               <div className="space-y-2">
-                <Label className="text-gray-300">Adjustment Amount</Label>
+                <Label className="text-white/50 text-[13px]">Adjustment Amount</Label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="bg-transparent border-white/10 text-white hover:bg-red-500/20 hover:border-red-500/30 hover:text-white"
+                    className="bg-white/[0.04] border-white/[0.08] text-white/60 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400/80"
                     onClick={() => setAdjustmentAmount((prev) => prev - 10)}
                   >
                     <Minus className="w-4 h-4" />
@@ -493,29 +497,29 @@ export default function AdminTokensPage() {
                     type="number"
                     value={adjustmentAmount}
                     onChange={(e) => setAdjustmentAmount(parseInt(e.target.value) || 0)}
-                    className="text-center bg-black/50 border-white/10 text-white"
+                    className="text-center bg-white/[0.03] border-white/[0.06] text-white"
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="bg-transparent border-white/10 text-white hover:bg-green-500/20 hover:border-green-500/30 hover:text-white"
+                    className="bg-white/[0.04] border-white/[0.08] text-white/60 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-400/80"
                     onClick={() => setAdjustmentAmount((prev) => prev + 10)}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-[11px] text-white/25">
                   Use positive numbers to add tokens, negative to remove
                 </p>
               </div>
 
               {/* Preview */}
               {adjustmentAmount !== 0 && (
-                <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+                <div className="p-4 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-300">New Balance</span>
-                    <span className="text-cyan-400 font-semibold">
+                    <span className="text-white/50 text-[13px]">New Balance</span>
+                    <span className="text-emerald-400/80 font-semibold text-[13px]">
                       {Math.max(0, selectedCustomer.availableTokens + adjustmentAmount)} tokens
                     </span>
                   </div>
@@ -524,12 +528,12 @@ export default function AdminTokensPage() {
 
               {/* Reason */}
               <div className="space-y-2">
-                <Label className="text-gray-300">Reason (optional)</Label>
+                <Label className="text-white/50 text-[13px]">Reason (optional)</Label>
                 <Input
                   value={adjustmentReason}
                   onChange={(e) => setAdjustmentReason(e.target.value)}
                   placeholder="e.g., Customer support credit"
-                  className="bg-black/50 border-white/10 text-white"
+                  className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                 />
               </div>
             </div>
@@ -543,14 +547,14 @@ export default function AdminTokensPage() {
                 setAdjustmentAmount(0)
                 setAdjustmentReason("")
               }}
-              className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white"
+              className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAdjustTokens}
               disabled={adjustmentAmount === 0 || isAdjusting}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
+              className="bg-gradient-to-r from-emerald-600/80 to-cyan-600/80 hover:from-emerald-500/80 hover:to-cyan-500/80 text-white border-0"
             >
               {isAdjusting ? (
                 <>

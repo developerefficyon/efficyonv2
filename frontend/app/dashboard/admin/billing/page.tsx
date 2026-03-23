@@ -169,27 +169,35 @@ export default function AdminBillingPage() {
   const displayStats = [
     {
       title: "Monthly Recurring Revenue",
+      shortTitle: "MRR",
       value: formatMrr(billingStats.mrr),
       icon: DollarSign,
-      color: "text-cyan-400",
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-400/70",
     },
     {
       title: "Churn Rate",
+      shortTitle: "Churn",
       value: `${billingStats.churnRate.toFixed(1)}%`,
       icon: TrendingDown,
-      color: billingStats.churnRate > 5 ? "text-red-400" : "text-green-400",
+      iconBg: billingStats.churnRate > 5 ? "bg-red-500/10" : "bg-green-500/10",
+      iconColor: billingStats.churnRate > 5 ? "text-red-400/70" : "text-green-400/70",
     },
     {
       title: "Active Subscriptions",
+      shortTitle: "Active",
       value: billingStats.activeCount.toString(),
       icon: Users,
-      color: "text-cyan-400",
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-400/70",
     },
     {
       title: "Avg Revenue per Customer",
+      shortTitle: "Avg Revenue",
       value: `$${billingStats.avgRevenue.toFixed(0)}`,
       icon: TrendingUp,
-      color: "text-cyan-400",
+      iconBg: "bg-cyan-500/10",
+      iconColor: "text-cyan-400/70",
     },
   ]
 
@@ -255,41 +263,46 @@ export default function AdminBillingPage() {
   const allFailedPayments = [...paymentIssues, ...pastDueIssues]
 
   return (
-    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Billing & Subscriptions</h2>
-        <p className="text-sm sm:text-base text-gray-400">Monitor revenue, subscriptions, and payment issues</p>
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* Header */}
+      <div className="animate-slide-up delay-0">
+        <p className="text-[13px] text-white/30 font-medium mb-1">Financial Overview</p>
+        <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+          Billing & <span className="italic text-emerald-400/90">Subscriptions</span>
+        </h2>
+        <p className="text-[14px] text-white/35 mt-1">Monitor revenue, subscriptions, and payment issues</p>
       </div>
 
       {/* Billing Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="bg-black/95 backdrop-blur-xl border-white/10">
-              <CardHeader className="pb-2">
-                <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 w-20 bg-white/10 rounded animate-pulse" />
+            <Card key={i} className={`bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-${i + 1}`}>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-md bg-white/[0.04] animate-pulse" />
+                  <div className="h-2 w-20 bg-white/[0.04] rounded animate-pulse" />
+                </div>
+                <div className="h-8 w-24 bg-white/[0.04] rounded animate-pulse" />
               </CardContent>
             </Card>
           ))
         ) : (
-          displayStats.map((stat) => {
+          displayStats.map((stat, i) => {
             const Icon = stat.icon
             return (
               <Card
                 key={stat.title}
-                className="bg-black/95 backdrop-blur-xl border-white/10"
+                className={`bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift animate-slide-up delay-${i + 1}`}
               >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">
-                    {stat.title}
-                  </CardTitle>
-                  <Icon className={`w-4 h-4 ${stat.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{stat.value}</div>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-7 h-7 rounded-md ${stat.iconBg} flex items-center justify-center`}>
+                      <Icon className={`w-3.5 h-3.5 ${stat.iconColor}`} />
+                    </div>
+                    <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">{stat.shortTitle}</span>
+                  </div>
+                  <p className="text-3xl font-semibold text-white tracking-tight">{stat.value}</p>
                 </CardContent>
               </Card>
             )
@@ -298,34 +311,34 @@ export default function AdminBillingPage() {
       </div>
 
       {/* Tabbed Content Section */}
-      <Card className="bg-black/95 backdrop-blur-xl border-white/10">
+      <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl animate-slide-up delay-5">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4">
             {/* Search Filter */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/25" />
               <Input
                 placeholder="Search by company, email, or plan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500"
+                className="pl-10 bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
               />
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+            <div className="flex flex-wrap gap-2 p-1 bg-white/[0.02] rounded-lg border border-white/[0.04]">
               <button
                 onClick={() => setActiveTab("active")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === "active"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-white/[0.06] text-white border border-white/[0.08]"
+                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
                 }`}
               >
                 <CheckCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Active Subscriptions</span>
                 <span className="sm:hidden">Active</span>
-                <Badge className="h-5 px-1.5 text-[10px] bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                <Badge className="h-5 px-1.5 text-[10px] bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15">
                   {activeSubscriptions.filter(s =>
                     s.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     s.plan.toLowerCase().includes(searchQuery.toLowerCase())
@@ -336,14 +349,14 @@ export default function AdminBillingPage() {
                 onClick={() => setActiveTab("trials")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === "trials"
-                    ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-white/[0.06] text-white border border-white/[0.08]"
+                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
                 }`}
               >
                 <Clock className="w-4 h-4" />
                 <span className="hidden sm:inline">Trials Ending Soon</span>
                 <span className="sm:hidden">Trials</span>
-                <Badge className="h-5 px-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                <Badge className="h-5 px-1.5 text-[10px] bg-yellow-500/10 text-yellow-400/80 border-yellow-500/15">
                   {trials.filter(t =>
                     t.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -355,14 +368,14 @@ export default function AdminBillingPage() {
                 onClick={() => setActiveTab("failed")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === "failed"
-                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-white/[0.06] text-white border border-white/[0.08]"
+                    : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]"
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
                 <span className="hidden sm:inline">Payment Issues</span>
                 <span className="sm:hidden">Issues</span>
-                <Badge className="h-5 px-1.5 text-[10px] bg-red-500/20 text-red-400 border-red-500/30">
+                <Badge className="h-5 px-1.5 text-[10px] bg-red-500/10 text-red-400/80 border-red-500/15">
                   {allFailedPayments.filter(p =>
                     p.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     p.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -378,9 +391,16 @@ export default function AdminBillingPage() {
           {activeTab === "active" && (
             <div className="space-y-3">
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-                  <span className="ml-3 text-gray-400">Loading subscriptions...</span>
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 bg-white/[0.04] rounded animate-pulse" />
+                        <div className="h-2 w-48 bg-white/[0.02] rounded animate-pulse" />
+                      </div>
+                      <div className="h-6 w-16 bg-white/[0.04] rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : (() => {
                 const filteredSubscriptions = activeSubscriptions.filter(s =>
@@ -390,8 +410,8 @@ export default function AdminBillingPage() {
                 if (filteredSubscriptions.length === 0) {
                   return (
                     <div className="text-center py-8">
-                      <CheckCircle className="w-8 h-8 text-cyan-400/50 mx-auto mb-3" />
-                      <p className="text-gray-400">
+                      <CheckCircle className="w-8 h-8 text-white/10 mx-auto mb-3" />
+                      <p className="text-white/25">
                         {searchQuery ? "No subscriptions match your search" : "No active subscriptions found"}
                       </p>
                     </div>
@@ -400,7 +420,7 @@ export default function AdminBillingPage() {
                 return filteredSubscriptions.map((sub, index) => (
                   <div
                     key={index}
-                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors border border-white/[0.04]"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -408,14 +428,14 @@ export default function AdminBillingPage() {
                         <Badge
                           className={
                             sub.status === "active"
-                              ? "bg-green-500/20 text-green-400 border-green-500/30"
-                              : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                              ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
+                              : "bg-yellow-500/10 text-yellow-400/80 border-yellow-500/15"
                           }
                         >
                           {sub.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                      <div className="flex items-center gap-4 text-xs text-white/40 flex-wrap">
                         <span>{sub.plan} Plan</span>
                         <span className="hidden sm:inline">&bull;</span>
                         <span>Next billing: {sub.nextBilling}</span>
@@ -436,9 +456,16 @@ export default function AdminBillingPage() {
           {activeTab === "trials" && (
             <div className="space-y-3">
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-                  <span className="ml-3 text-gray-400">Loading trials...</span>
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 bg-white/[0.04] rounded animate-pulse" />
+                        <div className="h-2 w-48 bg-white/[0.02] rounded animate-pulse" />
+                      </div>
+                      <div className="h-6 w-16 bg-white/[0.04] rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : (() => {
                 const filteredTrials = trials.filter(t =>
@@ -449,8 +476,8 @@ export default function AdminBillingPage() {
                 if (filteredTrials.length === 0) {
                   return (
                     <div className="text-center py-8">
-                      <Clock className="w-8 h-8 text-yellow-400/50 mx-auto mb-3" />
-                      <p className="text-gray-400">
+                      <Clock className="w-8 h-8 text-white/10 mx-auto mb-3" />
+                      <p className="text-white/25">
                         {searchQuery ? "No trials match your search" : "No trials ending soon"}
                       </p>
                     </div>
@@ -459,12 +486,12 @@ export default function AdminBillingPage() {
                 return filteredTrials.map((trial, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-yellow-500/20 hover:bg-yellow-500/5 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-yellow-500/10 hover:bg-yellow-500/[0.03] transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{trial.company}</p>
-                      <p className="text-xs text-gray-400 truncate">{trial.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">{trial.plan} Plan</p>
+                      <p className="text-xs text-white/40 truncate">{trial.email}</p>
+                      <p className="text-xs text-white/25 mt-1">{trial.plan} Plan</p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
                       <p className={`text-sm font-semibold ${trial.daysLeft <= 3 ? "text-red-400" : "text-yellow-400"}`}>
@@ -481,9 +508,16 @@ export default function AdminBillingPage() {
           {activeTab === "failed" && (
             <div className="space-y-3">
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-                  <span className="ml-3 text-gray-400">Loading payment data...</span>
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 bg-white/[0.04] rounded animate-pulse" />
+                        <div className="h-2 w-48 bg-white/[0.02] rounded animate-pulse" />
+                      </div>
+                      <div className="h-6 w-16 bg-white/[0.04] rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : (() => {
                 const filteredPayments = allFailedPayments.filter(p =>
@@ -494,8 +528,8 @@ export default function AdminBillingPage() {
                 if (filteredPayments.length === 0) {
                   return (
                     <div className="text-center py-8">
-                      <CheckCircle className="w-8 h-8 text-green-400/50 mx-auto mb-3" />
-                      <p className="text-gray-400">
+                      <CheckCircle className="w-8 h-8 text-white/10 mx-auto mb-3" />
+                      <p className="text-white/25">
                         {searchQuery ? "No payment issues match your search" : "No payment issues"}
                       </p>
                     </div>
@@ -504,17 +538,17 @@ export default function AdminBillingPage() {
                 return filteredPayments.map((payment, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 rounded-lg bg-black/50 border border-red-500/20 hover:bg-red-500/5 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-red-500/10 hover:bg-red-500/[0.03] transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{payment.company}</p>
-                      <p className="text-xs text-gray-400 truncate">{payment.email}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-white/40 truncate">{payment.email}</p>
+                      <p className="text-xs text-white/25 mt-1">
                         {payment.reason} &bull; ${payment.amount}/mo
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
-                      <p className="text-xs text-gray-400">{payment.failedDate}</p>
+                      <p className="text-xs text-white/40">{payment.failedDate}</p>
                     </div>
                   </div>
                 ))

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,15 +49,19 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 animate-slide-up delay-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h2>
-          <p className="text-sm sm:text-base text-gray-400">Manage system configuration and preferences</p>
+          <p className="text-[13px] text-white/30 font-medium mb-1">System Configuration</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight">
+            Admin <span className="italic text-violet-400/90">Settings</span>
+          </h2>
+          <p className="text-[14px] text-white/35 mt-1">Manage system configuration and preferences</p>
         </div>
         <Button
           onClick={handleSave}
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white w-full sm:w-auto"
+          className="bg-white/[0.04] border border-white/[0.08] text-white/60 hover:bg-white/[0.06] hover:text-white/80 w-full sm:w-auto"
         >
           <Save className="w-4 h-4 mr-2" />
           Save Changes
@@ -69,19 +72,21 @@ export default function AdminSettingsPage() {
         {/* Main Settings */}
         <div className="lg:col-span-2 space-y-6">
           {/* General Settings */}
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-cyan-400" />
-                <CardTitle className="text-white">General Settings</CardTitle>
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-1">
+            <div className="p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                  <Settings className="w-4 h-4 text-cyan-400/70" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-medium text-white/80">General Settings</h3>
+                  <p className="text-[12px] text-white/25">Basic system configuration</p>
+                </div>
               </div>
-              <CardDescription className="text-gray-400">
-                Basic system configuration
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="px-6 pb-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName" className="text-gray-300">
+                <Label htmlFor="companyName" className="text-[12px] text-white/50">
                   Company Name
                 </Label>
                 <Input
@@ -90,11 +95,11 @@ export default function AdminSettingsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, companyName: e.target.value })
                   }
-                  className="bg-black/50 border-white/10 text-white"
+                  className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supportEmail" className="text-gray-300">
+                <Label htmlFor="supportEmail" className="text-[12px] text-white/50">
                   Support Email
                 </Label>
                 <Input
@@ -104,11 +109,11 @@ export default function AdminSettingsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, supportEmail: e.target.value })
                   }
-                  className="bg-black/50 border-white/10 text-white"
+                  className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="adminEmail" className="text-gray-300">
+                <Label htmlFor="adminEmail" className="text-[12px] text-white/50">
                   Admin Email
                 </Label>
                 <Input
@@ -118,12 +123,12 @@ export default function AdminSettingsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, adminEmail: e.target.value })
                   }
-                  className="bg-black/50 border-white/10 text-white"
+                  className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="maxUsers" className="text-gray-300">
+                  <Label htmlFor="maxUsers" className="text-[12px] text-white/50">
                     Max Users
                   </Label>
                   <Input
@@ -133,11 +138,11 @@ export default function AdminSettingsPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, maxUsers: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sessionTimeout" className="text-gray-300">
+                  <Label htmlFor="sessionTimeout" className="text-[12px] text-white/50">
                     Session Timeout (min)
                   </Label>
                   <Input
@@ -147,29 +152,31 @@ export default function AdminSettingsPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, sessionTimeout: e.target.value })
                     }
-                    className="bg-black/50 border-white/10 text-white"
+                    className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Notification Settings */}
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-cyan-400" />
-                <CardTitle className="text-white">Notifications</CardTitle>
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-2">
+            <div className="p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                  <Bell className="w-4 h-4 text-amber-400/70" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-medium text-white/80">Notifications</h3>
+                  <p className="text-[12px] text-white/25">Configure notification preferences</p>
+                </div>
               </div>
-              <CardDescription className="text-gray-400">
-                Configure notification preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="px-6 pb-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">Email Notifications</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">Email Notifications</Label>
+                  <p className="text-[12px] text-white/25">
                     Receive email alerts for important events
                   </p>
                 </div>
@@ -178,10 +185,11 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("emailNotifications")}
                 />
               </div>
+              <div className="border-t border-white/[0.04]" />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">System Alerts</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">System Alerts</Label>
+                  <p className="text-[12px] text-white/25">
                     Get notified about system issues
                   </p>
                 </div>
@@ -190,10 +198,11 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("systemAlerts")}
                 />
               </div>
+              <div className="border-t border-white/[0.04]" />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">Weekly Reports</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">Weekly Reports</Label>
+                  <p className="text-[12px] text-white/25">
                     Automatically send weekly summary reports
                   </p>
                 </div>
@@ -202,25 +211,27 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("weeklyReports")}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Security Settings */}
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-cyan-400" />
-                <CardTitle className="text-white">Security</CardTitle>
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-3">
+            <div className="p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-md bg-red-500/10 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-red-400/70" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-medium text-white/80">Security</h3>
+                  <p className="text-[12px] text-white/25">Manage security and access controls</p>
+                </div>
               </div>
-              <CardDescription className="text-gray-400">
-                Manage security and access controls
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="px-6 pb-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">Two-Factor Authentication</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">Two-Factor Authentication</Label>
+                  <p className="text-[12px] text-white/25">
                     Require 2FA for all admin accounts
                   </p>
                 </div>
@@ -229,10 +240,11 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("twoFactorAuth")}
                 />
               </div>
+              <div className="border-t border-white/[0.04]" />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">API Access</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">API Access</Label>
+                  <p className="text-[12px] text-white/25">
                     Enable API access for integrations
                   </p>
                 </div>
@@ -241,31 +253,33 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("apiAccess")}
                 />
               </div>
-              <div className="pt-4 border-t border-white/10">
-                <Button variant="outline" className="border-white/10 bg-black/50 text-white">
+              <div className="pt-4 border-t border-white/[0.04]">
+                <Button variant="outline" className="bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70">
                   <Key className="w-4 h-4 mr-2" />
                   Change Master Password
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* System Settings */}
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Server className="w-5 h-5 text-cyan-400" />
-                <CardTitle className="text-white">System</CardTitle>
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-4">
+            <div className="p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-md bg-violet-500/10 flex items-center justify-center">
+                  <Server className="w-4 h-4 text-violet-400/70" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-medium text-white/80">System</h3>
+                  <p className="text-[12px] text-white/25">System-wide configuration</p>
+                </div>
               </div>
-              <CardDescription className="text-gray-400">
-                System-wide configuration
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="px-6 pb-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-white">Maintenance Mode</Label>
-                  <p className="text-sm text-gray-400">
+                  <Label className="text-[13px] text-white/70">Maintenance Mode</Label>
+                  <p className="text-[12px] text-white/25">
                     Temporarily disable access for maintenance
                   </p>
                 </div>
@@ -274,77 +288,76 @@ export default function AdminSettingsPage() {
                   onCheckedChange={() => handleToggle("maintenanceMode")}
                 />
               </div>
-              <div className="pt-4 border-t border-white/10 space-y-3">
-                <Button variant="outline" className="w-full border-white/10 bg-black/50 text-white">
+              <div className="pt-4 border-t border-white/[0.04] space-y-3">
+                <Button variant="outline" className="w-full bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70">
                   <Database className="w-4 h-4 mr-2" />
                   Backup Database
                 </Button>
-                <Button variant="outline" className="w-full border-white/10 bg-black/50 text-white">
+                <Button variant="outline" className="w-full bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70">
                   <Server className="w-4 h-4 mr-2" />
                   System Status
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar Info */}
         <div className="space-y-6">
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-2">
+            <div className="p-6 pb-4">
+              <h3 className="text-[12px] text-white/40 font-medium uppercase tracking-wider">Quick Actions</h3>
+            </div>
+            <div className="px-6 pb-6 space-y-3">
               <Button
                 variant="outline"
-                className="w-full border-white/10 bg-black/50 text-white justify-start"
+                className="w-full bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70 justify-start"
               >
                 <Users className="w-4 h-4 mr-2" />
                 Manage Users
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-white/10 bg-black/50 text-white justify-start"
+                className="w-full bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70 justify-start"
               >
                 <Mail className="w-4 h-4 mr-2" />
                 Email Settings
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-white/10 bg-black/50 text-white justify-start"
+                className="w-full bg-white/[0.03] border-white/[0.06] text-white/50 hover:bg-white/[0.06] hover:text-white/70 justify-start"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 Regional Settings
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white">System Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl animate-slide-up delay-3">
+            <div className="p-6 pb-4">
+              <h3 className="text-[12px] text-white/40 font-medium uppercase tracking-wider">System Info</h3>
+            </div>
+            <div className="px-6 pb-6 space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-400">Version</span>
-                <span className="text-white">2.4.1</span>
+                <span className="text-[12px] text-white/25">Version</span>
+                <span className="text-[13px] text-white/60">2.4.1</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Last Updated</span>
-                <span className="text-white">2024-06-15</span>
+                <span className="text-[12px] text-white/25">Last Updated</span>
+                <span className="text-[13px] text-white/60">2024-06-15</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Status</span>
-                <span className="text-green-400">Operational</span>
+                <span className="text-[12px] text-white/25">Status</span>
+                <span className="text-[13px] text-emerald-400/80">Operational</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Uptime</span>
-                <span className="text-white">99.9%</span>
+                <span className="text-[12px] text-white/25">Uptime</span>
+                <span className="text-[13px] text-white/60">99.9%</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
-

@@ -178,42 +178,46 @@ function PlanDonut({
 
 // ── Token usage gauge ──
 function TokenGauge({ percent }: { percent: number }) {
-  const size = 140
+  const width = 140
   const strokeWidth = 10
-  const radius = (size - strokeWidth) / 2
-  // Semicircle: half circumference
+  const radius = (width - strokeWidth) / 2
   const semiCircumference = Math.PI * radius
   const offset = semiCircumference - (percent / 100) * semiCircumference
   const color =
     percent >= 80 ? "#f87171" : percent >= 50 ? "#fbbf24" : "#34d399"
 
+  // Position circle center at bottom of the visible area
+  const cx = width / 2
+  const cy = radius + strokeWidth / 2
+  const svgHeight = cy + strokeWidth / 2
+
   return (
-    <div className="relative" style={{ width: size, height: size / 2 + 20 }}>
-      <svg width={size} height={size / 2 + 10} className="overflow-visible">
+    <div className="relative" style={{ width, height: svgHeight + 28 }}>
+      <svg width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`}>
         {/* Track */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={radius}
           fill="none"
           stroke="rgba(255,255,255,0.04)"
           strokeWidth={strokeWidth}
           strokeDasharray={`${semiCircumference} ${semiCircumference}`}
           strokeDashoffset={0}
-          transform={`rotate(180, ${size / 2}, ${size / 2})`}
+          transform={`rotate(180, ${cx}, ${cy})`}
           strokeLinecap="round"
         />
         {/* Fill */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={radius}
           fill="none"
           stroke={color}
           strokeWidth={strokeWidth}
           strokeDasharray={`${semiCircumference} ${semiCircumference}`}
           strokeDashoffset={offset}
-          transform={`rotate(180, ${size / 2}, ${size / 2})`}
+          transform={`rotate(180, ${cx}, ${cy})`}
           strokeLinecap="round"
           className="transition-all duration-1000"
         />

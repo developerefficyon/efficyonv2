@@ -74,39 +74,43 @@ interface DashboardSummary {
 
 // ── Token usage gauge (semicircle) ──
 function UsageGauge({ percent, available, total }: { percent: number; available: number; total: number }) {
-  const size = 160
+  const width = 160
   const strokeWidth = 12
-  const radius = (size - strokeWidth) / 2
+  const radius = (width - strokeWidth) / 2
   const semiCircumference = Math.PI * radius
-  const offset = semiCircumference - ((100 - percent) / 100) * semiCircumference
+  const offset = semiCircumference - (percent / 100) * semiCircumference
   const color =
     percent >= 90 ? "#f87171" : percent >= 70 ? "#fbbf24" : "#34d399"
 
+  const cx = width / 2
+  const cy = radius + strokeWidth / 2
+  const svgHeight = cy + strokeWidth / 2
+
   return (
-    <div className="relative" style={{ width: size, height: size / 2 + 24 }}>
-      <svg width={size} height={size / 2 + 12} className="overflow-visible">
+    <div className="relative" style={{ width, height: svgHeight + 32 }}>
+      <svg width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`}>
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={radius}
           fill="none"
           stroke="rgba(255,255,255,0.04)"
           strokeWidth={strokeWidth}
           strokeDasharray={`${semiCircumference} ${semiCircumference}`}
           strokeDashoffset={0}
-          transform={`rotate(180, ${size / 2}, ${size / 2})`}
+          transform={`rotate(180, ${cx}, ${cy})`}
           strokeLinecap="round"
         />
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={radius}
           fill="none"
           stroke={color}
           strokeWidth={strokeWidth}
           strokeDasharray={`${semiCircumference} ${semiCircumference}`}
           strokeDashoffset={offset}
-          transform={`rotate(180, ${size / 2}, ${size / 2})`}
+          transform={`rotate(180, ${cx}, ${cy})`}
           strokeLinecap="round"
           className="transition-all duration-1000"
         />
