@@ -22,6 +22,9 @@ import {
   AlertCircle,
   Info,
   ExternalLink,
+  ArrowUpRight,
+  Layers,
+  Sparkles,
 } from "lucide-react"
 import { getBackendToken } from "@/lib/auth-hooks"
 import { useApiCache } from "@/lib/use-api-cache"
@@ -59,6 +62,11 @@ interface DashboardData {
   lastAnalysisAt: string | null
 }
 
+function formatSavings(amount: number): string {
+  if (amount % 1 === 0) return amount.toLocaleString()
+  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export default function RecommendationsPage() {
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null)
 
@@ -91,64 +99,90 @@ export default function RecommendationsPage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "downgrade":
-        return <TrendingDown className="w-5 h-5 text-blue-400" />
+        return <TrendingDown className="w-4 h-4 text-blue-400/70" />
       case "remove":
       case "Remove Inactive Seats":
-        return <X className="w-5 h-5 text-red-400" />
+        return <X className="w-4 h-4 text-red-400/70" />
       case "switch":
-        return <ArrowRight className="w-5 h-5 text-purple-400" />
+        return <ArrowRight className="w-4 h-4 text-violet-400/70" />
       case "Audit HubSpot Plan":
       case "Review User Access":
-        return <Lightbulb className="w-5 h-5 text-yellow-400" />
+        return <Lightbulb className="w-4 h-4 text-amber-400/70" />
       default:
-        return <Zap className="w-5 h-5 text-cyan-400" />
+        return <Zap className="w-4 h-4 text-emerald-400/70" />
     }
   }
 
-  const getImpactBadge = (impact: string) => {
-    const normalizedImpact = impact?.toLowerCase() || "medium"
-    const styles = {
-      high: "bg-green-500/20 text-green-400 border-green-500/30",
-      medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      low: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "downgrade": return "bg-blue-500/10"
+      case "remove":
+      case "Remove Inactive Seats": return "bg-red-500/10"
+      case "switch": return "bg-violet-500/10"
+      case "Audit HubSpot Plan":
+      case "Review User Access": return "bg-amber-500/10"
+      default: return "bg-emerald-500/10"
     }
-    return styles[normalizedImpact as keyof typeof styles] || styles.medium
   }
 
-  // Get recommendations from dashboard data
+  const getImpactStyle = (impact: string) => {
+    const n = impact?.toLowerCase() || "medium"
+    if (n === "high") return "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
+    if (n === "low") return "bg-white/[0.04] text-white/35 border-white/[0.06]"
+    return "bg-amber-500/10 text-amber-400/80 border-amber-500/15"
+  }
+
+  const getEffortStyle = (effort: string) => {
+    const n = effort?.toLowerCase() || ""
+    if (n === "low") return "bg-emerald-500/10 text-emerald-400/70 border-emerald-500/15"
+    if (n === "high") return "bg-red-500/10 text-red-400/70 border-red-500/15"
+    return "bg-white/[0.04] text-white/35 border-white/[0.06]"
+  }
+
   const recommendations: Recommendation[] = dashboardData?.recommendations || []
   const hasRealData = dashboardData?.hasData === true && recommendations.length > 0
 
   const totalPotentialSavings = dashboardData?.summary?.totalPotentialSavings ||
     recommendations.reduce((sum, r) => sum + (r.savings || 0), 0)
 
+  // Count by impact
+  const highImpact = recommendations.filter(r => r.impact?.toLowerCase() === "high").length
+  const withSavings = recommendations.filter(r => r.savings > 0).length
+
+  // ── Loading ──
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto mb-4" />
-          <p className="text-gray-400">Loading recommendations...</p>
+          <div className="relative mx-auto w-12 h-12 mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
+            <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+          </div>
+          <p className="text-[13px] text-white/30">Loading recommendations...</p>
         </div>
       </div>
     )
   }
 
+  // ── Error ──
   if (error) {
     return (
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-        <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Recommendations</h2>
-          <p className="text-gray-400">
-            AI-powered suggestions to optimize your SaaS spending
-          </p>
+      <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+        <div className="animate-slide-up delay-0">
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+            Recommend<span className="italic text-emerald-400/90">ations</span>
+          </h2>
+          <p className="text-[14px] text-white/35">AI-powered suggestions to optimize your spending</p>
         </div>
-        <Card className="bg-black/80 backdrop-blur-xl border-red-500/20">
+        <Card className="bg-red-500/[0.03] border-red-500/10 rounded-xl animate-slide-up delay-1">
           <CardContent className="p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <p className="text-red-400 mb-2">{error}</p>
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-5 h-5 text-red-400/70" />
+            </div>
+            <p className="text-[13px] text-red-400/70 mb-4">{error}</p>
             <Button
               onClick={() => window.location.reload()}
-              className="mt-4 bg-gradient-to-r from-cyan-500 to-blue-600"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-5 text-[13px] rounded-lg"
             >
               Retry
             </Button>
@@ -158,137 +192,185 @@ export default function RecommendationsPage() {
     )
   }
 
-  // Empty state when no recommendations exist
+  // ── Empty State ──
   if (!hasRealData) {
     return (
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-        <div className="flex items-center justify-between">
+      <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up delay-0">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Recommendations</h2>
-            <p className="text-gray-400">
-              AI-powered suggestions to optimize your SaaS spending
-            </p>
+            <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+              Recommend<span className="italic text-emerald-400/90">ations</span>
+            </h2>
+            <p className="text-[14px] text-white/35">AI-powered suggestions to optimize your spending</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl px-5 py-3">
-            <p className="text-xs text-gray-400 mb-0.5">Potential Savings</p>
-            <p className="text-xl font-bold text-gray-500">$0/mo</p>
+          <div className="text-right">
+            <p className="text-[11px] text-white/25 uppercase tracking-wider mb-0.5">Potential Savings</p>
+            <p className="text-xl font-semibold text-white/20">$0/mo</p>
           </div>
         </div>
 
-        <Card className="bg-black/80 backdrop-blur-xl border-white/10">
-          <CardContent className="p-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-6">
-              <Lightbulb className="w-8 h-8 text-cyan-400" />
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl overflow-hidden relative animate-slide-up delay-1">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl" />
+          <CardContent className="p-12 text-center relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-5">
+              <Lightbulb className="w-7 h-7 text-white/15" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-3">
-              No Recommendations Yet
-            </h3>
-            <p className="text-gray-400 max-w-md mx-auto mb-6">
-              Connect your tools and run a cost analysis to get AI-powered recommendations
-              for optimizing your SaaS spending.
+            <h3 className="text-xl font-display text-white mb-2">No Recommendations Yet</h3>
+            <p className="text-[13px] text-white/30 max-w-md mx-auto mb-6 leading-relaxed">
+              Connect your tools and run a cost analysis to get AI-powered
+              recommendations for optimizing your SaaS spending.
             </p>
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                onClick={() => window.location.href = "/dashboard/tools"}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
-              >
+            <Link href="/dashboard/tools">
+              <Button className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium h-9 px-5 text-[13px] rounded-lg">
                 Connect Tools
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
-            </div>
+            </Link>
           </CardContent>
         </Card>
       </div>
     )
   }
 
+  // ── Main View ──
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div className="space-y-8 w-full max-w-full overflow-x-hidden relative grain-overlay">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up delay-0">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Recommendations</h2>
-          <p className="text-gray-400">
-            AI-powered suggestions to optimize your SaaS spending
-          </p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/80 backdrop-blur-xl px-5 py-3">
-          <p className="text-xs text-gray-400 mb-0.5">Potential Savings</p>
-          <p className="text-2xl font-bold text-green-400 whitespace-nowrap">${totalPotentialSavings % 1 === 0 ? totalPotentialSavings.toLocaleString() : totalPotentialSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</p>
+          <h2 className="text-3xl sm:text-4xl font-display text-white tracking-tight mb-1">
+            Recommend<span className="italic text-emerald-400/90">ations</span>
+          </h2>
+          <p className="text-[14px] text-white/35">AI-powered suggestions to optimize your spending</p>
         </div>
       </div>
 
-      {/* Recommendations List */}
-      <div className="space-y-3">
-        {recommendations.map((rec) => (
+      {/* ── Summary Strip ── */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 animate-slide-up delay-1">
+        {/* Total Savings */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift relative overflow-hidden group">
+          <div className="absolute -top-16 -right-16 w-32 h-32 bg-emerald-500/[0.06] rounded-full blur-3xl group-hover:bg-emerald-500/[0.1] transition-all duration-700" />
+          <CardContent className="p-5 relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400/60" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Potential Savings</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-semibold text-emerald-400 tracking-tight">
+              ${formatSavings(totalPotentialSavings)}
+              <span className="text-[12px] text-white/20 font-normal ml-0.5">/mo</span>
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* High Impact Count */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400/60" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">High Impact</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{highImpact}</p>
+          </CardContent>
+        </Card>
+
+        {/* Total Recommendations */}
+        <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="w-3.5 h-3.5 text-white/25" />
+              <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Total</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+              {recommendations.length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Recommendations List ── */}
+      <div className="space-y-2 animate-slide-up delay-2">
+        {recommendations.map((rec, index) => (
           <Card
             key={rec.id}
-            className="bg-black/80 backdrop-blur-xl border-white/10 hover:border-cyan-500/30 transition-all"
+            className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift group relative overflow-hidden"
           >
-            <CardContent className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="p-2.5 rounded-lg bg-white/5 mt-0.5">
+            {/* Left accent */}
+            <div className={`absolute left-0 top-0 bottom-0 w-[2px] ${
+              rec.impact?.toLowerCase() === "high" ? "bg-emerald-400/50" :
+              rec.impact?.toLowerCase() === "low" ? "bg-white/[0.08]" : "bg-amber-400/40"
+            }`} />
+
+            <CardContent className="p-4 pl-5 sm:p-5 sm:pl-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                {/* Type icon */}
+                <div className={`w-9 h-9 rounded-lg ${getTypeColor(rec.type || rec.title)} flex items-center justify-center flex-shrink-0 mt-0.5`}>
                   {getTypeIcon(rec.type || rec.title)}
                 </div>
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-white truncate mb-1.5">{rec.title}</h3>
-                      <Badge className={getImpactBadge(rec.impact)}>
-                        {rec.impact} impact
-                      </Badge>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[14px] font-medium text-white/85 mb-1.5 line-clamp-1">{rec.title}</h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge className={`${getImpactStyle(rec.impact)} text-[9px] h-[18px] px-1.5 rounded-full font-medium`}>
+                          {rec.impact} impact
+                        </Badge>
+                        {rec.effort && (
+                          <Badge className={`${getEffortStyle(rec.effort)} text-[9px] h-[18px] px-1.5 rounded-full font-medium`}>
+                            {rec.effort} effort
+                          </Badge>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Savings */}
                     <div className="text-right shrink-0">
                       {rec.savings > 0 ? (
-                        <>
-                          <p className="text-xl font-bold text-green-400">
-                            ${rec.savings % 1 === 0 ? rec.savings.toLocaleString() : rec.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                        <div>
+                          <p className="text-lg font-semibold text-emerald-400">
+                            ${formatSavings(rec.savings)}
                           </p>
-                          <p className="text-xs text-gray-500">Savings</p>
-                        </>
+                          <p className="text-[10px] text-white/20">/month</p>
+                        </div>
                       ) : (
-                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                        <Badge className="bg-blue-500/10 text-blue-400/70 border-blue-500/15 text-[9px] h-[18px] px-1.5 rounded-full">
                           Optimization
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-400 mt-2">{rec.description}</p>
+
+                  <p className="text-[12px] text-white/30 mt-2 line-clamp-2 leading-relaxed">{rec.description}</p>
+
+                  {/* Footer */}
                   <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        {rec.tool}
-                      </span>
+                    <div className="flex items-center gap-2 text-[11px] text-white/20">
+                      <span>{rec.tool}</span>
                       {rec.category && (
                         <>
-                          <span>·</span>
+                          <span className="text-white/10">·</span>
                           <span>{rec.category}</span>
                         </>
                       )}
-                      {rec.effort && (
-                        <>
-                          <span>·</span>
-                          <span>Effort: {rec.effort}</span>
-                        </>
-                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="border-white/10 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white h-8 text-xs"
+                        className="h-6 px-2 text-[10px] text-white/25 hover:text-white/60 hover:bg-white/[0.04] rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => setSelectedRecommendation(rec)}
                       >
-                        <Info className="w-3.5 h-3.5 mr-1.5" />
+                        <Info className="w-2.5 h-2.5 mr-0.5" />
                         Details
                       </Button>
                       {rec.integrationId && (
                         <Link href={`/dashboard/tools/${rec.integrationId}`}>
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white h-8 text-xs"
+                            className="h-6 px-2 text-[10px] bg-emerald-500/90 hover:bg-emerald-400 text-black font-medium rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                            View in Tool
+                            View Tool <ArrowUpRight className="w-2.5 h-2.5 ml-0.5" />
                           </Button>
                         </Link>
                       )}
@@ -301,71 +383,77 @@ export default function RecommendationsPage() {
         ))}
       </div>
 
-      {/* Last Analysis Info */}
+      {/* ── Last Analysis ── */}
       {dashboardData?.lastAnalysisAt && (
-        <div className="text-center text-sm text-gray-500">
-          Last analysis: {new Date(dashboardData.lastAnalysisAt).toLocaleString()}
+        <div className="text-center animate-slide-up delay-3">
+          <p className="text-[11px] text-white/15">
+            Last analysis: {new Date(dashboardData.lastAnalysisAt).toLocaleString()}
+          </p>
         </div>
       )}
 
-      {/* Recommendation Details Dialog */}
+      {/* ── Details Dialog ── */}
       <Dialog open={!!selectedRecommendation} onOpenChange={() => setSelectedRecommendation(null)}>
-        <DialogContent className="bg-black/95 border-white/10 text-white max-w-lg">
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white max-w-lg rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl text-white flex items-center gap-2">
-              {selectedRecommendation && getTypeIcon(selectedRecommendation.type || selectedRecommendation.title)}
-              {selectedRecommendation?.title}
+            <DialogTitle className="text-[16px] font-medium text-white flex items-center gap-2.5">
+              {selectedRecommendation && (
+                <div className={`w-8 h-8 rounded-lg ${getTypeColor(selectedRecommendation.type || selectedRecommendation.title)} flex items-center justify-center flex-shrink-0`}>
+                  {getTypeIcon(selectedRecommendation.type || selectedRecommendation.title)}
+                </div>
+              )}
+              <span className="line-clamp-1">{selectedRecommendation?.title}</span>
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-[13px] text-white/35">
               Recommendation for {selectedRecommendation?.tool}
             </DialogDescription>
           </DialogHeader>
 
           {selectedRecommendation && (
-            <div className="space-y-4 mt-4">
-              <div className="flex items-center gap-2">
-                <Badge className={getImpactBadge(selectedRecommendation.impact)}>
+            <div className="space-y-4 mt-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge className={`${getImpactStyle(selectedRecommendation.impact)} text-[9px] h-[18px] px-1.5 rounded-full font-medium`}>
                   {selectedRecommendation.impact} impact
                 </Badge>
                 {selectedRecommendation.effort && (
-                  <Badge className="bg-white/10 text-gray-300 border-white/20">
+                  <Badge className={`${getEffortStyle(selectedRecommendation.effort)} text-[9px] h-[18px] px-1.5 rounded-full font-medium`}>
                     {selectedRecommendation.effort} effort
                   </Badge>
                 )}
                 {selectedRecommendation.category && (
-                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                  <Badge className="bg-violet-500/10 text-violet-400/70 border-violet-500/15 text-[9px] h-[18px] px-1.5 rounded-full font-medium">
                     {selectedRecommendation.category}
                   </Badge>
                 )}
               </div>
 
               <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-1">Description</h4>
-                <p className="text-white">{selectedRecommendation.description}</p>
+                <p className="text-[11px] text-white/25 uppercase tracking-wider mb-1.5">Description</p>
+                <p className="text-[13px] text-white/70 leading-relaxed">{selectedRecommendation.description}</p>
               </div>
 
               {selectedRecommendation.savings > 0 && (
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-green-400 mb-1">Potential Savings</h4>
-                  <p className="text-2xl font-bold text-green-400">
-                    ${selectedRecommendation.savings}/month
+                <div className="bg-emerald-500/[0.05] border border-emerald-500/10 rounded-lg p-4">
+                  <p className="text-[11px] text-emerald-400/60 uppercase tracking-wider mb-1">Potential Savings</p>
+                  <p className="text-2xl font-semibold text-emerald-400">
+                    ${formatSavings(selectedRecommendation.savings)}
+                    <span className="text-[12px] text-white/20 font-normal ml-0.5">/month</span>
                   </p>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.06]">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setSelectedRecommendation(null)}
-                  className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                  className="border border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
                 >
                   Close
                 </Button>
                 {selectedRecommendation.integrationId && (
                   <Link href={`/dashboard/tools/${selectedRecommendation.integrationId}`}>
-                    <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View in Tool
+                    <Button className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium rounded-lg h-9 text-[13px]">
+                      View in Tool <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
                   </Link>
                 )}
