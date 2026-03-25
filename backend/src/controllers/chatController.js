@@ -415,7 +415,7 @@ async function chatWithTool(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, toolId, dataType, cachedResearchData, conversationId, stream } = req.body
+    const { question, toolId, dataType, cachedResearchData, skipDataFetch, conversationId, stream } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
@@ -453,6 +453,10 @@ async function chatWithTool(req, res) {
       console.log(`[${new Date().toISOString()}] Using cached research data (free follow-up)`)
       toolData = cachedResearchData
       dataDescription = getDataDescription(integration.provider, dataType)
+    } else if (skipDataFetch) {
+      // Light prompt on tool tab — respond with tool context but no data fetch (free)
+      console.log(`[${new Date().toISOString()}] Light prompt on ${integration.provider} tab — skipping data fetch`)
+      dataDescription = `${integration.provider} integration (no data loaded yet — suggest the user ask a data-specific question to load their ${integration.provider} data)`
     } else {
       // Need to fetch new data - this is a deep research request (costs 1 token)
       isDeepResearch = true

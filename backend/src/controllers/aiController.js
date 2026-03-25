@@ -162,6 +162,36 @@ async function chatAboutAnalysis(req, res) {
       return res.status(400).json({ error: "question is required" })
     }
 
+    // Fetch user's connected integrations to provide context
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", user.id)
+      .single()
+
+    let connectedTools = []
+    if (profile?.company_id) {
+      const { data: integrations } = await supabase
+        .from("company_integrations")
+        .select("tool_name, status")
+        .eq("company_id", profile.company_id)
+
+      if (integrations) {
+        connectedTools = integrations
+          .filter(i => i.status === "connected")
+          .map(i => i.tool_name)
+      }
+    }
+
+    // Build enriched context with connected tool info
+    let enrichedContext = analysisContext
+    if (!enrichedContext && connectedTools.length > 0) {
+      enrichedContext = {
+        connectedTools,
+        hint: "The user has these integrations connected. For data-specific questions, suggest they select the relevant tool tab (e.g. Fortnox, QuickBooks) at the top of the chat to analyze their actual data. Do NOT ask them to upload a file — their data is accessible through the tool tabs.",
+      }
+    }
+
     // Check token balance (for display purposes, chat doesn't consume tokens)
     const { available: availableTokens } = await tokenService.checkTokenBalance(user.id, 0)
 
@@ -185,12 +215,12 @@ async function chatAboutAnalysis(req, res) {
 
       aiOpts.stream = true
       aiOpts.res = res
-      await openaiService.chatAboutAnalysis(question, analysisContext, aiOpts)
+      await openaiService.chatAboutAnalysis(question, enrichedContext, aiOpts)
       return // Response already ended by streamChatCompletion
     }
 
     // Chat doesn't consume tokens - it's unlimited for Deep Research reports
-    const response = await openaiService.chatAboutAnalysis(question, analysisContext, aiOpts)
+    const response = await openaiService.chatAboutAnalysis(question, enrichedContext, aiOpts)
 
     return res.json({
       success: true,

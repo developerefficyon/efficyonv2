@@ -541,7 +541,7 @@ export default function ChatbotPage() {
           conversationId,
           stream: true,
         }
-      } else if (activeTab === "general" || (activeTab !== "general" && !isHeavyPrompt(text))) {
+      } else if (activeTab === "general") {
         endpoint = `${apiBase}/api/ai/chat`
         body = {
           question: text,
@@ -572,11 +572,13 @@ export default function ChatbotPage() {
       } else {
         endpoint = `${apiBase}/api/chat/tool`
         const dataType = detectDataType(text)
+        const hasCached = !!(researchCache.toolData)
         body = {
           question: text,
           toolId: activeTab,
           dataType,
           cachedResearchData: researchCache.toolData || undefined,
+          skipDataFetch: !hasCached && !isHeavyPrompt(text),
           conversationId,
           stream: true,
         }
