@@ -6,6 +6,158 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "anthropic/claude-sonnet-4-5"
 const OPENAI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 /**
+ * Truncate a JSON string at record boundaries to avoid cutting mid-object.
+ * If data is an array, keeps whole records until the limit is reached.
+ * If data is an object, stringifies it and truncates at top-level key boundaries.
+ * @param {*} data - The data to truncate
+ * @param {number} maxChars - Maximum character length (default 15000)
+ * @returns {string} Truncated JSON string
+ */
+function smartTruncateJSON(data, maxChars = 15000) {
+  if (!data) return ""
+
+  const fullStr = JSON.stringify(data, null, 2)
+  if (fullStr.length <= maxChars) return fullStr
+
+  // If data is an array, keep whole records
+  if (Array.isArray(data)) {
+    const kept = []
+    let currentLength = 2 // for [ and ]
+    for (const item of data) {
+      const itemStr = JSON.stringify(item, null, 2)
+      // +2 for comma and newline
+      if (currentLength + itemStr.length + 2 > maxChars && kept.length > 0) break
+      kept.push(item)
+      currentLength += itemStr.length + 2
+    }
+    const truncatedNote = kept.length < data.length
+      ? `\n// ... truncated: showing ${kept.length} of ${data.length} records`
+      : ""
+    return JSON.stringify(kept, null, 2) + truncatedNote
+  }
+
+  // If data is an object, keep whole top-level keys
+  if (typeof data === "object") {
+    const keys = Object.keys(data)
+    const kept = {}
+    let currentLength = 2 // for { and }
+    for (const key of keys) {
+      const valueStr = JSON.stringify(data[key], null, 2)
+      const entryStr = `"${key}": ${valueStr}`
+      if (currentLength + entryStr.length + 2 > maxChars && Object.keys(kept).length > 0) {
+        kept["_truncated"] = `${keys.length - Object.keys(kept).length} more keys omitted`
+        break
+      }
+      kept[key] = data[key]
+      currentLength += entryStr.length + 2
+    }
+    return JSON.stringify(kept, null, 2)
+  }
+
+  // Fallback: plain string truncation
+  return fullStr.substring(0, maxChars) + "...(truncated)"
+}
+
+/**
+ * Build the messages array for an LLM call, injecting conversation history
+ * between the system prompt and the current user question.
+ * Keeps the last N turns (user+assistant pairs) to stay within context limits.
+ * @param {string} systemPrompt - The system message
+ * @param {string} question - The current user question
+ * @param {Array} conversationHistory - Array of {role, content} from DB (chronological)
+ * @param {number} maxTurns - Maximum number of past message pairs to include (default 10)
+ * @returns {Array} Messages array for OpenRouter API
+ */
+function buildMessagesWithHistory(systemPrompt, question, conversationHistory = [], maxTurns = 10) {
+  const messages = [{ role: "system", content: systemPrompt }]
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    // Take the last N messages (maxTurns * 2 for user+assistant pairs)
+    const recentMessages = conversationHistory.slice(-(maxTurns * 2))
+    for (const msg of recentMessages) {
+      messages.push({ role: msg.role, content: msg.content })
+    }
+  }
+
+  messages.push({ role: "user", content: question })
+  return messages
+}
+
+/**
+ * Stream a chat completion from OpenRouter, piping SSE chunks to an Express response.
+ * Headers should already be set by the controller before calling this.
+ * @param {object} res - Express response object (SSE headers already set)
+ * @param {object} requestBody - The full request body for OpenRouter (with stream: true)
+ * @returns {Promise<string>} The full assembled response text
+ */
+async function streamChatCompletion(res, requestBody) {
+  // Only set headers if not already sent (backwards compat)
+  if (!res.headersSent) {
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+    res.setHeader("X-Accel-Buffering", "no")
+    res.flushHeaders()
+  }
+
+  const response = await axios.post(
+    OPENAI_API_URL,
+    { ...requestBody, stream: true },
+    {
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://efficyon.com",
+      },
+      responseType: "stream",
+    }
+  )
+
+  let fullText = ""
+
+  return new Promise((resolve, reject) => {
+    let buffer = ""
+
+    response.data.on("data", (chunk) => {
+      buffer += chunk.toString()
+      const lines = buffer.split("\n")
+      // Keep the last potentially incomplete line in the buffer
+      buffer = lines.pop() || ""
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.startsWith("data: ")) continue
+        const payload = trimmed.slice(6)
+        if (payload === "[DONE]") {
+          res.write("data: [DONE]\n\n")
+          continue
+        }
+        try {
+          const parsed = JSON.parse(payload)
+          const content = parsed.choices?.[0]?.delta?.content
+          if (content) {
+            fullText += content
+            res.write(`data: ${JSON.stringify({ content })}\n\n`)
+          }
+        } catch {
+          // Skip malformed chunks
+        }
+      }
+    })
+
+    response.data.on("end", () => {
+      res.end()
+      resolve(fullText)
+    })
+
+    response.data.on("error", (err) => {
+      res.end()
+      reject(err)
+    })
+  })
+}
+
+/**
  * Generate AI-powered analysis summary
  * @param {Object} analysisData - Cost leak analysis data
  * @returns {Promise<string>} AI-generated summary
@@ -206,29 +358,31 @@ async function chatAboutAnalysis(question, analysisData, options = {}) {
   try {
     console.log(`[${new Date().toISOString()}] Chat query: ${question}`)
 
-    const context = JSON.stringify(analysisData, null, 2)
-    const systemPrompt = `You are a helpful financial analysis assistant. You have access to the following cost leak analysis data:
-
-${context}
+    const context = analysisData ? smartTruncateJSON(analysisData, 12000) : ""
+    const systemPrompt = `You are a helpful financial analysis assistant.${context ? ` You have access to the following cost leak analysis data:\n\n${context}` : ""}
 
 Help the user understand their cost leaks and provide actionable insights. Be friendly, clear, and specific.`
+
+    const messages = buildMessagesWithHistory(systemPrompt, question, options.conversationHistory)
+
+    // If streaming is requested, use the stream path
+    if (options.stream && options.res) {
+      const requestBody = {
+        model: options.modelId || OPENAI_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1500,
+      }
+      return await streamChatCompletion(options.res, requestBody)
+    }
 
     const response = await axios.post(
       OPENAI_API_URL,
       {
         model: options.modelId || OPENAI_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: question,
-          },
-        ],
+        messages,
         temperature: 0.7,
-        max_tokens: 500,
+        max_tokens: 1500,
       },
       {
         headers: {
@@ -387,9 +541,7 @@ async function chatWithToolContext(question, toolContext, options = {}) {
     // Build context string from tool data
     let dataContext = ""
     if (data) {
-      // Limit data size for context
-      const dataStr = JSON.stringify(data, null, 2)
-      dataContext = dataStr.length > 15000 ? dataStr.substring(0, 15000) + "...(truncated)" : dataStr
+      dataContext = smartTruncateJSON(data, 15000)
     }
 
     const systemPrompt = `You are an expert business analyst assistant specialized in ${toolName} data analysis. You help users understand and analyze their ${toolName} data.
@@ -424,20 +576,23 @@ SPECIAL INSTRUCTIONS FOR DATA TYPES:
 
 Be concise but thorough. Focus on actionable insights.`
 
+    const messages = buildMessagesWithHistory(systemPrompt, question, options.conversationHistory)
+
+    if (options.stream && options.res) {
+      const requestBody = {
+        model: options.modelId || OPENAI_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000,
+      }
+      return await streamChatCompletion(options.res, requestBody)
+    }
+
     const response = await axios.post(
       OPENAI_API_URL,
       {
         model: options.modelId || OPENAI_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: question,
-          },
-        ],
+        messages,
         temperature: 0.7,
         max_tokens: 2000,
       },
@@ -614,20 +769,23 @@ Use this EXACT format for tables:
 
 Be specific with numbers. Reference actual data from the context. Focus on actionable insights.`
 
+    const messages = buildMessagesWithHistory(systemPrompt, question, options.conversationHistory)
+
+    if (options.stream && options.res) {
+      const requestBody = {
+        model: options.modelId || OPENAI_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 3000,
+      }
+      return await streamChatCompletion(options.res, requestBody)
+    }
+
     const response = await axios.post(
       OPENAI_API_URL,
       {
         model: options.modelId || OPENAI_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: question,
-          },
-        ],
+        messages,
         temperature: 0.7,
         max_tokens: 3000,
       },
@@ -1003,8 +1161,7 @@ async function chatWithFileContext(question, fileAnalysis, options = {}) {
     // Build analysis context string
     let analysisContext = "No structured analysis results available."
     if (analysis) {
-      const analysisStr = JSON.stringify(analysis, null, 2)
-      analysisContext = analysisStr.length > 15000 ? analysisStr.substring(0, 15000) + "...(truncated)" : analysisStr
+      analysisContext = smartTruncateJSON(analysis, 15000)
     }
 
     const schemaLabels = {
@@ -1063,14 +1220,23 @@ Be thorough but concise. Focus on actionable insights that save money.`
 
     console.log(`[${new Date().toISOString()}] File chat query for ${fileName}: ${question}`)
 
+    const messages = buildMessagesWithHistory(systemPrompt, question, options.conversationHistory)
+
+    if (options.stream && options.res) {
+      const requestBody = {
+        model: options.modelId || OPENAI_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 3000,
+      }
+      return await streamChatCompletion(options.res, requestBody)
+    }
+
     const response = await axios.post(
       OPENAI_API_URL,
       {
         model: options.modelId || OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question },
-        ],
+        messages,
         temperature: 0.7,
         max_tokens: 3000,
       },
@@ -1102,4 +1268,7 @@ module.exports = {
   chatWithToolContext,
   chatWithComparisonContext,
   chatWithFileContext,
+  smartTruncateJSON,
+  buildMessagesWithHistory,
+  streamChatCompletion,
 }

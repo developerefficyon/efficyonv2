@@ -4,6 +4,25 @@ const tokenService = require("../services/tokenService")
 const { getModelPreference } = require("../services/modelPreferenceService")
 
 /**
+ * Load recent conversation history from Supabase for LLM context.
+ */
+async function loadConversationHistory(conversationId, maxMessages = 20) {
+  if (!conversationId) return []
+  try {
+    const { data: messages, error } = await supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+    if (error || !messages || messages.length === 0) return []
+    return messages.slice(-maxMessages)
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Error loading conversation history:`, err.message)
+    return []
+  }
+}
+
+/**
  * Analyze with AI enhancement
  * Combines cost leak detection with AI-generated insights
  * Consumes tokens based on number of integration sources
@@ -137,7 +156,7 @@ async function chatAboutAnalysis(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, analysisContext } = req.body
+    const { question, analysisContext, conversationId, stream } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
@@ -149,8 +168,29 @@ async function chatAboutAnalysis(req, res) {
     // Get model preference (still use selected model even though chat is free)
     const modelPref = await getModelPreference(user.id)
 
+    // Load conversation history for multi-turn context
+    const conversationHistory = await loadConversationHistory(conversationId)
+
+    const aiOpts = { modelId: modelPref.modelId, conversationHistory }
+
+    if (stream) {
+      res.setHeader("Content-Type", "text/event-stream")
+      res.setHeader("Cache-Control", "no-cache")
+      res.setHeader("Connection", "keep-alive")
+      res.setHeader("X-Accel-Buffering", "no")
+      res.flushHeaders()
+
+      // Send metadata before streaming
+      res.write(`data: ${JSON.stringify({ metadata: { tokensRemaining: availableTokens } })}\n\n`)
+
+      aiOpts.stream = true
+      aiOpts.res = res
+      await openaiService.chatAboutAnalysis(question, analysisContext, aiOpts)
+      return // Response already ended by streamChatCompletion
+    }
+
     // Chat doesn't consume tokens - it's unlimited for Deep Research reports
-    const response = await openaiService.chatAboutAnalysis(question, analysisContext, { modelId: modelPref.modelId })
+    const response = await openaiService.chatAboutAnalysis(question, analysisContext, aiOpts)
 
     return res.json({
       success: true,

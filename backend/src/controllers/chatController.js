@@ -9,6 +9,33 @@ const { getModelPreference } = require("../services/modelPreferenceService")
 const DEEP_RESEARCH_TOKEN_COST = 1
 
 /**
+ * Load recent conversation history from Supabase for LLM context.
+ * Returns the last `maxMessages` messages (user + assistant) in chronological order.
+ * Excludes the very last user message since it will be sent as the current question.
+ */
+async function loadConversationHistory(conversationId, maxMessages = 20) {
+  if (!conversationId) return []
+
+  try {
+    const { data: messages, error } = await supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+
+    if (error || !messages || messages.length === 0) return []
+
+    // Return the last N messages (excluding the most recent which is the current question)
+    // The current question hasn't been saved yet when this runs, but in case of race conditions
+    // we limit to maxMessages
+    return messages.slice(-maxMessages)
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Error loading conversation history:`, err.message)
+    return []
+  }
+}
+
+/**
  * Get all user IDs that belong to the same team/company.
  * Solo users (no company) return just their own ID.
  */
@@ -388,7 +415,7 @@ async function chatWithTool(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, toolId, dataType, cachedResearchData } = req.body
+    const { question, toolId, dataType, cachedResearchData, conversationId, stream } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
@@ -397,6 +424,9 @@ async function chatWithTool(req, res) {
     if (!toolId) {
       return res.status(400).json({ error: "toolId is required" })
     }
+
+    // Load conversation history for multi-turn context
+    const conversationHistory = await loadConversationHistory(conversationId)
 
     // Get the integration/tool info
     const { data: integration, error: intError } = await supabase
@@ -489,7 +519,28 @@ async function chatWithTool(req, res) {
     }
 
     // Generate AI response with tool context
-    const response = await openaiService.chatWithToolContext(question, toolContext, modelOpts)
+    const aiOpts = { ...modelOpts, conversationHistory }
+
+    if (stream) {
+      // Send metadata as the first SSE event before streaming AI content
+      res.setHeader("Content-Type", "text/event-stream")
+      res.setHeader("Cache-Control", "no-cache")
+      res.setHeader("Connection", "keep-alive")
+      res.setHeader("X-Accel-Buffering", "no")
+      res.flushHeaders()
+
+      // Send metadata (toolData for caching, tokensUsed) before the AI stream
+      const metadata = { toolData, dataType: dataType || "general", isDeepResearch, tokensUsed }
+      res.write(`data: ${JSON.stringify({ metadata })}\n\n`)
+
+      // Now stream the AI response
+      aiOpts.stream = true
+      aiOpts.res = res
+      await openaiService.chatWithToolContext(question, toolContext, aiOpts)
+      return // Response already ended by streamChatCompletion
+    }
+
+    const response = await openaiService.chatWithToolContext(question, toolContext, aiOpts)
 
     return res.json({
       success: true,
@@ -790,11 +841,14 @@ async function chatWithFileUpload(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, fileData, fileName, mimeType, cachedFileAnalysis } = req.body
+    const { question, fileData, fileName, mimeType, cachedFileAnalysis, conversationId, stream } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
     }
+
+    // Load conversation history for multi-turn context
+    const conversationHistory = await loadConversationHistory(conversationId)
 
     // Get model preference for this user's team
     const modelPref = await getModelPreference(user.id)
@@ -878,7 +932,26 @@ async function chatWithFileUpload(req, res) {
     }
 
     // Generate AI response with file context
-    const response = await openaiService.chatWithFileContext(question, fileAnalysis, modelOpts)
+    const aiOpts = { ...modelOpts, conversationHistory }
+
+    if (stream) {
+      res.setHeader("Content-Type", "text/event-stream")
+      res.setHeader("Cache-Control", "no-cache")
+      res.setHeader("Connection", "keep-alive")
+      res.setHeader("X-Accel-Buffering", "no")
+      res.flushHeaders()
+
+      // Send metadata before streaming AI content
+      const metadata = { fileAnalysis, isDeepResearch, tokensUsed }
+      res.write(`data: ${JSON.stringify({ metadata })}\n\n`)
+
+      aiOpts.stream = true
+      aiOpts.res = res
+      await openaiService.chatWithFileContext(question, fileAnalysis, aiOpts)
+      return // Response already ended by streamChatCompletion
+    }
+
+    const response = await openaiService.chatWithFileContext(question, fileAnalysis, aiOpts)
 
     return res.json({
       success: true,

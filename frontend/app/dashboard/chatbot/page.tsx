@@ -50,6 +50,56 @@ type Message = {
   fileName?: string
 }
 
+let messageIdCounter = 0
+function generateMessageId(): string {
+  return `${Date.now()}-${++messageIdCounter}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+/**
+ * Read an SSE stream from a fetch Response and call onChunk for each content delta.
+ * Handles metadata events (sent before AI content) and content deltas.
+ * Returns { text, metadata }.
+ */
+async function readSSEStream(
+  response: Response,
+  onChunk: (text: string) => void
+): Promise<{ text: string; metadata: Record<string, unknown> | null }> {
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let fullText = ""
+  let buffer = ""
+  let metadata: Record<string, unknown> | null = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split("\n")
+    buffer = lines.pop() || ""
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || !trimmed.startsWith("data: ")) continue
+      const payload = trimmed.slice(6)
+      if (payload === "[DONE]") continue
+      try {
+        const parsed = JSON.parse(payload)
+        if (parsed.metadata) {
+          metadata = parsed.metadata
+        } else if (parsed.content) {
+          fullText += parsed.content
+          onChunk(fullText)
+        }
+      } catch {
+        // Skip malformed chunks
+      }
+    }
+  }
+
+  return { text: fullText, metadata }
+}
+
 const suggestedQuestions = {
   general: [
     "What are my current cost optimization opportunities?",
@@ -443,7 +493,7 @@ export default function ChatbotPage() {
 
     setError(null)
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       role: "user",
       content: text || "Analyze this file for cost optimization opportunities",
       timestamp: new Date(),
@@ -454,7 +504,10 @@ export default function ChatbotPage() {
     setInput("")
     setIsLoading(true)
 
-    addMessageToConversation(conversationId, "user", text)
+    addMessageToConversation(conversationId, "user", userMessage.content)
+
+    // Create a placeholder assistant message for streaming
+    const assistantId = generateMessageId()
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -464,91 +517,40 @@ export default function ChatbotPage() {
         throw new Error("Session expired. Please log in again.")
       }
 
-      let response: Response
-      let data: any
+      let endpoint: string
+      let body: Record<string, unknown>
 
       if (selectedFile || researchCache.fileAnalysis) {
-        const messageText = userMessage.content
-        let fileData: string | undefined
-        let fileName: string | undefined
-        let mimeType: string | undefined
+        endpoint = `${apiBase}/api/chat/file-upload`
+        let fileDataB64: string | undefined
+        let fileNameStr: string | undefined
+        let mimeTypeStr: string | undefined
 
         if (selectedFile && !researchCache.fileAnalysis) {
-          fileData = await fileToBase64(selectedFile)
-          fileName = selectedFile.name
-          mimeType = selectedFile.type
+          fileDataB64 = await fileToBase64(selectedFile)
+          fileNameStr = selectedFile.name
+          mimeTypeStr = selectedFile.type
         }
 
-        response = await fetch(`${apiBase}/api/chat/file-upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            question: messageText,
-            fileData,
-            fileName: fileName || researchCache.fileAnalysis?.fileName,
-            mimeType,
-            cachedFileAnalysis: researchCache.fileAnalysis || undefined,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to analyze file")
+        body = {
+          question: userMessage.content,
+          fileData: fileDataB64,
+          fileName: fileNameStr || researchCache.fileAnalysis?.fileName,
+          mimeType: mimeTypeStr,
+          cachedFileAnalysis: researchCache.fileAnalysis || undefined,
+          conversationId,
+          stream: true,
         }
-
-        data = await response.json()
-
-        if (data.fileAnalysis) {
-          setResearchCache((prev) => ({ ...prev, fileAnalysis: data.fileAnalysis }))
+      } else if (activeTab === "general" || (activeTab !== "general" && !isHeavyPrompt(text))) {
+        endpoint = `${apiBase}/api/ai/chat`
+        body = {
+          question: text,
+          chatType: "general",
+          conversationId,
+          stream: true,
         }
-
-        if (data.tokensUsed > 0) {
-          await refreshTokenBalance()
-        }
-
-        clearFile()
-      } else if (activeTab === "general") {
-        response = await fetch(`${apiBase}/api/ai/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            question: text,
-            chatType: "general",
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to get response from AI")
-        }
-
-        data = await response.json()
-      } else if (activeTab !== "general" && !isHeavyPrompt(text)) {
-        response = await fetch(`${apiBase}/api/ai/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            question: text,
-            chatType: "general",
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to get response from AI")
-        }
-
-        data = await response.json()
       } else if (activeTab === "comparison") {
+        endpoint = `${apiBase}/api/chat/comparison`
         const hasFortnox = !!researchCache.fortnoxData
         const hasM365 = !!researchCache.m365Data
         const hasHubSpot = !!researchCache.hubspotData
@@ -561,29 +563,101 @@ export default function ChatbotPage() {
             }
           : undefined
 
-        response = await fetch(`${apiBase}/api/chat/comparison`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            question: text,
-            cachedResearchData: cachedData,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          if (errorData.error === "TOKEN_EXPIRED") {
-            refreshTools()
-            throw new Error(`A connected tool's token has expired. Please reconnect it in the Tools page.`)
-          }
-          throw new Error(errorData.error || "Failed to get response from AI")
+        body = {
+          question: text,
+          cachedResearchData: cachedData,
+          conversationId,
+          stream: true,
         }
+      } else {
+        endpoint = `${apiBase}/api/chat/tool`
+        const dataType = detectDataType(text)
+        body = {
+          question: text,
+          toolId: activeTab,
+          dataType,
+          cachedResearchData: researchCache.toolData || undefined,
+          conversationId,
+          stream: true,
+        }
+      }
 
-        data = await response.json()
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      })
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (errorData.error === "TOKEN_EXPIRED") {
+          refreshTools()
+          const provider = errorData.provider || "tool"
+          throw new Error(`Your ${provider} connection has expired. Please reconnect it in the Tools page.`)
+        }
+        throw new Error(errorData.error || "Failed to get response from AI")
+      }
+
+      const contentType = response.headers.get("content-type") || ""
+      let finalText: string
+
+      if (contentType.includes("text/event-stream")) {
+        // Streaming response — add placeholder and update progressively
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
+        ])
+
+        const { text: streamedText, metadata } = await readSSEStream(response, (partialText) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantId ? { ...msg, content: partialText } : msg
+            )
+          )
+        })
+        finalText = streamedText
+
+        // Final update to ensure complete text
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, content: finalText } : msg
+          )
+        )
+
+        // Process metadata from SSE stream (cache data, refresh tokens)
+        if (metadata) {
+          const meta = metadata as Record<string, unknown>
+          if (meta.fileAnalysis) {
+            setResearchCache((prev) => ({ ...prev, fileAnalysis: meta.fileAnalysis }))
+          }
+          if (meta.researchData) {
+            const rd = meta.researchData as Record<string, unknown>
+            setResearchCache({
+              fortnoxData: rd.fortnoxData,
+              m365Data: rd.m365Data,
+              hubspotData: rd.hubspotData,
+            })
+          }
+          if (meta.toolData) {
+            setResearchCache({ toolData: meta.toolData, dataType: meta.dataType as string })
+          }
+          if ((meta.tokensUsed as number) > 0) {
+            await refreshTokenBalance()
+          }
+        }
+      } else {
+        // Non-streaming JSON response (fallback for endpoints that don't stream,
+        // e.g. when file upload or tool data needs to be returned)
+        const data = await response.json()
+        finalText = data.response || "I apologize, but I couldn't generate a response. Please try again."
+
+        // Handle cached data from non-streaming responses
+        if (data.fileAnalysis) {
+          setResearchCache((prev) => ({ ...prev, fileAnalysis: data.fileAnalysis }))
+        }
         if (data.researchData) {
           setResearchCache({
             fortnoxData: data.researchData.fortnoxData,
@@ -591,61 +665,26 @@ export default function ChatbotPage() {
             hubspotData: data.researchData.hubspotData,
           })
         }
-
-        if (data.tokensUsed > 0) {
-          await refreshTokenBalance()
-        }
-      } else {
-        const dataType = detectDataType(text)
-        const cachedData = researchCache.toolData ? researchCache.toolData : undefined
-
-        response = await fetch(`${apiBase}/api/chat/tool`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            question: text,
-            toolId: activeTab,
-            dataType: dataType,
-            cachedResearchData: cachedData,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          if (errorData.error === "TOKEN_EXPIRED") {
-            const provider = errorData.provider || "tool"
-            refreshTools()
-            throw new Error(`Your ${provider} connection has expired. Please reconnect it in the Tools page.`)
-          }
-          throw new Error(errorData.error || "Failed to get response from AI")
-        }
-
-        data = await response.json()
-
         if (data.toolData) {
-          setResearchCache({
-            toolData: data.toolData,
-            dataType: data.dataType,
-          })
+          setResearchCache({ toolData: data.toolData, dataType: data.dataType })
         }
+
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: "assistant", content: finalText, timestamp: new Date() },
+        ])
 
         if (data.tokensUsed > 0) {
           await refreshTokenBalance()
         }
       }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.response || "I apologize, but I couldn't generate a response. Please try again.",
-        timestamp: new Date(),
+      // Clear file after successful file upload
+      if (selectedFile || researchCache.fileAnalysis) {
+        clearFile()
       }
 
-      setMessages((prev) => [...prev, assistantMessage])
-      addMessageToConversation(conversationId, "assistant", assistantMessage.content)
+      addMessageToConversation(conversationId, "assistant", finalText)
     } catch (err) {
       console.error("Chat error:", err)
       const errMsg = err instanceof Error ? err.message : "An error occurred"

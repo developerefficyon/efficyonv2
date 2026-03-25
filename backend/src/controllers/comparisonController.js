@@ -8,6 +8,25 @@ const { getModelPreference } = require("../services/modelPreferenceService")
 const DEEP_RESEARCH_TOKEN_COST = 1
 
 /**
+ * Load recent conversation history from Supabase for LLM context.
+ */
+async function loadConversationHistory(conversationId, maxMessages = 20) {
+  if (!conversationId) return []
+  try {
+    const { data: messages, error } = await supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+    if (error || !messages || messages.length === 0) return []
+    return messages.slice(-maxMessages)
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Error loading conversation history:`, err.message)
+    return []
+  }
+}
+
+/**
  * Chat with cross-platform comparison context
  * Supports any 2+ platforms connected (Fortnox, Microsoft 365, HubSpot)
  * If cachedResearchData is provided, uses it (free follow-up)
@@ -22,11 +41,14 @@ async function chatComparison(req, res) {
       return res.status(401).json({ error: "Unauthorized" })
     }
 
-    const { question, cachedResearchData } = req.body
+    const { question, cachedResearchData, conversationId, stream } = req.body
 
     if (!question) {
       return res.status(400).json({ error: "question is required" })
     }
+
+    // Load conversation history for multi-turn context
+    const conversationHistory = await loadConversationHistory(conversationId)
 
     // Get user's company
     const { data: profile } = await supabase
@@ -207,6 +229,31 @@ async function chatComparison(req, res) {
 
     // Generate AI response with comparison context
     console.log(`[${new Date().toISOString()}] Generating AI response...`)
+    const aiOpts = { ...modelOpts, conversationHistory }
+
+    if (stream) {
+      res.setHeader("Content-Type", "text/event-stream")
+      res.setHeader("Cache-Control", "no-cache")
+      res.setHeader("Connection", "keep-alive")
+      res.setHeader("X-Accel-Buffering", "no")
+      res.flushHeaders()
+
+      // Send metadata before streaming AI content
+      const metadata = {
+        researchData: { fortnoxData, m365Data, hubspotData, quickbooksData, shopifyData },
+        isDeepResearch,
+        tokensUsed,
+      }
+      res.write(`data: ${JSON.stringify({ metadata })}\n\n`)
+
+      aiOpts.stream = true
+      aiOpts.res = res
+      await openaiService.chatWithComparisonContext(
+        question, fortnoxData, m365Data, metrics, hubspotData, quickbooksData, shopifyData, aiOpts
+      )
+      return // Response already ended by streamChatCompletion
+    }
+
     const response = await openaiService.chatWithComparisonContext(
       question,
       fortnoxData,
@@ -215,7 +262,7 @@ async function chatComparison(req, res) {
       hubspotData,
       quickbooksData,
       shopifyData,
-      modelOpts
+      aiOpts
     )
 
     return res.json({
