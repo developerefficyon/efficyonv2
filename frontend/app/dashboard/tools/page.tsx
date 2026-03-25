@@ -29,14 +29,10 @@ import {
   XCircle,
   ExternalLink,
   Settings,
-  TrendingDown,
-  Users,
-  DollarSign,
   Activity,
   Clock,
   Plug,
   ShieldCheck,
-  BarChart3,
   Zap,
   Loader2,
   RefreshCw,
@@ -71,11 +67,8 @@ interface Tool {
   id: string
   name: string
   category: string
-  cost: number
-  seats: number
-  activeSeats: number
-  unusedSeats: number
-  wasteLevel: "high" | "medium" | "low"
+  description: string
+  connectedSince: string
   status: "connected" | "error" | "disconnected" | "expired" | "pending"
   lastSync: string
   issues: string[]
@@ -1403,11 +1396,21 @@ export default function ToolsPage() {
       return "Other"
     }
 
-    // Calculate waste level based on status
-    const getWasteLevel = (status: string): "high" | "medium" | "low" => {
-      if (status === "error" || status === "expired") return "high"
-      if (status === "disconnected" || status === "pending") return "medium"
-      return "low"
+    const getDescription = (toolName: string): string => {
+      const name = toolName.toLowerCase()
+      if (name.includes("fortnox")) return "Invoices, suppliers & accounting data"
+      if (name.includes("quickbooks")) return "Bills, expenses & financial reports"
+      if (name.includes("hubspot")) return "Contacts, deals & marketing data"
+      if (name.includes("microsoft") || name.includes("365")) return "Users, licenses & productivity tools"
+      if (name.includes("shopify")) return "Products, orders & customer data"
+      if (name.includes("slack")) return "Channels, users & messaging data"
+      if (name.includes("salesforce")) return "CRM contacts, leads & opportunities"
+      return "Connected integration"
+    }
+
+    const getConnectedSince = (createdAt: string): string => {
+      const date = new Date(createdAt)
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     }
 
     // Format last sync time
@@ -1443,20 +1446,12 @@ export default function ToolsPage() {
       return issues
     }
 
-    // Default values (can be enhanced by fetching from company_plans table)
-    const defaultCost = 0
-    const defaultSeats = 0
-    const defaultActiveSeats = 0
-
     return {
       id: integration.id,
       name: integration.tool_name,
       category: getCategory(integration.tool_name),
-      cost: defaultCost,
-      seats: defaultSeats,
-      activeSeats: defaultActiveSeats,
-      unusedSeats: Math.max(0, defaultSeats - defaultActiveSeats),
-      wasteLevel: getWasteLevel(isTokenExpired(integration) ? "expired" : integration.status),
+      description: getDescription(integration.tool_name),
+      connectedSince: getConnectedSince(integration.created_at),
       status: (integration.status === "expired" || isTokenExpired(integration))
         ? "expired"
         : integration.status as "connected" | "error" | "disconnected" | "expired" | "pending",
@@ -1466,15 +1461,6 @@ export default function ToolsPage() {
   })
 
   // Tools are now mapped from integrations - no hardcoded data
-
-  const getWasteBadge = (level: string) => {
-    const styles = {
-      high: "bg-red-500/20 text-red-400 border-red-500/30",
-      medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      low: "bg-green-500/20 text-green-400 border-green-500/30",
-    }
-    return styles[level as keyof typeof styles] || styles.low
-  }
 
   const getStatusIcon = (status: string) => {
     if (status === "connected") {
@@ -1765,8 +1751,6 @@ export default function ToolsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 animate-slide-up delay-6">
           {filteredTools.map((tool, index) => {
-            const usagePercent = tool.seats > 0 ? Math.round((tool.activeSeats / tool.seats) * 100) : 0
-            const potentialSavings = tool.seats > 0 ? tool.unusedSeats * (tool.cost / tool.seats) : 0
             const integration = integrations.find(i => i.id === tool.id)
 
             // Determine which reconnect handler to use
@@ -1811,53 +1795,11 @@ export default function ToolsPage() {
                     {getStatusIcon(tool.status)}
                   </div>
 
-                  {/* Cost & seats */}
+                  {/* Description & connected date */}
                   <div className="mb-3">
-                    {tool.cost > 0 || tool.seats > 0 ? (
-                      <>
-                        <div className="flex items-baseline gap-1 mb-2">
-                          <span className="text-xl font-semibold text-white">${tool.cost}</span>
-                          <span className="text-[11px] text-white/25">/mo</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] text-white/35 mb-2">
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span>{tool.activeSeats}/{tool.seats} seats</span>
-                          </div>
-                          {tool.unusedSeats > 0 && (
-                            <span className="text-red-400/70">{tool.unusedSeats} unused</span>
-                          )}
-                        </div>
-                        <div className="w-full bg-white/[0.04] rounded-full h-1.5 mb-1">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${
-                              usagePercent >= 80 ? "bg-emerald-400" :
-                              usagePercent >= 60 ? "bg-amber-400" : "bg-red-400"
-                            }`}
-                            style={{ width: `${usagePercent}%` }}
-                          />
-                        </div>
-                        <p className="text-[10px] text-white/20">{usagePercent}% utilization</p>
-                      </>
-                    ) : (
-                      <div className="py-2">
-                        <p className="text-[12px] text-white/25">Cost data not available</p>
-                        <p className="text-[10px] text-white/15 mt-0.5">Add plan details for optimization</p>
-                      </div>
-                    )}
+                    <p className="text-[12px] text-white/40 leading-relaxed">{tool.description}</p>
+                    <p className="text-[10px] text-white/20 mt-1.5">Connected {tool.connectedSince}</p>
                   </div>
-
-                  {/* Savings alert */}
-                  {tool.unusedSeats > 0 && (
-                    <div className="p-2.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/10 mb-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-emerald-400/70">Potential savings</span>
-                        <span className="text-[13px] font-semibold text-emerald-400">
-                          ${Math.round(potentialSavings)}/mo
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Issues */}
                   {tool.issues.length > 0 && (
