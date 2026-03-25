@@ -479,6 +479,13 @@ async function chatWithTool(req, res) {
 
       try {
         toolData = await fetchToolData(integration, dataType, req)
+
+        if (!toolData) {
+          console.warn(`[${new Date().toISOString()}] fetchToolData returned null/empty for ${integration.provider} ${dataType}`)
+        } else {
+          console.log(`[${new Date().toISOString()}] Successfully fetched ${integration.provider} ${dataType} data`)
+        }
+
         dataDescription = getDataDescription(integration.provider, dataType)
 
         // Consume token after successful data fetch
@@ -494,6 +501,7 @@ async function chatWithTool(req, res) {
         }
       } catch (fetchError) {
         console.error(`[${new Date().toISOString()}] Error fetching tool data:`, fetchError.message)
+        console.error(`[${new Date().toISOString()}] Full error:`, fetchError.stack || fetchError)
 
         // Token expiry — surface as 401 so the frontend can prompt the user to reconnect
         const isTokenExpiry = fetchError.message.toLowerCase().includes("expired") ||
@@ -508,8 +516,10 @@ async function chatWithTool(req, res) {
           })
         }
 
-        // For other errors (rate limit, network blip), continue without tool data
-        // AI will respond based on the question alone
+        // Surface the error so the user knows data fetch failed
+        return res.status(500).json({
+          error: `Failed to fetch ${integration.provider} data: ${fetchError.message}. Please try again or check your integration connection.`,
+        })
       }
     }
 
