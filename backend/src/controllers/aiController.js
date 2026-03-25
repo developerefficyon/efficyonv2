@@ -199,7 +199,12 @@ async function chatAboutAnalysis(req, res) {
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chat:`, error.message)
-    res.status(500).json({ error: error.message })
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)
+      res.end()
+    } else {
+      res.status(500).json({ error: error.message })
+    }
   }
 }
 

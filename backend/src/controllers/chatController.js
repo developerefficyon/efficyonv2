@@ -552,7 +552,12 @@ async function chatWithTool(req, res) {
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chatWithTool:`, error.message)
-    res.status(500).json({ error: error.message })
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)
+      res.end()
+    } else {
+      res.status(500).json({ error: error.message })
+    }
   }
 }
 
@@ -962,7 +967,12 @@ async function chatWithFileUpload(req, res) {
     })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in chatWithFileUpload:`, error.message)
-    res.status(500).json({ error: error.message })
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)
+      res.end()
+    } else {
+      res.status(500).json({ error: error.message })
+    }
   }
 }
 

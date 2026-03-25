@@ -8,17 +8,17 @@ const { supabase } = require("../config/supabase")
 
 const MODEL_CONFIG = {
   haiku: {
-    modelId: "anthropic/claude-haiku-4-5-20251001",
+    modelId: "anthropic/claude-haiku-4.5",
     multiplier: 1,
     label: "Claude Haiku",
   },
   sonnet: {
-    modelId: "anthropic/claude-sonnet-4-5",
+    modelId: "anthropic/claude-sonnet-4.5",
     multiplier: 2,
     label: "Claude Sonnet",
   },
   opus: {
-    modelId: "anthropic/claude-opus-4-6",
+    modelId: "anthropic/claude-opus-4.6",
     multiplier: 3,
     label: "Claude Opus",
   },
