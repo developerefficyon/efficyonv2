@@ -539,7 +539,6 @@ async function startFortnoxOAuth(req, res) {
     })
   }
 
-  const environment = settings.environment || integration.environment || "sandbox"
   const redirectUri = process.env.FORTNOX_REDIRECT_URI || "http://localhost:4000/api/integrations/fortnox/callback"
 
   const scopeEnv = process.env.FORTNOX_OAUTH_SCOPE
@@ -558,7 +557,7 @@ async function startFortnoxOAuth(req, res) {
   authUrl.searchParams.set("scope", scope)
   authUrl.searchParams.set("access_type", "offline")
 
-  const statePayload = { company_id: companyId, environment }
+  const statePayload = { company_id: companyId }
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url")
   authUrl.searchParams.set("state", state)
 

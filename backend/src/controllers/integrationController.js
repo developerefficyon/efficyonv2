@@ -200,7 +200,6 @@ async function upsertIntegrations(req, res) {
 
     const settings = {
       connection_type: i.connection_type || "api_key",
-      environment: i.environment || "production",
       oauth_data: i.oauth_data || null,
       api_key: i.api_key || null,
       client_id: i.client_id || null,
@@ -345,7 +344,6 @@ async function getIntegrations(req, res) {
       ...integration,
       tool_name: integration.provider,
       connection_type: settings.connection_type || "api_key",
-      environment: settings.environment || "production",
       oauth_data: settings.oauth_data || null,
       api_key: settings.api_key || null,
       client_id: settings.client_id || null,

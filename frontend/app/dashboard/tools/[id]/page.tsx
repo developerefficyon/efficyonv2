@@ -70,7 +70,6 @@ interface Integration {
   provider: string
   connection_type: string
   status: string
-  environment: string
   created_at: string
   updated_at: string
   settings?: any
@@ -3536,16 +3535,10 @@ export default function ToolDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
                     <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
-                    <Badge className={integration.environment === "production" ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"}>
-                      {integration.environment || "N/A"}
-                    </Badge>
                   </div>
                   <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
@@ -5397,16 +5390,10 @@ export default function ToolDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Connection Type</p>
                   <p className="text-white font-medium capitalize">{integration.connection_type || "N/A"}</p>
-                </div>
-                <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Environment</p>
-                  <Badge className={integration.environment === "production" ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15" : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"}>
-                    {integration.environment || "N/A"}
-                  </Badge>
                 </div>
                 <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>

@@ -89,7 +89,7 @@ export default function SetupGuidePage() {
         <div>
           <p className="text-sm font-medium text-gray-300 mb-2">Prerequisites</p>
           <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
-            <li>A Fortnox account (sandbox or production)</li>
+            <li>A Fortnox account</li>
             <li>Access to the Fortnox Developer Portal</li>
             <li>Admin rights on the Fortnox company you want to connect</li>
           </ul>
@@ -173,7 +173,7 @@ export default function SetupGuidePage() {
           <div className="flex items-start gap-3">
             <StepNumber n={9} />
             <p className="text-sm text-gray-400">
-              Choose <span className="font-mono text-gray-300">Sandbox</span> or <span className="font-mono text-gray-300">Production</span> environment and click <span className="font-mono text-gray-300">Connect</span>. You&apos;ll be redirected to Fortnox to authorize.
+              Click <span className="font-mono text-gray-300">Connect</span>. You&apos;ll be redirected to Fortnox to authorize.
             </p>
           </div>
         </div>
@@ -462,7 +462,7 @@ export default function SetupGuidePage() {
           <div className="flex items-start gap-3">
             <StepNumber n={5} />
             <p className="text-sm text-gray-400">
-              Go to <span className="font-mono text-gray-300">Keys &amp; credentials</span>. Choose your environment (<span className="font-mono text-gray-300">Sandbox</span> for testing or <span className="font-mono text-gray-300">Production</span> for live data).
+              Go to <span className="font-mono text-gray-300">Keys &amp; credentials</span>.
             </p>
           </div>
 

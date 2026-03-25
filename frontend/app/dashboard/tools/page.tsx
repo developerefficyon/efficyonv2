@@ -54,7 +54,6 @@ interface Integration {
   tool_name: string
   connection_type: string
   status: string
-  environment: string
   created_at: string
   updated_at: string
   oauth_data?: {
@@ -133,7 +132,6 @@ export default function ToolsPage() {
   const [fortnoxForm, setFortnoxForm] = useState({
     clientId: "",
     clientSecret: "",
-    environment: "sandbox",
   })
   const [microsoft365Form, setMicrosoft365Form] = useState({
     tenantId: "",
@@ -150,7 +148,6 @@ export default function ToolsPage() {
   const [quickbooksForm, setQuickbooksForm] = useState({
     clientId: "",
     clientSecret: "",
-    environment: "sandbox",
   })
   const [shopifyForm, setShopifyForm] = useState({
     shopDomain: "",
@@ -627,7 +624,6 @@ export default function ToolsPage() {
               tool_name: "Fortnox",
               connection_type: "oauth",
               status: "pending",
-              environment: fortnoxForm.environment,
               client_id: fortnoxForm.clientId,
               client_secret: fortnoxForm.clientSecret,
             },
@@ -1090,7 +1086,6 @@ export default function ToolsPage() {
               status: "pending",
               client_id: quickbooksForm.clientId,
               client_secret: quickbooksForm.clientSecret,
-              environment: quickbooksForm.environment,
             },
           ],
         }),
@@ -1944,7 +1939,7 @@ export default function ToolsPage() {
           } else {
             setIsConnecting(false)
             setSelectedTool("")
-            setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+            setFortnoxForm({ clientId: "", clientSecret: "" })
             setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
             setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
           }
@@ -2049,23 +2044,6 @@ export default function ToolsPage() {
                     }
                     className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="environment" className="text-white/60 text-[13px]">
-                    Environment
-                  </Label>
-                  <select
-                    id="environment"
-                    value={fortnoxForm.environment}
-                    onChange={(e) =>
-                      setFortnoxForm({ ...fortnoxForm, environment: e.target.value })
-                    }
-                    className="bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 w-full text-[13px] focus:border-emerald-500/30 outline-none"
-                  >
-                    <option value="sandbox">Sandbox (Testing)</option>
-                    <option value="production">Production</option>
-                  </select>
                 </div>
 
                 <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
@@ -2312,23 +2290,6 @@ export default function ToolsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="qb-environment" className="text-white/60 text-[13px]">
-                    Environment
-                  </Label>
-                  <select
-                    id="qb-environment"
-                    value={quickbooksForm.environment}
-                    onChange={(e) =>
-                      setQuickbooksForm({ ...quickbooksForm, environment: e.target.value })
-                    }
-                    className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
-                  >
-                    <option value="sandbox">Sandbox</option>
-                    <option value="production">Production</option>
-                  </select>
-                </div>
-
                 <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
                   <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
                   <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
@@ -2412,10 +2373,10 @@ export default function ToolsPage() {
               onClick={() => {
                 setIsConnectModalOpen(false)
                 setSelectedTool("")
-                setFortnoxForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+                setFortnoxForm({ clientId: "", clientSecret: "" })
                 setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
                 setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
-                setQuickbooksForm({ clientId: "", clientSecret: "", environment: "sandbox" })
+                setQuickbooksForm({ clientId: "", clientSecret: "" })
                 setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
               }}
               className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
