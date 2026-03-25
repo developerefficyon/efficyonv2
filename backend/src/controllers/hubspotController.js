@@ -359,8 +359,33 @@ async function hubspotOAuthCallback(req, res) {
 
   log("log", endpoint, `Callback params - code: ${code ? "present" : "missing"}, state: ${state ? "present" : "missing"}, error: ${error || "none"}`)
 
+  // Helper to clean up pending integration on OAuth failure
+  const cleanupPendingIntegration = async (companyId) => {
+    try {
+      const { data: pending } = await supabase
+        .from("company_integrations")
+        .select("id, status")
+        .eq("company_id", companyId)
+        .ilike("provider", "hubspot")
+        .eq("status", "pending")
+        .maybeSingle()
+      if (pending) {
+        await supabase.from("company_integrations").delete().eq("id", pending.id)
+        log("log", endpoint, `Cleaned up pending HubSpot integration ${pending.id}`)
+      }
+    } catch (e) {
+      log("error", endpoint, `Failed to cleanup pending integration: ${e.message}`)
+    }
+  }
+
   if (error) {
     log("error", endpoint, `Error from HubSpot: ${error} ${error_description || ""}`)
+    if (state) {
+      try {
+        const s = JSON.parse(Buffer.from(state, "base64url").toString("utf8"))
+        if (s.company_id) await cleanupPendingIntegration(s.company_id)
+      } catch { /* ignore parse errors */ }
+    }
     return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error&error=${encodeURIComponent(error)}`)
   }
 
@@ -461,6 +486,7 @@ async function hubspotOAuthCallback(req, res) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
       log("error", endpoint, `Token exchange failed (${tokenResponse.status}): ${errorText}`)
+      if (integration.status === "pending") await cleanupPendingIntegration(companyId)
       // Include more detail in the redirect for debugging
       return res.redirect(`${frontendUrl}/dashboard/tools?hubspot=error_token&details=${encodeURIComponent(errorText.substring(0, 100))}`)
     }

@@ -286,6 +286,25 @@ async function shopifyOAuthCallback(req, res) {
 
   log("log", endpoint, `Callback params - code: ${code ? "present" : "missing"}, state: ${state ? "present" : "missing"}, shop: ${shop || "missing"}, hmac: ${hmac ? "present" : "missing"}`)
 
+  // Helper to clean up pending integration on OAuth failure
+  const cleanupPendingIntegration = async (companyId) => {
+    try {
+      const { data: pending } = await supabase
+        .from("company_integrations")
+        .select("id, status")
+        .eq("company_id", companyId)
+        .ilike("provider", "shopify")
+        .eq("status", "pending")
+        .maybeSingle()
+      if (pending) {
+        await supabase.from("company_integrations").delete().eq("id", pending.id)
+        log("log", endpoint, `Cleaned up pending Shopify integration ${pending.id}`)
+      }
+    } catch (e) {
+      log("error", endpoint, `Failed to cleanup pending integration: ${e.message}`)
+    }
+  }
+
   if (!code || !state) {
     log("error", endpoint, `Missing params - code: ${!!code}, state: ${!!state}`)
     return res.redirect(`${frontendUrl}/dashboard/tools?shopify=error_missing_code`)
@@ -332,6 +351,7 @@ async function shopifyOAuthCallback(req, res) {
 
         if (computedHmac !== hmac) {
           log("error", endpoint, "HMAC validation failed - request may not be authentic")
+          if (tempIntegration.status === "pending") await cleanupPendingIntegration(tempState.company_id)
           return res.redirect(`${frontendUrl}/dashboard/tools?shopify=error_hmac_invalid`)
         }
         log("log", endpoint, "HMAC validation passed")
@@ -434,6 +454,7 @@ async function shopifyOAuthCallback(req, res) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
       log("error", endpoint, `Token exchange failed (${tokenResponse.status}): ${errorText}`)
+      if (integration.status === "pending") await cleanupPendingIntegration(companyId)
       return res.redirect(`${frontendUrl}/dashboard/tools?shopify=error_token&details=${encodeURIComponent(errorText.substring(0, 100))}`)
     }
 

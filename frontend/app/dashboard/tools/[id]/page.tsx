@@ -74,6 +74,27 @@ interface Integration {
   created_at: string
   updated_at: string
   settings?: any
+  oauth_data?: {
+    tokens?: {
+      access_token?: string
+      refresh_token?: string
+      expires_at?: number
+      expires_in?: number
+      scope?: string
+    }
+  } | null
+}
+
+const isTokenExpired = (integration: Integration): boolean => {
+  const expiresAt = integration.oauth_data?.tokens?.expires_at
+  if (!expiresAt) return false
+  const now = Math.floor(Date.now() / 1000)
+  return now >= (expiresAt - 300)
+}
+
+const getEffectiveStatus = (integration: Integration): string => {
+  if (integration.status === "expired" || isTokenExpired(integration)) return "expired"
+  return integration.status
 }
 
 export default function ToolDetailPage() {
@@ -238,28 +259,28 @@ export default function ToolDetailPage() {
       }
 
       // If it's Fortnox and connected, load the information (but not analysis - user must click button)
-      if (found.tool_name === "Fortnox" && found.status === "connected") {
+      if (found.tool_name === "Fortnox" && getEffectiveStatus(found) === "connected") {
         void loadFortnoxInfo(found)
         // Analysis is only loaded when user clicks "Analyze Cost Leaks" button
       }
 
       // If it's Microsoft 365 and connected, load the information
-      if (found.tool_name === "Microsoft365" && found.status === "connected") {
+      if (found.tool_name === "Microsoft365" && getEffectiveStatus(found) === "connected") {
         void loadMicrosoft365Info(found)
       }
 
       // If it's HubSpot and connected, load the information
-      if (found.tool_name === "HubSpot" && found.status === "connected") {
+      if (found.tool_name === "HubSpot" && getEffectiveStatus(found) === "connected") {
         void loadHubSpotInfo(found)
       }
 
       // If it's QuickBooks and connected, load the information
-      if (found.tool_name === "QuickBooks" && found.status === "connected") {
+      if (found.tool_name === "QuickBooks" && getEffectiveStatus(found) === "connected") {
         void loadQuickBooksInfo(found)
       }
 
       // If it's Shopify and connected, load the information
-      if (found.tool_name === "Shopify" && found.status === "connected") {
+      if (found.tool_name === "Shopify" && getEffectiveStatus(found) === "connected") {
         void loadShopifyInfo(found)
       }
     } catch (error) {
@@ -2505,21 +2526,21 @@ export default function ToolDetailPage() {
         <div className="flex items-center gap-2 shrink-0">
           <Badge
             className={`text-[10px] h-6 px-2.5 rounded-full font-medium ${
-              integration.status === "connected"
+              getEffectiveStatus(integration) === "connected"
                 ? "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/15"
-                : integration.status === "error"
+                : getEffectiveStatus(integration) === "error" || getEffectiveStatus(integration) === "expired"
                   ? "bg-red-500/10 text-red-400/80 border-red-500/15"
                   : "bg-amber-500/10 text-amber-400/80 border-amber-500/15"
             }`}
           >
-            {integration.status === "connected" && <CheckCircle className="w-3 h-3 mr-1" />}
-            {integration.status}
+            {getEffectiveStatus(integration) === "connected" && <CheckCircle className="w-3 h-3 mr-1" />}
+            {getEffectiveStatus(integration)}
           </Badge>
         </div>
       </div>
 
       {/* Tabs for organized sections */}
-      {hasFullUI && integration.status === "connected" ? (
+      {hasFullUI && getEffectiveStatus(integration) === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="bg-white/[0.02] border border-white/[0.06] mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap rounded-lg p-1">
             <TabsTrigger

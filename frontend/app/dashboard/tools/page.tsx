@@ -604,6 +604,7 @@ export default function ToolsPage() {
     }
 
     setIsConnecting(true)
+    let createdIntegrationId: string | null = null
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -651,6 +652,9 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to connect Fortnox")
       }
 
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
       await new Promise(resolve => setTimeout(resolve, 200))
 
       const oauthRes = await fetch(`${apiBase}/api/integrations/fortnox/oauth/start`, {
@@ -685,6 +689,9 @@ export default function ToolsPage() {
       toast.error("Failed to connect Fortnox", {
         description: error.message || "An error occurred.",
       })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -697,6 +704,7 @@ export default function ToolsPage() {
     }
 
     setIsConnecting(true)
+    let createdIntegrationId: string | null = null
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -745,6 +753,9 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to save Microsoft 365 configuration")
       }
 
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // Start OAuth flow
@@ -780,6 +791,9 @@ export default function ToolsPage() {
       toast.error("Failed to connect Microsoft 365", {
         description: error.message || "An error occurred.",
       })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -945,6 +959,7 @@ export default function ToolsPage() {
     }
 
     setIsConnecting(true)
+    let createdIntegrationId: string | null = null
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -997,6 +1012,9 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to save HubSpot configuration")
       }
 
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // Start OAuth flow
@@ -1032,6 +1050,9 @@ export default function ToolsPage() {
       toast.error("Failed to connect HubSpot", {
         description: error.message || "An error occurred.",
       })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -1044,6 +1065,7 @@ export default function ToolsPage() {
     }
 
     setIsConnecting(true)
+    let createdIntegrationId: string | null = null
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -1087,6 +1109,9 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to save QuickBooks configuration")
       }
 
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
       await new Promise(resolve => setTimeout(resolve, 200))
 
       const oauthRes = await fetch(`${apiBase}/api/integrations/quickbooks/oauth/start`, {
@@ -1121,6 +1146,9 @@ export default function ToolsPage() {
       toast.error("Failed to connect QuickBooks", {
         description: error.message || "An error occurred.",
       })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -1139,6 +1167,7 @@ export default function ToolsPage() {
     }
 
     setIsConnecting(true)
+    let createdIntegrationId: string | null = null
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
       const accessToken = await getBackendToken()
@@ -1182,6 +1211,9 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to save Shopify configuration")
       }
 
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
       await new Promise(resolve => setTimeout(resolve, 200))
 
       const oauthRes = await fetch(`${apiBase}/api/integrations/shopify/oauth/start`, {
@@ -1216,6 +1248,9 @@ export default function ToolsPage() {
       toast.error("Failed to connect Shopify", {
         description: error.message || "An error occurred.",
       })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -1263,6 +1298,22 @@ export default function ToolsPage() {
       })
     } finally {
       setSyncingId(null)
+    }
+  }
+
+  // Silently delete a pending integration that failed OAuth
+  const cleanupFailedIntegration = async (integrationId: string) => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) return
+      await fetch(`${apiBase}/api/integrations/${integrationId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      loadIntegrations()
+    } catch {
+      // Silent cleanup - don't bother the user
     }
   }
 

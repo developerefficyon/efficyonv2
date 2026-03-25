@@ -586,6 +586,25 @@ async function fortnoxOAuthCallback(req, res) {
   const { code, state, error, error_description } = req.query
   const frontendUrl = process.env.FRONTEND_APP_URL || "http://localhost:3000"
 
+  // Helper to clean up pending integration on OAuth failure
+  const cleanupPendingIntegration = async (companyId) => {
+    try {
+      const { data: pending } = await supabase
+        .from("company_integrations")
+        .select("id, status")
+        .eq("company_id", companyId)
+        .eq("provider", "Fortnox")
+        .eq("status", "pending")
+        .maybeSingle()
+      if (pending) {
+        await supabase.from("company_integrations").delete().eq("id", pending.id)
+        log("log", endpoint, `Cleaned up pending Fortnox integration ${pending.id}`)
+      }
+    } catch (e) {
+      log("error", endpoint, `Failed to cleanup pending integration: ${e.message}`)
+    }
+  }
+
   if (error) {
     log("error", endpoint, `Error from Fortnox: ${error} ${error_description || ""}`)
     let errorType = "error"
@@ -593,6 +612,13 @@ async function fortnoxOAuthCallback(req, res) {
       errorType = "error_missing_license"
     } else if (error === "invalid_scope") {
       errorType = "error_invalid_scope"
+    }
+    // Clean up the pending integration if we can parse state
+    if (state) {
+      try {
+        const s = JSON.parse(Buffer.from(state, "base64url").toString("utf8"))
+        if (s.company_id) await cleanupPendingIntegration(s.company_id)
+      } catch { /* ignore parse errors */ }
     }
     return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=${errorType}&error=${encodeURIComponent(error)}`)
   }
@@ -645,6 +671,7 @@ async function fortnoxOAuthCallback(req, res) {
     })
 
     if (!tokenResponse.ok) {
+      if (integration.status === "pending") await cleanupPendingIntegration(companyId)
       return res.redirect(`${frontendUrl}/dashboard/tools?fortnox=error_token`)
     }
 
