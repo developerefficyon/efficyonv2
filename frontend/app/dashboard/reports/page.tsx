@@ -139,174 +139,27 @@ export default function ReportsPage() {
     setIsExporting(true)
 
     try {
-      const doc = new jsPDF()
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const margin = 15
-      let yPosition = margin
-
-      // Colors
-      const primaryColor: [number, number, number] = [6, 182, 212]
-      const darkBg: [number, number, number] = [15, 23, 42]
-      const successColor: [number, number, number] = [16, 185, 129]
-
-      // Header Background
-      doc.setFillColor(...darkBg)
-      doc.rect(0, 0, pageWidth, 45, "F")
-
-      // Header
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(24)
-      doc.setFont("helvetica", "bold")
-      doc.text("Cost Analysis Report", margin, 25)
-
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(...primaryColor)
-      doc.text(`${analysis.provider} | Generated ${formatDate(analysis.created_at)}`, margin, 35)
-
-      yPosition = 55
-
-      // Summary Section
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(50, 50, 50)
-      doc.text("Executive Summary", margin, yPosition)
-      yPosition += 10
-
-      // Summary boxes
-      const boxWidth = (pageWidth - margin * 2 - 20) / 3
-      const boxHeight = 30
-
-      // Findings box
-      doc.setFillColor(240, 240, 240)
-      doc.roundedRect(margin, yPosition, boxWidth, boxHeight, 3, 3, "F")
-      doc.setFontSize(20)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(50, 50, 50)
-      doc.text(String(analysis.summary.totalFindings), margin + boxWidth / 2, yPosition + 15, { align: "center" })
-      doc.setFontSize(8)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(100, 100, 100)
-      doc.text("Total Findings", margin + boxWidth / 2, yPosition + 23, { align: "center" })
-
-      // Savings box
-      doc.setFillColor(220, 252, 231)
-      doc.roundedRect(margin + boxWidth + 10, yPosition, boxWidth, boxHeight, 3, 3, "F")
-      doc.setFontSize(20)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(...successColor)
-      doc.text(`$${analysis.summary.totalPotentialSavings.toFixed(0)}`, margin + boxWidth + 10 + boxWidth / 2, yPosition + 15, { align: "center" })
-      doc.setFontSize(8)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(100, 100, 100)
-      doc.text("Potential Savings", margin + boxWidth + 10 + boxWidth / 2, yPosition + 23, { align: "center" })
-
-      // Health Score box
-      doc.setFillColor(240, 240, 240)
-      doc.roundedRect(margin + (boxWidth + 10) * 2, yPosition, boxWidth, boxHeight, 3, 3, "F")
-      doc.setFontSize(20)
-      doc.setFont("helvetica", "bold")
-      const healthScore = analysis.summary.healthScore
-      if (healthScore !== null) {
-        if (healthScore >= 70) doc.setTextColor(16, 185, 129)
-        else if (healthScore >= 40) doc.setTextColor(245, 158, 11)
-        else doc.setTextColor(239, 68, 68)
-        doc.text(`${healthScore}%`, margin + (boxWidth + 10) * 2 + boxWidth / 2, yPosition + 15, { align: "center" })
-      } else {
-        doc.setTextColor(100, 100, 100)
-        doc.text("N/A", margin + (boxWidth + 10) * 2 + boxWidth / 2, yPosition + 15, { align: "center" })
-      }
-      doc.setFontSize(8)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(100, 100, 100)
-      doc.text("Health Score", margin + (boxWidth + 10) * 2 + boxWidth / 2, yPosition + 23, { align: "center" })
-
-      yPosition += boxHeight + 15
-
-      // Severity Breakdown
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(50, 50, 50)
-      doc.text("Findings by Severity", margin, yPosition)
-      yPosition += 10
-
-      const severityData = [
-        ["High Priority", String(analysis.summary.highSeverity), "Requires immediate attention"],
-        ["Medium Priority", String(analysis.summary.mediumSeverity), "Should be reviewed soon"],
-        ["Low Priority", String(analysis.summary.lowSeverity), "Monitor and address when possible"],
-      ]
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Severity", "Count", "Action"]],
-        body: severityData,
-        theme: "striped",
-        headStyles: {
-          fillColor: darkBg,
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-        styles: {
-          fontSize: 10,
-          cellPadding: 5,
-        },
-        margin: { left: margin, right: margin },
+      // Fetch full analysis detail to get AI summary
+      const token = await getBackendToken()
+      const res = await fetch(`${apiBase}/api/analysis-history/${analysis.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) throw new Error("Failed to fetch analysis detail")
+      const data = await res.json()
+      const aiSummary = data.analysis?.analysis_result?.aiSummary
 
-      yPosition = (doc as any).lastAutoTable.finalY + 15
-
-      // Analysis Parameters
-      if (analysis.parameters && Object.keys(analysis.parameters).length > 0) {
-        doc.setFontSize(14)
-        doc.setFont("helvetica", "bold")
-        doc.setTextColor(50, 50, 50)
-        doc.text("Analysis Parameters", margin, yPosition)
-        yPosition += 10
-
-        const paramData = Object.entries(analysis.parameters).map(([key, value]) => [
-          key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-          String(value),
-        ])
-
-        if (paramData.length > 0) {
-          autoTable(doc, {
-            startY: yPosition,
-            head: [["Parameter", "Value"]],
-            body: paramData,
-            theme: "striped",
-            headStyles: {
-              fillColor: darkBg,
-              textColor: [255, 255, 255],
-              fontStyle: "bold",
-            },
-            styles: {
-              fontSize: 10,
-              cellPadding: 5,
-            },
-            margin: { left: margin, right: margin },
-          })
-        }
+      if (!aiSummary) {
+        toast.error("No AI summary available for this analysis")
+        return
       }
 
-      // Footer
-      const footerY = doc.internal.pageSize.getHeight() - 10
-      doc.setFontSize(8)
-      doc.setTextColor(150, 150, 150)
-      doc.text("Generated by Efficyon - SaaS Cost Optimization Platform", pageWidth / 2, footerY, { align: "center" })
-
-      // Save
-      const filename = `${analysis.provider}_Analysis_${new Date(analysis.created_at).toISOString().split("T")[0]}.pdf`
-      doc.save(filename)
-
-      toast.success("Report downloaded", {
-        description: `${filename} has been saved`,
-      })
+      exportAiSummaryPDF(aiSummary, analysis.provider)
+      setShowExportDialog(false)
     } catch (err) {
       console.error("Error generating PDF:", err)
       toast.error("Failed to generate PDF")
     } finally {
       setIsExporting(false)
-      setShowExportDialog(false)
     }
   }
 
@@ -709,18 +562,6 @@ export default function ReportsPage() {
                                     <h4 className="text-[12px] font-medium text-white/70">AI Summary</h4>
                                     <Badge variant="outline" className="text-[9px] h-[16px] border-violet-500/15 text-violet-400/60 bg-violet-500/[0.06] rounded-full px-1.5">AI</Badge>
                                   </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      exportAiSummaryPDF(expandedData.analysis_result.aiSummary, expandedData.provider)
-                                    }}
-                                    className="h-6 px-2 text-[10px] text-white/25 hover:text-white/60 border border-white/[0.06] hover:bg-white/[0.04] rounded-md"
-                                  >
-                                    <Download className="w-2.5 h-2.5 mr-0.5" />
-                                    Export
-                                  </Button>
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none
                                   [&_p]:text-white/50 [&_p]:text-[12px] [&_p]:leading-relaxed [&_p]:mb-2
