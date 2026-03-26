@@ -155,6 +155,7 @@ export default function ToolDetailPage() {
   const [isLoadingHistoricalAnalysis, setIsLoadingHistoricalAnalysis] = useState(false)
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<"current" | "history">("current")
   const [isSavingAnalysis, setIsSavingAnalysis] = useState(false)
+  const [deleteAnalysisId, setDeleteAnalysisId] = useState<string | null>(null)
 
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set())
   const [resolvedFindings, setResolvedFindings] = useState<Set<number>>(new Set())
@@ -3350,9 +3351,7 @@ export default function ToolDetailPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (confirm("Delete this analysis from history?")) {
-                                deleteHistoricalAnalysis(analysis.id)
-                              }
+                              setDeleteAnalysisId(analysis.id)
                             }}
                             className="text-gray-500 hover:text-red-400 hover:bg-red-500/10"
                           >
@@ -6255,6 +6254,37 @@ export default function ToolDetailPage() {
                   Download PDF
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Analysis Confirmation Modal */}
+      <Dialog open={!!deleteAnalysisId} onOpenChange={(open) => !open && setDeleteAnalysisId(null)}>
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white rounded-xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[16px] font-medium text-white">Delete Analysis</DialogTitle>
+            <DialogDescription className="text-[13px] text-white/35">
+              Are you sure you want to delete this analysis from history? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteAnalysisId(null)}
+              className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (deleteAnalysisId) {
+                  deleteHistoricalAnalysis(deleteAnalysisId)
+                  setDeleteAnalysisId(null)
+                }
+              }}
+              className="bg-red-500/90 hover:bg-red-500 text-white font-medium rounded-lg h-9 text-[13px]"
+            >
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
