@@ -1360,16 +1360,6 @@ export default function ToolsPage() {
     }
   }
 
-  // Helper to check if token is expired
-  const isTokenExpired = (integration: Integration): boolean => {
-    const expiresAt = integration.oauth_data?.tokens?.expires_at
-    if (!expiresAt) return false // No expiry info, assume valid
-
-    const now = Math.floor(Date.now() / 1000)
-    // Consider expired if less than 5 minutes remaining (same as backend buffer)
-    return now >= (expiresAt - 300)
-  }
-
   // Map integrations to tools format
   const tools: Tool[] = integrations.map((integration) => {
     // Determine category based on tool name (can be enhanced with actual category from tools table)
@@ -1452,11 +1442,9 @@ export default function ToolsPage() {
       category: getCategory(integration.tool_name),
       description: getDescription(integration.tool_name),
       connectedSince: getConnectedSince(integration.created_at),
-      status: (integration.status === "expired" || isTokenExpired(integration))
-        ? "expired"
-        : integration.status as "connected" | "error" | "disconnected" | "expired" | "pending",
+      status: integration.status as "connected" | "error" | "disconnected" | "expired" | "pending",
       lastSync: getLastSync(integration.updated_at),
-      issues: getIssues(isTokenExpired(integration) ? "expired" : integration.status),
+      issues: getIssues(integration.status),
     }
   })
 
@@ -1829,7 +1817,7 @@ export default function ToolsPage() {
                               className={`h-6 px-2 text-[10px] rounded-md ${
                                 tool.status === "expired" || tool.status === "error"
                                   ? "text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
-                                  : "text-white/25 hover:text-white/60 hover:bg-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity"
+                                  : "text-white/25 hover:text-white/60 hover:bg-white/[0.04]"
                               }`}
                               onClick={reconnectHandler}
                               disabled={reconnectingId === integration.id}
@@ -1845,7 +1833,7 @@ export default function ToolsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 px-2 text-[10px] text-white/15 hover:text-red-400/70 hover:bg-red-500/[0.05] rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-6 px-2 text-[10px] text-white/15 hover:text-red-400/70 hover:bg-red-500/[0.05] rounded-md"
                             onClick={() => handleDeleteClick(integration)}
                           >
                             <Trash2 className="w-2.5 h-2.5" />
