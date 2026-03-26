@@ -1875,12 +1875,26 @@ export default function ToolsPage() {
           }
         }}
       >
-        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white w-[95vw] max-w-lg sm:w-full max-h-[90vh] overflow-y-auto rounded-2xl premium-scrollbar p-0" style={{ scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
-          <div className="px-6 pt-6 pb-4">
+        <DialogContent className="!bg-[#0c0c0e] !border-white/[0.06] text-white w-[95vw] max-w-[520px] sm:w-full max-h-[90vh] overflow-y-auto rounded-2xl premium-scrollbar p-0 overflow-hidden" style={{ scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+          {/* Ambient top glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+
+          {/* Header */}
+          <div className="relative px-6 pt-7 pb-5">
             <DialogHeader>
-              <DialogTitle className="text-[18px] font-semibold text-white tracking-tight">Connect New Tool</DialogTitle>
-              <DialogDescription className="text-[13px] text-white/40 mt-1">
-                {selectedTool ? "Configure your integration" : "Choose an integration to get started"}
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Plug className="w-3 h-3 text-emerald-400/80" />
+                </div>
+                <DialogTitle className="text-[17px] font-semibold text-white/95 tracking-[-0.01em]">
+                  {selectedTool ? (() => {
+                    const names: Record<string, string> = { fortnox: "Fortnox", microsoft365: "Microsoft 365", hubspot: "HubSpot", quickbooks: "QuickBooks", shopify: "Shopify" }
+                    return `Connect ${names[selectedTool] || selectedTool}`
+                  })() : "Connect New Tool"}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-[12.5px] text-white/30 pl-[34px]">
+                {selectedTool ? "Enter your credentials to authorize access" : "Select an integration to connect"}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1888,47 +1902,54 @@ export default function ToolsPage() {
           <div className="px-6 pb-6">
             {/* Tool Picker Grid */}
             {!selectedTool && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
                 {[
-                  { id: "fortnox", name: "Fortnox", category: "Finance", color: "#2DB250", logo: (
-                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                      <rect width="32" height="32" rx="8" fill="#2DB250" fillOpacity="0.12"/>
-                      <text x="16" y="21" textAnchor="middle" fill="#2DB250" fontSize="14" fontWeight="700" fontFamily="system-ui">F</text>
+                  { id: "fortnox", name: "Fortnox", desc: "Invoices, suppliers & accounting", category: "Finance", color: "#2DB250", logo: (
+                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
+                      <rect width="40" height="40" rx="10" fill="#2DB250" fillOpacity="0.08"/>
+                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#2DB250" strokeOpacity="0.1"/>
+                      <path d="M13 14h14M13 19h10M13 24h7" stroke="#2DB250" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
                   )},
-                  { id: "microsoft365", name: "Microsoft 365", category: "Productivity", color: "#0078D4", logo: (
-                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                      <rect width="32" height="32" rx="8" fill="#0078D4" fillOpacity="0.12"/>
-                      <g transform="translate(8, 8)">
-                        <rect x="0" y="0" width="7" height="7" rx="1" fill="#F25022"/>
-                        <rect x="9" y="0" width="7" height="7" rx="1" fill="#7FBA00"/>
-                        <rect x="0" y="9" width="7" height="7" rx="1" fill="#00A4EF"/>
-                        <rect x="9" y="9" width="7" height="7" rx="1" fill="#FFB900"/>
+                  { id: "microsoft365", name: "Microsoft 365", desc: "Users, licenses & productivity tools", category: "Productivity", color: "#0078D4", logo: (
+                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
+                      <rect width="40" height="40" rx="10" fill="#0078D4" fillOpacity="0.06"/>
+                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#0078D4" strokeOpacity="0.08"/>
+                      <rect x="11" y="11" width="8" height="8" rx="1.5" fill="#F25022"/>
+                      <rect x="21" y="11" width="8" height="8" rx="1.5" fill="#7FBA00"/>
+                      <rect x="11" y="21" width="8" height="8" rx="1.5" fill="#00A4EF"/>
+                      <rect x="21" y="21" width="8" height="8" rx="1.5" fill="#FFB900"/>
+                    </svg>
+                  )},
+                  { id: "hubspot", name: "HubSpot", desc: "Contacts, deals & marketing data", category: "CRM", color: "#FF7A59", logo: (
+                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
+                      <rect width="40" height="40" rx="10" fill="#FF7A59" fillOpacity="0.06"/>
+                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#FF7A59" strokeOpacity="0.08"/>
+                      <g transform="translate(10, 9)">
+                        <circle cx="14" cy="13" r="4" stroke="#FF7A59" strokeWidth="2"/>
+                        <path d="M14 9V5.5" stroke="#FF7A59" strokeWidth="2" strokeLinecap="round"/>
+                        <circle cx="14" cy="4" r="1.5" fill="#FF7A59"/>
+                        <path d="M10.5 15.5L4 20" stroke="#FF7A59" strokeWidth="2" strokeLinecap="round"/>
+                        <circle cx="3" cy="20.5" r="1.5" fill="#FF7A59"/>
                       </g>
                     </svg>
                   )},
-                  { id: "hubspot", name: "HubSpot", category: "CRM / Marketing", color: "#FF7A59", logo: (
-                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                      <rect width="32" height="32" rx="8" fill="#FF7A59" fillOpacity="0.12"/>
-                      <g transform="translate(7, 7)">
-                        <path d="M13.5 6.3V3.6a1.8 1.8 0 10-1.2 0v2.7a4.5 4.5 0 00-2.7 1.6L3.2 3.6a1.5 1.5 0 10-.7 1l6.3 4.2a4.5 4.5 0 00-.3 1.7 4.5 4.5 0 004.5 4.5 4.5 4.5 0 004.5-4.5 4.5 4.5 0 00-4-4.2zm0 6.7a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="#FF7A59"/>
-                      </g>
+                  { id: "quickbooks", name: "QuickBooks", desc: "Bills, expenses & financial reports", category: "Finance", color: "#2CA01C", logo: (
+                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
+                      <rect width="40" height="40" rx="10" fill="#2CA01C" fillOpacity="0.06"/>
+                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#2CA01C" strokeOpacity="0.08"/>
+                      <circle cx="20" cy="20" r="9" stroke="#2CA01C" strokeWidth="1.5" strokeOpacity="0.3"/>
+                      <path d="M15.5 17h-1.5a2.5 2.5 0 000 5h1.5" stroke="#2CA01C" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M24.5 23h1.5a2.5 2.5 0 000-5h-1.5" stroke="#2CA01C" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
                   )},
-                  { id: "quickbooks", name: "QuickBooks", category: "Finance", color: "#2CA01C", logo: (
-                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                      <rect width="32" height="32" rx="8" fill="#2CA01C" fillOpacity="0.12"/>
-                      <circle cx="16" cy="16" r="8" fill="#2CA01C" fillOpacity="0.2"/>
-                      <path d="M12 13h-1a2 2 0 000 4h1m8 2h1a2 2 0 000-4h-1" stroke="#2CA01C" strokeWidth="1.5" strokeLinecap="round"/>
-                      <path d="M14 11v10m4-10v10" stroke="#2CA01C" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  )},
-                  { id: "shopify", name: "Shopify", category: "E-Commerce", color: "#95BF47", logo: (
-                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                      <rect width="32" height="32" rx="8" fill="#95BF47" fillOpacity="0.12"/>
-                      <g transform="translate(9, 6)">
-                        <path d="M11.5 4.2s-.3 0-.3.1l-.5 1.6a3.4 3.4 0 00-2.2-1c-1.8-.1-3 1.4-3.4 2.8L3 7.2c-.5-.2-.6-.2-.6-.2s-.1 0-.2.1L.7 14.7l8.5 1.5 4.5-1s-2.2-10.8-2.2-11zM8.3 6.4l-.8 2.5A3 3 0 005.7 8l.8-2.5c.3-.2.6-.3.8-.3s.6 0 1 .2z" fill="#95BF47"/>
-                        <path d="M11.2 4.3a1.4 1.4 0 00-1-.4h-.2l-.3-.3C9.3 3.2 8.8 3 8.3 3c-2 0-3 2.5-3.3 3.8l-2 .6c-.6.2-.6.2-.7.8L1 14.7l7.2 1.3L11.2 4.3z" fill="#5E8E3E"/>
+                  { id: "shopify", name: "Shopify", desc: "Products, orders & customer data", category: "E-Commerce", color: "#95BF47", logo: (
+                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
+                      <rect width="40" height="40" rx="10" fill="#95BF47" fillOpacity="0.06"/>
+                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#95BF47" strokeOpacity="0.08"/>
+                      <g transform="translate(11, 9)">
+                        <path d="M15 3.5c-.2-.6-.7-1-1.2-1l-.5-.3c-.3-.3-.7-.5-1.3-.5-2.7 0-4.2 3.3-4.6 5l-2.5.8c-.8.2-.8.3-.9 1L2.2 20l10.3 1.8 5.5-1.4S15 4.1 15 3.5z" fill="#95BF47"/>
+                        <path d="M13.8 2.5c-.1 0-.2 0-.3.1l-.6 2a5 5 0 00-3-1c-2.4 0-3.6 2-4 3.5L3.5 8c-.7.2-.7.2-.8.9L1 20l9 1.6 5-1.2S14 3 13.8 2.5z" fill="#5E8E3E"/>
                       </g>
                     </svg>
                   )},
@@ -1941,24 +1962,31 @@ export default function ToolsPage() {
                       key={tool.id}
                       onClick={() => !alreadyConnected && setSelectedTool(tool.id)}
                       disabled={alreadyConnected}
-                      className={`group relative flex flex-col items-start gap-3 p-4 rounded-xl border transition-all duration-200 text-left ${
+                      className={`group relative w-full flex items-center gap-3.5 p-3.5 rounded-xl border transition-all duration-200 text-left ${
                         alreadyConnected
-                          ? "border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed"
-                          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] cursor-pointer"
+                          ? "border-white/[0.03] bg-white/[0.01] opacity-35 cursor-not-allowed"
+                          : "border-white/[0.05] bg-white/[0.015] hover:bg-white/[0.035] cursor-pointer"
                       }`}
+                      style={!alreadyConnected ? { ["--tool-color" as string]: tool.color } : undefined}
                     >
-                      <div className="flex items-center justify-between w-full">
-                        {tool.logo}
-                        {alreadyConnected && (
-                          <span className="text-[10px] text-emerald-400/60 font-medium bg-emerald-400/[0.08] px-2 py-0.5 rounded-full">Connected</span>
-                        )}
+                      {tool.logo}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-medium text-white/90">{tool.name}</p>
+                          <span className="text-[10px] text-white/20 font-medium tracking-wide uppercase">{tool.category}</span>
+                        </div>
+                        <p className="text-[11.5px] text-white/25 mt-0.5 truncate">{tool.desc}</p>
                       </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-white/90">{tool.name}</p>
-                        <p className="text-[11px] text-white/30 mt-0.5">{tool.category}</p>
-                      </div>
+                      {alreadyConnected ? (
+                        <span className="shrink-0 flex items-center gap-1 text-[10px] text-emerald-400/50 font-medium bg-emerald-400/[0.06] px-2 py-1 rounded-md">
+                          <CheckCircle className="w-2.5 h-2.5" />
+                          Connected
+                        </span>
+                      ) : (
+                        <svg className="w-4 h-4 text-white/10 group-hover:text-white/30 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                      )}
                       {!alreadyConnected && (
-                        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${tool.color}30, 0 0 20px ${tool.color}08` }} />
+                        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${tool.color}18, 0 0 24px -4px ${tool.color}08` }} />
                       )}
                     </button>
                   )
@@ -1966,24 +1994,24 @@ export default function ToolsPage() {
               </div>
             )}
 
-            {/* Selected tool header with back button */}
+            {/* Selected tool: back button */}
             {selectedTool && (
-              <div className="space-y-4">
+              <div className="mb-5">
                 <button
                   onClick={() => setSelectedTool("")}
-                  className="flex items-center gap-2 text-[12px] text-white/30 hover:text-white/60 transition-colors -mt-1 mb-2"
+                  className="group flex items-center gap-1.5 text-[11.5px] text-white/25 hover:text-white/50 transition-colors"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-                  All integrations
+                  <svg className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                  Back to all integrations
                 </button>
               </div>
             )}
 
             {selectedTool === "fortnox" && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client-id" className="text-white/60 text-[13px]">
-                    Client ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="client-id"
@@ -1993,13 +2021,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setFortnoxForm({ ...fortnoxForm, clientId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="client-secret" className="text-white/60 text-[13px]">
-                    Client Secret <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="client-secret"
@@ -2009,35 +2037,42 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setFortnoxForm({ ...fortnoxForm, clientSecret: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
-                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Log into developer.fortnox.se and create an app</li>
-                    <li>Set the redirect URI provided during onboarding</li>
-                    <li>Copy the Client ID and Client Secret here</li>
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Log into developer.fortnox.se and create an app</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Set the redirect URI provided during onboarding</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Copy the Client ID and Client Secret here</li>
                   </ol>
-                  <p className="text-xs text-gray-500 mt-2">Scopes: companyinformation, customer, invoice, supplierinvoice, bookkeeping, salary, article, supplier</p>
-                  <Link
-                    href="/dashboard/tools/guide#fortnox"
-                    onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
-                  >
-                    <BookOpen className="w-3 h-3" />
-                    Full setup guide
-                  </Link>
+                  <div className="mt-3 pt-2.5 border-t border-white/[0.04] flex items-center justify-between">
+                    <p className="text-[10px] text-white/15 font-mono truncate mr-2">companyinformation, customer, invoice, supplier...</p>
+                    <Link
+                      href="/dashboard/tools/guide#fortnox"
+                      onClick={() => setIsConnectModalOpen(false)}
+                      className="inline-flex items-center gap-1 text-[11px] text-emerald-400/50 hover:text-emerald-400/80 transition-colors shrink-0"
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      Guide
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
 
             {selectedTool === "microsoft365" && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="m365-tenant-id" className="text-white/60 text-[13px]">
-                    Tenant ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m365-tenant-id" className="text-white/50 text-[12px] font-medium">
+                    Tenant ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="m365-tenant-id"
@@ -2047,13 +2082,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, tenantId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="m365-client-id" className="text-white/60 text-[13px]">
-                    Client ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m365-client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="m365-client-id"
@@ -2063,13 +2098,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, clientId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="m365-client-secret" className="text-white/60 text-[13px]">
-                    Client Secret <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m365-client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="m365-client-secret"
@@ -2079,35 +2114,42 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setMicrosoft365Form({ ...microsoft365Form, clientSecret: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
-                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Go to Azure Portal &gt; App registrations, create a new app</li>
-                    <li>Add API permissions: User.Read.All, Directory.Read.All, AuditLog.Read.All, Reports.Read.All</li>
-                    <li>Grant admin consent, then create a Client Secret</li>
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to Azure Portal &gt; App registrations, create a new app</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Add API permissions: User.Read.All, Directory.Read.All, AuditLog.Read.All</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Grant admin consent, then create a Client Secret</li>
                   </ol>
-                  <p className="text-xs text-gray-500 mt-2">Requires admin consent for all permissions</p>
-                  <Link
-                    href="/dashboard/tools/guide#microsoft365"
-                    onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
-                  >
-                    <BookOpen className="w-3 h-3" />
-                    Full setup guide
-                  </Link>
+                  <div className="mt-3 pt-2.5 border-t border-white/[0.04] flex items-center justify-between">
+                    <p className="text-[10px] text-white/15 font-mono">Requires admin consent</p>
+                    <Link
+                      href="/dashboard/tools/guide#microsoft365"
+                      onClick={() => setIsConnectModalOpen(false)}
+                      className="inline-flex items-center gap-1 text-[11px] text-emerald-400/50 hover:text-emerald-400/80 transition-colors shrink-0"
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      Guide
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
 
             {selectedTool === "hubspot" && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hubspot-client-id" className="text-white/60 text-[13px]">
-                    Client ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="hubspot-client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="hubspot-client-id"
@@ -2117,13 +2159,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setHubspotForm({ ...hubspotForm, clientId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="hubspot-client-secret" className="text-white/60 text-[13px]">
-                    Client Secret <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="hubspot-client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="hubspot-client-secret"
@@ -2133,17 +2175,19 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setHubspotForm({ ...hubspotForm, clientSecret: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-white/10">
-                  <p className="text-sm text-cyan-400 mb-1">Pricing Information</p>
-                  <p className="text-xs text-gray-500 mb-3">Optional — helps provide more accurate cost analysis</p>
+                <div className="pt-4 border-t border-white/[0.04]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-[12px] font-medium text-white/40">Pricing Info</p>
+                    <span className="text-[10px] text-white/15 bg-white/[0.03] px-1.5 py-0.5 rounded">Optional</span>
+                  </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="hubspot-hub-type" className="text-white/60 text-[13px]">
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hubspot-hub-type" className="text-white/50 text-[12px] font-medium">
                         Primary Hub
                       </Label>
                       <select
@@ -2152,7 +2196,7 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, hubType: e.target.value })
                         }
-                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
+                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2.5 text-[13px] focus:border-emerald-500/30 outline-none transition-all"
                       >
                         <option value="starter_platform">Starter Customer Platform (All Hubs)</option>
                         <option value="marketing">Marketing Hub</option>
@@ -2163,8 +2207,8 @@ export default function ToolsPage() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="hubspot-tier" className="text-white/60 text-[13px]">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hubspot-tier" className="text-white/50 text-[12px] font-medium">
                         Plan Tier
                       </Label>
                       <select
@@ -2173,7 +2217,7 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, tier: e.target.value })
                         }
-                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2 text-[13px] focus:border-emerald-500/30 outline-none"
+                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2.5 text-[13px] focus:border-emerald-500/30 outline-none transition-all"
                       >
                         <option value="starter">Starter ($15-20/seat)</option>
                         <option value="professional">Professional ($50-100/seat)</option>
@@ -2181,9 +2225,9 @@ export default function ToolsPage() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="hubspot-seats" className="text-white/60 text-[13px]">
-                        Number of Paid Seats
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hubspot-seats" className="text-white/50 text-[12px] font-medium">
+                        Paid Seats
                       </Label>
                       <Input
                         id="hubspot-seats"
@@ -2194,40 +2238,44 @@ export default function ToolsPage() {
                         onChange={(e) =>
                           setHubspotForm({ ...hubspotForm, paidSeats: e.target.value })
                         }
-                        className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                        className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                       />
-                      <p className="text-xs text-gray-500">
-                        Leave blank to auto-detect from your HubSpot account
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
-                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Go to HubSpot &gt; Settings &gt; Integrations &gt; Private Apps</li>
-                    <li>Create app with scopes: settings.users.read, settings.users.write, account-info.security.read, crm.objects.contacts.read</li>
-                    <li>Copy the Client ID and Client Secret here</li>
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to HubSpot &gt; Settings &gt; Integrations &gt; Private Apps</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Create app with required scopes</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Copy the Client ID and Client Secret here</li>
                   </ol>
-                  <p className="text-xs text-gray-500 mt-2">Scopes: settings.users.read, settings.users.write, account-info.security.read, crm.objects.contacts.read</p>
-                  <Link
-                    href="/dashboard/tools/guide#hubspot"
-                    onClick={() => setIsConnectModalOpen(false)}
-                    className="inline-flex items-center gap-1 text-[11px] text-emerald-400/60 hover:text-emerald-400 mt-2"
-                  >
-                    <BookOpen className="w-3 h-3" />
-                    Full setup guide
-                  </Link>
+                  <div className="mt-3 pt-2.5 border-t border-white/[0.04] flex items-center justify-between">
+                    <p className="text-[10px] text-white/15 font-mono truncate mr-2">settings.users.read, account-info.security.read...</p>
+                    <Link
+                      href="/dashboard/tools/guide#hubspot"
+                      onClick={() => setIsConnectModalOpen(false)}
+                      className="inline-flex items-center gap-1 text-[11px] text-emerald-400/50 hover:text-emerald-400/80 transition-colors shrink-0"
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      Guide
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
 
             {selectedTool === "quickbooks" && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="qb-client-id" className="text-white/60 text-[13px]">
-                    Client ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="qb-client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="qb-client-id"
@@ -2237,13 +2285,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setQuickbooksForm({ ...quickbooksForm, clientId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="qb-client-secret" className="text-white/60 text-[13px]">
-                    Client Secret <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="qb-client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="qb-client-secret"
@@ -2253,17 +2301,22 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setQuickbooksForm({ ...quickbooksForm, clientSecret: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
-                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Go to developer.intuit.com and create an app</li>
-                    <li>Select &quot;Accounting&quot; scope</li>
-                    <li>Add redirect URI: your backend callback URL</li>
-                    <li>Copy Client ID and Client Secret here</li>
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to developer.intuit.com and create an app</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Select &quot;Accounting&quot; scope</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Add redirect URI: your backend callback URL</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">04</span>Copy Client ID and Client Secret here</li>
                   </ol>
                 </div>
               </div>
@@ -2271,9 +2324,9 @@ export default function ToolsPage() {
 
             {selectedTool === "shopify" && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-shop" className="text-white/60 text-[13px]">
-                    Shop Domain <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="shopify-shop" className="text-white/50 text-[12px] font-medium">
+                    Shop Domain <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="shopify-shop"
@@ -2283,16 +2336,16 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, shopDomain: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
-                  <p className="text-xs text-gray-500">
-                    Your Shopify store URL (e.g., my-store or my-store.myshopify.com)
+                  <p className="text-[10.5px] text-white/15">
+                    e.g., my-store or my-store.myshopify.com
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-client-id" className="text-white/60 text-[13px]">
-                    Client ID <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="shopify-client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="shopify-client-id"
@@ -2302,13 +2355,13 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, clientId: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-client-secret" className="text-white/60 text-[13px]">
-                    Client Secret <span className="text-red-400">*</span>
+                <div className="space-y-1.5">
+                  <Label htmlFor="shopify-client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
                   </Label>
                   <Input
                     id="shopify-client-secret"
@@ -2318,73 +2371,85 @@ export default function ToolsPage() {
                     onChange={(e) =>
                       setShopifyForm({ ...shopifyForm, clientSecret: e.target.value })
                     }
-                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg focus:border-emerald-500/30"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10">
-                  <p className="text-[11px] font-medium text-emerald-400/80 mb-2">Quick Setup</p>
-                  <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Go to partners.shopify.com and create an app</li>
-                    <li>Set redirect URL to your backend callback URL</li>
-                    <li>Copy the API Key (Client ID) and API Secret Key (Client Secret)</li>
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to partners.shopify.com and create an app</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Set redirect URL to your backend callback URL</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Copy the API Key and API Secret Key</li>
                   </ol>
                 </div>
               </div>
             )}
           </div>
 
+          {/* Footer with actions */}
           {selectedTool && (
-            <div className="px-6 pb-6 pt-2 flex justify-end gap-2 border-t border-white/[0.04]">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsConnectModalOpen(false)
-                  setSelectedTool("")
-                  setFortnoxForm({ clientId: "", clientSecret: "" })
-                  setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
-                  setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
-                  setQuickbooksForm({ clientId: "", clientSecret: "" })
-                  setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
-                }}
-                className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (selectedTool === "fortnox") {
-                    handleConnectFortnox()
-                  } else if (selectedTool === "microsoft365") {
-                    handleConnectMicrosoft365()
-                  } else if (selectedTool === "hubspot") {
-                    handleConnectHubSpot()
-                  } else if (selectedTool === "quickbooks") {
-                    handleConnectQuickBooks()
-                  } else if (selectedTool === "shopify") {
-                    handleConnectShopify()
+            <div className="relative px-6 pb-6 pt-4 border-t border-white/[0.04]">
+              <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/[0.03] to-transparent" />
+              <div className="flex justify-end gap-2.5">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsConnectModalOpen(false)
+                    setSelectedTool("")
+                    setFortnoxForm({ clientId: "", clientSecret: "" })
+                    setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
+                    setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
+                    setQuickbooksForm({ clientId: "", clientSecret: "" })
+                    setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
+                  }}
+                  className="border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.05] rounded-lg h-9 text-[12.5px] px-4 transition-all"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedTool === "fortnox") {
+                      handleConnectFortnox()
+                    } else if (selectedTool === "microsoft365") {
+                      handleConnectMicrosoft365()
+                    } else if (selectedTool === "hubspot") {
+                      handleConnectHubSpot()
+                    } else if (selectedTool === "quickbooks") {
+                      handleConnectQuickBooks()
+                    } else if (selectedTool === "shopify") {
+                      handleConnectShopify()
+                    }
+                  }}
+                  disabled={
+                    !selectedTool ||
+                    (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
+                    (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
+                    (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
+                    (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
+                    (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
+                    isConnecting
                   }
-                }}
-                disabled={
-                  !selectedTool ||
-                  (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
-                  (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
-                  (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
-                  (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
-                  (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
-                  isConnecting
-                }
-                className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  "Connect"
-                )}
-              </Button>
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold disabled:opacity-30 disabled:hover:bg-emerald-500 rounded-lg h-9 text-[12.5px] px-5 transition-all shadow-[0_0_20px_-4px_rgba(52,211,153,0.3)] hover:shadow-[0_0_24px_-2px_rgba(52,211,153,0.4)] disabled:shadow-none"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Plug className="w-3 h-3 mr-1.5" />
+                      Connect
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
