@@ -2479,23 +2479,69 @@ export default function ToolDetailPage() {
     <>
       {/* Full-screen loading overlay */}
       {(isLoadingAnalysis || isSavingAnalysis) && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4">
-            <div className="relative w-10 h-10">
-              <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
-              <div className="absolute inset-0 rounded-full border-2 border-emerald-400/60 border-t-transparent animate-spin" />
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center">
+          <div className="relative flex flex-col items-center gap-6 max-w-xs mx-4">
+            {/* Ambient glow behind spinner */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+
+            {/* Spinner */}
+            <div className="relative w-14 h-14">
+              <svg className="w-14 h-14 animate-spin" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="24" stroke="white" strokeOpacity="0.06" strokeWidth="3" />
+                <path
+                  d="M28 4a24 24 0 0 1 24 24"
+                  stroke="url(#spinner-gradient)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <defs>
+                  <linearGradient id="spinner-gradient" x1="28" y1="4" x2="52" y2="28">
+                    <stop stopColor="#34d399" stopOpacity="0.9" />
+                    <stop offset="1" stopColor="#34d399" stopOpacity="0.2" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                {isSavingAnalysis ? (
+                  <svg className="w-5 h-5 text-emerald-400/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                ) : (
+                  <Search className="w-5 h-5 text-emerald-400/70" />
+                )}
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-white font-medium text-[15px]">
-                {isSavingAnalysis ? "Saving Analysis..." : "Analyzing..."}
+
+            {/* Text */}
+            <div className="text-center space-y-1.5">
+              <p className="text-white/90 font-medium text-[15px] tracking-[-0.01em]">
+                {isSavingAnalysis ? "Saving Analysis" : "Analyzing Data"}
               </p>
-              <p className="text-white/30 text-[13px] mt-1">
+              <p className="text-white/25 text-[12.5px] leading-relaxed max-w-[220px]">
                 {isSavingAnalysis
-                  ? "Saving your analysis to the database."
-                  : "Please wait while we analyze your data."}
+                  ? "Persisting results to your account..."
+                  : "Scanning for cost optimization opportunities..."}
               </p>
+            </div>
+
+            {/* Animated progress dots */}
+            <div className="flex items-center gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-400/50"
+                  style={{
+                    animation: "pulse 1.4s ease-in-out infinite",
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
             </div>
           </div>
+          <style jsx>{`
+            @keyframes pulse {
+              0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+              40% { opacity: 1; transform: scale(1.2); }
+            }
+          `}</style>
         </div>
       )}
 
