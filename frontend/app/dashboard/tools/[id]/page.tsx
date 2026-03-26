@@ -2948,14 +2948,30 @@ export default function ToolDetailPage() {
                         From {new Date(selectedHistoricalAnalysis.created_at).toLocaleString()}
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedHistoricalAnalysis(null)}
-                      className="border-white/10 text-gray-400 hover:text-white"
-                    >
-                      Close
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {selectedHistoricalAnalysis.analysis_data?.aiSummary && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => exportAiSummaryPDF(
+                            selectedHistoricalAnalysis.analysis_data.aiSummary,
+                            selectedHistoricalAnalysis.provider || integration?.tool_name
+                          )}
+                          className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white"
+                        >
+                          <Download className="w-4 h-4 mr-1.5" />
+                          Export PDF
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedHistoricalAnalysis(null)}
+                        className="border-white/10 text-gray-400 hover:text-white"
+                      >
+                        Close
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
