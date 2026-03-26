@@ -84,15 +84,7 @@ interface Integration {
   } | null
 }
 
-const isTokenExpired = (integration: Integration): boolean => {
-  const expiresAt = integration.oauth_data?.tokens?.expires_at
-  if (!expiresAt) return false
-  const now = Math.floor(Date.now() / 1000)
-  return now >= (expiresAt - 300)
-}
-
 const getEffectiveStatus = (integration: Integration): string => {
-  if (integration.status === "expired" || isTokenExpired(integration)) return "expired"
   return integration.status
 }
 
