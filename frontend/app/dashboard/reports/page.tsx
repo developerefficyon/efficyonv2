@@ -146,7 +146,7 @@ export default function ReportsPage() {
       })
       if (!res.ok) throw new Error("Failed to fetch analysis detail")
       const data = await res.json()
-      const aiSummary = data.analysis?.analysis_result?.aiSummary
+      const aiSummary = data.analysis?.analysis_data?.aiSummary
 
       if (!aiSummary) {
         toast.error("No AI summary available for this analysis")
@@ -554,7 +554,7 @@ export default function ReportsPage() {
                             </div>
 
                             {/* AI Summary */}
-                            {expandedData.analysis_result?.aiSummary && (
+                            {expandedData.analysis_data?.aiSummary && (
                               <div className="rounded-lg border border-violet-500/10 bg-violet-500/[0.03] p-4">
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2">
@@ -588,13 +588,13 @@ export default function ReportsPage() {
                                       tr: ({ children }) => <tr className="border-b border-white/[0.03]">{children}</tr>,
                                     }}
                                   >
-                                    {expandedData.analysis_result.aiSummary}
+                                    {expandedData.analysis_data.aiSummary}
                                   </ReactMarkdown>
                                 </div>
                               </div>
                             )}
 
-                            {!expandedData.analysis_result?.aiSummary && (
+                            {!expandedData.analysis_data?.aiSummary && (
                               <p className="text-[12px] text-white/20 text-center py-4">
                                 No AI summary available. Re-run analysis to generate one.
                               </p>
