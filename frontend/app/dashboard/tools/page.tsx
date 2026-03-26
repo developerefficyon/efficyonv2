@@ -1875,75 +1875,112 @@ export default function ToolsPage() {
           }
         }}
       >
-        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto rounded-xl premium-scrollbar" style={{ scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
-          <DialogHeader>
-            <DialogTitle className="text-[16px] font-medium text-white">Connect New Tool</DialogTitle>
-            <DialogDescription className="text-[13px] text-white/35">
-              Select a tool to connect to your account
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white w-[95vw] max-w-lg sm:w-full max-h-[90vh] overflow-y-auto rounded-2xl premium-scrollbar p-0" style={{ scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}>
+          <div className="px-6 pt-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="text-[18px] font-semibold text-white tracking-tight">Connect New Tool</DialogTitle>
+              <DialogDescription className="text-[13px] text-white/40 mt-1">
+                {selectedTool ? "Configure your integration" : "Choose an integration to get started"}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="tool-select" className="text-white/60 text-[13px]">
-                Select Tool
-              </Label>
-              <Select
-                value={selectedTool || undefined}
-                onValueChange={(value) => setSelectedTool(value)}
-              >
-                <SelectTrigger
-                  id="tool-select"
-                  className="w-full h-10 !bg-white/[0.03] !border !border-white/[0.06] !text-white/80 rounded-lg"
+          <div className="px-6 pb-6">
+            {/* Tool Picker Grid */}
+            {!selectedTool && (
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: "fortnox", name: "Fortnox", category: "Finance", color: "#2DB250", logo: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#2DB250" fillOpacity="0.12"/>
+                      <text x="16" y="21" textAnchor="middle" fill="#2DB250" fontSize="14" fontWeight="700" fontFamily="system-ui">F</text>
+                    </svg>
+                  )},
+                  { id: "microsoft365", name: "Microsoft 365", category: "Productivity", color: "#0078D4", logo: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#0078D4" fillOpacity="0.12"/>
+                      <g transform="translate(8, 8)">
+                        <rect x="0" y="0" width="7" height="7" rx="1" fill="#F25022"/>
+                        <rect x="9" y="0" width="7" height="7" rx="1" fill="#7FBA00"/>
+                        <rect x="0" y="9" width="7" height="7" rx="1" fill="#00A4EF"/>
+                        <rect x="9" y="9" width="7" height="7" rx="1" fill="#FFB900"/>
+                      </g>
+                    </svg>
+                  )},
+                  { id: "hubspot", name: "HubSpot", category: "CRM / Marketing", color: "#FF7A59", logo: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#FF7A59" fillOpacity="0.12"/>
+                      <g transform="translate(7, 7)">
+                        <path d="M13.5 6.3V3.6a1.8 1.8 0 10-1.2 0v2.7a4.5 4.5 0 00-2.7 1.6L3.2 3.6a1.5 1.5 0 10-.7 1l6.3 4.2a4.5 4.5 0 00-.3 1.7 4.5 4.5 0 004.5 4.5 4.5 4.5 0 004.5-4.5 4.5 4.5 0 00-4-4.2zm0 6.7a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="#FF7A59"/>
+                      </g>
+                    </svg>
+                  )},
+                  { id: "quickbooks", name: "QuickBooks", category: "Finance", color: "#2CA01C", logo: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#2CA01C" fillOpacity="0.12"/>
+                      <circle cx="16" cy="16" r="8" fill="#2CA01C" fillOpacity="0.2"/>
+                      <path d="M12 13h-1a2 2 0 000 4h1m8 2h1a2 2 0 000-4h-1" stroke="#2CA01C" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M14 11v10m4-10v10" stroke="#2CA01C" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  )},
+                  { id: "shopify", name: "Shopify", category: "E-Commerce", color: "#95BF47", logo: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                      <rect width="32" height="32" rx="8" fill="#95BF47" fillOpacity="0.12"/>
+                      <g transform="translate(9, 6)">
+                        <path d="M11.5 4.2s-.3 0-.3.1l-.5 1.6a3.4 3.4 0 00-2.2-1c-1.8-.1-3 1.4-3.4 2.8L3 7.2c-.5-.2-.6-.2-.6-.2s-.1 0-.2.1L.7 14.7l8.5 1.5 4.5-1s-2.2-10.8-2.2-11zM8.3 6.4l-.8 2.5A3 3 0 005.7 8l.8-2.5c.3-.2.6-.3.8-.3s.6 0 1 .2z" fill="#95BF47"/>
+                        <path d="M11.2 4.3a1.4 1.4 0 00-1-.4h-.2l-.3-.3C9.3 3.2 8.8 3 8.3 3c-2 0-3 2.5-3.3 3.8l-2 .6c-.6.2-.6.2-.7.8L1 14.7l7.2 1.3L11.2 4.3z" fill="#5E8E3E"/>
+                      </g>
+                    </svg>
+                  )},
+                ].map((tool) => {
+                  const alreadyConnected = integrations.some(
+                    (i) => i.tool_name.toLowerCase().replace(/\s+/g, '') === tool.id.replace(/\s+/g, '')
+                  )
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => !alreadyConnected && setSelectedTool(tool.id)}
+                      disabled={alreadyConnected}
+                      className={`group relative flex flex-col items-start gap-3 p-4 rounded-xl border transition-all duration-200 text-left ${
+                        alreadyConnected
+                          ? "border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed"
+                          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] cursor-pointer"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        {tool.logo}
+                        {alreadyConnected && (
+                          <span className="text-[10px] text-emerald-400/60 font-medium bg-emerald-400/[0.08] px-2 py-0.5 rounded-full">Connected</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-medium text-white/90">{tool.name}</p>
+                        <p className="text-[11px] text-white/30 mt-0.5">{tool.category}</p>
+                      </div>
+                      {!alreadyConnected && (
+                        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${tool.color}30, 0 0 20px ${tool.color}08` }} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Selected tool header with back button */}
+            {selectedTool && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setSelectedTool("")}
+                  className="flex items-center gap-2 text-[12px] text-white/30 hover:text-white/60 transition-colors -mt-1 mb-2"
                 >
-                  <SelectValue placeholder="Choose a tool..." />
-                </SelectTrigger>
-                <SelectContent
-                  className="bg-[#141415] border border-white/[0.08] backdrop-blur-xl z-[100] shadow-lg rounded-lg"
-                  position="popper"
-                  sideOffset={4}
-                >
-                  {isLoadingTools ? (
-                    <SelectItem value="loading" disabled className="text-gray-400">
-                      Loading tools...
-                    </SelectItem>
-                  ) : (
-                    <>
-                      <SelectItem value="fortnox" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
-                        Fortnox
-                      </SelectItem>
-                      <SelectItem value="microsoft365" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
-                        Microsoft 365
-                      </SelectItem>
-                      <SelectItem value="hubspot" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
-                        HubSpot
-                      </SelectItem>
-                      <SelectItem value="quickbooks" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
-                        QuickBooks
-                      </SelectItem>
-                      <SelectItem value="shopify" className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer">
-                        Shopify
-                      </SelectItem>
-                      {availableTools.length > 0 && availableTools
-                        .filter(tool => !["fortnox", "microsoft365", "hubspot", "quickbooks", "shopify"].includes(tool.name.toLowerCase()))
-                        .map((tool) => (
-                          <SelectItem
-                            key={tool.id}
-                            value={tool.name.toLowerCase()}
-                            className="text-white hover:bg-white/[0.06] focus:bg-white/[0.06] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white cursor-pointer"
-                          >
-                            {tool.name}
-                          </SelectItem>
-                        ))
-                      }
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                  All integrations
+                </button>
+              </div>
+            )}
 
             {selectedTool === "fortnox" && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
@@ -1997,7 +2034,7 @@ export default function ToolsPage() {
             )}
 
             {selectedTool === "microsoft365" && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="m365-tenant-id" className="text-white/60 text-[13px]">
                     Tenant ID <span className="text-red-400">*</span>
@@ -2067,7 +2104,7 @@ export default function ToolsPage() {
             )}
 
             {selectedTool === "hubspot" && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="hubspot-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
@@ -2187,7 +2224,7 @@ export default function ToolsPage() {
             )}
 
             {selectedTool === "quickbooks" && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="qb-client-id" className="text-white/60 text-[13px]">
                     Client ID <span className="text-red-400">*</span>
@@ -2233,7 +2270,7 @@ export default function ToolsPage() {
             )}
 
             {selectedTool === "shopify" && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="shopify-shop" className="text-white/60 text-[13px]">
                     Shop Domain <span className="text-red-400">*</span>
@@ -2297,57 +2334,59 @@ export default function ToolsPage() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsConnectModalOpen(false)
-                setSelectedTool("")
-                setFortnoxForm({ clientId: "", clientSecret: "" })
-                setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
-                setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
-                setQuickbooksForm({ clientId: "", clientSecret: "" })
-                setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
-              }}
-              className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedTool === "fortnox") {
-                  handleConnectFortnox()
-                } else if (selectedTool === "microsoft365") {
-                  handleConnectMicrosoft365()
-                } else if (selectedTool === "hubspot") {
-                  handleConnectHubSpot()
-                } else if (selectedTool === "quickbooks") {
-                  handleConnectQuickBooks()
-                } else if (selectedTool === "shopify") {
-                  handleConnectShopify()
+          {selectedTool && (
+            <div className="px-6 pb-6 pt-2 flex justify-end gap-2 border-t border-white/[0.04]">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsConnectModalOpen(false)
+                  setSelectedTool("")
+                  setFortnoxForm({ clientId: "", clientSecret: "" })
+                  setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
+                  setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
+                  setQuickbooksForm({ clientId: "", clientSecret: "" })
+                  setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
+                }}
+                className="border-white/[0.06] bg-white/[0.03] text-white/50 hover:text-white hover:bg-white/[0.06] rounded-lg h-9 text-[13px]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedTool === "fortnox") {
+                    handleConnectFortnox()
+                  } else if (selectedTool === "microsoft365") {
+                    handleConnectMicrosoft365()
+                  } else if (selectedTool === "hubspot") {
+                    handleConnectHubSpot()
+                  } else if (selectedTool === "quickbooks") {
+                    handleConnectQuickBooks()
+                  } else if (selectedTool === "shopify") {
+                    handleConnectShopify()
+                  }
+                }}
+                disabled={
+                  !selectedTool ||
+                  (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
+                  (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
+                  (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
+                  (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
+                  (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
+                  isConnecting
                 }
-              }}
-              disabled={
-                !selectedTool ||
-                (selectedTool === "fortnox" && (!fortnoxForm.clientId || !fortnoxForm.clientSecret)) ||
-                (selectedTool === "microsoft365" && (!microsoft365Form.tenantId || !microsoft365Form.clientId || !microsoft365Form.clientSecret)) ||
-                (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
-                (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
-                (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
-                isConnecting
-              }
-              className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Connect"
-              )}
-            </Button>
-          </DialogFooter>
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium disabled:opacity-50 rounded-lg h-9 text-[13px]"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Connect"
+                )}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
