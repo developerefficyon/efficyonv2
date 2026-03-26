@@ -6065,243 +6065,252 @@ export default function ToolDetailPage() {
 
       {/* PDF Preview Dialog */}
       <Dialog open={showPdfPreview} onOpenChange={setShowPdfPreview}>
-        <DialogContent className="sm:max-w-2xl !bg-[#111113] !border-white/[0.08] rounded-xl text-white max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="text-xl font-bold flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              PDF Summary Preview
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              A concise 1-page summary with key metrics, charts, and top priority actions.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-2xl !bg-[#0c0c0e] !border-white/[0.06] rounded-2xl text-white max-h-[90vh] overflow-hidden flex flex-col p-0">
+          {/* Ambient top glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
 
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4 py-4">
-            {/* PDF Preview Content */}
-            <div className="bg-white rounded-lg p-4 text-slate-900 shadow-xl">
-              {/* Mock PDF Header */}
-              <div className="bg-slate-900 rounded-lg p-3 mb-4">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-[17px] font-semibold text-white/95 tracking-[-0.01em] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/[0.08] flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-emerald-400/80" />
+                </div>
+                Export Report
+              </DialogTitle>
+              <DialogDescription className="text-[12.5px] text-white/30 mt-1 pl-[42px]">
+                Preview your cost analysis report before downloading
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-4 premium-scrollbar" style={{ scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+            {/* PDF Preview — styled as a paper document */}
+            <div className="relative bg-white rounded-xl overflow-hidden shadow-2xl shadow-black/40 ring-1 ring-black/10">
+              {/* Document header bar */}
+              <div className="bg-gradient-to-r from-[#0f1419] to-[#1a1f2e] px-5 py-3.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full" />
                     </div>
                     <div>
-                      <h3 className="text-white font-bold text-sm">Efficyon</h3>
-                      <p className="text-gray-400 text-[10px]">Cost Leak Analysis Summary</p>
+                      <h3 className="text-white font-semibold text-[13px] tracking-[-0.01em]">Efficyon</h3>
+                      <p className="text-white/30 text-[9px]">Cost Leak Analysis Report</p>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-[10px]">
-                    {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-white/40 text-[9px]">
+                      {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                    <p className="text-white/20 text-[8px]">{integration?.tool_name || "Integration"}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Key Metrics */}
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                <div className="bg-slate-100 rounded p-2 text-center">
-                  <p className="text-[8px] text-slate-500 uppercase">Total Issues</p>
-                  <p className="text-lg font-bold text-slate-800">
-                    {costLeakAnalysis?.overallSummary?.totalFindings || 0}
-                  </p>
-                </div>
-                <div className="bg-emerald-50 rounded p-2 text-center border border-emerald-200">
-                  <p className="text-[8px] text-emerald-600 uppercase">Savings</p>
-                  <p className="text-sm font-bold text-emerald-600">
-                    ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                  </p>
-                </div>
-                <div className="bg-red-50 rounded p-2 text-center border border-red-200">
-                  <p className="text-[8px] text-red-600 uppercase">High</p>
-                  <p className="text-lg font-bold text-red-600">
-                    {costLeakAnalysis?.overallSummary?.highSeverity || 0}
-                  </p>
-                </div>
-                <div className="bg-amber-50 rounded p-2 text-center border border-amber-200">
-                  <p className="text-[8px] text-amber-600 uppercase">Medium</p>
-                  <p className="text-lg font-bold text-amber-600">
-                    {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
-                  </p>
-                </div>
-              </div>
-
-              {/* Charts Section */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Donut Chart Preview */}
-                <div>
-                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Issues by Severity</h4>
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-16 h-16">
-                      <svg viewBox="0 0 36 36" className="w-full h-full">
-                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                        {(costLeakAnalysis?.overallSummary?.highSeverity || 0) > 0 && (
-                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="3"
-                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
-                            strokeDashoffset="25" />
-                        )}
-                        {(costLeakAnalysis?.overallSummary?.mediumSeverity || 0) > 0 && (
-                          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3"
-                            strokeDasharray={`${((costLeakAnalysis?.overallSummary?.mediumSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100} 100`}
-                            strokeDashoffset={`${25 - ((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 100}`} />
-                        )}
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs font-bold text-slate-700">{costLeakAnalysis?.overallSummary?.totalFindings || 0}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1 text-[9px]">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-red-500 rounded-sm" />
-                        <span className="text-slate-600">High ({costLeakAnalysis?.overallSummary?.highSeverity || 0})</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-amber-500 rounded-sm" />
-                        <span className="text-slate-600">Medium ({costLeakAnalysis?.overallSummary?.mediumSeverity || 0})</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-sm" />
-                        <span className="text-slate-600">Low ({costLeakAnalysis?.overallSummary?.lowSeverity || 0})</span>
-                      </div>
-                    </div>
+              <div className="px-5 py-4 text-slate-900">
+                {/* Key Metrics */}
+                <div className="grid grid-cols-4 gap-2 mb-5">
+                  <div className="rounded-lg bg-slate-50 p-2.5 text-center border border-slate-100">
+                    <p className="text-[7px] text-slate-400 uppercase tracking-widest font-medium">Issues</p>
+                    <p className="text-xl font-bold text-slate-800 mt-0.5 leading-none">
+                      {costLeakAnalysis?.overallSummary?.totalFindings || 0}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50/80 p-2.5 text-center border border-emerald-100">
+                    <p className="text-[7px] text-emerald-500 uppercase tracking-widest font-medium">Savings</p>
+                    <p className="text-base font-bold text-emerald-600 mt-0.5 leading-none">
+                      ${(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-red-50/80 p-2.5 text-center border border-red-100">
+                    <p className="text-[7px] text-red-400 uppercase tracking-widest font-medium">High</p>
+                    <p className="text-xl font-bold text-red-600 mt-0.5 leading-none">
+                      {costLeakAnalysis?.overallSummary?.highSeverity || 0}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50/80 p-2.5 text-center border border-amber-100">
+                    <p className="text-[7px] text-amber-500 uppercase tracking-widest font-medium">Medium</p>
+                    <p className="text-xl font-bold text-amber-600 mt-0.5 leading-none">
+                      {costLeakAnalysis?.overallSummary?.mediumSeverity || 0}
+                    </p>
                   </div>
                 </div>
 
-                {/* Bar Chart Preview */}
-                <div>
-                  <h4 className="text-[10px] font-bold text-slate-700 mb-2">Savings by Category</h4>
-                  <div className="space-y-2">
-                    {getGroupedFindingsForPreview().slice(0, 3).map(([key, group]) => (
-                      <div key={key} className="space-y-0.5">
-                        <div className="flex justify-between text-[8px]">
-                          <span className="text-slate-600">{group.title}</span>
-                          <span className="font-medium text-slate-700">${(group.savings || 0).toLocaleString()}</span>
-                        </div>
-                        <div className="h-2 bg-slate-100 rounded overflow-hidden">
-                          <div
-                            className={`h-full rounded ${
-                              group.color === 'red' ? 'bg-red-500' :
-                              group.color === 'amber' ? 'bg-amber-500' :
-                              group.color === 'orange' ? 'bg-orange-500' :
-                              'bg-slate-400'
-                            }`}
-                            style={{ width: `${Math.min(((group.savings || 0) / Math.max(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 1, 1)) * 100, 100)}%` }}
-                          />
+                {/* Charts Section */}
+                <div className="grid grid-cols-2 gap-5 mb-5">
+                  {/* Donut Chart */}
+                  <div>
+                    <h4 className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Severity Breakdown</h4>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-[68px] h-[68px]">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3.5" />
+                          {(costLeakAnalysis?.overallSummary?.highSeverity || 0) > 0 && (
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#ef4444" strokeWidth="3.5"
+                              strokeDasharray={`${((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 87.96} 87.96`}
+                              strokeLinecap="round" />
+                          )}
+                          {(costLeakAnalysis?.overallSummary?.mediumSeverity || 0) > 0 && (
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="3.5"
+                              strokeDasharray={`${((costLeakAnalysis?.overallSummary?.mediumSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 87.96} 87.96`}
+                              strokeDashoffset={`${-((costLeakAnalysis?.overallSummary?.highSeverity || 0) / Math.max((costLeakAnalysis?.overallSummary?.totalFindings || 1), 1)) * 87.96}`}
+                              strokeLinecap="round" />
+                          )}
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[13px] font-bold text-slate-700">{costLeakAnalysis?.overallSummary?.totalFindings || 0}</span>
                         </div>
                       </div>
-                    ))}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-red-500 rounded-[3px]" />
+                          <span className="text-[9px] text-slate-500">High <span className="font-semibold text-slate-700">({costLeakAnalysis?.overallSummary?.highSeverity || 0})</span></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-amber-500 rounded-[3px]" />
+                          <span className="text-[9px] text-slate-500">Medium <span className="font-semibold text-slate-700">({costLeakAnalysis?.overallSummary?.mediumSeverity || 0})</span></span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-slate-300 rounded-[3px]" />
+                          <span className="text-[9px] text-slate-500">Low <span className="font-semibold text-slate-700">({costLeakAnalysis?.overallSummary?.lowSeverity || 0})</span></span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Top Actions Preview */}
-              <div className="mb-3">
-                <h4 className="text-[10px] font-bold text-slate-700 mb-2">Top Priority Actions</h4>
-                <div className="space-y-1">
-                  {(() => {
-                    // Consolidate findings by title (check both Fortnox and M365 data sources)
-                    const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
-                    const consolidated: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
-                    findings.forEach((f: any) => {
-                      const title = f.title || 'Untitled'
-                      if (!consolidated[title]) {
-                        consolidated[title] = { title, count: 0, totalSavings: 0, severity: f.severity || 'low' }
-                      }
-                      consolidated[title].count++
-                      consolidated[title].totalSavings += f.potentialSavings || 0
-                      if (f.severity === 'high') consolidated[title].severity = 'high'
-                      else if (f.severity === 'medium' && consolidated[title].severity !== 'high') {
-                        consolidated[title].severity = 'medium'
-                      }
-                    })
-                    return Object.values(consolidated)
-                      .sort((a, b) => b.totalSavings - a.totalSavings)
-                      .slice(0, 3)
-                      .map((action, index) => (
-                        <div key={index} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1.5">
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${
-                            action.severity === 'high' ? 'bg-red-500' : action.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
-                          }`}>
-                            {index + 1}
+                  {/* Bar Chart */}
+                  <div>
+                    <h4 className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Savings by Category</h4>
+                    <div className="space-y-2.5">
+                      {getGroupedFindingsForPreview().slice(0, 3).map(([key, group]) => (
+                        <div key={key} className="space-y-1">
+                          <div className="flex justify-between text-[8px]">
+                            <span className="text-slate-500">{group.title}</span>
+                            <span className="font-semibold text-slate-700">${(group.savings || 0).toLocaleString()}</span>
                           </div>
-                          <span className="text-[9px] text-slate-700 flex-1 truncate">
-                            {action.title}{action.count > 1 ? ` (${action.count})` : ''}
-                          </span>
-                          <span className="text-[9px] font-bold text-emerald-600">
-                            ${action.totalSavings.toLocaleString()}
-                          </span>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                group.color === 'red' ? 'bg-red-500' :
+                                group.color === 'amber' ? 'bg-amber-500' :
+                                group.color === 'orange' ? 'bg-orange-500' :
+                                'bg-slate-400'
+                              }`}
+                              style={{ width: `${Math.min(((group.savings || 0) / Math.max(costLeakAnalysis?.overallSummary?.totalPotentialSavings || 1, 1)) * 100, 100)}%` }}
+                            />
+                          </div>
                         </div>
-                      ))
-                  })()}
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Footer Preview */}
-              <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[8px] text-slate-400">
-                <span>Confidential</span>
-                <span className="text-cyan-600">Powered by Efficyon</span>
-                <span>Page 1 of 1</span>
+                {/* Top Actions */}
+                <div className="mb-4">
+                  <h4 className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Priority Actions</h4>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const findings = costLeakAnalysis?.supplierInvoiceAnalysis?.findings || costLeakAnalysis?.licenseAnalysis?.findings || []
+                      const consolidated: Record<string, { title: string, count: number, totalSavings: number, severity: string }> = {}
+                      findings.forEach((f: any) => {
+                        const title = f.title || 'Untitled'
+                        if (!consolidated[title]) {
+                          consolidated[title] = { title, count: 0, totalSavings: 0, severity: f.severity || 'low' }
+                        }
+                        consolidated[title].count++
+                        consolidated[title].totalSavings += f.potentialSavings || 0
+                        if (f.severity === 'high') consolidated[title].severity = 'high'
+                        else if (f.severity === 'medium' && consolidated[title].severity !== 'high') {
+                          consolidated[title].severity = 'medium'
+                        }
+                      })
+                      return Object.values(consolidated)
+                        .sort((a, b) => b.totalSavings - a.totalSavings)
+                        .slice(0, 3)
+                        .map((action, index) => (
+                          <div key={index} className="flex items-center gap-2.5 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                            <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white ${
+                              action.severity === 'high' ? 'bg-red-500' : action.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <span className="text-[10px] text-slate-600 flex-1 truncate">
+                              {action.title}{action.count > 1 ? ` (${action.count})` : ''}
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-600">
+                              ${action.totalSavings.toLocaleString()}
+                            </span>
+                          </div>
+                        ))
+                    })()}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between text-[7px] text-slate-300 uppercase tracking-wider">
+                  <span>Confidential</span>
+                  <span className="text-emerald-500 font-medium normal-case tracking-normal text-[8px]">Powered by Efficyon</span>
+                  <span>Page 1 of 1</span>
+                </div>
               </div>
             </div>
 
-            {/* PDF Info */}
-            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
-              <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                <Info className="w-4 h-4 text-emerald-400" />
-                What's included in the PDF
+            {/* What's included */}
+            <div className="relative p-4 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05]">
+              <h4 className="text-[12px] font-medium text-white/45 mb-3 flex items-center gap-2">
+                <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                  <Info className="w-2.5 h-2.5 text-emerald-400/70" />
+                </div>
+                Included in PDF
               </h4>
-              <ul className="text-xs text-gray-400 space-y-1.5">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Key metrics summary (issues, savings, severity counts)
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Visual donut chart showing severity distribution
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Bar chart showing savings by category
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  Top 3 priority actions with potential savings
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  AI insight with actionable recommendation
-                </li>
-              </ul>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pl-6">
+                {[
+                  "Key metrics & severity counts",
+                  "Severity distribution chart",
+                  "Savings by category breakdown",
+                  "Top priority actions",
+                  "AI-generated recommendations",
+                ].map((item) => (
+                  <p key={item} className="text-[11px] text-white/25 flex items-center gap-1.5">
+                    <CheckCircle className="w-3 h-3 text-emerald-400/40 shrink-0" />
+                    {item}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 border-t border-slate-700/50 pt-4 gap-2 sm:gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowPdfPreview(false)}
-              className="border-slate-600 text-gray-300 hover:bg-slate-800 hover:text-white"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={exportToPDF}
-              disabled={isExporting}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download PDF
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+          {/* Footer */}
+          <div className="relative px-6 pb-6 pt-4 border-t border-white/[0.04] shrink-0">
+            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/[0.03] to-transparent" />
+            <div className="flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                onClick={() => setShowPdfPreview(false)}
+                className="border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.05] rounded-lg h-9 text-[12.5px] px-4 transition-all"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={exportToPDF}
+                disabled={isExporting}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold disabled:opacity-30 rounded-lg h-9 text-[12.5px] px-5 transition-all shadow-[0_0_20px_-4px_rgba(52,211,153,0.3)] hover:shadow-[0_0_24px_-2px_rgba(52,211,153,0.4)] disabled:shadow-none"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    Download PDF
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
       {/* Delete Analysis Confirmation Modal */}
