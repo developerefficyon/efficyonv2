@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/ui/navbar"
 import { useAuth } from "@/lib/auth-hooks"
-import { SparklesCore } from "@/components/ui/sparkles"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
@@ -29,7 +28,7 @@ function LoginContent() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false) // used to disable form during redirect
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
@@ -82,67 +81,6 @@ function LoginContent() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (isRedirecting) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
-        {/* Sparkles Background */}
-        <div className="absolute inset-0">
-          <SparklesCore
-            id="login-sparkles"
-            background="transparent"
-            minSize={0.4}
-            maxSize={1.2}
-            particleDensity={50}
-            className="w-full h-full"
-            particleColor="#22d3ee"
-            speed={0.5}
-          />
-        </div>
-
-        {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse delay-700" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center text-center px-4">
-          {/* Animated Logo */}
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-xl opacity-50 animate-pulse" />
-            <div className="relative w-20 h-20 flex items-center justify-center bg-black/80 backdrop-blur-sm border border-white/20 rounded-2xl">
-              <div className="absolute w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full top-3 left-3 shadow-lg shadow-cyan-500/50 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.5s' }} />
-              <div className="absolute w-3 h-3 bg-white/60 rounded-full top-3 right-3 animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.5s' }} />
-              <div className="absolute w-3 h-3 bg-white/60 rounded-full bottom-3 left-3 animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.5s' }} />
-              <div className="absolute w-5 h-1 bg-white/60 bottom-4 right-3 rounded animate-bounce" style={{ animationDelay: '600ms', animationDuration: '1.5s' }} />
-            </div>
-          </div>
-
-          {/* Text */}
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 animate-fade-in">
-            Welcome back
-          </h1>
-          <p className="text-gray-400 text-lg mb-8 animate-fade-in-delay">
-            Preparing your dashboard...
-          </p>
-
-          {/* Loading Indicator */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-12 h-12 border-2 border-cyan-500/30 rounded-full" />
-              <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-cyan-500 rounded-full animate-spin" />
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span className="inline-block w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-              <span>Optimizing your experience</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Gradient Line */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-      </div>
-    )
   }
 
   return (

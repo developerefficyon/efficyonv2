@@ -375,8 +375,25 @@ export default function DashboardLayout({
 
   if (isLoading || isCheckingSubscription) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-white">Loading...</div>
+      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
+        {/* Gradient Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse delay-700" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-4">
+          {/* Loading Indicator */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 border-2 border-cyan-500/30 rounded-full" />
+              <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+            </div>
+            <p className="text-gray-400 text-sm">Loading your dashboard...</p>
+          </div>
+        </div>
+
+        {/* Bottom Gradient Line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
       </div>
     )
   }
