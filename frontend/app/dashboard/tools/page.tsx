@@ -2452,6 +2452,24 @@ export default function ToolsPage() {
               </div>
             </div>
           )}
+
+          {/* Privacy & Terms Notice */}
+          <div className="px-6 pb-5 pt-3">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/40 mt-0.5 shrink-0" />
+              <p className="text-[10.5px] leading-[1.5] text-white/25">
+                By connecting, you agree to our{" "}
+                <Link href="/terms" target="_blank" className="text-emerald-400/50 hover:text-emerald-400/70 underline underline-offset-2 transition-colors">
+                  Terms &amp; Conditions
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="text-emerald-400/50 hover:text-emerald-400/70 underline underline-offset-2 transition-colors">
+                  Privacy Policy
+                </Link>
+                . Efficyon does not store, sell, or share your data. Your information is used solely for analysis purposes within your account.
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
