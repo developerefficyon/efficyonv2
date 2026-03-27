@@ -34,13 +34,13 @@ export default function TermsOfService() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Service Description</h2>
                 <p className="mb-4">
-                  AI Agency provides artificial intelligence solutions including but not limited to:
+                  Efficyon provides SaaS cost optimization and analysis solutions including but not limited to:
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>AI chatbot development and deployment</li>
-                  <li>Workflow automation systems</li>
-                  <li>AI integration services</li>
-                  <li>Custom AI solution development</li>
+                  <li>SaaS subscription tracking and management</li>
+                  <li>AI-powered cost analysis and optimization</li>
+                  <li>Third-party tool integrations and data analysis</li>
+                  <li>Spending reports and recommendations</li>
                 </ul>
               </section>
 
@@ -67,8 +67,8 @@ export default function TermsOfService() {
                 <h2 className="text-2xl font-bold text-white mb-4">Contact Information</h2>
                 <p>
                   For questions about these Terms of Service, contact us at{" "}
-                  <a href="mailto:legal@aiagency.com" className="text-blue-400 hover:text-blue-300">
-                    legal@aiagency.com
+                  <a href="mailto:info@efficyon.com" className="text-blue-400 hover:text-blue-300">
+                    info@efficyon.com
                   </a>
                 </p>
               </section>

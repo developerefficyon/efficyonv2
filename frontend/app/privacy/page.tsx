@@ -60,8 +60,8 @@ export default function PrivacyPolicy() {
                 <h2 className="text-2xl font-bold text-white mb-4">Contact Us</h2>
                 <p>
                   If you have any questions about this Privacy Policy, please contact us at{" "}
-                  <a href="mailto:privacy@aiagency.com" className="text-blue-400 hover:text-blue-300">
-                    privacy@aiagency.com
+                  <a href="mailto:info@efficyon.com" className="text-blue-400 hover:text-blue-300">
+                    info@efficyon.com
                   </a>
                 </p>
               </section>
