@@ -36,6 +36,7 @@ import {
   ChevronDown,
   Eye,
 } from "lucide-react"
+import Link from "next/link"
 import { getBackendToken } from "@/lib/auth-hooks"
 import { useApiCache } from "@/lib/use-api-cache"
 import jsPDF from "jspdf"
@@ -414,6 +415,26 @@ export default function ReportsPage() {
           Rep<span className="italic text-emerald-400/90">orts</span>
         </h2>
         <p className="text-[14px] text-white/35">Download and export your analysis reports</p>
+      </div>
+
+      {/* ── Monthly Reports Link ── */}
+      <div className="animate-slide-up delay-0">
+        <Link href="/dashboard/reports/monthly">
+          <Card className="bg-white/[0.02] border-white/[0.06] rounded-xl card-hover-lift group cursor-pointer">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-medium text-white/80">Monthly Reports</p>
+                  <p className="text-[11px] text-white/30">Automated monthly cost reports with AI summaries and renewal alerts</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* ── Summary Stats ── */}

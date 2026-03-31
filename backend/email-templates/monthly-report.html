@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Report - Efficyon</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #e5e7eb; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0f1117;">
+  <div style="background: #1a1d27; padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #34d399; margin: 0 0 4px;">Efficyon</h1>
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">Monthly Cost Report &mdash; {{ .ReportMonth }}</p>
+    </div>
+
+    <p style="font-size: 15px; color: #d1d5db;">Hi {{ .CompanyName }},</p>
+    <p style="font-size: 14px; color: #9ca3af;">Here&rsquo;s your monthly pulse check on SaaS costs and optimization opportunities.</p>
+
+    <!-- AI Summary -->
+    <div style="background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.15); border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #34d399; margin: 0 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Summary</h3>
+      <p style="color: #d1d5db; font-size: 14px; margin: 0;">{{ .AiSummary }}</p>
+    </div>
+
+    <!-- Savings Counters -->
+    <div style="display: flex; gap: 12px; margin: 20px 0;">
+      <div style="flex: 1; background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.15); border-radius: 8px; padding: 16px; text-align: center;">
+        <p style="color: #fbbf24; font-size: 24px; font-weight: 700; margin: 0;">{{ .TotalWasteIdentified }}</p>
+        <p style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 0;">Waste Identified</p>
+      </div>
+      <div style="flex: 1; background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.15); border-radius: 8px; padding: 16px; text-align: center;">
+        <p style="color: #34d399; font-size: 24px; font-weight: 700; margin: 0;">{{ .SavingsRealized }}</p>
+        <p style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 0;">Savings Realized</p>
+      </div>
+    </div>
+
+    <!-- Changes This Month -->
+    {{ .ChangesHTML }}
+
+    <!-- Recommended Action -->
+    <div style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #818cf8; margin: 0 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Recommended Action</h3>
+      <p style="color: #d1d5db; font-size: 14px; margin: 0;">{{ .RecommendedAction }}</p>
+    </div>
+
+    <!-- Renewal Alerts -->
+    {{ .RenewalAlertsHTML }}
+
+    <!-- Quarterly CTA -->
+    {{ .QuarterlyCtaHTML }}
+
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 30px 0;">
+      <p style="color: #9ca3af; font-size: 13px; font-style: italic; margin: 0 0 16px;">Ready to go deeper? Run your monthly cross-platform analysis in Efficyon &mdash; takes less than 5 minutes and typically surfaces savings this report doesn&rsquo;t catch.</p>
+      <a href="{{ .DashboardURL }}" style="display: inline-block; padding: 12px 28px; background: #34d399; color: #0f1117; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">View Full Report</a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 30px 0;">
+    <p style="font-size: 12px; color: #4b5563; text-align: center;">&copy; 2025 Efficyon. All rights reserved.</p>
+    <p style="font-size: 11px; color: #374151; text-align: center;">You&rsquo;re receiving this because you have an active Efficyon subscription.</p>
+  </div>
+</body>
+</html>

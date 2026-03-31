@@ -25,6 +25,8 @@ import {
   Layers,
 } from "lucide-react"
 import Link from "next/link"
+import { SavingsCounter } from "@/components/savings-counter"
+import { RenewalAlertsWidget } from "@/components/renewal-alerts-widget"
 
 interface DashboardSummary {
   totalPotentialSavings: number
@@ -353,6 +355,20 @@ export default function UserDashboard() {
       {/* ── Main Dashboard Content ── */}
       {!isLoading && !error && (dashboardData?.tools?.length || 0) > 0 && (
         <>
+          {/* ── Cumulative Savings Counter ── */}
+          {hasRealData && (
+            <div className="animate-slide-up delay-1">
+              <SavingsCounter />
+            </div>
+          )}
+
+          {/* ── Renewal Alerts ── */}
+          {hasRealData && (
+            <div className="animate-slide-up delay-2">
+              <RenewalAlertsWidget />
+            </div>
+          )}
+
           {/* ── KPI Metric Cards — Bento Grid ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Potential Savings — Hero metric */}

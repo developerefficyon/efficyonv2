@@ -146,6 +146,32 @@ async function sendTeamInviteEmail({ email, inviterName, companyName, role, invi
   })
 }
 
+async function sendMonthlyReport({ email, companyName, reportMonth, aiSummary, recommendedAction, totalWaste, savingsRealized, changesHTML, renewalAlertsHTML, quarterlyCtaHTML }) {
+  let template = loadTemplate("monthly-report")
+  if (!template) {
+    return { error: "Monthly report email template not found" }
+  }
+
+  const html = replaceTemplateVariables(template, {
+    CompanyName: companyName || "Your Company",
+    ReportMonth: reportMonth,
+    AiSummary: aiSummary || "No summary available this month.",
+    RecommendedAction: recommendedAction || "Log into Efficyon to review your latest analysis.",
+    TotalWasteIdentified: `$${Math.round(totalWaste || 0).toLocaleString()}`,
+    SavingsRealized: `$${Math.round(savingsRealized || 0).toLocaleString()}`,
+    ChangesHTML: changesHTML || "",
+    RenewalAlertsHTML: renewalAlertsHTML || "",
+    QuarterlyCtaHTML: quarterlyCtaHTML || "",
+    DashboardURL: `${APP_URL}/dashboard/reports/monthly`,
+  })
+
+  return await sendEmail({
+    to: email,
+    subject: `Efficyon Monthly Report — ${reportMonth}`,
+    html,
+  })
+}
+
 function generateSecureToken() {
   return crypto.randomBytes(32).toString("hex")
 }
@@ -157,6 +183,7 @@ module.exports = {
   sendMagicLinkEmail,
   sendEmailChangeConfirmationEmail,
   sendTeamInviteEmail,
+  sendMonthlyReport,
   generateSecureToken,
   APP_URL,
 }

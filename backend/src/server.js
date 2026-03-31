@@ -5,6 +5,7 @@ dotenv.config()
 
 const app = require("./app")
 const { initializeScheduler } = require("./schedulers/agentScheduler")
+const { initializeMonthlyReportScheduler } = require("./schedulers/monthlyReportScheduler")
 
 // Use PORT from env or default to 4000
 const PORT = process.env.PORT || 4000
@@ -21,6 +22,13 @@ app.listen(PORT, () => {
   initializeScheduler().catch((err) => {
     console.error(`[AgentScheduler] Initialization failed: ${err.message}`)
   })
+
+  // Initialize monthly report scheduler
+  try {
+    initializeMonthlyReportScheduler()
+  } catch (err) {
+    console.error(`[MonthlyReport] Scheduler initialization failed: ${err.message}`)
+  }
 })
 
 

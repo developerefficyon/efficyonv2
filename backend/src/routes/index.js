@@ -193,6 +193,23 @@ const {
   getDashboardSummary,
 } = require("../controllers/analysisHistoryController")
 
+// Savings Controller - cumulative savings summary
+const { getSavingsSummary } = require("../controllers/savingsController")
+
+// Renewal Controller - renewal alert detection and management
+const {
+  getRenewalAlerts,
+  dismissRenewal,
+  refreshRenewals,
+} = require("../controllers/renewalController")
+
+// Monthly Report Controller - monthly report generation and viewing
+const {
+  getMonthlyReports,
+  getMonthlyReportByMonth,
+  triggerMonthlyReport,
+} = require("../controllers/monthlyReportController")
+
 const router = express.Router()
 
 // Health
@@ -309,6 +326,19 @@ router.delete("/api/analysis-history/:id", requireAuth, requireRole("owner", "ed
 
 // Dashboard Summary Route
 router.get("/api/dashboard/summary", requireAuth, requireRole("owner", "editor", "viewer"), getDashboardSummary)
+
+// Savings Summary Route
+router.get("/api/dashboard/savings-summary", requireAuth, requireRole("owner", "editor", "viewer"), getSavingsSummary)
+
+// Renewal Alert Routes
+router.get("/api/dashboard/renewal-alerts", requireAuth, requireRole("owner", "editor", "viewer"), getRenewalAlerts)
+router.post("/api/dashboard/renewal-alerts/refresh", requireAuth, requireRole("owner", "editor"), refreshRenewals)
+router.patch("/api/dashboard/renewal-alerts/:id/dismiss", requireAuth, requireRole("owner", "editor"), dismissRenewal)
+
+// Monthly Report Routes
+router.get("/api/dashboard/monthly-reports", requireAuth, requireRole("owner", "editor", "viewer"), getMonthlyReports)
+router.get("/api/dashboard/monthly-reports/:month", requireAuth, requireRole("owner", "editor", "viewer"), getMonthlyReportByMonth)
+router.post("/api/dashboard/monthly-reports/generate", requireAuth, requireRole("owner"), triggerMonthlyReport)
 
 router.get("/api/plans", requireAuth, requireRole("owner", "editor", "viewer"), getPlans)
 router.post("/api/plans", requireAuth, requireRole("owner"), upsertPlans)
