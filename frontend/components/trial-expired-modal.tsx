@@ -26,12 +26,12 @@ const plans: Plan[] = [
   {
     id: "startup",
     name: "Startup",
-    price: "$39",
-    period: "month",
+    price: "$199",
+    period: "6 months",
     description: "For companies with 1-10 employees",
     features: [
       "5 integrations",
-      "10 monthly credits",
+      "10 monthly tokens",
       "Email support",
       "Basic analytics",
     ],
@@ -39,12 +39,12 @@ const plans: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    price: "$119",
-    period: "month",
+    price: "$599",
+    period: "6 months",
     description: "For companies with 11-50 employees",
     features: [
       "15 integrations",
-      "50 monthly credits",
+      "50 monthly tokens",
       "Priority support",
       "Advanced analytics",
     ],
@@ -53,12 +53,12 @@ const plans: Plan[] = [
   {
     id: "custom",
     name: "Enterprise",
-    price: "$299",
-    period: "month",
+    price: "Custom",
+    period: "",
     description: "For companies with 50+ employees",
     features: [
       "Unlimited integrations",
-      "200 monthly credits",
+      "200 monthly tokens",
       "Dedicated support",
       "Custom features",
     ],
@@ -153,7 +153,7 @@ export function TrialExpiredModal({
                 <span className="text-2xl font-bold text-white">
                   {plan.price}
                 </span>
-                <span className="text-sm text-gray-400">/{plan.period}</span>
+                {plan.period && <span className="text-sm text-gray-400">/{plan.period}</span>}
               </div>
               <p className="text-xs text-gray-400 mb-3">{plan.description}</p>
               <ul className="space-y-1.5">

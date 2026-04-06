@@ -1,16 +1,12 @@
 "use client"
 
 import { buttonVariants } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 import { Check, Star } from "lucide-react"
 import Link from "next/link"
-import { useState, useRef } from "react"
-// @ts-ignore - canvas-confetti doesn't have type definitions
-import confetti from "canvas-confetti"
+import { useState } from "react"
 
 interface PricingPlan {
   name: string
@@ -22,6 +18,7 @@ interface PricingPlan {
   buttonText: string
   href: string
   isPopular: boolean
+  monthlyPrice?: string
 }
 
 interface PricingProps {
@@ -35,33 +32,8 @@ export function Pricing({
   title = "Simple, Transparent Pricing",
   description = "Choose the plan that works for you\nAll plans include access to our platform, lead generation tools, and dedicated support.",
 }: PricingProps) {
-  const [isMonthly, setIsMonthly] = useState(true)
+  const [billingPeriod, setBillingPeriod] = useState<"6month" | "monthly" | "annual">("6month")
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const switchRef = useRef<HTMLButtonElement>(null)
-
-  const handleToggle = (checked: boolean) => {
-    setIsMonthly(!checked)
-    if (checked && switchRef.current) {
-      const rect = switchRef.current.getBoundingClientRect()
-      const x = rect.left + rect.width / 2
-      const y = rect.top + rect.height / 2
-
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: {
-          x: x / window.innerWidth,
-          y: y / window.innerHeight,
-        },
-        colors: ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--secondary))", "hsl(var(--muted))"],
-        ticks: 200,
-        gravity: 1.2,
-        decay: 0.94,
-        startVelocity: 30,
-        shapes: ["circle"],
-      })
-    }
-  }
 
   return (
     <div className="container py-20 mx-auto">
@@ -71,14 +43,37 @@ export function Pricing({
       </div>
 
       <div className="flex justify-center mb-10">
-        <label className="relative inline-flex items-center cursor-pointer">
-          <Label>
-            <Switch ref={switchRef as any} checked={!isMonthly} onCheckedChange={handleToggle} className="relative" />
-          </Label>
-        </label>
-        <span className="ml-2 font-semibold text-white">
-          Annual billing <span className="text-blue-400">(Save 20%)</span>
-        </span>
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-white/5 border border-white/10">
+          {([
+            { value: "6month" as const, label: "6 Months", badge: "Best Value" },
+            { value: "monthly" as const, label: "Monthly", badge: null },
+            { value: "annual" as const, label: "Annual", badge: "Save 20%" },
+          ]).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setBillingPeriod(option.value)}
+              className={cn(
+                "relative px-4 py-2 rounded-md text-sm font-semibold transition-all flex items-center gap-2",
+                billingPeriod === option.value
+                  ? "bg-blue-500/20 text-white border border-blue-400/50"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              {option.label}
+              {option.badge && billingPeriod === option.value && (
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full",
+                  option.value === "6month"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-green-500/20 text-green-400"
+                )}>
+                  {option.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto">
@@ -122,14 +117,34 @@ export function Pricing({
               <p className="text-base font-semibold text-gray-300">{plan.name}</p>
               <div className="mt-6 flex items-center justify-center gap-x-2">
                 <span className="text-5xl font-bold tracking-tight text-white transition-all duration-500 ease-out">
-                  ${isMonthly ? plan.price : plan.yearlyPrice}
+                  {plan.price === "Custom"
+                    ? "Custom"
+                    : `$${billingPeriod === "6month"
+                        ? plan.price
+                        : billingPeriod === "annual"
+                          ? plan.yearlyPrice
+                          : (plan.monthlyPrice || plan.yearlyPrice)}`}
                 </span>
-                {plan.period !== "Next 3 months" && (
-                  <span className="text-sm font-semibold leading-6 tracking-wide text-gray-300">/ {plan.period}</span>
+                {plan.price !== "Custom" && plan.period && (
+                  <span className="text-sm font-semibold leading-6 tracking-wide text-gray-300">
+                    / {billingPeriod === "6month"
+                        ? plan.period
+                        : billingPeriod === "annual"
+                          ? "mo"
+                          : "month"}
+                  </span>
                 )}
               </div>
 
-              <p className="text-xs leading-5 text-gray-400">{isMonthly ? "billed monthly" : "billed annually"}</p>
+              <p className="text-xs leading-5 text-gray-400">
+                {plan.price === "Custom"
+                  ? "Contact us for pricing"
+                  : billingPeriod === "6month"
+                    ? "then monthly after 6 months"
+                    : billingPeriod === "annual"
+                      ? "billed annually"
+                      : "billed monthly"}
+              </p>
 
               <ul className="mt-5 gap-2 flex flex-col">
                 {plan.features.map((feature, idx) => (

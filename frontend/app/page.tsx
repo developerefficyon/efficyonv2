@@ -290,9 +290,10 @@ export default function HomePage() {
           plans={[
             {
               name: "Startup",
-              price: "39",
+              price: "199",
+              monthlyPrice: "39",
               yearlyPrice: "31",
-              period: "month",
+              period: "6 months",
               features: [
                 "AI-driven process analysis",
                 "Monthly optimization reports",
@@ -310,9 +311,10 @@ export default function HomePage() {
             },
             {
               name: "Growth",
-              price: "119",
+              price: "599",
+              monthlyPrice: "119",
               yearlyPrice: "95",
-              period: "month",
+              period: "6 months",
               features: [
                 "Everything in Startup +",
                 "Advanced AI analysis",
@@ -333,7 +335,7 @@ export default function HomePage() {
               name: "Enterprise",
               price: "Custom",
               yearlyPrice: "Custom",
-              period: "month",
+              period: "",
               features: [
                 "Everything in Growth +",
                 "Dedicated team",
@@ -342,7 +344,7 @@ export default function HomePage() {
                 "SLA guarantee",
                 "Quarterly strategy review",
                 "Unlimited integrations",
-                "200 monthly credits",
+                "200 monthly tokens",
                 "Unlimited team members",
               ],
               description: "For companies with 50+ employees",

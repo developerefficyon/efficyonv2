@@ -163,6 +163,7 @@ create table if not exists public.plan_catalog (
   description text,
   price_monthly_cents integer not null check (price_monthly_cents >= 0),
   price_annual_cents integer check (price_annual_cents >= 0),
+  price_6month_cents integer check (price_6month_cents >= 0),
   included_tokens integer not null default 0,
   max_integrations integer,
   max_team_members integer,
@@ -170,6 +171,7 @@ create table if not exists public.plan_catalog (
   stripe_product_id text unique,
   stripe_price_monthly_id text unique,
   stripe_price_annual_id text unique,
+  stripe_price_6month_id text unique,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -191,6 +193,7 @@ create table if not exists public.subscriptions (
   canceled_at timestamptz,
   amount_cents integer,
   currency text default 'usd',
+  billing_period text default 'monthly' check (billing_period in ('monthly','annual','6month')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

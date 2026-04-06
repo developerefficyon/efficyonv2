@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,7 +76,7 @@ function OnboardingPageContent() {
     secondaryGoals: [] as string[],
     // Step 4: Plan
     plan: "",
-    billingPeriod: "monthly" as "monthly" | "annual",
+    billingPeriod: "6month" as "6month" | "monthly" | "annual",
     // Step 6: Billing
     billingName: "",
     billingEmail: "",
@@ -534,6 +533,7 @@ function OnboardingPageContent() {
     discount?: string
     popular?: boolean
     originalPrice?: string
+    sixMonthPrice?: string
   }
 
   const plans: Plan[] = [
@@ -557,6 +557,7 @@ function OnboardingPageContent() {
       name: "Startup",
       price: "$39",
       annualPrice: "$31",
+      sixMonthPrice: "$199",
       period: "month",
       description: "For companies with 1-10 employees",
       features: [
@@ -572,6 +573,7 @@ function OnboardingPageContent() {
       name: "Growth",
       price: "$119",
       annualPrice: "$95",
+      sixMonthPrice: "$599",
       period: "month",
       description: "For companies with 11-50 employees",
       features: [
@@ -931,33 +933,36 @@ function OnboardingPageContent() {
                 </CardHeader>
                 <CardContent>
                   {/* Billing Period Toggle */}
-                  <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-black/30 rounded-lg border border-white/10">
-                    <span className={cn(
-                      "text-sm font-medium transition-colors",
-                      formData.billingPeriod === "monthly" ? "text-white" : "text-gray-500"
-                    )}>
-                      Monthly
-                    </span>
-                    <Switch
-                      checked={formData.billingPeriod === "annual"}
-                      onCheckedChange={(checked) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          billingPeriod: checked ? "annual" : "monthly"
-                        }))
-                      }}
-                    />
-                    <span className={cn(
-                      "text-sm font-medium transition-colors",
-                      formData.billingPeriod === "annual" ? "text-white" : "text-gray-500"
-                    )}>
-                      Annual
-                    </span>
-                    {formData.billingPeriod === "annual" && (
-                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                        Save 20%
-                      </span>
-                    )}
+                  <div className="flex items-center justify-center gap-2 mb-6 p-3 bg-black/30 rounded-lg border border-white/10">
+                    {([
+                      { value: "6month" as const, label: "6 Months", badge: "Best Value" },
+                      { value: "monthly" as const, label: "Monthly", badge: null },
+                      { value: "annual" as const, label: "Annual", badge: "Save 20%" },
+                    ]).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, billingPeriod: option.value }))}
+                        className={cn(
+                          "relative px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+                          formData.billingPeriod === option.value
+                            ? "bg-cyan-500/20 text-white border border-cyan-500/50"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        {option.label}
+                        {option.badge && formData.billingPeriod === option.value && (
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded-full",
+                            option.value === "6month"
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-green-500/20 text-green-400"
+                          )}>
+                            {option.badge}
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {plans.map((plan) => (
@@ -1005,8 +1010,19 @@ function OnboardingPageContent() {
                           <span className="text-2xl font-bold text-white">
                             {plan.price === "Custom"
                               ? "Custom"
-                              : (plan.isTrial ? plan.price : (formData.billingPeriod === "annual" ? plan.annualPrice : plan.price))}
+                              : plan.isTrial
+                                ? plan.price
+                                : formData.billingPeriod === "6month" && plan.sixMonthPrice
+                                  ? plan.sixMonthPrice
+                                  : formData.billingPeriod === "annual"
+                                    ? plan.annualPrice
+                                    : plan.price}
                           </span>
+                          {!plan.isTrial && plan.price !== "Custom" && formData.billingPeriod === "6month" && plan.sixMonthPrice && (
+                            <span className="text-sm text-gray-500 line-through ml-1">
+                              ${parseInt(plan.price.replace("$", "")) * 6}
+                            </span>
+                          )}
                           {!plan.isTrial && plan.price !== "Custom" && formData.billingPeriod === "annual" && (
                             <span className="text-sm text-gray-500 line-through ml-1">
                               {plan.price}
@@ -1020,9 +1036,20 @@ function OnboardingPageContent() {
                           <span className="text-sm text-gray-400">
                             {plan.price === "Custom"
                               ? "/month"
-                              : `/${plan.isTrial ? plan.period : (formData.billingPeriod === "annual" ? "mo (billed yearly)" : plan.period)}`}
+                              : plan.isTrial
+                                ? `/${plan.period}`
+                                : formData.billingPeriod === "6month"
+                                  ? "/6 months"
+                                  : formData.billingPeriod === "annual"
+                                    ? "/mo (billed yearly)"
+                                    : `/${plan.period}`}
                           </span>
                         </div>
+                        {!plan.isTrial && plan.price !== "Custom" && formData.billingPeriod === "6month" && plan.sixMonthPrice && (
+                          <p className="text-xs text-yellow-400/80 mb-2">
+                            Then {plan.price}/mo after 6 months
+                          </p>
+                        )}
                         {plan.id === "custom" && (
                           <p className="text-xs text-purple-400 mb-2">Contact sales for pricing</p>
                         )}

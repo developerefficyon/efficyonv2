@@ -88,8 +88,8 @@ async function createPaymentIntent(req, res) {
       return res.status(400).json({ error: "Plan tier is required" })
     }
 
-    if (!["monthly", "annual"].includes(billingPeriod)) {
-      return res.status(400).json({ error: "Invalid billing period. Must be 'monthly' or 'annual'" })
+    if (!["monthly", "annual", "6month"].includes(billingPeriod)) {
+      return res.status(400).json({ error: "Invalid billing period. Must be 'monthly', 'annual', or '6month'" })
     }
 
     // Determine success and cancel URLs based on returnUrl or default to onboarding
@@ -132,9 +132,11 @@ async function createPaymentIntent(req, res) {
         .maybeSingle()
 
       // Create initial subscription record (will be updated by webhook)
-      const initialAmountCents = billingPeriod === "annual"
-        ? plan.price_annual_cents
-        : plan.price_monthly_cents
+      const initialAmountCents = billingPeriod === "6month"
+        ? plan.price_6month_cents
+        : billingPeriod === "annual"
+          ? plan.price_annual_cents
+          : plan.price_monthly_cents
 
       const { data: newSubscription, error: subInsertError } = await supabase
         .from("subscriptions")
@@ -158,9 +160,11 @@ async function createPaymentIntent(req, res) {
     }
 
     // Get the appropriate Stripe Price ID based on billing period
-    const stripePriceId = billingPeriod === "annual"
-      ? plan.stripe_price_annual_id
-      : plan.stripe_price_monthly_id
+    const stripePriceId = billingPeriod === "6month"
+      ? plan.stripe_price_6month_id
+      : billingPeriod === "annual"
+        ? plan.stripe_price_annual_id
+        : plan.stripe_price_monthly_id
 
     if (!stripePriceId) {
       console.error(`[${new Date().toISOString()}] No Stripe Price ID configured for ${plan.name} (${billingPeriod})`)
@@ -194,9 +198,11 @@ async function createPaymentIntent(req, res) {
 
     console.log(`[${new Date().toISOString()}] Checkout session created: ${checkoutSession.id}`)
 
-    const priceAmount = billingPeriod === "annual"
-      ? plan.price_annual_cents
-      : plan.price_monthly_cents
+    const priceAmount = billingPeriod === "6month"
+      ? plan.price_6month_cents
+      : billingPeriod === "annual"
+        ? plan.price_annual_cents
+        : plan.price_monthly_cents
 
     return res.json({
       sessionId: checkoutSession.id,
@@ -208,6 +214,7 @@ async function createPaymentIntent(req, res) {
         price: priceAmount,
         monthlyPrice: plan.price_monthly_cents,
         annualPrice: plan.price_annual_cents,
+        sixMonthPrice: plan.price_6month_cents,
         tokens: plan.included_tokens,
       },
     })
@@ -754,6 +761,9 @@ async function handleCheckoutSessionCompleted(session) {
 
     const companyId = profile.company_id || null
 
+    // Determine billing period from metadata
+    const billingPeriod = session.metadata?.billingPeriod || "monthly"
+
     // Create or update subscription record
     const subscriptionData = {
       user_id: userId,
@@ -768,7 +778,12 @@ async function handleCheckoutSessionCompleted(session) {
       current_period_end: stripeSubscription?.current_period_end
         ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      amount_cents: plan.price_monthly_cents,
+      amount_cents: billingPeriod === "6month"
+        ? plan.price_6month_cents
+        : billingPeriod === "annual"
+          ? plan.price_annual_cents
+          : plan.price_monthly_cents,
+      billing_period: billingPeriod,
       currency: "usd",
       updated_at: new Date().toISOString(),
     }
@@ -1006,6 +1021,45 @@ async function handleInvoicePaymentSucceeded(invoice) {
     if (subError || !subscription) {
       console.warn(`[${new Date().toISOString()}] No subscription found for customer: ${customerId}`)
       return
+    }
+
+    // If this is a 6-month plan renewal, transition to monthly billing
+    if (subscription.billing_period === "6month" && subscription.stripe_subscription_id) {
+      console.log(`[${new Date().toISOString()}] 6-month period ended for user ${subscription.user_id}, transitioning to monthly billing`)
+
+      try {
+        const monthlyPriceId = subscription.plan_catalog?.stripe_price_monthly_id
+        if (monthlyPriceId) {
+          // Get the current Stripe subscription to find the item ID
+          const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
+          const subscriptionItemId = stripeSubscription.items.data[0]?.id
+
+          if (subscriptionItemId) {
+            // Update the Stripe subscription to use the monthly price
+            await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+              items: [{
+                id: subscriptionItemId,
+                price: monthlyPriceId,
+              }],
+              proration_behavior: "none",
+            })
+
+            // Update our database to reflect monthly billing
+            await supabase
+              .from("subscriptions")
+              .update({
+                billing_period: "monthly",
+                amount_cents: subscription.plan_catalog?.price_monthly_cents,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("stripe_customer_id", customerId)
+
+            console.log(`[${new Date().toISOString()}] Successfully transitioned user ${subscription.user_id} from 6-month to monthly billing`)
+          }
+        }
+      } catch (transitionError) {
+        console.error(`[${new Date().toISOString()}] Error transitioning 6-month to monthly:`, transitionError.message)
+      }
     }
 
     const newTokens = subscription.plan_catalog?.included_tokens || 0

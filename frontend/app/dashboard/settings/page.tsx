@@ -61,8 +61,8 @@ const plans: Plan[] = [
   {
     id: "startup",
     name: "Startup",
-    price: "$39",
-    period: "month",
+    price: "$199",
+    period: "6 months",
     description: "For companies with 1-10 employees",
     features: [
       "5 integrations",
@@ -75,8 +75,8 @@ const plans: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    price: "$119",
-    period: "month",
+    price: "$599",
+    period: "6 months",
     description: "For companies with 11-50 employees",
     features: [
       "15 integrations",
@@ -91,8 +91,8 @@ const plans: Plan[] = [
   {
     id: "custom",
     name: "Enterprise",
-    price: "$299",
-    period: "month",
+    price: "Custom",
+    period: "",
     description: "For companies with 50+ employees",
     features: [
       "Unlimited integrations",
@@ -293,6 +293,7 @@ function SettingsContent() {
           planTier: selectedPlan.toLowerCase(),
           email: userEmail,
           companyName: companyName,
+          billingPeriod: "6month",
           returnUrl: "/dashboard/settings",
         }),
       })
@@ -863,7 +864,7 @@ function SettingsContent() {
 
                         <div className="flex items-baseline gap-1 mb-0.5">
                           <span className="text-2xl sm:text-3xl font-semibold text-white">{plan.price}</span>
-                          <span className="text-white/25 text-[12px]">/{plan.period}</span>
+                          {plan.period && <span className="text-white/25 text-[12px]">/{plan.period}</span>}
                         </div>
 
                         <p className="text-white/30 mb-3 text-[11px] leading-relaxed">{plan.description}</p>
