@@ -86,6 +86,62 @@ const INTEGRATIONS = [
       </svg>
     ),
   },
+  {
+    id: "openai",
+    label: "OpenAI",
+    color: "#10A37F",
+    desc: "AI Spend",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
+        <rect width="28" height="28" rx="7" fill="#10A37F" fillOpacity="0.08"/>
+        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#10A37F" strokeOpacity="0.15"/>
+        <circle cx="14" cy="14" r="5.5" stroke="#10A37F" strokeWidth="1.6"/>
+        <path d="M14 8.5v11M8.5 14h11" stroke="#10A37F" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: "anthropic",
+    label: "Anthropic",
+    color: "#D4A27F",
+    desc: "AI Spend",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
+        <rect width="28" height="28" rx="7" fill="#D4A27F" fillOpacity="0.1"/>
+        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#D4A27F" strokeOpacity="0.2"/>
+        <path d="M11 19l3-10 3 10M12 16h4" stroke="#D4A27F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: "gemini",
+    label: "Gemini",
+    color: "#4285F4",
+    desc: "AI Spend",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
+        <rect width="28" height="28" rx="7" fill="#4285F4" fillOpacity="0.08"/>
+        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#4285F4" strokeOpacity="0.18"/>
+        <path d="M14 7l1.6 5.4L21 14l-5.4 1.6L14 21l-1.6-5.4L7 14l5.4-1.6L14 7z" fill="#4285F4" fillOpacity="0.7"/>
+      </svg>
+    ),
+  },
+  {
+    id: "googleworkspace",
+    label: "Google Workspace",
+    color: "#34A853",
+    desc: "Productivity & Identity",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
+        <rect width="28" height="28" rx="7" fill="#34A853" fillOpacity="0.07"/>
+        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#34A853" strokeOpacity="0.15"/>
+        <circle cx="10" cy="14" r="2.2" fill="#4285F4"/>
+        <circle cx="18" cy="14" r="2.2" fill="#34A853"/>
+        <circle cx="14" cy="10" r="2.2" fill="#FBBC04"/>
+        <circle cx="14" cy="18" r="2.2" fill="#EA4335"/>
+      </svg>
+    ),
+  },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -789,6 +845,346 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Shopify access tokens are permanent and do not expire unless the app is uninstalled. Your API secret key and access token are encrypted at rest using AES-256-GCM. Effycion verifies all OAuth callbacks using HMAC-SHA256. All scopes are read-only &mdash; Effycion will never modify your store data.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* OpenAI Section */}
+      <section id="openai" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "openai" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#10A37F]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            {INTEGRATIONS[5].logo}
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">OpenAI</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#10A37F]/50 mt-1">&#8226;</span>An OpenAI organization (Team, Enterprise, or Pay-as-you-go)</li>
+              <li className="flex items-start gap-2"><span className="text-[#10A37F]/50 mt-1">&#8226;</span>Owner role on the OpenAI organization (required to mint Admin keys)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#10A37F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://platform.openai.com/settings/organization/admin-keys" target="_blank" rel="noopener noreferrer" className="text-[#10A37F]/80 hover:text-[#10A37F] inline-flex items-center gap-1 transition-colors">
+                  platform.openai.com/settings/organization/admin-keys <ExternalLink className="w-3 h-3" />
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#10A37F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create new admin key</span>. Give it a name (e.g. &quot;Effycion&quot;).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#10A37F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Copy the generated key (starts with <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">sk-admin-</span>) immediately &mdash; it will not be shown again.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#10A37F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#10A37F]/80 hover:text-[#10A37F] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, select OpenAI, and paste your Admin key.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#10A37F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. Effycion will pull the last 90 days of usage and cost data from the Usage and Costs APIs.
+              </p>
+            </div>
+          </div>
+
+          <SecurityBox>
+            Admin keys are read-only for usage/cost endpoints in Effycion &mdash; we never call inference, mutate org settings, or create resources. Your key is encrypted at rest using AES-256-GCM and you can revoke it at any time from the OpenAI dashboard.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Anthropic Section */}
+      <section id="anthropic" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "anthropic" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#D4A27F]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            {INTEGRATIONS[6].logo}
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Anthropic</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#D4A27F]/50 mt-1">&#8226;</span>An Anthropic Console organization with billing enabled</li>
+              <li className="flex items-start gap-2"><span className="text-[#D4A27F]/50 mt-1">&#8226;</span>Admin role on the workspace (required to create Admin API keys)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#D4A27F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://console.anthropic.com/settings/admin-keys" target="_blank" rel="noopener noreferrer" className="text-[#D4A27F]/80 hover:text-[#D4A27F] inline-flex items-center gap-1 transition-colors">
+                  console.anthropic.com/settings/admin-keys <ExternalLink className="w-3 h-3" />
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#D4A27F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create Admin Key</span>. Name it (e.g. &quot;Effycion&quot;) and confirm.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#D4A27F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Copy the key (starts with <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">sk-ant-admin-</span>) immediately &mdash; it will not be shown again.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#D4A27F" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#D4A27F]/80 hover:text-[#D4A27F] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, select Anthropic, paste your Admin key, and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+          </div>
+
+          <SecurityBox>
+            Effycion only calls Anthropic&apos;s Usage and Cost Reports endpoints &mdash; never the Messages API. The Admin key is encrypted at rest using AES-256-GCM and can be revoked from the Anthropic Console at any time.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Gemini Section */}
+      <section id="gemini" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "gemini" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#4285F4]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            {INTEGRATIONS[7].logo}
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Gemini (Vertex AI)</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span>A Google Cloud project with the Vertex AI / Gemini API enabled</li>
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span>Cloud Billing enabled and billing export to BigQuery configured (recommended for actual cost)</li>
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span>IAM permission to create service accounts and grant roles</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noopener noreferrer" className="text-[#4285F4]/80 hover:text-[#4285F4] inline-flex items-center gap-1 transition-colors">
+                  console.cloud.google.com &rsaquo; IAM &rsaquo; Service Accounts <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}and select your project.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create service account</span>. Name it (e.g. &quot;effycion-gemini-reader&quot;).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Grant the following IAM roles:
+              </p>
+            </div>
+            <div className="ml-10 flex flex-wrap gap-1.5">
+              <ScopeBadge>roles/monitoring.viewer</ScopeBadge>
+              <ScopeBadge>roles/bigquery.dataViewer</ScopeBadge>
+              <ScopeBadge>roles/bigquery.jobUser</ScopeBadge>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open the service account &gt; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Keys</span> &gt; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Add key &rsaquo; Create new key &rsaquo; JSON</span>. A <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">.json</span> credentials file will download.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                <span className="text-white/55">(Optional, recommended)</span> Set up a billing export to BigQuery so Effycion can pull <em>actual</em> costs instead of estimates. Note the fully-qualified table name, e.g. <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">project.dataset.gcp_billing_export_v1_XXXXXX</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#4285F4]/80 hover:text-[#4285F4] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, select Gemini, paste the contents of the JSON key file, and (if applicable) the BigQuery billing table name.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. Effycion will validate the credentials and start syncing usage.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="Estimated vs. Actual cost">
+            Without a BigQuery billing export, Effycion estimates Gemini cost using token counts from Cloud Monitoring multiplied by Vertex AI list prices. With the export, costs come straight from your Cloud Billing data and reflect any committed-use or negotiated discounts.
+          </InfoBox>
+
+          <SecurityBox>
+            The service account JSON is encrypted at rest using AES-256-GCM. All granted roles are read-only. You can revoke access at any time by deleting the service account key from the Google Cloud Console.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Google Workspace Section */}
+      <section id="googleworkspace" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "googleworkspace" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#34A853]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            {INTEGRATIONS[8].logo}
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Google Workspace</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity & Identity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#34A853]/50 mt-1">&#8226;</span>A Google Workspace tenant (Business Starter or higher)</li>
+              <li className="flex items-start gap-2"><span className="text-[#34A853]/50 mt-1">&#8226;</span>Super Admin role in the Workspace Admin Console</li>
+              <li className="flex items-start gap-2"><span className="text-[#34A853]/50 mt-1">&#8226;</span>A Google Cloud project where you can create an OAuth client</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-[#34A853]/80 hover:text-[#34A853] inline-flex items-center gap-1 transition-colors">
+                  console.cloud.google.com &rsaquo; APIs & Services &rsaquo; Credentials <ExternalLink className="w-3 h-3" />
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Configure the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">OAuth consent screen</span> as <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Internal</span> (so only your Workspace users can authorize).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Enable these APIs on the project: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Admin SDK API</span> and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Reports API</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create Credentials &rsaquo; OAuth client ID &rsaquo; Web application</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Set the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Authorized redirect URI</span> to:
+              </p>
+            </div>
+            <div className="ml-10 overflow-x-auto rounded-lg border border-white/[0.05] bg-white/[0.02] px-3.5 py-2">
+              <code className="text-[11.5px] font-mono text-white/55">https://efficyonv2.onrender.com/api/integrations/googleworkspace/callback</code>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Save and copy the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client ID</span> and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client Secret</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                The following read-only scopes will be requested when you authorize:
+              </p>
+            </div>
+            <div className="ml-10 flex flex-wrap gap-1.5">
+              <ScopeBadge>admin.directory.user.readonly</ScopeBadge>
+              <ScopeBadge>admin.directory.customer.readonly</ScopeBadge>
+              <ScopeBadge>admin.directory.group.readonly</ScopeBadge>
+              <ScopeBadge>admin.reports.audit.readonly</ScopeBadge>
+              <ScopeBadge>admin.reports.usage.readonly</ScopeBadge>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={8} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#34A853]/80 hover:text-[#34A853] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, select Google Workspace, and paste your Client ID and Client Secret.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={9} color="#34A853" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. You&apos;ll be redirected to Google to authorize as a Super Admin. After consent, Effycion begins pulling user, license, and usage data.
+              </p>
+            </div>
+          </div>
+
+          <SecurityBox>
+            All requested scopes are read-only. Your OAuth client secret and refresh tokens are encrypted at rest using AES-256-GCM. Effycion will never modify users, groups, or settings in your Workspace tenant. Access can be revoked at any time from <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">admin.google.com &rsaquo; Security &rsaquo; API controls</span>.
           </SecurityBox>
         </div>
       </section>
