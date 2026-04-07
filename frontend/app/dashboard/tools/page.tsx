@@ -42,6 +42,7 @@ import {
 import Link from "next/link"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
+import { ToolLogo } from "@/components/tools/tool-logos"
 import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
 
@@ -147,6 +148,10 @@ export default function ToolsPage() {
     clientId: "",
     clientSecret: "",
   })
+  const [openaiForm, setOpenaiForm] = useState({ apiKey: "" })
+  const [anthropicForm, setAnthropicForm] = useState({ apiKey: "" })
+  const [geminiForm, setGeminiForm] = useState({ serviceAccountJson: "", bigqueryTable: "" })
+  const [googleWorkspaceForm, setGoogleWorkspaceForm] = useState({ clientId: "", clientSecret: "" })
 
   const loadTools = useCallback(async () => {
     try {
@@ -269,6 +274,24 @@ export default function ToolsPage() {
     const hubspotStatus = params.get("hubspot")
     const quickbooksStatus = params.get("quickbooks")
     const shopifyStatus = params.get("shopify")
+    const googleWorkspaceStatus = params.get("googleworkspace")
+
+    if (googleWorkspaceStatus) {
+      setIsConnecting(false)
+      window.history.replaceState({}, "", window.location.pathname)
+      oauthCallbackProcessedRef.current = true
+      if (googleWorkspaceStatus === "connected") {
+        toast.success("Google Workspace connected successfully!", {
+          description: "Your Google Workspace integration is now active.",
+          duration: 5000,
+        })
+      } else {
+        toast.error("Failed to connect Google Workspace", {
+          description: googleWorkspaceStatus.replace("error_", "").replace(/_/g, " "),
+          duration: 10000,
+        })
+      }
+    }
 
     // Handle Microsoft 365 OAuth callback immediately (before auth check)
     if (microsoft365Status) {
@@ -1244,6 +1267,254 @@ export default function ToolsPage() {
     }
   }
 
+  const handleConnectOpenAI = async () => {
+    const apiKey = openaiForm.apiKey.trim()
+    if (!apiKey) {
+      toast.error("Please paste your OpenAI Admin API key")
+      return
+    }
+    if (!apiKey.startsWith("sk-admin-")) {
+      toast.error("That looks like a regular API key", {
+        description: "OpenAI cost analysis requires an Admin key (starts with sk-admin-).",
+      })
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/openai/connect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ api_key: apiKey }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect OpenAI")
+      }
+
+      toast.success("OpenAI connected", {
+        description: "Backfilling 90 days of usage in the background…",
+      })
+      setOpenaiForm({ apiKey: "" })
+      setSelectedTool("")
+      setIsConnectModalOpen(false)
+      await loadIntegrations()
+    } catch (err: any) {
+      toast.error("Failed to connect OpenAI", { description: err.message })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleConnectAnthropic = async () => {
+    const apiKey = anthropicForm.apiKey.trim()
+    if (!apiKey) {
+      toast.error("Please paste your Anthropic Admin API key")
+      return
+    }
+    if (!apiKey.startsWith("sk-ant-admin")) {
+      toast.error("That looks like a regular API key", {
+        description: "Anthropic cost analysis requires an Admin key (starts with sk-ant-admin01-).",
+      })
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/anthropic/connect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ api_key: apiKey }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect Anthropic")
+      }
+
+      toast.success("Anthropic connected", {
+        description: "Backfilling 90 days of usage in the background…",
+      })
+      setAnthropicForm({ apiKey: "" })
+      setSelectedTool("")
+      setIsConnectModalOpen(false)
+      await loadIntegrations()
+    } catch (err: any) {
+      toast.error("Failed to connect Anthropic", { description: err.message })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleConnectGoogleWorkspace = async () => {
+    if (!googleWorkspaceForm.clientId || !googleWorkspaceForm.clientSecret) {
+      toast.error("Please fill in Client ID and Client Secret")
+      return
+    }
+
+    setIsConnecting(true)
+    let createdIntegrationId: string | null = null
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      // Save credentials first (status=pending), then trigger OAuth
+      const res = await fetch(`${apiBase}/api/integrations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          integrations: [
+            {
+              tool_name: "GoogleWorkspace",
+              connection_type: "oauth",
+              status: "pending",
+              client_id: googleWorkspaceForm.clientId,
+              client_secret: googleWorkspaceForm.clientSecret,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+        if (res.status === 403 && errorData.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: errorData.message || `Your plan allows up to ${errorData.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          setIsConnecting(false)
+          return
+        }
+        throw new Error(errorData.error || "Failed to save Google Workspace configuration")
+      }
+
+      const resData = await res.json()
+      createdIntegrationId = resData.integrations?.[0]?.id || null
+
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/googleworkspace/oauth/start`, {
+        method: "GET",
+        headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+      })
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start OAuth")
+      }
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+      if (!redirectUrl) throw new Error("No OAuth URL returned from backend")
+
+      toast.success("Redirecting to Google to authorize...", {
+        description: "You'll be taken to Google to grant access.",
+      })
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error connecting Google Workspace:", error)
+      toast.error("Failed to connect Google Workspace", {
+        description: error.message || "An error occurred.",
+      })
+      if (createdIntegrationId) {
+        cleanupFailedIntegration(createdIntegrationId)
+      }
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleConnectGemini = async () => {
+    const json = geminiForm.serviceAccountJson.trim()
+    if (!json) {
+      toast.error("Please paste your service account JSON")
+      return
+    }
+    // Basic shape check before sending — backend re-validates against Google
+    try {
+      const parsed = JSON.parse(json)
+      if (parsed.type !== "service_account" || !parsed.private_key || !parsed.client_email) {
+        toast.error("That doesn't look like a service account JSON", {
+          description: "It must include type='service_account', private_key, and client_email.",
+        })
+        return
+      }
+    } catch {
+      toast.error("Invalid JSON", { description: "Could not parse the pasted text as JSON." })
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const res = await fetch(`${apiBase}/api/integrations/gemini/connect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          service_account_json: json,
+          bigquery_table: geminiForm.bigqueryTable.trim() || null,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect Gemini")
+      }
+
+      toast.success("Gemini connected", {
+        description: geminiForm.bigqueryTable
+          ? "Backfilling 90 days of usage from BigQuery export…"
+          : "Backfilling 90 days of usage from Cloud Monitoring (estimated cost)…",
+      })
+      setGeminiForm({ serviceAccountJson: "", bigqueryTable: "" })
+      setSelectedTool("")
+      setIsConnectModalOpen(false)
+      await loadIntegrations()
+    } catch (err: any) {
+      toast.error("Failed to connect Gemini", { description: err.message })
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
   const handleSyncNow = async (integration: Integration) => {
     setSyncingId(integration.id)
     try {
@@ -1658,6 +1929,9 @@ export default function ToolsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
             <Input
+              type="search"
+              name="tool-search"
+              autoComplete="off"
               placeholder="Search tools..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1769,14 +2043,19 @@ export default function ToolsPage() {
                 <CardContent className="p-4 pt-5">
                   {/* Header row */}
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        tool.status === "connected" ? "bg-emerald-400" :
-                        tool.status === "error" || tool.status === "expired" ? "bg-red-400" :
-                        tool.status === "pending" ? "bg-amber-400" : "bg-white/15"
-                      }`} />
-                      <div>
-                        <p className="text-[14px] font-medium text-white/85">{tool.name}</p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative shrink-0">
+                        <ToolLogo name={tool.name} size={36} />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0a] ${
+                            tool.status === "connected" ? "bg-emerald-400" :
+                            tool.status === "error" || tool.status === "expired" ? "bg-red-400" :
+                            tool.status === "pending" ? "bg-amber-400" : "bg-white/15"
+                          }`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-white/85 truncate">{tool.name}</p>
                         <p className="text-[11px] text-white/25">{tool.category}</p>
                       </div>
                     </div>
@@ -1902,57 +2181,17 @@ export default function ToolsPage() {
           <div className="px-6 pb-6">
             {/* Tool Picker Grid */}
             {!selectedTool && (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 -mr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {[
-                  { id: "fortnox", name: "Fortnox", desc: "Invoices, suppliers & accounting", category: "Finance", color: "#2DB250", logo: (
-                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
-                      <rect width="40" height="40" rx="10" fill="#2DB250" fillOpacity="0.08"/>
-                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#2DB250" strokeOpacity="0.1"/>
-                      <path d="M13 14h14M13 19h10M13 24h7" stroke="#2DB250" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                  )},
-                  { id: "microsoft365", name: "Microsoft 365", desc: "Users, licenses & productivity tools", category: "Productivity", color: "#0078D4", logo: (
-                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
-                      <rect width="40" height="40" rx="10" fill="#0078D4" fillOpacity="0.06"/>
-                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#0078D4" strokeOpacity="0.08"/>
-                      <rect x="11" y="11" width="8" height="8" rx="1.5" fill="#F25022"/>
-                      <rect x="21" y="11" width="8" height="8" rx="1.5" fill="#7FBA00"/>
-                      <rect x="11" y="21" width="8" height="8" rx="1.5" fill="#00A4EF"/>
-                      <rect x="21" y="21" width="8" height="8" rx="1.5" fill="#FFB900"/>
-                    </svg>
-                  )},
-                  { id: "hubspot", name: "HubSpot", desc: "Contacts, deals & marketing data", category: "CRM", color: "#FF7A59", logo: (
-                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
-                      <rect width="40" height="40" rx="10" fill="#FF7A59" fillOpacity="0.06"/>
-                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#FF7A59" strokeOpacity="0.08"/>
-                      <g transform="translate(10, 9)">
-                        <circle cx="14" cy="13" r="4" stroke="#FF7A59" strokeWidth="2"/>
-                        <path d="M14 9V5.5" stroke="#FF7A59" strokeWidth="2" strokeLinecap="round"/>
-                        <circle cx="14" cy="4" r="1.5" fill="#FF7A59"/>
-                        <path d="M10.5 15.5L4 20" stroke="#FF7A59" strokeWidth="2" strokeLinecap="round"/>
-                        <circle cx="3" cy="20.5" r="1.5" fill="#FF7A59"/>
-                      </g>
-                    </svg>
-                  )},
-                  { id: "quickbooks", name: "QuickBooks", desc: "Bills, expenses & financial reports", category: "Finance", color: "#2CA01C", logo: (
-                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
-                      <rect width="40" height="40" rx="10" fill="#2CA01C" fillOpacity="0.06"/>
-                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#2CA01C" strokeOpacity="0.08"/>
-                      <circle cx="20" cy="20" r="9" stroke="#2CA01C" strokeWidth="1.5" strokeOpacity="0.3"/>
-                      <path d="M15.5 17h-1.5a2.5 2.5 0 000 5h1.5" stroke="#2CA01C" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M24.5 23h1.5a2.5 2.5 0 000-5h-1.5" stroke="#2CA01C" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                  )},
-                  { id: "shopify", name: "Shopify", desc: "Products, orders & customer data", category: "E-Commerce", color: "#95BF47", logo: (
-                    <svg viewBox="0 0 40 40" className="w-10 h-10 shrink-0" fill="none">
-                      <rect width="40" height="40" rx="10" fill="#95BF47" fillOpacity="0.06"/>
-                      <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#95BF47" strokeOpacity="0.08"/>
-                      <g transform="translate(11, 9)">
-                        <path d="M15 3.5c-.2-.6-.7-1-1.2-1l-.5-.3c-.3-.3-.7-.5-1.3-.5-2.7 0-4.2 3.3-4.6 5l-2.5.8c-.8.2-.8.3-.9 1L2.2 20l10.3 1.8 5.5-1.4S15 4.1 15 3.5z" fill="#95BF47"/>
-                        <path d="M13.8 2.5c-.1 0-.2 0-.3.1l-.6 2a5 5 0 00-3-1c-2.4 0-3.6 2-4 3.5L3.5 8c-.7.2-.7.2-.8.9L1 20l9 1.6 5-1.2S14 3 13.8 2.5z" fill="#5E8E3E"/>
-                      </g>
-                    </svg>
-                  )},
+                  { id: "fortnox", name: "Fortnox", desc: "Invoices, suppliers & accounting", category: "Finance", color: "#2DB250" },
+                  { id: "microsoft365", name: "Microsoft 365", desc: "Users, licenses & productivity tools", category: "Productivity", color: "#0078D4" },
+                  { id: "hubspot", name: "HubSpot", desc: "Contacts, deals & marketing data", category: "CRM", color: "#FF7A59" },
+                  { id: "quickbooks", name: "QuickBooks", desc: "Bills, expenses & financial reports", category: "Finance", color: "#2CA01C" },
+                  { id: "shopify", name: "Shopify", desc: "Products, orders & customer data", category: "E-Commerce", color: "#95BF47" },
+                  { id: "openai", name: "OpenAI", desc: "ChatGPT API spend & cost analysis", category: "AI", color: "#10A37F" },
+                  { id: "anthropic", name: "Anthropic", desc: "Claude API spend & cost analysis", category: "AI", color: "#D97757" },
+                  { id: "gemini", name: "Gemini", desc: "Google Gemini API spend & cost analysis", category: "AI", color: "#4285F4" },
+                  { id: "googleworkspace", name: "Google Workspace", desc: "Users, licenses & directory data", category: "Productivity", color: "#4285F4" },
                 ].map((tool) => {
                   const alreadyConnected = integrations.some(
                     (i) => i.tool_name.toLowerCase().replace(/\s+/g, '') === tool.id.replace(/\s+/g, '')
@@ -1969,7 +2208,7 @@ export default function ToolsPage() {
                       }`}
                       style={!alreadyConnected ? { ["--tool-color" as string]: tool.color } : undefined}
                     >
-                      {tool.logo}
+                      <ToolLogo name={tool.id} size={40} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-[13px] font-medium text-white/90">{tool.name}</p>
@@ -2390,6 +2629,198 @@ export default function ToolsPage() {
                 </div>
               </div>
             )}
+
+            {selectedTool === "openai" && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="openai-admin-key" className="text-white/50 text-[12px] font-medium">
+                    Admin API Key <span className="text-red-400/70">*</span>
+                  </Label>
+                  <Input
+                    id="openai-admin-key"
+                    name="openai-admin-key"
+                    type="password"
+                    placeholder="sk-admin-..."
+                    value={openaiForm.apiKey}
+                    onChange={(e) => setOpenaiForm({ apiKey: e.target.value })}
+                    autoComplete="new-password"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
+                  />
+                  <p className="text-[10.5px] text-white/15">
+                    Must start with <code>sk-admin-</code>. Regular project keys won&apos;t work.
+                  </p>
+                </div>
+
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to platform.openai.com → Organization → Admin keys</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Create a new Admin key with billing read access</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Paste it here — we&apos;ll backfill 90 days of usage</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            {selectedTool === "googleworkspace" && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gw-client-id" className="text-white/50 text-[12px] font-medium">
+                    Client ID <span className="text-red-400/70">*</span>
+                  </Label>
+                  <Input
+                    id="gw-client-id"
+                    name="gw-client-id"
+                    type="text"
+                    placeholder="123456789-xxxxxxx.apps.googleusercontent.com"
+                    value={googleWorkspaceForm.clientId}
+                    onChange={(e) => setGoogleWorkspaceForm({ ...googleWorkspaceForm, clientId: e.target.value })}
+                    autoComplete="off"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="gw-client-secret" className="text-white/50 text-[12px] font-medium">
+                    Client Secret <span className="text-red-400/70">*</span>
+                  </Label>
+                  <Input
+                    id="gw-client-secret"
+                    name="gw-client-secret"
+                    type="password"
+                    placeholder="GOCSPX-..."
+                    value={googleWorkspaceForm.clientSecret}
+                    onChange={(e) => setGoogleWorkspaceForm({ ...googleWorkspaceForm, clientSecret: e.target.value })}
+                    autoComplete="new-password"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
+                  />
+                </div>
+
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>In Google Cloud Console, create an OAuth 2.0 Client ID (type: Web application)</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Add the Effycion callback URL as an authorized redirect URI</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Enable Admin SDK API in the same project; sign in as a Workspace admin when prompted</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">04</span>Paste Client ID and Client Secret here</li>
+                  </ol>
+                  <p className="text-[10.5px] text-white/15 mt-2.5">
+                    Required scopes: <code className="text-white/30">admin.directory.user.readonly</code>, <code className="text-white/30">admin.directory.customer.readonly</code>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {selectedTool === "gemini" && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gemini-sa-json" className="text-white/50 text-[12px] font-medium">
+                    Service Account JSON <span className="text-red-400/70">*</span>
+                  </Label>
+                  <textarea
+                    id="gemini-sa-json"
+                    name="gemini-sa-json"
+                    placeholder='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----..."}'
+                    value={geminiForm.serviceAccountJson}
+                    onChange={(e) => setGeminiForm({ ...geminiForm, serviceAccountJson: e.target.value })}
+                    autoComplete="off"
+                    spellCheck={false}
+                    rows={6}
+                    className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 text-[11px] font-mono rounded-lg p-3 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all resize-y"
+                  />
+                  <p className="text-[10.5px] text-white/15">
+                    Paste the full JSON key file. Stored encrypted with AES-256-GCM.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="gemini-bq-table" className="text-white/50 text-[12px] font-medium">
+                    BigQuery Billing Export Table <span className="text-white/25 font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="gemini-bq-table"
+                    name="gemini-bq-table"
+                    type="text"
+                    placeholder="myproject.billing_export.gcp_billing_export_v1_XXXXXX"
+                    value={geminiForm.bigqueryTable}
+                    onChange={(e) => setGeminiForm({ ...geminiForm, bigqueryTable: e.target.value })}
+                    autoComplete="off"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[12px] font-mono rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
+                  />
+                  <p className="text-[10.5px] text-white/15">
+                    With BigQuery export connected, costs are <strong>actual</strong>. Without it,
+                    we pull token counts from Cloud Monitoring and estimate cost from Google&apos;s public price table.
+                  </p>
+                </div>
+
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>In Google Cloud Console, create a service account in the project where Gemini runs</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Grant role <code className="text-white/50">Monitoring Viewer</code> (and <code className="text-white/50">BigQuery Data Viewer</code> if using export)</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Create a JSON key for the service account and paste it above</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            {selectedTool === "anthropic" && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="anthropic-admin-key" className="text-white/50 text-[12px] font-medium">
+                    Admin API Key <span className="text-red-400/70">*</span>
+                  </Label>
+                  <Input
+                    id="anthropic-admin-key"
+                    name="anthropic-admin-key"
+                    type="password"
+                    placeholder="sk-ant-admin01-..."
+                    value={anthropicForm.apiKey}
+                    onChange={(e) => setAnthropicForm({ apiKey: e.target.value })}
+                    autoComplete="new-password"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    className="bg-white/[0.03] border-white/[0.06] text-white/80 text-[13px] rounded-lg h-10 focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/10 placeholder:text-white/15 transition-all"
+                  />
+                  <p className="text-[10.5px] text-white/15">
+                    Must start with <code>sk-ant-admin01-</code>. Regular API keys won&apos;t work.
+                  </p>
+                </div>
+
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-white/[0.025] to-white/[0.01] border border-white/[0.05] mt-5">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="w-2.5 h-2.5 text-emerald-400/70" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-white/50">Quick Setup</p>
+                  </div>
+                  <ol className="text-[11.5px] text-white/30 space-y-2 ml-0.5">
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">01</span>Go to console.anthropic.com → Settings → Admin Keys</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">02</span>Create an Admin key with usage &amp; billing read access</li>
+                    <li className="flex gap-2.5"><span className="text-emerald-400/40 font-mono text-[10px] mt-px shrink-0">03</span>Paste it here — we&apos;ll backfill 90 days of usage</li>
+                  </ol>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer with actions */}
@@ -2407,6 +2838,10 @@ export default function ToolsPage() {
                     setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
                     setQuickbooksForm({ clientId: "", clientSecret: "" })
                     setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
+                    setOpenaiForm({ apiKey: "" })
+                    setAnthropicForm({ apiKey: "" })
+                    setGeminiForm({ serviceAccountJson: "", bigqueryTable: "" })
+                    setGoogleWorkspaceForm({ clientId: "", clientSecret: "" })
                   }}
                   className="border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.05] rounded-lg h-9 text-[12.5px] px-4 transition-all"
                 >
@@ -2424,6 +2859,14 @@ export default function ToolsPage() {
                       handleConnectQuickBooks()
                     } else if (selectedTool === "shopify") {
                       handleConnectShopify()
+                    } else if (selectedTool === "openai") {
+                      handleConnectOpenAI()
+                    } else if (selectedTool === "anthropic") {
+                      handleConnectAnthropic()
+                    } else if (selectedTool === "gemini") {
+                      handleConnectGemini()
+                    } else if (selectedTool === "googleworkspace") {
+                      handleConnectGoogleWorkspace()
                     }
                   }}
                   disabled={
@@ -2433,6 +2876,10 @@ export default function ToolsPage() {
                     (selectedTool === "hubspot" && (!hubspotForm.clientId || !hubspotForm.clientSecret)) ||
                     (selectedTool === "quickbooks" && (!quickbooksForm.clientId || !quickbooksForm.clientSecret)) ||
                     (selectedTool === "shopify" && (!shopifyForm.shopDomain || !shopifyForm.clientId || !shopifyForm.clientSecret)) ||
+                    (selectedTool === "openai" && !openaiForm.apiKey) ||
+                    (selectedTool === "anthropic" && !anthropicForm.apiKey) ||
+                    (selectedTool === "gemini" && !geminiForm.serviceAccountJson) ||
+                    (selectedTool === "googleworkspace" && (!googleWorkspaceForm.clientId || !googleWorkspaceForm.clientSecret)) ||
                     isConnecting
                   }
                   className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold disabled:opacity-30 disabled:hover:bg-emerald-500 rounded-lg h-9 text-[12.5px] px-5 transition-all shadow-[0_0_20px_-4px_rgba(52,211,153,0.3)] hover:shadow-[0_0_24px_-2px_rgba(52,211,153,0.4)] disabled:shadow-none"

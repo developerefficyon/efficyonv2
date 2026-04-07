@@ -81,7 +81,7 @@ async function saveAnalysis(req, res) {
       duplicateQuery = duplicateQuery
         .eq("parameters->>startDate", params.startDate || null)
         .eq("parameters->>endDate", params.endDate || null)
-    } else if (provider === "Microsoft365" || provider === "HubSpot") {
+    } else if (provider === "Microsoft365" || provider === "HubSpot" || provider === "GoogleWorkspace") {
       duplicateQuery = duplicateQuery
         .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
     }
@@ -362,6 +362,17 @@ function extractSummary(analysisData, provider) {
     if (analysisData.licenseAnalysis?.summary?.healthScore !== undefined) {
       summary.healthScore = analysisData.licenseAnalysis.summary.healthScore
     }
+  } else if (provider === "GoogleWorkspace") {
+    // Google Workspace analyzer (services/googleWorkspaceCostLeakAnalysis.js)
+    // intentionally returns the same overallSummary shape as M365 so the
+    // shared history surface (rendered via the existing analysis-history flow)
+    // can read it without a Google-specific code path here.
+    const overall = analysisData.overallSummary || {}
+    summary.totalFindings = overall.totalFindings || 0
+    summary.totalPotentialSavings = overall.totalPotentialSavings || 0
+    summary.highSeverity = overall.highSeverity || 0
+    summary.mediumSeverity = overall.mediumSeverity || 0
+    summary.lowSeverity = overall.lowSeverity || 0
   } else if (provider === "QuickBooks") {
     const overall = analysisData.overallSummary || {}
     summary.totalFindings = overall.totalFindings || 0

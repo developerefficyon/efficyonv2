@@ -6,6 +6,7 @@ dotenv.config()
 const app = require("./app")
 const { initializeScheduler } = require("./schedulers/agentScheduler")
 const { initializeMonthlyReportScheduler } = require("./schedulers/monthlyReportScheduler")
+const { initializeOpenAISyncScheduler } = require("./schedulers/openaiSyncScheduler")
 
 // Use PORT from env or default to 4000
 const PORT = process.env.PORT || 4000
@@ -28,6 +29,13 @@ app.listen(PORT, () => {
     initializeMonthlyReportScheduler()
   } catch (err) {
     console.error(`[MonthlyReport] Scheduler initialization failed: ${err.message}`)
+  }
+
+  // Initialize OpenAI usage sync scheduler
+  try {
+    initializeOpenAISyncScheduler()
+  } catch (err) {
+    console.error(`[OpenAISync] Scheduler initialization failed: ${err.message}`)
   }
 })
 

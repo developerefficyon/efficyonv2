@@ -50,6 +50,45 @@ const {
   getTools,
 } = require("../controllers/integrationController")
 
+// OpenAI cost analysis tool integration
+const {
+  connect: openaiConnect,
+  disconnect: openaiDisconnect,
+  sync: openaiSync,
+  getUsage: openaiGetUsage,
+  getStatus: openaiGetStatus,
+} = require("../controllers/openaiUsageController")
+
+// Anthropic cost analysis tool integration
+const {
+  connect: anthropicConnect,
+  disconnect: anthropicDisconnect,
+  sync: anthropicSync,
+  getUsage: anthropicGetUsage,
+  getStatus: anthropicGetStatus,
+} = require("../controllers/anthropicUsageController")
+
+// Gemini cost analysis tool integration (service account auth)
+const {
+  connect: geminiConnect,
+  disconnect: geminiDisconnect,
+  sync: geminiSync,
+  getUsage: geminiGetUsage,
+  getStatus: geminiGetStatus,
+} = require("../controllers/geminiUsageController")
+
+// Google Workspace OAuth + Admin SDK integration
+const {
+  startGoogleWorkspaceOAuth,
+  googleWorkspaceOAuthCallback,
+  getGoogleWorkspaceUsers,
+  getGoogleWorkspaceDomain,
+  getGoogleWorkspaceGroups,
+  getGoogleWorkspaceLicenses,
+  getGoogleWorkspaceReports,
+  analyzeGoogleWorkspaceCostLeaksEndpoint,
+} = require("../controllers/googleWorkspaceController")
+
 // Fortnox Controller - Fortnox OAuth and data operations
 const {
   startFortnoxOAuth,
@@ -244,6 +283,37 @@ router.get("/api/settings/ai-model", requireAuth, requireRole("owner", "editor",
 router.put("/api/settings/ai-model", requireAuth, requireRole("owner"), setAiModel)
 
 router.get("/api/tools", requireAuth, requireRole("owner", "editor", "viewer"), getTools)
+
+// OpenAI cost analysis tool
+router.post("/api/integrations/openai/connect", requireAuth, requireRole("owner", "editor"), openaiConnect)
+router.delete("/api/integrations/openai", requireAuth, requireRole("owner", "editor"), openaiDisconnect)
+router.post("/api/integrations/openai/sync", requireAuth, requireRole("owner", "editor"), openaiSync)
+router.get("/api/integrations/openai/usage", requireAuth, requireRole("owner", "editor", "viewer"), openaiGetUsage)
+router.get("/api/integrations/openai/status", requireAuth, requireRole("owner", "editor", "viewer"), openaiGetStatus)
+
+// Anthropic cost analysis tool
+router.post("/api/integrations/anthropic/connect", requireAuth, requireRole("owner", "editor"), anthropicConnect)
+router.delete("/api/integrations/anthropic", requireAuth, requireRole("owner", "editor"), anthropicDisconnect)
+router.post("/api/integrations/anthropic/sync", requireAuth, requireRole("owner", "editor"), anthropicSync)
+router.get("/api/integrations/anthropic/usage", requireAuth, requireRole("owner", "editor", "viewer"), anthropicGetUsage)
+router.get("/api/integrations/anthropic/status", requireAuth, requireRole("owner", "editor", "viewer"), anthropicGetStatus)
+
+// Gemini cost analysis tool
+router.post("/api/integrations/gemini/connect", requireAuth, requireRole("owner", "editor"), geminiConnect)
+router.delete("/api/integrations/gemini", requireAuth, requireRole("owner", "editor"), geminiDisconnect)
+router.post("/api/integrations/gemini/sync", requireAuth, requireRole("owner", "editor"), geminiSync)
+router.get("/api/integrations/gemini/usage", requireAuth, requireRole("owner", "editor", "viewer"), geminiGetUsage)
+router.get("/api/integrations/gemini/status", requireAuth, requireRole("owner", "editor", "viewer"), geminiGetStatus)
+
+// Google Workspace OAuth + Directory
+router.get("/api/integrations/googleworkspace/oauth/start", requireAuth, requireRole("owner", "editor"), startGoogleWorkspaceOAuth)
+router.get("/api/integrations/googleworkspace/callback", googleWorkspaceOAuthCallback)
+router.get("/api/integrations/googleworkspace/users", requireAuth, requireRole("owner", "editor", "viewer"), getGoogleWorkspaceUsers)
+router.get("/api/integrations/googleworkspace/domain", requireAuth, requireRole("owner", "editor", "viewer"), getGoogleWorkspaceDomain)
+router.get("/api/integrations/googleworkspace/groups", requireAuth, requireRole("owner", "editor", "viewer"), getGoogleWorkspaceGroups)
+router.get("/api/integrations/googleworkspace/licenses", requireAuth, requireRole("owner", "editor", "viewer"), getGoogleWorkspaceLicenses)
+router.get("/api/integrations/googleworkspace/reports", requireAuth, requireRole("owner", "editor", "viewer"), getGoogleWorkspaceReports)
+router.post("/api/integrations/googleworkspace/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeGoogleWorkspaceCostLeaksEndpoint)
 router.get("/api/integrations", requireAuth, requireRole("owner", "editor", "viewer"), getIntegrations)
 router.post("/api/integrations", requireAuth, requireRole("owner", "editor"), upsertIntegrations)
 router.delete("/api/integrations/:id", requireAuth, requireRole("owner", "editor"), deleteIntegration)

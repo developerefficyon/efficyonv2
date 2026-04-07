@@ -63,6 +63,9 @@ import autoTable from "jspdf-autotable"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { toast } from "sonner"
 import { formatCurrencyForIntegration } from "@/lib/currency"
+import { useToolInfo } from "@/lib/tools/use-tool-info"
+import { getToolConfig } from "@/lib/tools/registry"
+import { getToolView } from "@/components/tools/registry"
 
 interface Integration {
   id: string
@@ -96,42 +99,32 @@ export default function ToolDetailPage() {
 
   const [integration, setIntegration] = useState<Integration | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [fortnoxInfo, setFortnoxInfo] = useState<{
-    company?: any
-    settings?: any
-    invoices?: any[]
-    supplierInvoices?: any[]
-    expenses?: any[]
-    vouchers?: any[]
-    accounts?: any[]
-    articles?: any[]
-    customers?: any[]
-    suppliers?: any[]
-  }>({})
-  const [microsoft365Info, setMicrosoft365Info] = useState<{
-    licenses?: any[]
-    users?: any[]
-    usageReports?: any
-  }>({})
-  const [hubspotInfo, setHubspotInfo] = useState<{
-    users?: any[]
-    accountInfo?: any
-  }>({})
-  const [quickbooksInfo, setQuickbooksInfo] = useState<{
-    company?: any
-    invoices?: any[]
-    bills?: any[]
-    expenses?: any[]
-    vendors?: any[]
-    accounts?: any[]
-  }>({})
-  const [shopifyInfo, setShopifyInfo] = useState<{
-    shop?: any
-    orders?: any[]
-    products?: any[]
-    appCharges?: any[]
-  }>({})
-  const [isLoadingInfo, setIsLoadingInfo] = useState(false)
+  // ── Tool data is now loaded by the registry-driven `useToolInfo` hook.
+  //    The aliases below preserve the variable names referenced throughout
+  //    the JSX tree below (fortnoxInfo, microsoft365Info, etc.) without
+  //    requiring a sweep of the 3500-line render block. Only one alias is
+  //    populated at a time — whichever tool the current integration is.
+  const {
+    info: toolInfo,
+    isLoading: isLoadingInfo,
+    reload: reloadToolInfo,
+  } = useToolInfo(integration)
+  const fortnoxInfo = (toolInfo || {}) as {
+    company?: any; settings?: any; invoices?: any[]; supplierInvoices?: any[];
+    expenses?: any[]; vouchers?: any[]; accounts?: any[]; articles?: any[];
+    customers?: any[]; suppliers?: any[];
+  }
+  const microsoft365Info = (toolInfo || {}) as {
+    licenses?: any[]; users?: any[]; usageReports?: any;
+  }
+  const hubspotInfo = (toolInfo || {}) as { users?: any[]; accountInfo?: any }
+  const quickbooksInfo = (toolInfo || {}) as {
+    company?: any; invoices?: any[]; bills?: any[]; expenses?: any[];
+    vendors?: any[]; accounts?: any[];
+  }
+  const shopifyInfo = (toolInfo || {}) as {
+    shop?: any; orders?: any[]; products?: any[]; appCharges?: any[];
+  }
   const [infoSearchQuery, setInfoSearchQuery] = useState("")
   const [isInfoVisible, setIsInfoVisible] = useState(true)
   const [costLeakAnalysis, setCostLeakAnalysis] = useState<any>(null)
@@ -235,44 +228,14 @@ export default function ToolDetailPage() {
 
       setIntegration(found)
 
-      // Set default data tab based on integration type
-      if (found.tool_name === "Microsoft365" || found.provider === "Microsoft365") {
-        setActiveDataTab("licenses")
-      } else if (found.tool_name === "HubSpot" || found.provider === "HubSpot") {
-        setActiveDataTab("users")
-      } else if (found.tool_name === "QuickBooks" || found.provider === "QuickBooks") {
-        setActiveDataTab("company")
-      } else if (found.tool_name === "Shopify" || found.provider === "Shopify") {
-        setActiveDataTab("shop")
-      } else {
-        setActiveDataTab("company")
-      }
+      // Default tab is sourced from the tool config in the registry — adding
+      // a new tool no longer requires editing this branch.
+      const cfg = getToolConfig(found.tool_name || found.provider)
+      setActiveDataTab(cfg?.defaultTab || "company")
 
-      // If it's Fortnox and connected, load the information (but not analysis - user must click button)
-      if (found.tool_name === "Fortnox" && getEffectiveStatus(found) === "connected") {
-        void loadFortnoxInfo(found)
-        // Analysis is only loaded when user clicks "Analyze Cost Leaks" button
-      }
-
-      // If it's Microsoft 365 and connected, load the information
-      if (found.tool_name === "Microsoft365" && getEffectiveStatus(found) === "connected") {
-        void loadMicrosoft365Info(found)
-      }
-
-      // If it's HubSpot and connected, load the information
-      if (found.tool_name === "HubSpot" && getEffectiveStatus(found) === "connected") {
-        void loadHubSpotInfo(found)
-      }
-
-      // If it's QuickBooks and connected, load the information
-      if (found.tool_name === "QuickBooks" && getEffectiveStatus(found) === "connected") {
-        void loadQuickBooksInfo(found)
-      }
-
-      // If it's Shopify and connected, load the information
-      if (found.tool_name === "Shopify" && getEffectiveStatus(found) === "connected") {
-        void loadShopifyInfo(found)
-      }
+      // Data loading is handled by `useToolInfo` (triggered by the integration
+      // state change above). Cost-leak analysis is still loaded on demand via
+      // the explicit "Analyze" button.
     } catch (error) {
       console.error("Error loading integration:", error)
       toast.error("Failed to load integration", {
@@ -284,535 +247,6 @@ export default function ToolDetailPage() {
     }
   }
 
-  const loadFortnoxInfo = async (integration: Integration) => {
-    setIsLoadingInfo(true)
-    setFortnoxInfo({})
-
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Authentication required")
-        setIsLoadingInfo(false)
-        return
-      }
-
-      const [
-        companyRes,
-        settingsRes,
-        invoicesRes,
-        supplierInvoicesRes,
-        expensesRes,
-        vouchersRes,
-        accountsRes,
-        articlesRes,
-        customersRes,
-        suppliersRes,
-      ] = await Promise.allSettled([
-        fetch(`${apiBase}/api/integrations/fortnox/company`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/settings`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/invoices`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/supplier-invoices`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/expenses`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/vouchers`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/accounts`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/articles`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/customers`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/fortnox/suppliers`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
-
-      const info: any = {}
-
-      // Check if any response indicates token expiration
-      const allResponses = [
-        companyRes, settingsRes, invoicesRes, supplierInvoicesRes,
-        expensesRes, vouchersRes, accountsRes, articlesRes, customersRes, suppliersRes
-      ]
-
-      for (const response of allResponses) {
-        if (response.status === "fulfilled" && !response.value.ok) {
-          try {
-            const errorClone = response.value.clone()
-            const errorData = await errorClone.json()
-            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
-              toast.error("Integration token expired", {
-                description: "Please reconnect your Fortnox integration to continue.",
-                duration: 10000,
-              })
-              setIsLoadingInfo(false)
-              return
-            }
-          } catch (e) {
-            // Ignore JSON parse errors
-          }
-        }
-      }
-
-      if (companyRes.status === "fulfilled" && companyRes.value.ok) {
-        try {
-          const data = await companyRes.value.json()
-          info.company = data.companyInformation || data
-        } catch (e) {
-          console.error("Error parsing company info:", e)
-        }
-      }
-
-      if (settingsRes.status === "fulfilled" && settingsRes.value.ok) {
-        try {
-          const data = await settingsRes.value.json()
-          info.settings = data.settings || data
-        } catch (e) {
-          console.error("Error parsing settings:", e)
-        }
-      }
-
-      if (invoicesRes.status === "fulfilled" && invoicesRes.value.ok) {
-        try {
-          const data = await invoicesRes.value.json()
-          info.invoices = data.Invoices || data.invoices || []
-        } catch (e) {
-          console.error("Error parsing invoices:", e)
-        }
-      }
-
-      if (supplierInvoicesRes.status === "fulfilled" && supplierInvoicesRes.value.ok) {
-        try {
-          const data = await supplierInvoicesRes.value.json()
-          info.supplierInvoices = data.SupplierInvoices || data.supplierInvoices || []
-        } catch (e) {
-          console.error("Error parsing supplier invoices:", e)
-        }
-      }
-
-      if (expensesRes.status === "fulfilled" && expensesRes.value.ok) {
-        try {
-          const data = await expensesRes.value.json()
-          info.expenses = data.SalaryExpenses || data.Expenses || data.expenses || []
-        } catch (e) {
-          console.error("Error parsing expenses:", e)
-        }
-      }
-
-      if (vouchersRes.status === "fulfilled" && vouchersRes.value.ok) {
-        try {
-          const data = await vouchersRes.value.json()
-          info.vouchers = data.Vouchers || data.vouchers || []
-        } catch (e) {
-          console.error("Error parsing vouchers:", e)
-        }
-      }
-
-      if (accountsRes.status === "fulfilled" && accountsRes.value.ok) {
-        try {
-          const data = await accountsRes.value.json()
-          info.accounts = data.Accounts || data.accounts || []
-        } catch (e) {
-          console.error("Error parsing accounts:", e)
-        }
-      }
-
-      if (articlesRes.status === "fulfilled" && articlesRes.value.ok) {
-        try {
-          const data = await articlesRes.value.json()
-          info.articles = data.Articles || data.articles || []
-        } catch (e) {
-          console.error("Error parsing articles:", e)
-        }
-      }
-
-      if (customersRes.status === "fulfilled" && customersRes.value.ok) {
-        try {
-          const data = await customersRes.value.json()
-          info.customers = data.customers || data.Customers || []
-        } catch (e) {
-          console.error("Error parsing customers:", e)
-        }
-      }
-
-      if (suppliersRes.status === "fulfilled" && suppliersRes.value.ok) {
-        try {
-          const data = await suppliersRes.value.json()
-          info.suppliers = data.Suppliers || data.suppliers || []
-        } catch (e) {
-          console.error("Error parsing suppliers:", e)
-        }
-      }
-
-      setFortnoxInfo(info)
-    } catch (error) {
-      console.error("Error loading Fortnox info:", error)
-      toast.error("Failed to load integration information")
-    } finally {
-      setIsLoadingInfo(false)
-    }
-  }
-
-  const loadMicrosoft365Info = async (integration: Integration) => {
-    setIsLoadingInfo(true)
-    setMicrosoft365Info({})
-
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Authentication required")
-        setIsLoadingInfo(false)
-        return
-      }
-
-      const [licensesRes, usersRes] = await Promise.allSettled([
-        fetch(`${apiBase}/api/integrations/microsoft365/licenses`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/microsoft365/users`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
-
-      const info: any = {}
-
-      // Check if any response indicates token expiration
-      for (const response of [licensesRes, usersRes]) {
-        if (response.status === "fulfilled" && !response.value.ok) {
-          try {
-            const errorClone = response.value.clone()
-            const errorData = await errorClone.json()
-            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
-              toast.error("Integration token expired", {
-                description: "Please reconnect your Microsoft 365 integration to continue.",
-                duration: 10000,
-              })
-              setIsLoadingInfo(false)
-              return
-            }
-          } catch (e) {
-            // Ignore JSON parse errors
-          }
-        }
-      }
-
-      if (licensesRes.status === "fulfilled" && licensesRes.value.ok) {
-        try {
-          const data = await licensesRes.value.json()
-          info.licenses = data.licenses || []
-        } catch (e) {
-          console.error("Error parsing licenses:", e)
-        }
-      }
-
-      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
-        try {
-          const data = await usersRes.value.json()
-          info.users = data.users || []
-        } catch (e) {
-          console.error("Error parsing users:", e)
-        }
-      }
-
-      setMicrosoft365Info(info)
-    } catch (error) {
-      console.error("Error loading Microsoft 365 info:", error)
-      toast.error("Failed to load Microsoft 365 information")
-    } finally {
-      setIsLoadingInfo(false)
-    }
-  }
-
-  const loadHubSpotInfo = async (integration: Integration) => {
-    setIsLoadingInfo(true)
-    setHubspotInfo({})
-
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Authentication required")
-        setIsLoadingInfo(false)
-        return
-      }
-
-      const [usersRes, accountRes] = await Promise.allSettled([
-        fetch(`${apiBase}/api/integrations/hubspot/users`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/hubspot/account`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
-
-      const info: any = {}
-
-      // Check if any response indicates token expiration
-      for (const response of [usersRes, accountRes]) {
-        if (response.status === "fulfilled" && !response.value.ok) {
-          try {
-            const errorClone = response.value.clone()
-            const errorData = await errorClone.json()
-            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
-              toast.error("Integration token expired", {
-                description: "Please reconnect your HubSpot integration to continue.",
-                duration: 10000,
-              })
-              setIsLoadingInfo(false)
-              return
-            }
-          } catch (e) {
-            // Ignore JSON parse errors
-          }
-        }
-      }
-
-      if (usersRes.status === "fulfilled" && usersRes.value.ok) {
-        try {
-          const data = await usersRes.value.json()
-          info.users = data.users || []
-        } catch (e) {
-          console.error("Error parsing HubSpot users:", e)
-        }
-      }
-
-      if (accountRes.status === "fulfilled" && accountRes.value.ok) {
-        try {
-          const data = await accountRes.value.json()
-          info.accountInfo = data
-        } catch (e) {
-          console.error("Error parsing HubSpot account info:", e)
-        }
-      }
-
-      setHubspotInfo(info)
-    } catch (error) {
-      console.error("Error loading HubSpot info:", error)
-      toast.error("Failed to load HubSpot information")
-    } finally {
-      setIsLoadingInfo(false)
-    }
-  }
-
-  const loadQuickBooksInfo = async (integration: Integration) => {
-    setIsLoadingInfo(true)
-    setQuickbooksInfo({})
-
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Authentication required")
-        setIsLoadingInfo(false)
-        return
-      }
-
-      const [companyRes, invoicesRes, billsRes, vendorsRes, accountsRes] = await Promise.allSettled([
-        fetch(`${apiBase}/api/integrations/quickbooks/company`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/quickbooks/invoices`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/quickbooks/bills`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/quickbooks/vendors`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/quickbooks/accounts`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
-
-      const info: any = {}
-
-      for (const response of [companyRes, invoicesRes, billsRes, vendorsRes, accountsRes]) {
-        if (response.status === "fulfilled" && !response.value.ok) {
-          try {
-            const errorClone = response.value.clone()
-            const errorData = await errorClone.json()
-            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
-              toast.error("Integration token expired", {
-                description: "Please reconnect your QuickBooks integration to continue.",
-                duration: 10000,
-              })
-              setIsLoadingInfo(false)
-              return
-            }
-          } catch (e) {
-            // Ignore JSON parse errors
-          }
-        }
-      }
-
-      if (companyRes.status === "fulfilled" && companyRes.value.ok) {
-        try {
-          const data = await companyRes.value.json()
-          info.company = data.companyInfo || data
-        } catch (e) {
-          console.error("Error parsing QuickBooks company:", e)
-        }
-      }
-
-      if (invoicesRes.status === "fulfilled" && invoicesRes.value.ok) {
-        try {
-          const data = await invoicesRes.value.json()
-          info.invoices = data.invoices || []
-        } catch (e) {
-          console.error("Error parsing QuickBooks invoices:", e)
-        }
-      }
-
-      if (billsRes.status === "fulfilled" && billsRes.value.ok) {
-        try {
-          const data = await billsRes.value.json()
-          info.bills = data.bills || []
-        } catch (e) {
-          console.error("Error parsing QuickBooks bills:", e)
-        }
-      }
-
-      if (vendorsRes.status === "fulfilled" && vendorsRes.value.ok) {
-        try {
-          const data = await vendorsRes.value.json()
-          info.vendors = data.vendors || []
-        } catch (e) {
-          console.error("Error parsing QuickBooks vendors:", e)
-        }
-      }
-
-      if (accountsRes.status === "fulfilled" && accountsRes.value.ok) {
-        try {
-          const data = await accountsRes.value.json()
-          info.accounts = data.accounts || []
-        } catch (e) {
-          console.error("Error parsing QuickBooks accounts:", e)
-        }
-      }
-
-      setQuickbooksInfo(info)
-    } catch (error) {
-      console.error("Error loading QuickBooks info:", error)
-      toast.error("Failed to load QuickBooks information")
-    } finally {
-      setIsLoadingInfo(false)
-    }
-  }
-
-  const loadShopifyInfo = async (integration: Integration) => {
-    setIsLoadingInfo(true)
-    setShopifyInfo({})
-
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-      const accessToken = await getBackendToken()
-
-      if (!accessToken) {
-        toast.error("Authentication required")
-        setIsLoadingInfo(false)
-        return
-      }
-
-      const [shopRes, ordersRes, productsRes, appChargesRes] = await Promise.allSettled([
-        fetch(`${apiBase}/api/integrations/shopify/shop`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/shopify/orders`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/shopify/products`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`${apiBase}/api/integrations/shopify/app-charges`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ])
-
-      const info: any = {}
-
-      for (const response of [shopRes, ordersRes, productsRes, appChargesRes]) {
-        if (response.status === "fulfilled" && !response.value.ok) {
-          try {
-            const errorClone = response.value.clone()
-            const errorData = await errorClone.json()
-            if (errorData.requiresReconnect || errorData.code === "TOKEN_EXPIRED") {
-              toast.error("Integration token expired", {
-                description: "Please reconnect your Shopify integration to continue.",
-                duration: 10000,
-              })
-              setIsLoadingInfo(false)
-              return
-            }
-          } catch (e) {
-            // Ignore JSON parse errors
-          }
-        }
-      }
-
-      if (shopRes.status === "fulfilled" && shopRes.value.ok) {
-        try {
-          const data = await shopRes.value.json()
-          info.shop = data.shop || data
-        } catch (e) {
-          console.error("Error parsing Shopify shop:", e)
-        }
-      }
-
-      if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
-        try {
-          const data = await ordersRes.value.json()
-          info.orders = data.orders || []
-        } catch (e) {
-          console.error("Error parsing Shopify orders:", e)
-        }
-      }
-
-      if (productsRes.status === "fulfilled" && productsRes.value.ok) {
-        try {
-          const data = await productsRes.value.json()
-          info.products = data.products || []
-        } catch (e) {
-          console.error("Error parsing Shopify products:", e)
-        }
-      }
-
-      if (appChargesRes.status === "fulfilled" && appChargesRes.value.ok) {
-        try {
-          const data = await appChargesRes.value.json()
-          info.appCharges = data.recurring_application_charges || data.appCharges || []
-        } catch (e) {
-          console.error("Error parsing Shopify app charges:", e)
-        }
-      }
-
-      setShopifyInfo(info)
-    } catch (error) {
-      console.error("Error loading Shopify info:", error)
-      toast.error("Failed to load Shopify information")
-    } finally {
-      setIsLoadingInfo(false)
-    }
-  }
 
   const fetchHubSpotCostLeakAnalysis = async () => {
     setIsLoadingAnalysis(true)
@@ -2109,8 +1543,25 @@ export default function ToolDetailPage() {
         </div>
       </div>
 
+      {/* Registry-driven tool views — checked first so newly migrated tools
+          render via their own component instead of the legacy inline JSX. */}
+      {(() => {
+        const RegisteredView = getToolView(integration.tool_name || integration.provider)
+        if (RegisteredView && getEffectiveStatus(integration) === "connected") {
+          return (
+            <RegisteredView
+              integration={integration as any}
+              info={toolInfo}
+              isLoading={isLoadingInfo}
+              reload={reloadToolInfo}
+            />
+          )
+        }
+        return null
+      })()}
+
       {/* Tabs for organized sections */}
-      {hasFullUI && getEffectiveStatus(integration) === "connected" ? (
+      {!getToolView(integration.tool_name || integration.provider) && hasFullUI && getEffectiveStatus(integration) === "connected" ? (
         <Tabs defaultValue="analysis" className="w-full">
           <TabsList className="bg-white/[0.02] border border-white/[0.06] mb-6 w-full sm:w-auto overflow-x-auto flex-wrap sm:flex-nowrap rounded-lg p-1">
             <TabsTrigger

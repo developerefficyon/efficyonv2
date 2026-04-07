@@ -1,0 +1,175 @@
+/**
+ * Shared brand logos for tool integrations.
+ *
+ * Single source of truth used by both the Connect modal picker and the
+ * connected-tool cards on the dashboard. Adding a logo for a new tool means
+ * adding one entry to `TOOL_LOGOS` keyed by the lowercase id used by the
+ * tools list.
+ *
+ * Brand SVG paths are sourced from the simple-icons project — they are the
+ * official marks each company publishes for embedding.
+ */
+
+import type { ReactNode } from "react"
+
+export interface ToolBrand {
+  /** Hex color used for the icon fill and the rounded background tint. */
+  color: string
+  /** The 24×24 path content (children of the inner <svg viewBox="0 0 24 24">). */
+  path: ReactNode
+}
+
+export const TOOL_BRANDS: Record<string, ToolBrand> = {
+  fortnox: {
+    color: "#2DB250",
+    // Fortnox isn't in simple-icons; minimalist three-line ledger glyph.
+    path: <path d="M5 6h14M5 11h10M5 16h7" stroke="#2DB250" strokeWidth="2" strokeLinecap="round" />,
+  },
+  microsoft365: {
+    color: "#0078D4",
+    // Microsoft 4-color square mark.
+    path: (
+      <>
+        <rect x="2" y="2" width="9" height="9" rx="0.5" fill="#F25022" />
+        <rect x="13" y="2" width="9" height="9" rx="0.5" fill="#7FBA00" />
+        <rect x="2" y="13" width="9" height="9" rx="0.5" fill="#00A4EF" />
+        <rect x="13" y="13" width="9" height="9" rx="0.5" fill="#FFB900" />
+      </>
+    ),
+  },
+  hubspot: {
+    color: "#FF7A59",
+    path: (
+      <path
+        fill="#FF7A59"
+        d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z"
+      />
+    ),
+  },
+  quickbooks: {
+    color: "#2CA01C",
+    path: (
+      <path
+        fill="#2CA01C"
+        d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm.642 4.1335c.9554 0 1.7296.776 1.7296 1.7332v9.0667h1.6c1.614 0 2.9275-1.3156 2.9275-2.933 0-1.6173-1.3136-2.9333-2.9276-2.9333h-.6654V7.3334h.6654c2.5722 0 4.6577 2.0897 4.6577 4.667 0 2.5774-2.0855 4.6666-4.6577 4.6666H12.642zM7.9837 7.333h3.3291v12.533c-.9555 0-1.73-.7759-1.73-1.7332V9.0662H7.9837c-1.6146 0-2.9277 1.316-2.9277 2.9334 0 1.6175 1.3131 2.9333 2.9277 2.9333h.6654v1.7332h-.6654c-2.5725 0-4.6577-2.0892-4.6577-4.6665 0-2.5771 2.0852-4.6666 4.6577-4.6666Z"
+      />
+    ),
+  },
+  shopify: {
+    color: "#95BF47",
+    path: (
+      <path
+        fill="#95BF47"
+        d="M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.73c-.018-.116-.114-.192-.211-.192s-1.929-.136-1.929-.136-1.275-1.274-1.439-1.411c-.045-.037-.075-.057-.121-.074l-.914 21.104h.023zM11.71 11.305s-.81-.424-1.774-.424c-1.447 0-1.504.906-1.504 1.141 0 1.232 3.24 1.715 3.24 4.629 0 2.295-1.44 3.76-3.406 3.76-2.354 0-3.54-1.465-3.54-1.465l.646-2.086s1.245 1.066 2.28 1.066c.675 0 .975-.545.975-.932 0-1.619-2.654-1.694-2.654-4.359-.034-2.237 1.571-4.416 4.827-4.416 1.257 0 1.875.361 1.875.361l-.945 2.715-.02.01zM11.17.83c.136 0 .271.038.405.135-.984.465-2.064 1.639-2.508 3.992-.656.213-1.293.405-1.889.578C7.697 3.75 8.951.84 11.17.84V.83zm1.235 2.949v.135c-.754.232-1.583.484-2.394.736.466-1.777 1.333-2.645 2.085-2.971.193.501.309 1.176.309 2.1zm.539-2.234c.694.074 1.141.867 1.429 1.755-.349.114-.735.231-1.158.366v-.252c0-.752-.096-1.371-.271-1.871v.002zm2.992 1.289c-.02 0-.06.021-.078.021s-.289.075-.714.21c-.423-1.233-1.176-2.37-2.508-2.37h-.115C12.135.209 11.669 0 11.265 0 8.159 0 6.675 3.877 6.21 5.846c-1.194.365-2.063.636-2.16.674-.675.213-.694.232-.772.87-.075.462-1.83 14.063-1.83 14.063L15.009 24l.927-21.166z"
+      />
+    ),
+  },
+  openai: {
+    color: "#10A37F",
+    path: (
+      <path
+        fill="#10A37F"
+        d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"
+      />
+    ),
+  },
+  anthropic: {
+    color: "#D97757",
+    path: (
+      <path
+        fill="#D97757"
+        d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"
+      />
+    ),
+  },
+  gemini: {
+    color: "#4285F4",
+    path: (
+      <path
+        fill="#4285F4"
+        d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"
+      />
+    ),
+  },
+  googleworkspace: {
+    color: "#4285F4",
+    // Google "G" mark in the official 4 brand colors. simple-icons doesn't ship
+    // a workspace-specific logo, so we use the corporate G in full color.
+    path: (
+      <>
+        <path
+          fill="#4285F4"
+          d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.46 5.46 0 0 1-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A11.997 11.997 0 0 0 12 24z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.27 14.29a7.21 7.21 0 0 1 0-4.58V6.62H1.29a12 12 0 0 0 0 10.76l3.98-3.09z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A11.997 11.997 0 0 0 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"
+        />
+      </>
+    ),
+  },
+}
+
+/**
+ * Normalize a tool name or id ("HubSpot", "Microsoft365", "hub-spot") to the
+ * registry key. Forgiving so callers can pass either `tool.id` or `tool_name`.
+ */
+function brandKey(input?: string): string {
+  if (!input) return ""
+  return input.toLowerCase().replace(/[\s_-]/g, "")
+}
+
+/**
+ * Render the brand logo for a given tool name/id, framed in the same rounded
+ * tile used by the Connect modal picker. Pass `size` to override the default
+ * 40×40 (e.g. `size={32}` for compact card headers).
+ */
+export function ToolLogo({ name, size = 40 }: { name?: string; size?: number }) {
+  const brand = TOOL_BRANDS[brandKey(name)]
+  if (!brand) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-[10px] bg-white/[0.04] border border-white/[0.06] shrink-0"
+      />
+    )
+  }
+
+  // Inner glyph is sized to ~60% of the tile, centered.
+  const inner = Math.round(size * 0.6)
+  const offset = Math.round((size - inner) / 2)
+
+  return (
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      width={size}
+      height={size}
+      className="shrink-0"
+      fill="none"
+    >
+      <rect width={size} height={size} rx={Math.round(size / 4)} fill={brand.color} fillOpacity={0.08} />
+      <rect
+        x={0.5}
+        y={0.5}
+        width={size - 1}
+        height={size - 1}
+        rx={Math.round(size / 4) - 0.5}
+        stroke={brand.color}
+        strokeOpacity={0.1}
+      />
+      <g transform={`translate(${offset} ${offset})`}>
+        <svg viewBox="0 0 24 24" width={inner} height={inner}>
+          {brand.path}
+        </svg>
+      </g>
+    </svg>
+  )
+}
