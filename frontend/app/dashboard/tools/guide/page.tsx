@@ -5,143 +5,18 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ExternalLink, Shield, Info } from "lucide-react"
 import Link from "next/link"
+import { ToolLogo } from "@/components/tools/tool-logos"
 
 const INTEGRATIONS = [
-  {
-    id: "fortnox",
-    label: "Fortnox",
-    color: "#2DB250",
-    desc: "Finance & Accounting",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#2DB250" fillOpacity="0.1"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#2DB250" strokeOpacity="0.15"/>
-        <path d="M9 10h10M9 14h7M9 18h5" stroke="#2DB250" strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    id: "microsoft365",
-    label: "Microsoft 365",
-    color: "#0078D4",
-    desc: "Productivity & Identity",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#0078D4" fillOpacity="0.06"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#0078D4" strokeOpacity="0.1"/>
-        <rect x="7" y="7" width="6" height="6" rx="1.2" fill="#F25022"/>
-        <rect x="15" y="7" width="6" height="6" rx="1.2" fill="#7FBA00"/>
-        <rect x="7" y="15" width="6" height="6" rx="1.2" fill="#00A4EF"/>
-        <rect x="15" y="15" width="6" height="6" rx="1.2" fill="#FFB900"/>
-      </svg>
-    ),
-  },
-  {
-    id: "hubspot",
-    label: "HubSpot",
-    color: "#FF7A59",
-    desc: "CRM & Marketing",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#FF7A59" fillOpacity="0.06"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#FF7A59" strokeOpacity="0.1"/>
-        <g transform="translate(6.5, 6)">
-          <circle cx="10" cy="9.5" r="3" stroke="#FF7A59" strokeWidth="1.5"/>
-          <path d="M10 6.5V4" stroke="#FF7A59" strokeWidth="1.5" strokeLinecap="round"/>
-          <circle cx="10" cy="3" r="1.2" fill="#FF7A59"/>
-          <path d="M7.5 11.5L3 15" stroke="#FF7A59" strokeWidth="1.5" strokeLinecap="round"/>
-          <circle cx="2" cy="15.5" r="1.2" fill="#FF7A59"/>
-        </g>
-      </svg>
-    ),
-  },
-  {
-    id: "quickbooks",
-    label: "QuickBooks",
-    color: "#2CA01C",
-    desc: "Financial Management",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#2CA01C" fillOpacity="0.06"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#2CA01C" strokeOpacity="0.1"/>
-        <circle cx="14" cy="14" r="7" stroke="#2CA01C" strokeWidth="1.2" strokeOpacity="0.25"/>
-        <path d="M11 12h-1a1.8 1.8 0 000 3.6h1" stroke="#2CA01C" strokeWidth="1.6" strokeLinecap="round"/>
-        <path d="M17 16h1a1.8 1.8 0 000-3.6h-1" stroke="#2CA01C" strokeWidth="1.6" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    id: "shopify",
-    label: "Shopify",
-    color: "#95BF47",
-    desc: "E-Commerce",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#95BF47" fillOpacity="0.06"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#95BF47" strokeOpacity="0.1"/>
-        <g transform="translate(8, 6)">
-          <path d="M10.5 3c-.15-.45-.5-.7-.85-.7l-.35-.2c-.25-.25-.55-.4-.95-.4-1.5 0-2.35 1.85-2.6 2.8l-1.5.45c-.45.15-.45.15-.5.6L2.5 14.5l6.3 1.1 3.4-.85S10.5 3.4 10.5 3z" fill="#95BF47"/>
-          <path d="M9.65 2.3c-.07 0-.13 0-.2.05l-.4 1.4a3.5 3.5 0 00-2.1-.7c-1.7 0-2.5 1.75-2.8 2.65L2.5 6.3c-.5.15-.5.15-.55.65L.8 14.5l6.3 1.1 3.5-.85S9.8 2.65 9.65 2.3z" fill="#5E8E3E"/>
-        </g>
-      </svg>
-    ),
-  },
-  {
-    id: "openai",
-    label: "OpenAI",
-    color: "#10A37F",
-    desc: "AI Spend",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#10A37F" fillOpacity="0.08"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#10A37F" strokeOpacity="0.15"/>
-        <circle cx="14" cy="14" r="5.5" stroke="#10A37F" strokeWidth="1.6"/>
-        <path d="M14 8.5v11M8.5 14h11" stroke="#10A37F" strokeWidth="1.6" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    color: "#D4A27F",
-    desc: "AI Spend",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#D4A27F" fillOpacity="0.1"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#D4A27F" strokeOpacity="0.2"/>
-        <path d="M11 19l3-10 3 10M12 16h4" stroke="#D4A27F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    id: "gemini",
-    label: "Gemini",
-    color: "#4285F4",
-    desc: "AI Spend",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#4285F4" fillOpacity="0.08"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#4285F4" strokeOpacity="0.18"/>
-        <path d="M14 7l1.6 5.4L21 14l-5.4 1.6L14 21l-1.6-5.4L7 14l5.4-1.6L14 7z" fill="#4285F4" fillOpacity="0.7"/>
-      </svg>
-    ),
-  },
-  {
-    id: "googleworkspace",
-    label: "Google Workspace",
-    color: "#34A853",
-    desc: "Productivity & Identity",
-    logo: (
-      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0" fill="none">
-        <rect width="28" height="28" rx="7" fill="#34A853" fillOpacity="0.07"/>
-        <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" stroke="#34A853" strokeOpacity="0.15"/>
-        <circle cx="10" cy="14" r="2.2" fill="#4285F4"/>
-        <circle cx="18" cy="14" r="2.2" fill="#34A853"/>
-        <circle cx="14" cy="10" r="2.2" fill="#FBBC04"/>
-        <circle cx="14" cy="18" r="2.2" fill="#EA4335"/>
-      </svg>
-    ),
-  },
+  { id: "fortnox", label: "Fortnox", color: "#2DB250", desc: "Finance & Accounting" },
+  { id: "microsoft365", label: "Microsoft 365", color: "#0078D4", desc: "Productivity & Identity" },
+  { id: "hubspot", label: "HubSpot", color: "#FF7A59", desc: "CRM & Marketing" },
+  { id: "quickbooks", label: "QuickBooks", color: "#2CA01C", desc: "Financial Management" },
+  { id: "shopify", label: "Shopify", color: "#95BF47", desc: "E-Commerce" },
+  { id: "openai", label: "OpenAI", color: "#10A37F", desc: "AI Spend" },
+  { id: "anthropic", label: "Anthropic", color: "#D97757", desc: "AI Spend" },
+  { id: "gemini", label: "Gemini", color: "#4285F4", desc: "AI Spend" },
+  { id: "googleworkspace", label: "Google Workspace", color: "#4285F4", desc: "Productivity & Identity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -243,7 +118,7 @@ export default function SetupGuidePage() {
                 : "text-white/30 hover:text-white/50 hover:bg-white/[0.02]"
             }`}
           >
-            {i.logo}
+            <ToolLogo name={i.id} size={24} />
             <span className="hidden sm:inline">{i.label}</span>
           </button>
         ))}
@@ -255,7 +130,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#2DB250]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {activeIntegration.logo}
+            <ToolLogo name="fortnox" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Fortnox</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">Finance & Accounting</p>
@@ -363,7 +238,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#0078D4]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[1].logo}
+            <ToolLogo name="microsoft365" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Microsoft 365</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">Productivity & Identity</p>
@@ -506,7 +381,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#FF7A59]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[2].logo}
+            <ToolLogo name="hubspot" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">HubSpot</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">CRM & Marketing</p>
@@ -612,7 +487,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#2CA01C]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[3].logo}
+            <ToolLogo name="quickbooks" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">QuickBooks</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">Financial Management</p>
@@ -743,7 +618,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#95BF47]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[4].logo}
+            <ToolLogo name="shopify" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Shopify</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">E-Commerce</p>
@@ -854,7 +729,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#10A37F]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[5].logo}
+            <ToolLogo name="openai" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">OpenAI</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
@@ -925,7 +800,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#D4A27F]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[6].logo}
+            <ToolLogo name="anthropic" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Anthropic</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
@@ -989,7 +864,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#4285F4]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[7].logo}
+            <ToolLogo name="gemini" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Gemini (Vertex AI)</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">AI Spend</p>
@@ -1084,7 +959,7 @@ export default function SetupGuidePage() {
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#34A853]/20 to-transparent" />
           <div className="flex items-center gap-3">
-            {INTEGRATIONS[8].logo}
+            <ToolLogo name="googleworkspace" size={32} />
             <div>
               <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Google Workspace</h3>
               <p className="text-[11.5px] text-white/25 mt-0.5">Productivity & Identity</p>
