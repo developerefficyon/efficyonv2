@@ -230,6 +230,47 @@ export default function SetupGuidePage() {
               </p>
             </div>
           </div>
+
+          {/* Read-Only Enforcement */}
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Optional: Enforce Read-Only Access</p>
+            <p className="text-[12.5px] text-white/30 leading-relaxed">
+              Effycion already only reads your Fortnox data — we never write, update, or delete anything. However, if you want Fortnox itself to enforce read-only access at the API level, you can use the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Fortnox Läs</span> (Fortnox Read) license:
+            </p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#2DB250" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Fortnox, create a dedicated user for the integration (e.g. &quot;Effycion Integration&quot;).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#2DB250" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Assign that user only the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Fortnox Läs</span> (Fortnox Read) license — not the full Fortnox license.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#2DB250" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Have that user activate the Effycion integration. The integration will inherit the user&apos;s read-only permissions — Fortnox will block any write operations at the API level.
+              </p>
+            </div>
+
+            <InfoBox title="Why this works">
+              When an integration is activated by a user (rather than a service account), it inherits that user&apos;s license permissions. A user with only the Fortnox Läs license can only read data — so the integration is technically restricted to read-only access by Fortnox itself, regardless of what scopes are granted.
+            </InfoBox>
+
+            <InfoBox title="Note">
+              The Fortnox Läs license is a separate license that may incur additional cost. This step is entirely optional — Effycion only uses read-only API calls regardless. This option is for customers who want Fortnox-enforced guarantees.
+            </InfoBox>
+          </div>
+
+          <SecurityBox>
+            Effycion uses only GET (read) requests to the Fortnox API. We never create, modify, or delete any data in your Fortnox account. Your OAuth tokens are encrypted with AES-256 and can be revoked at any time.
+          </SecurityBox>
         </div>
       </section>
 

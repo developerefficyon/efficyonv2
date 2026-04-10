@@ -2304,6 +2304,26 @@ export default function ToolsPage() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Read-only enforcement tip */}
+                <div className="relative p-3.5 rounded-xl bg-gradient-to-b from-emerald-500/[0.02] to-emerald-500/[0.005] border border-emerald-500/[0.08] mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 rounded-md bg-emerald-500/[0.08] flex items-center justify-center">
+                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-400/50" />
+                    </div>
+                    <p className="text-[11.5px] font-medium text-emerald-400/50">Read-Only Guarantee</p>
+                  </div>
+                  <p className="text-[11px] text-white/25 leading-relaxed pl-6">
+                    Effycion only reads data — we never write to Fortnox. For extra security, activate this integration with a user that has the <span className="text-white/40 font-medium">Fortnox Läs</span> (Read) license. Fortnox will then enforce read-only at the API level.{" "}
+                    <Link
+                      href="/dashboard/tools/guide#fortnox"
+                      onClick={() => setIsConnectModalOpen(false)}
+                      className="text-emerald-400/50 hover:text-emerald-400/80 transition-colors"
+                    >
+                      Learn more
+                    </Link>
+                  </p>
+                </div>
               </div>
             )}
 

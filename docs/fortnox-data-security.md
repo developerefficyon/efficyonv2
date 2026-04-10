@@ -86,6 +86,31 @@ The results are presented to you as recommendations. **You decide what to act on
 
 ---
 
+## Optional: Fortnox-Enforced Read-Only Access
+
+While Efficyon only makes read-only API calls by design, some customers want an additional guarantee enforced by Fortnox itself. This is possible using the **Fortnox Läs** (Fortnox Read) license.
+
+### How It Works
+
+When a Fortnox integration is activated by a user (rather than a service account), the integration inherits that user's license permissions. If the activating user only has the **Fortnox Läs** license, the integration is restricted to read-only access at the Fortnox API level — regardless of what scopes are granted. This means even if our code attempted a write operation (which it never does), Fortnox would block it.
+
+### Setup Steps
+
+1. **Create a dedicated user** in your Fortnox account (e.g. "Efficyon Integration").
+2. **Assign the Fortnox Läs license** to that user — do not assign the full Fortnox license.
+3. **Activate the Efficyon integration** using that user's account. When redirected to Fortnox during the OAuth flow, log in as this dedicated user.
+
+The integration will now be technically restricted to read-only access by Fortnox itself.
+
+### Important Notes
+
+- The **Fortnox Läs** license is a separate license that may involve additional cost from Fortnox.
+- This step is **entirely optional**. Efficyon already only uses read-only API calls regardless of permissions granted.
+- This option exists for customers who require Fortnox-enforced guarantees for compliance or internal policy reasons.
+- The dedicated user must have access to the company data you want Efficyon to analyse (invoices, suppliers, etc.).
+
+---
+
 ## Data Flow Summary
 
 ```
@@ -128,6 +153,9 @@ Analysis results are stored in Efficyon's secure database. Raw Fortnox data is p
 
 **Who can see my data?**
 Only users within your company who have access to your Efficyon workspace.
+
+**Can I guarantee read-only access at the Fortnox level?**
+Yes. If you activate the integration using a Fortnox user that has only the Fortnox Läs (Read) license, Fortnox itself will enforce read-only access at the API level. See the "Fortnox-Enforced Read-Only Access" section above for setup instructions.
 
 ---
 
