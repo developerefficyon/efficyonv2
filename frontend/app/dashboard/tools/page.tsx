@@ -1764,6 +1764,12 @@ export default function ToolsPage() {
           Pending
         </Badge>
       )
+    } else if (status === "disconnected") {
+      return (
+        <Badge className="bg-white/[0.06] text-white/40 border-white/[0.08] text-[9px] h-[18px] px-1.5 rounded-full font-medium">
+          Disconnected
+        </Badge>
+      )
     }
     return (
       <Badge className="bg-white/[0.04] text-white/30 border-white/[0.06] text-[9px] h-[18px] px-1.5 rounded-full font-medium">
@@ -1982,6 +1988,9 @@ export default function ToolsPage() {
               <SelectItem value="all" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">All Status</SelectItem>
               <SelectItem value="connected" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Connected</SelectItem>
               <SelectItem value="error" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Error</SelectItem>
+              <SelectItem value="expired" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Expired</SelectItem>
+              <SelectItem value="pending" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Pending</SelectItem>
+              <SelectItem value="disconnected" className="text-white/70 text-[12px] focus:bg-white/[0.06] focus:text-white">Disconnected</SelectItem>
             </SelectContent>
           </Select>
         </div>
