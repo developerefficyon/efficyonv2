@@ -57,7 +57,7 @@ export function useToolInfo(integration: Integration | null): UseToolInfoResult 
       setInfo(null)
       return
     }
-    if (integration.status !== "connected" && integration.status !== "active") {
+    if (integration.status !== "connected") {
       setInfo(null)
       return
     }

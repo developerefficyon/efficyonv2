@@ -7,5 +7,6 @@ export const microsoft365Config: ToolConfig = {
   endpoints: [
     { key: "licenses", path: "/api/integrations/microsoft365/licenses", pick: ["licenses"], fallback: [] },
     { key: "users", path: "/api/integrations/microsoft365/users", pick: ["users"], fallback: [] },
+    { key: "usageReports", path: "/api/integrations/microsoft365/usage", pick: ["usageReports", "usage"], fallback: null },
   ],
 }
