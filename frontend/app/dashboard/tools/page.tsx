@@ -1528,7 +1528,23 @@ export default function ToolsPage() {
         return
       }
 
-      const res = await fetch(`${apiBase}/api/integrations/fortnox/sync-customers`, {
+      // Route to the correct sync endpoint for each tool
+      const syncEndpoints: Record<string, string> = {
+        Fortnox: "/api/integrations/fortnox/sync-customers",
+        OpenAI: "/api/integrations/openai/sync",
+        Anthropic: "/api/integrations/anthropic/sync",
+        Gemini: "/api/integrations/gemini/sync",
+      }
+      const syncPath = syncEndpoints[integration.tool_name]
+      if (!syncPath) {
+        toast.error("Sync not available", {
+          description: `Manual sync is not supported for ${integration.tool_name}.`,
+        })
+        setSyncingId(null)
+        return
+      }
+
+      const res = await fetch(`${apiBase}${syncPath}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1542,10 +1558,9 @@ export default function ToolsPage() {
       }
 
       const data = await res.json()
-      const customerCount = data.active_customers_count ?? 0
 
       toast.success("Synced successfully", {
-        description: `${customerCount} active customer${customerCount !== 1 ? "s" : ""} synced.`,
+        description: data.message || `${integration.tool_name} data refreshed.`,
         duration: 6000,
       })
 
