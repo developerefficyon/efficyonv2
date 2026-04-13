@@ -238,20 +238,19 @@ export default function ToolsPage() {
       setIntegrations(loadedIntegrations)
 
       // Update integration limits from response
-      const limits = data.limits ? {
-        current: data.limits.current || 0,
-        max: data.limits.max || 5,
-        canAddMore: data.limits.canAddMore ?? true,
-        planTier: data.limits.planTier || "startup",
-        planName: data.limits.planName || "Startup",
-      } : integrationLimits
-
       if (data.limits) {
+        const limits = {
+          current: data.limits.current || 0,
+          max: data.limits.max || 5,
+          canAddMore: data.limits.canAddMore ?? true,
+          planTier: data.limits.planTier || "startup",
+          planName: data.limits.planName || "Startup",
+        }
         setIntegrationLimits(limits)
       }
 
       // Save to cache for instant loading on revisit
-      setCache("integrations-data", { integrations: loadedIntegrations, limits })
+      setCache("integrations-data", { integrations: loadedIntegrations, limits: data.limits || null })
     } catch (error) {
       console.error("Error loading integrations:", error)
       toast.error("Failed to load integrations", {
