@@ -2166,6 +2166,12 @@ export default function ToolsPage() {
             setFortnoxForm({ clientId: "", clientSecret: "" })
             setMicrosoft365Form({ tenantId: "", clientId: "", clientSecret: "" })
             setHubspotForm({ clientId: "", clientSecret: "", hubType: "sales", tier: "professional", paidSeats: "" })
+            setQuickbooksForm({ clientId: "", clientSecret: "" })
+            setShopifyForm({ shopDomain: "", clientId: "", clientSecret: "" })
+            setOpenaiForm({ apiKey: "" })
+            setAnthropicForm({ apiKey: "" })
+            setGeminiForm({ serviceAccountJson: "", bigqueryTable: "" })
+            setGoogleWorkspaceForm({ clientId: "", clientSecret: "" })
           }
         }}
       >
