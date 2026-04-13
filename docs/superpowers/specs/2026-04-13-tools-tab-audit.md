@@ -9,10 +9,10 @@
 
 ## Section 1: Data Integrity (Database vs Backend)
 
-### CRITICAL-1: Column name `provider` does not exist in schema
+### CRITICAL-1: Column name `provider` does not exist in schema [RECLASSIFIED - NOT A BUG]
 
 **Files:** `backend/sql/010_complete_current_schema.sql` (line 108), all controllers
-**Severity:** CRITICAL
+**Severity:** ~~CRITICAL~~ N/A — `010_complete_current_schema.sql` is an abandoned schema redesign. The actual production schema (`000_init_clean_schema.sql`) uses `provider` and `settings`, matching the code.
 
 The `company_integrations` table defines `tool_name` as the column for provider identifiers. But every controller queries against `.eq("provider", ...)` — a column that does not exist in the schema.
 
@@ -28,10 +28,10 @@ The `company_integrations` table defines `tool_name` as the column for provider 
 
 ---
 
-### CRITICAL-2: Status CHECK constraint vs actual status values used
+### CRITICAL-2: Status CHECK constraint vs actual status values used [RECLASSIFIED - NOT A BUG]
 
 **File:** `backend/sql/010_complete_current_schema.sql` (line 110)
-**Severity:** CRITICAL
+**Severity:** ~~CRITICAL~~ N/A — The production schema (`000_init_clean_schema.sql`) has no CHECK constraint on status.
 
 Schema constraint allows only: `'connected', 'disconnected', 'error'`
 
@@ -50,10 +50,10 @@ Code writes these invalid values:
 
 ---
 
-### CRITICAL-3: `settings` column vs individual columns
+### CRITICAL-3: `settings` column vs individual columns [RECLASSIFIED - NOT A BUG]
 
 **File:** `integrationController.js` (line 268)
-**Severity:** CRITICAL
+**Severity:** ~~CRITICAL~~ N/A — The production schema (`000_init_clean_schema.sql`) uses a single `settings jsonb` column, matching the code.
 
 The schema defines individual columns (`oauth_data`, `api_key`, `client_id`, `client_secret`), but the controller inserts a single `settings` blob. This is either schema drift or the code is targeting a different table shape.
 
