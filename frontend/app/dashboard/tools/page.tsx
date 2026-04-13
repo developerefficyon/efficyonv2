@@ -954,6 +954,54 @@ export default function ToolsPage() {
     }
   }
 
+  const startGoogleWorkspaceOAuth = async (integrationId?: string) => {
+    if (integrationId) setReconnectingId(integrationId)
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+      const accessToken = await getBackendToken()
+
+      if (!accessToken) {
+        toast.error("Session expired", { description: "Please log in again" })
+        router.push("/login")
+        return
+      }
+
+      const oauthRes = await fetch(`${apiBase}/api/integrations/googleworkspace/oauth/start`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!oauthRes.ok) {
+        const errorData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to start Google Workspace OAuth")
+      }
+
+      const oauthData = await oauthRes.json()
+      const redirectUrl = oauthData.url
+
+      if (!redirectUrl) {
+        throw new Error("No OAuth URL returned from backend")
+      }
+
+      toast.success("Redirecting to Google to authorize...", {
+        description: "You'll be taken to Google to grant access.",
+      })
+
+      setTimeout(() => {
+        window.location.href = redirectUrl
+      }, 500)
+    } catch (error: any) {
+      console.error("Error starting Google Workspace OAuth:", error)
+      toast.error("Failed to start Google Workspace OAuth", {
+        description: error.message || "An error occurred.",
+      })
+      setReconnectingId(null)
+    }
+  }
+
   const handleConnectHubSpot = async () => {
     if (!hubspotForm.clientId || !hubspotForm.clientSecret) {
       toast.error("Please fill in all required fields")
@@ -1323,7 +1371,7 @@ export default function ToolsPage() {
       toast.error("Please paste your Anthropic Admin API key")
       return
     }
-    if (!apiKey.startsWith("sk-ant-admin")) {
+    if (!apiKey.startsWith("sk-ant-admin01-")) {
       toast.error("That looks like a regular API key", {
         description: "Anthropic cost analysis requires an Admin key (starts with sk-ant-admin01-).",
       })
@@ -2057,6 +2105,7 @@ export default function ToolsPage() {
               if (name === "HubSpot") return () => startHubSpotOAuth(integration.id)
               if (name === "QuickBooks") return () => startQuickBooksOAuth(integration.id)
               if (name === "Shopify") return () => startShopifyOAuth(integration.id)
+              if (name === "GoogleWorkspace") return () => startGoogleWorkspaceOAuth(integration.id)
               return null
             }
             const reconnectHandler = getReconnectHandler()
