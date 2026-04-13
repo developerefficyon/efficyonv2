@@ -45,24 +45,9 @@ import { useTeamRole } from "@/lib/team-role-context"
 import { ToolLogo } from "@/components/tools/tool-logos"
 import { getCache, setCache } from "@/lib/use-api-cache"
 import { toast } from "sonner"
+import type { Integration as SharedIntegration } from "@/lib/tools/types"
 
-interface Integration {
-  id: string
-  tool_name: string
-  connection_type: string
-  status: string
-  created_at: string
-  updated_at: string
-  oauth_data?: {
-    tokens?: {
-      access_token?: string
-      refresh_token?: string
-      expires_at?: number
-      expires_in?: number
-      scope?: string
-    }
-  } | null
-}
+type Integration = SharedIntegration
 
 interface Tool {
   id: string
@@ -2282,7 +2267,7 @@ export default function ToolsPage() {
                   { id: "googleworkspace", name: "Google Workspace", desc: "Users, licenses & directory data", category: "Productivity", color: "#4285F4" },
                 ].map((tool) => {
                   const alreadyConnected = integrations.some(
-                    (i) => i.tool_name.toLowerCase().replace(/\s+/g, '') === tool.id.replace(/\s+/g, '')
+                    (i) => i.tool_name.toLowerCase().replace(/[\s\-_]+/g, '') === tool.id.replace(/[\s\-_]+/g, '')
                   )
                   return (
                     <button
