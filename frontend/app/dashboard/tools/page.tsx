@@ -1659,6 +1659,12 @@ export default function ToolsPage() {
       if (name.includes("hubspot") || name.includes("salesforce") || name.includes("crm")) {
         return "CRM/Marketing"
       }
+      if (name.includes("openai") || name.includes("anthropic") || name.includes("gemini")) {
+        return "AI"
+      }
+      if (name.includes("shopify")) {
+        return "E-Commerce"
+      }
       if (name.includes("notion") || name.includes("workspace") || name.includes("office")) {
         return "Productivity"
       }
@@ -1678,6 +1684,10 @@ export default function ToolsPage() {
       if (name.includes("hubspot")) return "Contacts, deals & marketing data"
       if (name.includes("microsoft") || name.includes("365")) return "Users, licenses & productivity tools"
       if (name.includes("shopify")) return "Products, orders & customer data"
+      if (name.includes("openai")) return "ChatGPT API spend & cost analysis"
+      if (name.includes("anthropic")) return "Claude API spend & cost analysis"
+      if (name.includes("gemini")) return "Google Gemini API spend & cost analysis"
+      if (name.includes("googleworkspace")) return "Users, licenses & directory data"
       if (name.includes("slack")) return "Channels, users & messaging data"
       if (name.includes("salesforce")) return "CRM contacts, leads & opportunities"
       return "Connected integration"
@@ -2187,7 +2197,7 @@ export default function ToolsPage() {
                 </div>
                 <DialogTitle className="text-[17px] font-semibold text-white/95 tracking-[-0.01em]">
                   {selectedTool ? (() => {
-                    const names: Record<string, string> = { fortnox: "Fortnox", microsoft365: "Microsoft 365", hubspot: "HubSpot", quickbooks: "QuickBooks", shopify: "Shopify" }
+                    const names: Record<string, string> = { fortnox: "Fortnox", microsoft365: "Microsoft 365", hubspot: "HubSpot", quickbooks: "QuickBooks", shopify: "Shopify", openai: "OpenAI", anthropic: "Anthropic", gemini: "Gemini", googleworkspace: "Google Workspace" }
                     return `Connect ${names[selectedTool] || selectedTool}`
                   })() : "Connect New Tool"}
                 </DialogTitle>
