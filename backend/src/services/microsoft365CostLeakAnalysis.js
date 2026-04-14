@@ -72,7 +72,7 @@ const DOWNGRADE_RECOMMENDATIONS = {
  * Analyze inactive licenses
  * Users with licenses but no sign-in activity in specified days
  */
-function analyzeInactiveLicenses(users, daysThreshold = 30) {
+function analyzeInactiveLicenses(users, daysThreshold = 30, skuMap = {}) {
   const findings = []
   const now = new Date()
 
@@ -91,7 +91,7 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
 
     if (!lastSignIn) {
       // Never signed in but has licenses
-      const licenseCost = calculateUserLicenseCost(user.assignedLicenses)
+      const licenseCost = calculateUserLicenseCost(user.assignedLicenses, skuMap)
       const finding = {
         type: "inactive_license",
         severity: "high",
@@ -126,7 +126,7 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
     const daysSinceSignIn = Math.floor((now - lastSignInDate) / (1000 * 60 * 60 * 24))
 
     if (daysSinceSignIn >= daysThreshold) {
-      const licenseCost = calculateUserLicenseCost(user.assignedLicenses)
+      const licenseCost = calculateUserLicenseCost(user.assignedLicenses, skuMap)
       let severity = "medium"
       if (daysSinceSignIn >= 90) severity = "high"
       else if (daysSinceSignIn >= 60) severity = "high"
@@ -178,13 +178,13 @@ function analyzeInactiveLicenses(users, daysThreshold = 30) {
  * Analyze orphaned licenses
  * Licenses assigned to disabled/deleted accounts
  */
-function analyzeOrphanedLicenses(users) {
+function analyzeOrphanedLicenses(users, skuMap = {}) {
   const findings = []
 
   users.forEach((user) => {
     // Check for disabled accounts with licenses
     if (!user.accountEnabled && user.assignedLicenses && user.assignedLicenses.length > 0) {
-      const licenseCost = calculateUserLicenseCost(user.assignedLicenses)
+      const licenseCost = calculateUserLicenseCost(user.assignedLicenses, skuMap)
 
       const finding = {
         type: "orphaned_license",
@@ -403,19 +403,43 @@ function analyzeUnusedAddons(users, licenses) {
 }
 
 /**
- * Calculate monthly license cost for a user
+ * Tracks SKU IDs seen during a run that weren't in M365_LICENSE_COSTS.
+ * Flushed by `logUnknownSkus()` at end of run.
  */
-function calculateUserLicenseCost(assignedLicenses) {
+let _unknownSkusThisRun = new Set()
+
+/**
+ * Calculate monthly license cost for a user using SKU-aware pricing.
+ * Requires a `skuMap` (skuId → subscribedSku) so we can resolve skuPartNumber
+ * → price from M365_LICENSE_COSTS. Unknown SKUs are tracked and logged once
+ * per run via `logUnknownSkus()` rather than silently over-estimating.
+ */
+function calculateUserLicenseCost(assignedLicenses, skuMap) {
   let totalCost = 0
-
-  assignedLicenses.forEach((license) => {
-    // We don't have the SKU part number here, just the ID
-    // In a real scenario, we'd look this up from the subscribedSkus data
-    // For now, estimate based on common license costs
-    totalCost += 20 // Default estimate per license
-  })
-
+  for (const license of assignedLicenses || []) {
+    const skuId = license.skuId
+    const sku = skuMap?.[skuId]
+    if (!sku) {
+      _unknownSkusThisRun.add(skuId || "(no-id)")
+      continue
+    }
+    const info = M365_LICENSE_COSTS[sku.skuPartNumber]
+    if (!info) {
+      _unknownSkusThisRun.add(sku.skuPartNumber || skuId)
+      continue
+    }
+    totalCost += info.cost
+  }
   return totalCost
+}
+
+function logUnknownSkus() {
+  if (_unknownSkusThisRun.size > 0) {
+    console.warn(
+      `[${new Date().toISOString()}] [M365CostLeakAnalysis] Unknown SKUs skipped from pricing: ${Array.from(_unknownSkusThisRun).join(", ")}`,
+    )
+    _unknownSkusThisRun = new Set()
+  }
 }
 
 /**
@@ -476,9 +500,17 @@ function analyzeM365CostLeaks(data, options = {}) {
     }, 0)
   }
 
+  // Build skuMap once from subscribedSkus — used by calculateUserLicenseCost
+  // for SKU-aware pricing. Maps skuId → full sku object (so we can resolve
+  // skuPartNumber → M365_LICENSE_COSTS entry).
+  const skuMap = {}
+  for (const lic of (licenses || [])) {
+    if (lic.skuId) skuMap[lic.skuId] = lic
+  }
+
   // Run all analysis functions
-  const inactiveFindings = analyzeInactiveLicenses(users, inactivityDays)
-  const orphanedFindings = analyzeOrphanedLicenses(users)
+  const inactiveFindings = analyzeInactiveLicenses(users, inactivityDays, skuMap)
+  const orphanedFindings = analyzeOrphanedLicenses(users, skuMap)
   const overProvisionedFindings = analyzeOverProvisionedLicenses(users, licenses || [])
   const unusedAddonFindings = analyzeUnusedAddons(users, licenses || [])
 
@@ -511,6 +543,8 @@ function analyzeM365CostLeaks(data, options = {}) {
   results.overallSummary.highSeverity = highCount
   results.overallSummary.mediumSeverity = mediumCount
   results.overallSummary.lowSeverity = lowCount
+
+  logUnknownSkus()
 
   return results
 }
