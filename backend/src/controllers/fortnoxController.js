@@ -1072,7 +1072,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
       articles: [],
     }
 
-    const analysis = analyzeCostLeaks(data)
+    const analysis = await analyzeCostLeaks(data)
 
     // Convert SEK amounts to USD for display (Fortnox uses SEK natively)
     // Rate is fetched live from Frankfurter.app (ECB data) and cached for 24 hours

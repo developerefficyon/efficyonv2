@@ -3,7 +3,11 @@
  * Analyzes Fortnox data to identify potential cost leaks and anomalies
  */
 const crypto = require("crypto")
-const { formatCurrencyForIntegration } = require("../utils/currency")
+const {
+  formatCurrencyForIntegration,
+  getSekToUsdRate,
+  SEK_TO_USD_FALLBACK,
+} = require("../utils/currency")
 
 /**
  * Generate a stable hash for a finding to track recommendation status
@@ -13,8 +17,11 @@ function generateFindingHash(finding) {
   return crypto.createHash("md5").update(key).digest("hex")
 }
 
-// Convert SEK to USD for display (Fortnox uses SEK natively)
-const SEK_TO_USD = 0.095 // ~1 USD = 10.5 SEK
+// Convert SEK to USD for display (Fortnox uses SEK natively).
+// Module-scoped current rate, set by `analyzeCostLeaks` at entry.
+// Defaults to the fallback so helpers never see `undefined`.
+let SEK_TO_USD = SEK_TO_USD_FALLBACK
+
 function formatSekAsUsd(amount) {
   const usdAmount = Math.round((amount || 0) * SEK_TO_USD)
   return `$${usdAmount.toLocaleString('en-US')}`
@@ -556,7 +563,11 @@ function analyzeCustomerInvoices(invoices, options = {}) {
  * @param {boolean} [options.fromFileUpload] - If true, skip SEK→USD conversion
  * @returns {Object} Complete analysis results
  */
-function analyzeCostLeaks(data, options = {}) {
+async function analyzeCostLeaks(data, options = {}) {
+  // Refresh the SEK→USD rate once per analyzer run. `getSekToUsdRate` caches
+  // internally for 24h and falls back to the hardcoded constant on failure.
+  SEK_TO_USD = await getSekToUsdRate()
+
   const results = {
     timestamp: new Date().toISOString(),
     supplierInvoiceAnalysis: null,

@@ -46,7 +46,7 @@ async function analyzeUploadedFile(parsedFile, fileName, userHint) {
       case "fortnox": {
         const mapped = mapToAnalysisFormat(rows, "fortnox", columnMapping)
         if (mapped) {
-          analysis = analyzeCostLeaks(mapped, { fromFileUpload: true })
+          analysis = await analyzeCostLeaks(mapped, { fromFileUpload: true })
         }
         break
       }

@@ -471,7 +471,7 @@ async function runTestAnalysis(workspaceId, params) {
     if (analysisType === "standard" || analysisType === "deep") {
       // Run Fortnox invoice analysis (works for both API data and SaaS CSV data)
       if (assembledData.fortnox && integrationLabels.includes("Fortnox")) {
-        result.fortnox = analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })
+        result.fortnox = await analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })
       }
 
       // Run SaaS-specific analysis (license utilization, usage, price drift)
@@ -506,7 +506,7 @@ async function runTestAnalysis(workspaceId, params) {
       const fortnoxCompData = assembledData.fortnox
         ? {
             supplierInvoices: assembledData.fortnox.supplierInvoices,
-            costLeaks: result.fortnox || analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true }),
+            costLeaks: result.fortnox || (await analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })),
           }
         : null
 
