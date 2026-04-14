@@ -37,7 +37,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { getBackendToken } from "@/lib/auth-hooks"
-import type { ToolViewProps } from "./registry"
+import type { ToolViewProps } from "@/lib/tools/types"
 
 interface DirectoryUser {
   id?: string

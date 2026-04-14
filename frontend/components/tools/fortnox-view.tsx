@@ -27,7 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { formatCurrencyForIntegration } from "@/lib/currency"
-import type { ToolViewProps } from "./registry"
+import type { ToolViewProps } from "@/lib/tools/types"
 
 interface FortnoxInfo {
   company?: any

@@ -2,14 +2,12 @@
  * Tool registry — single source of truth mapping a provider name to its config.
  *
  * Adding a new tool integration to the dashboard:
- *   1. Create `lib/tools/configs/<name>.ts` exporting a `ToolConfig`.
+ *   1. Create `lib/tools/configs/<name>.ts` exporting a `UnifiedToolConfig`.
  *   2. Import + add it to `TOOL_REGISTRY` below.
- *   3. (For data tabs) create `components/tools/<name>-view.tsx` and register
- *      it in `components/tools/registry.tsx` (separate file because it pulls
- *      in JSX-heavy modules and we want this file to stay server-safe).
+ *   3. (For data tabs) create `components/tools/<name>-view.tsx` and wire it
+ *      into the config's `viewComponent` field.
  *
- * That's it. No edits to the giant `[id]/page.tsx` are required for the
- * data-loading layer.
+ * That's it. No edits to the giant `[id]/page.tsx` are required.
  */
 
 import type { ToolConfig } from "./types"

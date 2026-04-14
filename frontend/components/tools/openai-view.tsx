@@ -5,7 +5,7 @@
  *
  * Detail-page body for the OpenAI cost analysis tool. Rendered by
  * `dashboard/tools/[id]/page.tsx` when the integration's provider is "OpenAI"
- * (via the registry in `components/tools/registry.tsx`).
+ * (via the unified config in `lib/tools/configs/openai.ts`).
  *
  * Data: the generic `useToolInfo` hook (configured in `lib/tools/configs/openai.ts`)
  * already pulls /api/integrations/openai/usage and /status into a single info
@@ -39,7 +39,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts"
-import type { ToolViewProps } from "./registry"
+import type { ToolViewProps } from "@/lib/tools/types"
 
 interface UsageSummary {
   total_cost_usd: number
