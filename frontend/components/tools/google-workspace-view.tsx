@@ -7,14 +7,13 @@
  * domain, groups, and licenses from the generic `useToolInfo` payload — see
  * `lib/tools/configs/googleworkspace.ts` for the endpoint declarations.
  *
- * The Findings tab calls `/api/integrations/googleworkspace/cost-leaks`
- * on demand (it's expensive — pulls users + licenses + login activity in
- * parallel) and renders the Google-specific analyzer output.
+ * Cost-leak analysis is handled by the shared <AnalysisTab> in the
+ * ToolDetailTabs wrapper — this view only renders the raw data tabs.
  *
  * Independent of any Microsoft 365 view component or analyzer.
  */
 
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,14 +28,7 @@ import {
   CheckCircle,
   CreditCard,
   UsersRound,
-  Sparkles,
-  TrendingDown,
-  AlertTriangle,
-  ShieldCheck,
-  Clock,
 } from "lucide-react"
-import { toast } from "sonner"
-import { getBackendToken } from "@/lib/auth-hooks"
 import type { ToolViewProps } from "@/lib/tools/types"
 
 interface DirectoryUser {
@@ -81,76 +73,9 @@ interface SkuSummaryRow {
   assigned: number
 }
 
-interface CostLeakFinding {
-  id: string
-  type: string
-  group: string
-  severity: "high" | "medium" | "low"
-  title: string
-  description: string
-  userEmail?: string
-  userName?: string
-  skus?: { skuId: string; name: string }[]
-  potentialSavings?: number
-  potentialMonthlySavings?: number
-  lastLogin?: string | null
-  daysSinceLogin?: number
-  isAdmin?: boolean
-  action?: string
-}
-
-interface CostLeakResult {
-  timestamp: string
-  inactivityThreshold: number
-  licenseAnalysis: {
-    findings: CostLeakFinding[]
-    summary: {
-      totalUsers: number
-      totalLicenseAssignments: number
-      usersWithLicenses: number
-      suspendedUsers: number
-      inactiveUsers: number
-      usersWithout2sv: number
-      totalPotentialSavings: number
-    }
-  }
-  overallSummary: {
-    totalFindings: number
-    totalPotentialSavings: number
-    highSeverity: number
-    mediumSeverity: number
-    lowSeverity: number
-  }
-}
-
-const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-const fmtUsd = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n || 0)
-
-interface HistoryItem {
-  id: string
-  provider: string
-  parameters: any
-  summary: {
-    totalFindings: number
-    totalPotentialSavings: number
-    highSeverity: number
-    mediumSeverity: number
-    lowSeverity: number
-  }
-  created_at: string
-}
-
-export function GoogleWorkspaceView({ integration, info, isLoading, reload }: ToolViewProps) {
-  const [activeTab, setActiveTab] = useState<"users" | "licenses" | "groups" | "findings" | "domain">("users")
+export function GoogleWorkspaceView({ info, isLoading, reload }: ToolViewProps) {
+  const [activeTab, setActiveTab] = useState<"users" | "licenses" | "groups" | "domain">("users")
   const [search, setSearch] = useState("")
-  const [analysis, setAnalysis] = useState<CostLeakResult | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [inactivityDays, setInactivityDays] = useState(30)
-  const [findingsFilter, setFindingsFilter] = useState<"all" | "high" | "medium" | "low">("all")
-  const [history, setHistory] = useState<HistoryItem[]>([])
-  const [showHistory, setShowHistory] = useState(false)
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   const users = (info?.users as DirectoryUser[]) || []
   const domain = info?.domain as DomainInfo | undefined
@@ -180,103 +105,6 @@ export function GoogleWorkspaceView({ integration, info, isLoading, reload }: To
     () => licenses?.skuSummary?.reduce((s, sku) => s + sku.assigned, 0) || 0,
     [licenses],
   )
-
-  const persistAnalysis = useCallback(
-    async (data: CostLeakResult) => {
-      try {
-        const token = await getBackendToken()
-        const res = await fetch(`${apiBase}/api/analysis-history`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            integrationId: integration.id,
-            provider: "GoogleWorkspace",
-            parameters: { inactivityDays },
-            analysisData: data,
-          }),
-        })
-        if (!res.ok && res.status !== 409) {
-          // 409 = duplicate (same params already saved); silently ignored
-          const errData = await res.json().catch(() => ({}))
-          console.warn("[GoogleWorkspace] Failed to persist analysis:", errData.error)
-        }
-      } catch (err) {
-        console.warn("[GoogleWorkspace] Failed to persist analysis:", err)
-      }
-    },
-    [integration.id, inactivityDays],
-  )
-
-  const runAnalysis = useCallback(async () => {
-    setIsAnalyzing(true)
-    try {
-      const token = await getBackendToken()
-      const res = await fetch(`${apiBase}/api/integrations/googleworkspace/cost-leaks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ inactivityDays }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Analysis failed")
-      setAnalysis(data)
-      toast.success("Analysis complete", {
-        description: `${data.overallSummary.totalFindings} findings · ${fmtUsd(data.overallSummary.totalPotentialSavings)}/year potential savings`,
-      })
-      // Auto-persist to history (silent — duplicates are ignored)
-      void persistAnalysis(data)
-    } catch (err: any) {
-      toast.error("Cost-leak analysis failed", { description: err.message })
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }, [inactivityDays, persistAnalysis])
-
-  const loadHistory = useCallback(async () => {
-    setIsLoadingHistory(true)
-    try {
-      const token = await getBackendToken()
-      const res = await fetch(
-        `${apiBase}/api/analysis-history?integrationId=${integration.id}&provider=GoogleWorkspace&limit=20`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to load history")
-      setHistory(data.analyses || data.items || [])
-    } catch (err: any) {
-      toast.error("Failed to load history", { description: err.message })
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }, [integration.id])
-
-  const loadHistoricalAnalysis = useCallback(
-    async (id: string) => {
-      try {
-        const token = await getBackendToken()
-        const res = await fetch(`${apiBase}/api/analysis-history/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Failed to load analysis")
-        const payload = data.analysis_data || data.analysisData || data
-        setAnalysis(payload as CostLeakResult)
-        if (payload?.inactivityThreshold) setInactivityDays(payload.inactivityThreshold)
-        setShowHistory(false)
-        toast.success("Loaded historical analysis", {
-          description: new Date(data.created_at || Date.now()).toLocaleString(),
-        })
-      } catch (err: any) {
-        toast.error("Failed to load analysis", { description: err.message })
-      }
-    },
-    [],
-  )
-
-  const filteredFindings = useMemo(() => {
-    if (!analysis) return []
-    if (findingsFilter === "all") return analysis.licenseAnalysis.findings
-    return analysis.licenseAnalysis.findings.filter((f) => f.severity === findingsFilter)
-  }, [analysis, findingsFilter])
 
   if (isLoading && users.length === 0) {
     return (
@@ -328,10 +156,6 @@ export function GoogleWorkspaceView({ integration, info, isLoading, reload }: To
           <TabsTrigger value="groups" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white text-white/40 text-[12px] rounded-md">
             <UsersRound className="w-3.5 h-3.5 mr-1.5" />
             Groups
-          </TabsTrigger>
-          <TabsTrigger value="findings" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white text-white/40 text-[12px] rounded-md">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            Findings
           </TabsTrigger>
           <TabsTrigger value="domain" className="data-[state=active]:bg-white/[0.06] data-[state=active]:text-white text-white/40 text-[12px] rounded-md">
             <Globe className="w-3.5 h-3.5 mr-1.5" />
@@ -461,196 +285,6 @@ export function GoogleWorkspaceView({ integration, info, isLoading, reload }: To
           </Card>
         </TabsContent>
 
-        {/* FINDINGS */}
-        <TabsContent value="findings" className="mt-0 space-y-4">
-          {!analysis ? (
-            <Card className="bg-white/[0.02] border-white/[0.06]">
-              <CardContent className="py-12 text-center space-y-4">
-                <Sparkles className="w-8 h-8 mx-auto text-emerald-400/40" />
-                <div>
-                  <p className="text-white/80 text-[14px] mb-1">Analyze cost leaks</p>
-                  <p className="text-white/30 text-[12px]">
-                    Pulls users + licenses + login activity and flags suspended-but-licensed users,
-                    inactive users, downgrade candidates, and missing 2SV.
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <select
-                    value={inactivityDays}
-                    onChange={(e) => setInactivityDays(Number(e.target.value))}
-                    className="text-[12px] bg-white/[0.03] border border-white/[0.06] text-white/70 rounded-md px-2 py-1.5"
-                  >
-                    <option value={14}>Inactive 14+ days</option>
-                    <option value={30}>Inactive 30+ days</option>
-                    <option value={60}>Inactive 60+ days</option>
-                    <option value={90}>Inactive 90+ days</option>
-                  </select>
-                  <Button
-                    onClick={runAnalysis}
-                    disabled={isAnalyzing}
-                    className="bg-emerald-500 hover:bg-emerald-400 text-black h-8 text-[12px]"
-                  >
-                    {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
-                    Analyze
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <KpiCard
-                  icon={<TrendingDown className="w-3.5 h-3.5 text-emerald-400/80" />}
-                  label="Annual savings"
-                  value={fmtUsd(analysis.overallSummary.totalPotentialSavings)}
-                />
-                <KpiCard
-                  icon={<AlertTriangle className="w-3.5 h-3.5 text-rose-400/80" />}
-                  label="High severity"
-                  value={analysis.overallSummary.highSeverity}
-                  tone="danger"
-                />
-                <KpiCard
-                  icon={<AlertTriangle className="w-3.5 h-3.5 text-amber-400/80" />}
-                  label="Medium"
-                  value={analysis.overallSummary.mediumSeverity}
-                  tone="warning"
-                />
-                <KpiCard
-                  icon={<ShieldCheck className="w-3.5 h-3.5 text-white/40" />}
-                  label="Low"
-                  value={analysis.overallSummary.lowSeverity}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-[11px]">
-                  {(["all", "high", "medium", "low"] as const).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setFindingsFilter(f)}
-                      className={`px-2.5 py-1 rounded-md transition-colors ${
-                        findingsFilter === f
-                          ? "bg-white/[0.08] text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => {
-                      if (!showHistory) loadHistory()
-                      setShowHistory((s) => !s)
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.03] border-white/[0.08] text-white/70 hover:bg-white/[0.06] hover:text-white h-8 text-[12px]"
-                  >
-                    <Clock className="w-3.5 h-3.5 mr-1.5" />
-                    History
-                  </Button>
-                  <Button
-                    onClick={runAnalysis}
-                    disabled={isAnalyzing}
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/[0.03] border-white/[0.08] text-white/70 hover:bg-white/[0.06] hover:text-white h-8 text-[12px]"
-                  >
-                    {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
-                    Re-analyze
-                  </Button>
-                </div>
-              </div>
-
-              {showHistory && (
-                <Card className="bg-white/[0.02] border-white/[0.06]">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[12px] font-medium text-white/70">Saved analyses</p>
-                      <button
-                        onClick={() => setShowHistory(false)}
-                        className="text-white/30 hover:text-white/60 text-[11px]"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    {isLoadingHistory ? (
-                      <div className="py-6 text-center">
-                        <Loader2 className="w-4 h-4 animate-spin text-white/30 mx-auto" />
-                      </div>
-                    ) : history.length === 0 ? (
-                      <p className="py-6 text-center text-[11px] text-white/30">No saved analyses yet</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {history.map((h) => (
-                          <button
-                            key={h.id}
-                            onClick={() => loadHistoricalAnalysis(h.id)}
-                            className="w-full text-left flex items-center justify-between p-2.5 rounded-md bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] transition-colors"
-                          >
-                            <div>
-                              <div className="text-[11.5px] text-white/80">
-                                {new Date(h.created_at).toLocaleString()}
-                              </div>
-                              <div className="text-[10.5px] text-white/30">
-                                {h.summary?.totalFindings || 0} findings · inactivity{" "}
-                                {h.parameters?.inactivityDays || 30}d
-                              </div>
-                            </div>
-                            <div className="text-[12px] text-emerald-400/80 font-display">
-                              {fmtUsd(h.summary?.totalPotentialSavings || 0)}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="space-y-2">
-                {filteredFindings.map((f) => (
-                  <Card key={f.id} className="bg-white/[0.02] border-white/[0.06]">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <SeverityBadge severity={f.severity} />
-                            <span className="text-[10px] uppercase tracking-wide text-white/30">{f.group}</span>
-                          </div>
-                          <p className="text-[13px] font-medium text-white/85 mb-1">{f.title}</p>
-                          <p className="text-[11.5px] text-white/40 mb-2">{f.description}</p>
-                          {f.action && (
-                            <p className="text-[11px] text-emerald-400/60">→ {f.action}</p>
-                          )}
-                        </div>
-                        {(f.potentialSavings || 0) > 0 && (
-                          <div className="text-right shrink-0">
-                            <div className="text-[11px] text-white/30">Save</div>
-                            <div className="text-[15px] font-display text-emerald-400/90">
-                              {fmtUsd(f.potentialSavings || 0)}
-                            </div>
-                            <div className="text-[10px] text-white/30">/year</div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {filteredFindings.length === 0 && (
-                  <div className="py-10 text-center text-white/30 text-[12px]">
-                    No findings at this severity level
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </TabsContent>
-
         {/* DOMAIN */}
         <TabsContent value="domain" className="mt-0">
           <Card className="bg-white/[0.02] border-white/[0.06]">
@@ -706,16 +340,3 @@ function DomainRow({ label, value, mono }: { label: string; value?: string; mono
   )
 }
 
-function SeverityBadge({ severity }: { severity: "high" | "medium" | "low" }) {
-  const styles =
-    severity === "high"
-      ? "bg-rose-500/10 text-rose-400/90 border-rose-500/20"
-      : severity === "medium"
-      ? "bg-amber-500/10 text-amber-400/90 border-amber-500/20"
-      : "bg-white/[0.04] text-white/50 border-white/[0.08]"
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9.5px] uppercase tracking-wide font-medium border ${styles}`}>
-      {severity}
-    </span>
-  )
-}

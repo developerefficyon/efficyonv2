@@ -10,9 +10,9 @@ import Link from "next/link"
 import { useAuth, getBackendToken } from "@/lib/auth-hooks"
 import { useTeamRole } from "@/lib/team-role-context"
 import { getToolConfig } from "@/lib/tools/registry"
-import { useToolInfo } from "@/lib/tools/use-tool-info"
 import { useToolConnect } from "@/lib/tools/use-tool-connect"
 import { ToolDetailShell } from "@/components/tools/tool-detail-shell"
+import { ToolDetailTabs } from "@/components/tools/tool-detail-tabs"
 import type { Integration, UnifiedToolConfig } from "@/lib/tools/types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -116,7 +116,6 @@ function ConnectedToolDetail({
 }) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
-  const { info, isLoading: isLoadingInfo, reload } = useToolInfo(integration)
   const { reconnect, isConnecting: isReconnecting } = useToolConnect(config, onReload)
 
   const handleDelete = async () => {
@@ -142,7 +141,6 @@ function ConnectedToolDetail({
     }
   }
 
-  const ViewComponent = config.viewComponent
   const canReconnect = config.authType === "oauth"
 
   return (
@@ -156,12 +154,7 @@ function ConnectedToolDetail({
       isDeleting={isDeleting}
     >
       {integration.status === "connected" ? (
-        <ViewComponent
-          integration={integration}
-          info={info}
-          isLoading={isLoadingInfo}
-          reload={reload}
-        />
+        <ToolDetailTabs integration={integration} config={config} />
       ) : (
         <Card className="bg-white/[0.02] border-white/[0.06]">
           <CardContent className="p-8 text-center">
