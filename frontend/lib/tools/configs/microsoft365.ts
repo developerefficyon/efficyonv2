@@ -1,5 +1,5 @@
 import type { UnifiedToolConfig } from "../types"
-import { PendingToolView } from "@/components/tools/pending-tool-view"
+import { Microsoft365View } from "@/components/tools/microsoft365-view"
 
 export const microsoft365Config: UnifiedToolConfig = {
   provider: "Microsoft365",
@@ -43,6 +43,6 @@ export const microsoft365Config: UnifiedToolConfig = {
     { key: "usageReports", path: "/api/integrations/microsoft365/usage", pick: ["usageReports", "usage"], fallback: null },
   ],
   defaultTab: "licenses",
-  viewComponent: PendingToolView,
+  viewComponent: Microsoft365View,
   connectingToast: "Redirecting to Microsoft to authorize…",
 }
