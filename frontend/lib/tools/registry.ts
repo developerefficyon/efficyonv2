@@ -10,7 +10,7 @@
  * That's it. No edits to the giant `[id]/page.tsx` are required.
  */
 
-import type { ToolConfig } from "./types"
+import type { UnifiedToolConfig } from "./types"
 import { fortnoxConfig } from "./configs/fortnox"
 import { microsoft365Config } from "./configs/microsoft365"
 import { hubspotConfig } from "./configs/hubspot"
@@ -21,7 +21,7 @@ import { anthropicConfig } from "./configs/anthropic"
 import { geminiConfig } from "./configs/gemini"
 import { googleWorkspaceConfig } from "./configs/googleworkspace"
 
-export const TOOL_REGISTRY: Record<string, ToolConfig> = {
+export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
   Microsoft365: microsoft365Config,
   HubSpot: hubspotConfig,
@@ -38,7 +38,7 @@ export const TOOL_REGISTRY: Record<string, ToolConfig> = {
  * `company_integrations`. Returns undefined for unknown providers so the page
  * can render a generic empty state instead of crashing.
  */
-export function getToolConfig(providerOrToolName?: string): ToolConfig | undefined {
+export function getToolConfig(providerOrToolName?: string): UnifiedToolConfig | undefined {
   if (!providerOrToolName) return undefined
   return TOOL_REGISTRY[providerOrToolName]
 }

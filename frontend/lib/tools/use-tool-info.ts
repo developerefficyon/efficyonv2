@@ -8,7 +8,7 @@
  *   - info        merged endpoint payloads (typed as `ToolInfo`)
  *   - isLoading   true while a load is in flight
  *   - reload      manual refresh trigger (e.g. after a sync button click)
- *   - config      the resolved `ToolConfig` (so the page can read defaultTab)
+ *   - config      the resolved `UnifiedToolConfig` (so the page can read defaultTab)
  *
  * The hook deliberately keys on `integration?.id` so switching between tools
  * inside the same page mount triggers a fresh load.
@@ -17,13 +17,13 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createToolLoader } from "./create-tool-loader"
 import { getToolConfig } from "./registry"
-import type { Integration, ToolConfig, ToolInfo } from "./types"
+import type { Integration, UnifiedToolConfig, ToolInfo } from "./types"
 
 export interface UseToolInfoResult {
   info: ToolInfo | null
   isLoading: boolean
   reload: () => Promise<void>
-  config: ToolConfig | undefined
+  config: UnifiedToolConfig | undefined
 }
 
 export function useToolInfo(integration: Integration | null): UseToolInfoResult {

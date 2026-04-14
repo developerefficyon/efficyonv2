@@ -13,7 +13,7 @@
 
 import { toast } from "sonner"
 import { getBackendToken } from "@/lib/auth-hooks"
-import type { ToolConfig, ToolInfo } from "./types"
+import type { UnifiedToolConfig, ToolInfo } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -27,7 +27,7 @@ export interface LoadToolInfoResult {
  * arguments and resolves to `{ info, tokenExpired }`. Errors are surfaced via
  * toasts and `info` is null on hard failure so callers can clear their state.
  */
-export function createToolLoader(config: ToolConfig) {
+export function createToolLoader(config: UnifiedToolConfig) {
   return async function loadToolInfo(): Promise<LoadToolInfoResult> {
     const accessToken = await getBackendToken()
     if (!accessToken) {

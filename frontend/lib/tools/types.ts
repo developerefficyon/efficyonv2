@@ -93,9 +93,3 @@ export interface UnifiedToolConfig {
   connectingToast?: string
   connectedToast?: string
 }
-
-/**
- * Legacy alias — kept so old `getToolConfig` consumers still compile during the
- * migration. Will be removed after all consumers use UnifiedToolConfig.
- */
-export type ToolConfig = UnifiedToolConfig
