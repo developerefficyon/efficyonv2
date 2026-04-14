@@ -46,4 +46,7 @@ export const googleWorkspaceConfig: UnifiedToolConfig = {
   viewComponent: GoogleWorkspaceView,
   connectingToast: "Redirecting to Google to authorize…",
   tokenRevocation: { automated: true },
+  analysisType: "costLeaks",
+  analysisEndpoint: "/api/integrations/googleworkspace/cost-leaks",
+  analysisSupportsInactivity: true,
 }

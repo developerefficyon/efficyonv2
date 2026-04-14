@@ -62,4 +62,6 @@ export const shopifyConfig: UnifiedToolConfig = {
     automated: false,
     manualStepsNote: "To fully revoke access, uninstall the Effycion app from your Shopify admin under Settings → Apps and sales channels.",
   },
+  analysisType: "costLeaks",
+  analysisEndpoint: "/api/integrations/shopify/cost-leaks",
 }

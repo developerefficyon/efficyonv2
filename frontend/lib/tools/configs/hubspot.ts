@@ -89,4 +89,7 @@ export const hubspotConfig: UnifiedToolConfig = {
   viewComponent: HubSpotView,
   connectingToast: "Redirecting to HubSpot to authorize…",
   tokenRevocation: { automated: true },
+  analysisType: "costLeaks",
+  analysisEndpoint: "/api/integrations/hubspot/cost-leaks",
+  analysisSupportsInactivity: true,
 }

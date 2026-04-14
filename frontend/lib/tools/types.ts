@@ -100,4 +100,10 @@ export interface UnifiedToolConfig {
     /** Shown in the delete dialog when automated is false. Plain text with optional URLs. */
     manualStepsNote?: string
   }
+
+  // ANALYSIS (cost-leak or usage-summary)
+  analysisType?: "costLeaks" | "usage" | "none"
+  analysisEndpoint?: string
+  analysisSupportsInactivity?: boolean
+  analysisSupportsDateRange?: boolean
 }

@@ -58,4 +58,7 @@ export const fortnoxConfig: UnifiedToolConfig = {
   viewComponent: FortnoxView,
   connectingToast: "Redirecting to Fortnox to authorize…",
   tokenRevocation: { automated: true },
+  analysisType: "costLeaks",
+  analysisEndpoint: "/api/integrations/fortnox/cost-leaks",
+  analysisSupportsDateRange: true,
 }

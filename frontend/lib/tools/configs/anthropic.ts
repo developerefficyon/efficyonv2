@@ -41,4 +41,5 @@ export const anthropicConfig: UnifiedToolConfig = {
     automated: false,
     manualStepsNote: "Your stored API key is deleted from our servers. To fully revoke access, also delete the admin key from your Anthropic console.",
   },
+  analysisType: "usage",
 }

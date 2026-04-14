@@ -62,4 +62,5 @@ export const geminiConfig: UnifiedToolConfig = {
     automated: false,
     manualStepsNote: "Your stored service-account JSON is deleted from our servers. To fully revoke access, also delete or disable the service account in Google Cloud Console.",
   },
+  analysisType: "usage",
 }

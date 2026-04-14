@@ -46,4 +46,6 @@ export const quickbooksConfig: UnifiedToolConfig = {
   viewComponent: QuickBooksView,
   connectingToast: "Redirecting to QuickBooks to authorize…",
   tokenRevocation: { automated: true },
+  analysisType: "costLeaks",
+  analysisEndpoint: "/api/integrations/quickbooks/cost-leaks",
 }
