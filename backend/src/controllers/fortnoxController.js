@@ -1185,6 +1185,52 @@ async function analyzeFortnoxCostLeaks(req, res) {
   }
 }
 
+async function revokeFortnoxToken(refreshToken, ctx = {}) {
+  const endpoint = "revokeFortnoxToken"
+
+  if (!refreshToken) {
+    log("warn", endpoint, "No refresh token provided for revocation")
+    return { success: false, error: "No refresh token" }
+  }
+
+  const { clientId, clientSecret } = ctx
+  if (!clientId || !clientSecret) {
+    log("warn", endpoint, "Missing client credentials for Fortnox revocation")
+    return { success: false, error: "Missing client credentials" }
+  }
+
+  try {
+    log("log", endpoint, "Revoking Fortnox refresh token...")
+
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+    const body = new URLSearchParams({
+      token_type_hint: "refresh_token",
+      token: refreshToken,
+    }).toString()
+
+    const response = await fetch("https://apps.fortnox.se/oauth-v1/revoke", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${credentials}`,
+      },
+      body,
+    })
+
+    if (response.ok || response.status === 204) {
+      log("log", endpoint, "Fortnox token revoked successfully")
+      return { success: true }
+    } else {
+      const errorText = await response.text()
+      log("warn", endpoint, `Token revocation returned ${response.status}: ${errorText}`)
+      return { success: false, error: errorText }
+    }
+  } catch (error) {
+    log("error", endpoint, `Token revocation error: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
 module.exports = {
   startFortnoxOAuth,
   fortnoxOAuthCallback,
@@ -1201,4 +1247,5 @@ module.exports = {
   getFortnoxArticles,
   getFortnoxSuppliers,
   analyzeFortnoxCostLeaks,
+  revokeFortnoxToken,
 }
