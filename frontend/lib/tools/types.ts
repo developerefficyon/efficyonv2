@@ -1,13 +1,4 @@
-/**
- * Tool registry types.
- *
- * The goal of this module is to make adding a new tool integration to the
- * dashboard a single-file operation. Each tool declares the endpoints whose
- * responses make up its "info" payload (the data shown on the tool detail
- * page). The generic loader handles auth, parallel fetching, token-expiry
- * detection, and parsing — so per-tool files only describe the data shape,
- * never the mechanics.
- */
+import type { ComponentType } from "react"
 
 export interface Integration {
   id: string
@@ -23,13 +14,6 @@ export interface Integration {
 
 /**
  * One endpoint that contributes to a tool's info payload.
- *
- * - `key`        Field on the resulting info object.
- * - `path`       Backend path (relative to `${API_BASE}`).
- * - `pick`       Ordered list of response keys to try, first hit wins.
- *                e.g. ["Invoices", "invoices"] handles casing variants.
- * - `fallback`   Value to use when none of the `pick` keys are present.
- *                Defaults to [] for arrays, undefined otherwise.
  */
 export interface ToolEndpoint {
   key: string
@@ -39,17 +23,79 @@ export interface ToolEndpoint {
 }
 
 /**
- * Static configuration for a single tool. Lives in `lib/tools/configs/<name>.ts`.
+ * A single field in a tool's connect form.
  */
-export interface ToolConfig {
-  /** Provider/tool_name as stored in `company_integrations.provider`. */
-  provider: string
-  /** Human label used in toast messages. */
+export interface AuthField {
+  name: string
   label: string
-  /** Endpoints whose responses are merged into the info object. */
-  endpoints: ToolEndpoint[]
-  /** Default tab id for this tool's detail view. */
-  defaultTab: string
+  type: "text" | "password" | "textarea" | "select"
+  required: boolean
+  placeholder?: string
+  hint?: string
+  options?: { value: string; label: string }[]
+  validate?: (value: string) => string | null
 }
 
+export type ToolCategory =
+  | "Finance"
+  | "Productivity"
+  | "CRM/Marketing"
+  | "E-Commerce"
+  | "AI"
+  | "Communication"
+  | "Other"
+
+export type AuthType = "oauth" | "apiKey" | "serviceAccount"
+
 export type ToolInfo = Record<string, any>
+
+export interface ToolViewProps {
+  integration: Integration
+  info: ToolInfo | null
+  isLoading: boolean
+  reload: () => Promise<void>
+}
+
+/**
+ * Unified tool configuration — single source of truth per tool.
+ */
+export interface UnifiedToolConfig {
+  // IDENTITY
+  provider: string
+  id: string
+  label: string
+
+  // UI METADATA
+  category: ToolCategory
+  description: string
+  brandColor: string
+
+  // AUTH & CONNECT
+  authType: AuthType
+  authFields: AuthField[]
+  connectEndpoint: string
+  oauthStartEndpoint?: string
+  buildConnectRequest: (formValues: Record<string, any>) => Record<string, any>
+  validate?: (formValues: Record<string, any>) => string | null
+
+  // UI HINTS
+  quickSetup?: { title: string; steps: string[]; note?: string }
+  callouts?: { type: "info" | "warning" | "success"; title: string; body: string; link?: string }[]
+
+  // DATA FETCHING
+  endpoints: ToolEndpoint[]
+  defaultTab: string
+
+  // DETAIL PAGE
+  viewComponent: ComponentType<ToolViewProps>
+
+  // TOASTS
+  connectingToast?: string
+  connectedToast?: string
+}
+
+/**
+ * Legacy alias — kept so old `getToolConfig` consumers still compile during the
+ * migration. Will be removed after all consumers use UnifiedToolConfig.
+ */
+export type ToolConfig = UnifiedToolConfig
