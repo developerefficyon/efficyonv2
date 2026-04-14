@@ -81,12 +81,40 @@ function CostLeaksAnalysis({ integration, config }: AnalysisTabProps) {
       const data = await res.json()
       setAnalysis(data)
       toast.success("Analysis complete")
+
+      const providerName = integration.provider || integration.tool_name
+      const parameters: Record<string, any> = {}
+      if (config.analysisSupportsDateRange) {
+        if (startDate) parameters.startDate = startDate
+        if (endDate) parameters.endDate = endDate
+      }
+      if (config.analysisSupportsInactivity) {
+        parameters.inactivityDays = inactivityDays
+      }
+
+      const saveRes = await fetch(`${API_BASE}/api/analysis-history`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          integrationId: integration.id,
+          provider: providerName,
+          parameters,
+          analysisData: data,
+        }),
+      })
+      if (!saveRes.ok && saveRes.status !== 409) {
+        const err = await saveRes.json().catch(() => ({ error: "Unknown" }))
+        console.warn("Failed to save analysis to history:", err.error)
+      }
     } catch (err: any) {
       toast.error("Analysis failed", { description: err.message })
     } finally {
       setIsLoading(false)
     }
-  }, [config, inactivityDays, startDate, endDate, router])
+  }, [config, integration, inactivityDays, startDate, endDate, router])
 
   const allFindings = [
     ...(analysis?.supplierInvoiceAnalysis?.findings || []),
