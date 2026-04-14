@@ -99,43 +99,63 @@ function analyzeBills(bills) {
         return dateA - dateB
       })
 
-      for (let i = 0; i < sameBills.length - 1; i++) {
-        const bill1 = sameBills[i]
-        const bill2 = sameBills[i + 1]
-        const date1 = new Date(bill1.TxnDate || "")
-        const date2 = new Date(bill2.TxnDate || "")
-
-        if (isNaN(date1.getTime()) || isNaN(date2.getTime())) continue
-
-        const daysDiff = Math.abs((date2 - date1) / (1000 * 60 * 60 * 24))
-
+      // Cluster bills into groups where each consecutive pair is within 30 days.
+      const groups = []
+      let currentGroup = [sameBills[0]]
+      for (let i = 1; i < sameBills.length; i++) {
+        const prevDate = new Date(sameBills[i - 1].TxnDate || "")
+        const thisDate = new Date(sameBills[i].TxnDate || "")
+        const daysDiff = Math.abs((thisDate - prevDate) / (1000 * 60 * 60 * 24))
         if (daysDiff <= 30) {
-          const amount = bill1.calculatedTotal
-          let severity = "low"
-          if (amount > 1000) severity = "high"
-          else if (amount > 100) severity = "medium"
-
-          const finding = {
-            type: "duplicate_payment",
-            severity,
-            title: "Potential Duplicate Vendor Payment",
-            description: `Same vendor (${vendor.vendorName}), same amount (${formatAmount(amount)}), within ${Math.round(daysDiff)} days`,
-            bills: [bill1, bill2],
-            amount,
-            potentialSavings: amount,
-            recommendation: `Verify with ${vendor.vendorName} whether both payments were intentional. If duplicate, request a credit memo or refund for ${formatAmount(amount)}.`,
-            impact: severity,
-            effort: "low",
-            actionSteps: [
-              `Cross-reference both bill dates (${bill1.TxnDate || "N/A"} and ${bill2.TxnDate || "N/A"}) in your records`,
-              `Contact ${vendor.vendorName} accounts payable to confirm if both payments were valid`,
-              "If duplicate confirmed, request a credit memo or direct refund",
-              "Update your AP process to flag same-vendor/same-amount bills within 30 days",
-            ],
-          }
-          finding.findingHash = generateFindingHash(finding)
-          summary.duplicatePayments.push(finding)
+          currentGroup.push(sameBills[i])
+        } else {
+          if (currentGroup.length > 1) groups.push(currentGroup)
+          currentGroup = [sameBills[i]]
         }
+      }
+      if (currentGroup.length > 1) groups.push(currentGroup)
+
+      // Emit one finding per group of 2+ duplicates.
+      for (const group of groups) {
+        const amount = safeParseFloat(group[0].TotalAmt)
+        const vendorName = group[0].VendorRef?.name || "Unknown vendor"
+        const bills = group.map((b) => ({
+          id: b.Id,
+          txnDate: b.TxnDate,
+          docNumber: b.DocNumber,
+        }))
+
+        // Detect likely-recurring: all inter-bill intervals close to 30 days (monthly)
+        const intervals = []
+        for (let i = 1; i < group.length; i++) {
+          const d = (new Date(group[i].TxnDate) - new Date(group[i - 1].TxnDate)) / (1000 * 60 * 60 * 24)
+          intervals.push(d)
+        }
+        const likelyRecurring =
+          intervals.length > 0 && intervals.every((d) => d >= 25 && d <= 35)
+
+        let severity = "low"
+        if (amount > 1000) severity = "high"
+        else if (amount > 100) severity = "medium"
+
+        const finding = {
+          type: "duplicate_payment",
+          severity,
+          title: `Duplicate payment to ${vendorName}`,
+          description: `${group.length} bills of $${amount.toLocaleString()} to ${vendorName} within 30-day windows${likelyRecurring ? ". Interval pattern suggests this may be a legitimate subscription — verify before taking action." : "."}`,
+          bills,
+          amount,
+          potentialSavings: amount * (group.length - 1),
+          affectedBills: bills,
+          likelyRecurring,
+          recommendation: likelyRecurring
+            ? "Confirm whether this is an intentional recurring subscription. If so, consolidate under a single annual contract."
+            : `Review these ${group.length} bills and refund any accidental duplicates.`,
+          impact: severity,
+          effort: "low",
+        }
+        finding.findingHash = generateFindingHash(finding)
+        summary.duplicatePayments.push(finding)
       }
     })
   })
