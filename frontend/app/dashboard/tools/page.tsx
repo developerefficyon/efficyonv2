@@ -44,6 +44,7 @@ import { toast } from "sonner"
 import type { Integration as SharedIntegration } from "@/lib/tools/types"
 import { ToolConnectForm } from "@/components/tools/tool-connect-form"
 import { TOOL_REGISTRY, getToolConfig } from "@/lib/tools/registry"
+import { useOAuthCallback } from "@/lib/tools/oauth-callback-handler"
 
 type Integration = SharedIntegration
 
@@ -217,145 +218,11 @@ export default function ToolsPage() {
     }
   }, [router])
 
-  // Track if OAuth callback was just processed (need to force refresh data)
-  const oauthCallbackProcessedRef = useRef(false)
-
-  // Separate effect for OAuth callback handling - runs immediately regardless of auth state
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const microsoft365Status = params.get("microsoft365")
-    const hubspotStatus = params.get("hubspot")
-    const quickbooksStatus = params.get("quickbooks")
-    const shopifyStatus = params.get("shopify")
-    const googleWorkspaceStatus = params.get("googleworkspace")
-
-    if (googleWorkspaceStatus) {
-      setIsConnecting(false)
-      window.history.replaceState({}, "", window.location.pathname)
-      oauthCallbackProcessedRef.current = true
-      if (googleWorkspaceStatus === "connected") {
-        toast.success("Google Workspace connected successfully!", {
-          description: "Your Google Workspace integration is now active.",
-          duration: 5000,
-        })
-      } else {
-        toast.error("Failed to connect Google Workspace", {
-          description: googleWorkspaceStatus.replace("error_", "").replace(/_/g, " "),
-          duration: 10000,
-        })
-      }
-    }
-
-    // Handle Microsoft 365 OAuth callback immediately (before auth check)
-    if (microsoft365Status) {
-      setIsConnecting(false)
-      window.history.replaceState({}, "", window.location.pathname)
-      oauthCallbackProcessedRef.current = true // Mark that we need to refresh data
-
-      if (microsoft365Status === "connected") {
-        toast.success("Microsoft 365 connected successfully!", {
-          description: "Your Microsoft 365 integration is now active.",
-          duration: 5000,
-        })
-      } else {
-        toast.error("Failed to connect Microsoft 365", {
-          description: microsoft365Status.replace("error_", "").replace(/_/g, " "),
-          duration: 10000,
-        })
-      }
-    }
-
-    // Handle HubSpot OAuth callback immediately (before auth check)
-    if (hubspotStatus) {
-      setIsConnecting(false)
-      window.history.replaceState({}, "", window.location.pathname)
-      oauthCallbackProcessedRef.current = true // Mark that we need to refresh data
-
-      if (hubspotStatus === "connected") {
-        toast.success("HubSpot connected successfully!", {
-          description: "Your HubSpot integration is now active.",
-          duration: 5000,
-        })
-      } else {
-        // Get additional error details if available
-        const errorDetails = params.get("details")
-        const errorParam = params.get("error")
-        let description = hubspotStatus === "error" ? "Connection failed" : hubspotStatus.replace("error_", "").replace(/_/g, " ")
-        if (errorDetails) {
-          description += `: ${decodeURIComponent(errorDetails)}`
-        } else if (errorParam) {
-          description += `: ${decodeURIComponent(errorParam)}`
-        }
-
-        console.error(`HubSpot OAuth error: status=${hubspotStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
-
-        toast.error("Failed to connect HubSpot", {
-          description,
-          duration: 10000,
-        })
-      }
-    }
-
-    // Handle QuickBooks OAuth callback immediately (before auth check)
-    if (quickbooksStatus) {
-      setIsConnecting(false)
-      window.history.replaceState({}, "", window.location.pathname)
-      oauthCallbackProcessedRef.current = true
-
-      if (quickbooksStatus === "connected") {
-        toast.success("QuickBooks connected successfully!", {
-          description: "Your QuickBooks integration is now active.",
-          duration: 5000,
-        })
-      } else {
-        const errorDetails = params.get("details")
-        const errorParam = params.get("error")
-        let description = quickbooksStatus === "error" ? "Connection failed" : quickbooksStatus.replace("error_", "").replace(/_/g, " ")
-        if (errorDetails) {
-          description += `: ${decodeURIComponent(errorDetails)}`
-        } else if (errorParam) {
-          description += `: ${decodeURIComponent(errorParam)}`
-        }
-
-        console.error(`QuickBooks OAuth error: status=${quickbooksStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
-
-        toast.error("Failed to connect QuickBooks", {
-          description,
-          duration: 10000,
-        })
-      }
-    }
-
-    // Handle Shopify OAuth callback immediately (before auth check)
-    if (shopifyStatus) {
-      setIsConnecting(false)
-      window.history.replaceState({}, "", window.location.pathname)
-      oauthCallbackProcessedRef.current = true
-
-      if (shopifyStatus === "connected") {
-        toast.success("Shopify connected successfully!", {
-          description: "Your Shopify integration is now active.",
-          duration: 5000,
-        })
-      } else {
-        const errorDetails = params.get("details")
-        const errorParam = params.get("error")
-        let description = shopifyStatus === "error" ? "Connection failed" : shopifyStatus.replace("error_", "").replace(/_/g, " ")
-        if (errorDetails) {
-          description += `: ${decodeURIComponent(errorDetails)}`
-        } else if (errorParam) {
-          description += `: ${decodeURIComponent(errorParam)}`
-        }
-
-        console.error(`Shopify OAuth error: status=${shopifyStatus}, details=${errorDetails || "none"}, error=${errorParam || "none"}`)
-
-        toast.error("Failed to connect Shopify", {
-          description,
-          duration: 10000,
-        })
-      }
-    }
-  }, []) // Run once on mount
+  // OAuth callback handling is registry-driven — see lib/tools/oauth-callback-handler.
+  useOAuthCallback({
+    onSuccess: () => void loadIntegrations(true),
+    onDone: () => setIsConnecting(false),
+  })
 
   useEffect(() => {
     if (authLoading) {
@@ -377,90 +244,10 @@ export default function ToolsPage() {
       hasLoadedRef.current = false
     }
 
-    // Check for OAuth callback result in URL params
-    const params = new URLSearchParams(window.location.search)
-    const fortnoxStatus = params.get("fortnox")
-    const fortnoxError = params.get("error")
-    const fortnoxErrorDesc = params.get("error_desc")
-
-    if (fortnoxStatus || fortnoxError) {
-      setIsConnecting(false)
-      
-      if (fortnoxStatus === "connected") {
-        // Clean up URL immediately
-        window.history.replaceState({}, "", window.location.pathname)
-        toast.success("Fortnox connected successfully!", {
-          description: "Your Fortnox integration is now active.",
-          duration: 5000,
-        })
-        hasLoadedRef.current = true
-        // Load integrations and tools, then ensure loading state is cleared
-        loadIntegrations().then(() => {
-          setIsLoading(false)
-        }).catch(() => {
-          setIsLoading(false)
-        })
-        loadTools().catch(() => {
-          // Ignore errors
-        })
-        return
-      } else if (fortnoxError || fortnoxStatus) {
-        let errorMessage = "Failed to connect Fortnox"
-        let errorDescription = fortnoxErrorDesc || "An unknown error occurred."
-        
-        if (fortnoxStatus) {
-          switch (fortnoxStatus) {
-            case "error_missing_code":
-              errorDescription = "Missing authorization code from Fortnox. Please try again."
-              break
-            case "error_invalid_state":
-              errorDescription = "Invalid authorization state. Please try reconnecting."
-              break
-            case "error_integration_not_found":
-              errorDescription = "Fortnox integration not found. Please set up the integration again."
-              break
-            case "error_token":
-              errorDescription = "Failed to exchange authorization code for tokens. Check your Client ID and Secret."
-              break
-            case "error_saving_tokens":
-              errorDescription = "Failed to save tokens. Please try again."
-              break
-            default:
-              errorDescription = fortnoxErrorDesc || "An error occurred during authorization."
-          }
-        }
-        
-        toast.error(errorMessage, {
-          description: errorDescription,
-          duration: 10000,
-        })
-        window.history.replaceState({}, "", window.location.pathname)
-        hasLoadedRef.current = true
-        // Load integrations and tools, then ensure loading state is cleared
-        loadIntegrations().then(() => {
-          setIsLoading(false)
-        }).catch(() => {
-          setIsLoading(false)
-        })
-        loadTools().catch(() => {
-          // Ignore errors
-        })
-        return
-      }
-    }
-    
-    // Force refresh if OAuth callback was just processed, or if data hasn't been loaded yet
-    const shouldForceRefresh = oauthCallbackProcessedRef.current
-    if (hasLoadedRef.current && !userChanged && !shouldForceRefresh) {
+    if (hasLoadedRef.current && !userChanged) {
       return
     }
 
-    // Reset the OAuth callback flag
-    if (oauthCallbackProcessedRef.current) {
-      oauthCallbackProcessedRef.current = false
-    }
-
-    setIsConnecting(false)
     hasLoadedRef.current = true
     void loadIntegrations()
     void loadTools()
