@@ -9,6 +9,7 @@ const {
   validateAdminKey,
   syncCompanyUsage,
 } = require("../services/anthropicCostAnalysis")
+const { getIntegrationLimits } = require("./integrationController")
 
 const PROVIDER = "Anthropic"
 const TABLE = "anthropic_usage"
@@ -65,6 +66,20 @@ async function connect(req, res) {
       if (error) throw new Error(error.message)
       integrationId = existing.id
     } else {
+      // Enforce subscription integration limit on new connections (reconnects/key-rotations skip this)
+      const limits = await getIntegrationLimits(user.id)
+      if (!limits.canAddMore) {
+        log("warn", endpoint, `Integration limit reached: ${limits.currentIntegrations}/${limits.maxIntegrations}`)
+        return res.status(403).json({
+          error: "Integration limit reached",
+          message: `Your ${limits.planName} plan allows up to ${limits.maxIntegrations} integrations. You currently have ${limits.currentIntegrations} connected.`,
+          currentIntegrations: limits.currentIntegrations,
+          maxIntegrations: limits.maxIntegrations,
+          planTier: limits.planTier,
+          planName: limits.planName,
+        })
+      }
+
       const { data, error } = await supabase
         .from("company_integrations")
         .insert({
