@@ -74,10 +74,52 @@ function getCurrencySymbol(currency = "USD") {
   return config.symbol
 }
 
+/**
+ * Currency rate fetcher with 24h in-memory cache and safe fallback.
+ * Uses Frankfurter (ECB data, free, no auth).
+ *
+ * Replaces the hardcoded SEK_TO_USD = 0.095 in costLeakAnalysis.js.
+ */
+
+let sekToUsdCache = null
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const SEK_TO_USD_FALLBACK = 0.095 // Historical average — used only if fetch fails
+
+const log = (level, msg) => {
+  const ts = new Date().toISOString()
+  console[level](`[${ts}] [currency] ${msg}`)
+}
+
+/**
+ * Returns the current SEK→USD rate.
+ * Caches in-memory for 24h; falls back to hardcoded value on fetch failure.
+ */
+async function getSekToUsdRate() {
+  const now = Date.now()
+  if (sekToUsdCache && (now - sekToUsdCache.fetchedAt) < CACHE_TTL_MS) {
+    return sekToUsdCache.rate
+  }
+  try {
+    const res = await fetch("https://api.frankfurter.app/latest?from=SEK&to=USD")
+    if (!res.ok) throw new Error(`Frankfurter returned ${res.status}`)
+    const data = await res.json()
+    const rate = data?.rates?.USD
+    if (typeof rate !== "number") throw new Error("Missing USD rate in response")
+    sekToUsdCache = { rate, fetchedAt: now }
+    log("log", `Live rate fetched: 1 SEK = ${rate} USD`)
+    return rate
+  } catch (err) {
+    log("warn", `Live rate fetch failed (${err.message}) — using fallback ${SEK_TO_USD_FALLBACK}`)
+    return SEK_TO_USD_FALLBACK
+  }
+}
+
 module.exports = {
   INTEGRATION_CURRENCIES,
   getCurrencyForIntegration,
   formatCurrency,
   formatCurrencyForIntegration,
   getCurrencySymbol,
+  getSekToUsdRate,
+  SEK_TO_USD_FALLBACK,
 }
