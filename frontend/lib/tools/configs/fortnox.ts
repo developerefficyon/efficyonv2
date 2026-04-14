@@ -1,5 +1,5 @@
 import type { UnifiedToolConfig } from "../types"
-import { PendingToolView } from "@/components/tools/pending-tool-view"
+import { FortnoxView } from "@/components/tools/fortnox-view"
 
 export const fortnoxConfig: UnifiedToolConfig = {
   provider: "Fortnox",
@@ -55,6 +55,6 @@ export const fortnoxConfig: UnifiedToolConfig = {
     { key: "suppliers", path: "/api/integrations/fortnox/suppliers", pick: ["Suppliers", "suppliers"], fallback: [] },
   ],
   defaultTab: "company",
-  viewComponent: PendingToolView,
+  viewComponent: FortnoxView,
   connectingToast: "Redirecting to Fortnox to authorize…",
 }
