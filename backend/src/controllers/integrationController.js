@@ -6,6 +6,16 @@
 const { supabase } = require("../config/supabase")
 const { encryptIntegrationSettings, decryptIntegrationSettings, decryptOAuthData } = require("../utils/encryption")
 const { revokeHubSpotToken } = require("./hubspotController")
+const { revokeQuickBooksToken } = require("./quickbooksController")
+const { revokeFortnoxToken } = require("./fortnoxController")
+const { revokeGoogleWorkspaceToken } = require("./googleWorkspaceController")
+
+const REVOCATION_HANDLERS = {
+  HubSpot: { fn: revokeHubSpotToken, needsCreds: false },
+  QuickBooks: { fn: revokeQuickBooksToken, needsCreds: false },
+  GoogleWorkspace: { fn: revokeGoogleWorkspaceToken, needsCreds: false },
+  Fortnox: { fn: revokeFortnoxToken, needsCreds: true },
+}
 
 // Helper for logging
 const log = (level, endpoint, message, data = null) => {
@@ -423,19 +433,24 @@ async function deleteIntegration(req, res) {
     return res.status(404).json({ error: "Integration not found or you don't have permission to delete it" })
   }
 
-  // Revoke OAuth tokens before deleting (for HubSpot)
-  if (integration.provider?.toLowerCase() === "hubspot") {
+  // Revoke OAuth token with the provider before deleting (where supported).
+  // Failures are non-fatal — the DB row is still deleted, and tokens expire naturally.
+  const handler = REVOCATION_HANDLERS[integration.provider]
+  if (handler) {
     try {
       const settings = decryptIntegrationSettings(integration.settings || {})
       const oauthData = decryptOAuthData(settings.oauth_data || {})
       const refreshToken = oauthData?.tokens?.refresh_token
 
       if (refreshToken) {
-        log("log", endpoint, "Revoking HubSpot token before deletion...")
-        await revokeHubSpotToken(refreshToken)
+        log("log", endpoint, `Revoking ${integration.provider} token before deletion...`)
+        const ctx = handler.needsCreds
+          ? { clientId: settings.client_id, clientSecret: settings.client_secret }
+          : {}
+        await handler.fn(refreshToken, ctx)
       }
     } catch (e) {
-      log("warn", endpoint, `Could not revoke HubSpot token: ${e.message}`)
+      log("warn", endpoint, `Could not revoke ${integration.provider} token: ${e.message}`)
       // Continue with deletion even if revocation fails
     }
   }
