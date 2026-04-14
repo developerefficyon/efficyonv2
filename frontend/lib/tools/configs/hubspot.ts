@@ -1,5 +1,5 @@
 import type { UnifiedToolConfig } from "../types"
-import { PendingToolView } from "@/components/tools/pending-tool-view"
+import { HubSpotView } from "@/components/tools/hubspot-view"
 
 export const hubspotConfig: UnifiedToolConfig = {
   provider: "HubSpot",
@@ -86,6 +86,6 @@ export const hubspotConfig: UnifiedToolConfig = {
     { key: "accountInfo", path: "/api/integrations/hubspot/account", pick: ["accountInfo", "account"] },
   ],
   defaultTab: "users",
-  viewComponent: PendingToolView,
+  viewComponent: HubSpotView,
   connectingToast: "Redirecting to HubSpot to authorize…",
 }
