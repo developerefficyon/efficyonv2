@@ -45,6 +45,7 @@ import type { Integration as SharedIntegration } from "@/lib/tools/types"
 import { ToolConnectForm } from "@/components/tools/tool-connect-form"
 import { TOOL_REGISTRY, getToolConfig } from "@/lib/tools/registry"
 import { useOAuthCallback } from "@/lib/tools/oauth-callback-handler"
+import { startOAuthRedirect } from "@/lib/tools/start-oauth-redirect"
 
 type Integration = SharedIntegration
 
@@ -376,31 +377,8 @@ export default function ToolsPage() {
     if (!cfg || cfg.authType !== "oauth" || !cfg.oauthStartEndpoint) return null
     return async () => {
       setReconnectingId(integration.id)
-      try {
-        const accessToken = await getBackendToken()
-        if (!accessToken) {
-          router.push("/login")
-          return
-        }
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-        const oauthRes = await fetch(`${apiBase}${cfg.oauthStartEndpoint}`, {
-          method: "GET",
-          headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
-        })
-        if (!oauthRes.ok) {
-          const errData = await oauthRes.json().catch(() => ({ error: "Unknown error" }))
-          throw new Error(errData.error || "Failed to start OAuth")
-        }
-        const oauthData = await oauthRes.json()
-        if (!oauthData.url) throw new Error("No OAuth URL returned from backend")
-        toast.success(cfg.connectingToast || `Redirecting to ${cfg.label}…`)
-        setTimeout(() => {
-          window.location.href = oauthData.url
-        }, 500)
-      } catch (err: any) {
-        toast.error(`Failed to start ${cfg.label} OAuth`, {
-          description: err.message || "An error occurred.",
-        })
+      const result = await startOAuthRedirect(cfg, { onUnauthenticated: () => router.push("/login") })
+      if (!result.redirected) {
         setReconnectingId(null)
       }
     }
