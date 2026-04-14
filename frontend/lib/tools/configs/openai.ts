@@ -37,4 +37,8 @@ export const openaiConfig: UnifiedToolConfig = {
   defaultTab: "overview",
   viewComponent: OpenAIView,
   connectedToast: "OpenAI connected · Backfilling 90 days of usage in the background…",
+  tokenRevocation: {
+    automated: false,
+    manualStepsNote: "Your stored API key is deleted from our servers. To fully revoke access, also delete the admin key from your OpenAI dashboard.",
+  },
 }

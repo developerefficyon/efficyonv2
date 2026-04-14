@@ -58,4 +58,8 @@ export const geminiConfig: UnifiedToolConfig = {
   defaultTab: "overview",
   viewComponent: OpenAIView,
   connectedToast: "Gemini connected · Backfilling 90 days of usage in the background…",
+  tokenRevocation: {
+    automated: false,
+    manualStepsNote: "Your stored service-account JSON is deleted from our servers. To fully revoke access, also delete or disable the service account in Google Cloud Console.",
+  },
 }

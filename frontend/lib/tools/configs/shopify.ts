@@ -58,4 +58,8 @@ export const shopifyConfig: UnifiedToolConfig = {
   defaultTab: "shop",
   viewComponent: ShopifyView,
   connectingToast: "Redirecting to Shopify to authorize…",
+  tokenRevocation: {
+    automated: false,
+    manualStepsNote: "To fully revoke access, uninstall the Effycion app from your Shopify admin under Settings → Apps and sales channels.",
+  },
 }

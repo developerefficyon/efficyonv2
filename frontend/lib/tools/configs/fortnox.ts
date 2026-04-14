@@ -57,4 +57,5 @@ export const fortnoxConfig: UnifiedToolConfig = {
   defaultTab: "company",
   viewComponent: FortnoxView,
   connectingToast: "Redirecting to Fortnox to authorize…",
+  tokenRevocation: { automated: true },
 }

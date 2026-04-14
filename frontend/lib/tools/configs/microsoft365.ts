@@ -45,4 +45,8 @@ export const microsoft365Config: UnifiedToolConfig = {
   defaultTab: "licenses",
   viewComponent: Microsoft365View,
   connectingToast: "Redirecting to Microsoft to authorize…",
+  tokenRevocation: {
+    automated: false,
+    manualStepsNote: "Microsoft 365 tokens can't be revoked via API. To fully revoke access, visit https://myapps.microsoft.com, find this app, and click Remove.",
+  },
 }

@@ -45,4 +45,5 @@ export const quickbooksConfig: UnifiedToolConfig = {
   defaultTab: "company",
   viewComponent: QuickBooksView,
   connectingToast: "Redirecting to QuickBooks to authorize…",
+  tokenRevocation: { automated: true },
 }

@@ -88,4 +88,5 @@ export const hubspotConfig: UnifiedToolConfig = {
   defaultTab: "users",
   viewComponent: HubSpotView,
   connectingToast: "Redirecting to HubSpot to authorize…",
+  tokenRevocation: { automated: true },
 }

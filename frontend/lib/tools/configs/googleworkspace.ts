@@ -45,4 +45,5 @@ export const googleWorkspaceConfig: UnifiedToolConfig = {
   defaultTab: "users",
   viewComponent: GoogleWorkspaceView,
   connectingToast: "Redirecting to Google to authorize…",
+  tokenRevocation: { automated: true },
 }
