@@ -13,7 +13,8 @@
 
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Users, Settings } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Users, Settings, Search } from "lucide-react"
 import type { ToolViewProps } from "@/lib/tools/types"
 
 interface HubSpotInfo {
@@ -32,10 +33,21 @@ const filterData = (data: any[], query: string) => {
 export function HubSpotView({ info }: ToolViewProps) {
   const hubspotInfo = (info || {}) as HubSpotInfo
   const [activeDataTab, setActiveDataTab] = useState<string>("users")
-  const [infoSearchQuery] = useState("")
+  const [infoSearchQuery, setInfoSearchQuery] = useState("")
 
   return (
     <div>
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+        <Input
+          type="search"
+          placeholder="Search..."
+          value={infoSearchQuery}
+          onChange={(e) => setInfoSearchQuery(e.target.value)}
+          className="pl-9 h-9 bg-white/[0.03] border-white/[0.06] text-white/80 placeholder:text-white/20 text-[12px] rounded-lg focus:border-emerald-500/30 focus:bg-white/[0.05] transition-all"
+        />
+      </div>
+
       <div className="mb-4">
         <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-lg border border-white/[0.06]">
           <button
