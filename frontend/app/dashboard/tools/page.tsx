@@ -350,11 +350,8 @@ export default function ToolsPage() {
         throw new Error(errorData.error || "Failed to delete integration")
       }
 
-      const isHubSpot = integrationToDelete.tool_name?.toLowerCase() === "hubspot"
-      toast.success("Integration deleted successfully", {
-        description: isHubSpot
-          ? `${integrationToDelete.tool_name} has been removed and disconnected. You'll need to re-authorize when reconnecting.`
-          : `${integrationToDelete.tool_name} has been removed from your account.`,
+      toast.success("Integration deleted", {
+        description: `${integrationToDelete.tool_name} has been removed. Reconnect anytime — your history is preserved.`,
       })
 
       setIsDeleteModalOpen(false)
@@ -999,13 +996,51 @@ export default function ToolsPage() {
 
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white rounded-xl">
+        <DialogContent className="!bg-[#111113] !border-white/[0.08] text-white rounded-xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[16px] font-medium text-white">Delete Integration</DialogTitle>
-            <DialogDescription className="text-[13px] text-white/35">
-              Are you sure you want to delete {integrationToDelete?.tool_name}? This action cannot be undone.
+            <DialogTitle className="text-[16px] font-medium text-white">
+              Delete {integrationToDelete?.tool_name}?
+            </DialogTitle>
+            <DialogDescription className="text-[13px] text-white/50 leading-relaxed">
+              This will immediately:
             </DialogDescription>
           </DialogHeader>
+
+          {(() => {
+            const cfg = integrationToDelete ? getToolConfig(integrationToDelete.tool_name) : undefined
+            const revocation = cfg?.tokenRevocation
+
+            return (
+              <div className="space-y-3 py-2">
+                <ul className="space-y-1.5 text-[12.5px] text-white/60 pl-4">
+                  <li className="list-disc">Remove the integration from your dashboard</li>
+                  <li className="list-disc">Delete stored credentials and OAuth tokens on our servers</li>
+                  {revocation?.automated && (
+                    <li className="list-disc">
+                      Revoke the OAuth token with {cfg?.label || integrationToDelete?.tool_name}
+                    </li>
+                  )}
+                </ul>
+
+                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                  <p className="text-[11.5px] text-white/45 leading-relaxed">
+                    Your usage history and past cost analyses will be preserved and will reappear
+                    if you reconnect this tool later.
+                  </p>
+                </div>
+
+                {revocation && !revocation.automated && revocation.manualStepsNote && (
+                  <div className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400/80 shrink-0 mt-0.5" />
+                    <p className="text-[11.5px] text-amber-100/70 leading-relaxed">
+                      {revocation.manualStepsNote}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1031,7 +1066,7 @@ export default function ToolsPage() {
               ) : (
                 <>
                   <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Delete
+                  Delete integration
                 </>
               )}
             </Button>
