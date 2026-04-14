@@ -224,6 +224,110 @@ Formatting rules:
 }
 
 /**
+ * Generate an AI-powered usage summary for API-consumption tools (OpenAI, Anthropic, Gemini).
+ * Different prompt from generateAnalysisSummary — focuses on usage trends rather than cost-leak findings.
+ *
+ * @param {Object} usageData - Usage payload: { summary, daily, by_model }
+ * @param {string} providerLabel - "OpenAI" | "Anthropic" | "Gemini"
+ * @returns {Promise<string|null>} AI-generated markdown summary, or null on failure
+ */
+async function generateUsageSummary(usageData, providerLabel, options = {}) {
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[OpenAI] API key not configured, skipping usage summary generation")
+    return null
+  }
+
+  try {
+    console.log(`[${new Date().toISOString()}] Generating ${providerLabel} usage summary`)
+
+    const prompt = buildUsagePrompt(usageData, providerLabel)
+
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: options.modelId || OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: `You are a senior FinOps analyst specializing in AI API usage.
+Write a concise, actionable markdown report based on the usage data provided.
+
+Your report MUST include:
+1. **Spend Snapshot** — total cost, MTD vs. last month, trend direction
+2. **Model Mix** — which models drive most spend, with percentages
+3. **Trend Analysis** — notable spikes, growth patterns, or anomalies
+4. **Optimization Opportunities** — specific, actionable recommendations (e.g., model downgrade, caching, batching)
+5. **Budget Outlook** — projected month-end cost and whether trajectory is sustainable
+
+Formatting rules:
+- Use markdown headers (##, ###), bold, bullet points, and tables where useful
+- Use tables for model-mix breakdowns
+- Include specific dollar amounts and percentages
+- Be concrete — no filler text
+- Be concise — aim for 300-500 words total`,
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://efficyon.com",
+        },
+      },
+    )
+
+    const summary = response.data.choices[0].message.content
+    console.log(`[${new Date().toISOString()}] ${providerLabel} usage summary generated (${summary.length} chars)`)
+    return summary
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error generating usage summary: ${error.message}`)
+    return null
+  }
+}
+
+/**
+ * Build the user-facing prompt describing the usage data.
+ */
+function buildUsagePrompt(usageData, providerLabel) {
+  const { summary = {}, daily = [], by_model = [] } = usageData || {}
+
+  const lines = [`Analyze this ${providerLabel} API usage report and produce the requested summary.`]
+  lines.push("")
+  lines.push("## Summary metrics")
+  lines.push(`- Period: last ${summary.days || 30} days`)
+  lines.push(`- Total cost: $${(summary.total_cost_usd || 0).toFixed(2)}`)
+  lines.push(`- Month-to-date: $${(summary.mtd_cost_usd || 0).toFixed(2)}`)
+  lines.push(`- Last month: $${(summary.last_month_cost_usd || 0).toFixed(2)}`)
+  lines.push(`- Projected month-end: $${(summary.projected_month_end_usd || 0).toFixed(2)}`)
+  lines.push(`- Month-over-month delta: ${summary.mom_delta_pct != null ? summary.mom_delta_pct.toFixed(1) + "%" : "n/a"}`)
+  lines.push(`- Total input tokens: ${(summary.total_input_tokens || 0).toLocaleString()}`)
+  lines.push(`- Total output tokens: ${(summary.total_output_tokens || 0).toLocaleString()}`)
+  lines.push("")
+  lines.push("## Model breakdown")
+  if (by_model.length === 0) {
+    lines.push("(no per-model data)")
+  } else {
+    by_model.slice(0, 15).forEach(m => {
+      lines.push(`- ${m.model}: $${(m.cost_usd || 0).toFixed(2)} (${(m.input_tokens || 0).toLocaleString()} in / ${(m.output_tokens || 0).toLocaleString()} out)`)
+    })
+  }
+  lines.push("")
+  lines.push("## Recent daily costs (last 14 days)")
+  const recent = daily.slice(-14)
+  recent.forEach(d => {
+    lines.push(`- ${d.date}: $${(d.cost_usd || 0).toFixed(2)}`)
+  })
+  return lines.join("\n")
+}
+
+/**
  * Generate AI recommendations for specific findings
  * @param {Object} finding - Individual cost leak finding
  * @returns {Promise<string>} AI-generated recommendations
@@ -1271,4 +1375,5 @@ module.exports = {
   smartTruncateJSON,
   buildMessagesWithHistory,
   streamChatCompletion,
+  generateUsageSummary,
 }
