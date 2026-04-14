@@ -26,31 +26,45 @@ const log = (level, msg, data) => {
   else console[level](line)
 }
 
-// ── Pricing (USD per 1M tokens) ──────────────────────────────────────────────
-// Source: ai.google.dev/pricing as of 2025-Q1. Update as Google adjusts prices.
-// Used only when BigQuery export isn't connected; otherwise actual cost wins.
+/**
+ * Gemini per-1M-token pricing.
+ * Last verified: 2026-04-14 from ai.google.dev/pricing
+ *
+ * Known limitations:
+ * - `gemini-2.5-pro` >200k-token requests should use $2.50/M input + $15/M output.
+ *   The Cloud Monitoring API doesn't expose per-call context length, so we use
+ *   the ≤200k rate which systematically under-bills long-context Pro calls.
+ * - `cached` rate is the per-1M read fee only. Google also charges a separate
+ *   storage fee (~$4.50/M per hour of cache lifetime) that we don't model.
+ * - Unknown models fall back to Pro pricing (safer over-estimate than Flash).
+ */
+const PRICING_LAST_VERIFIED = "2026-04-14"
 const GEMINI_PRICES = {
-  "gemini-2.5-pro": { input: 1.25, output: 10.00, cached: 0.31 },
+  "gemini-2.5-pro": { input: 1.25, output: 10.00, cached: 0.125 },
   "gemini-2.5-flash": { input: 0.30, output: 2.50, cached: 0.075 },
   "gemini-2.5-flash-lite": { input: 0.10, output: 0.40, cached: 0.025 },
   "gemini-2.0-flash": { input: 0.10, output: 0.40, cached: 0.025 },
-  "gemini-2.0-flash-lite": { input: 0.075, output: 0.30, cached: 0.01875 },
-  "gemini-1.5-pro": { input: 1.25, output: 5.00, cached: 0.3125 },
-  "gemini-1.5-flash": { input: 0.075, output: 0.30, cached: 0.01875 },
-  "gemini-1.5-flash-8b": { input: 0.0375, output: 0.15, cached: 0.01 },
-  "text-embedding-004": { input: 0.025, output: 0, cached: 0 },
-  "text-embedding-005": { input: 0.025, output: 0, cached: 0 },
-  default: { input: 0.30, output: 2.50, cached: 0.075 }, // fall back to flash pricing
+  // Fallback for unknown models — use Pro pricing (over-estimate is safer than under-estimate)
+  default: { input: 1.25, output: 10.00, cached: 0.125 },
+}
+
+function getPricingForModel(model) {
+  const pricing = GEMINI_PRICES[model]
+  if (!pricing) {
+    console.warn(`[geminiCostAnalysis] Unknown model "${model}" — using default pricing (pricing table last verified ${PRICING_LAST_VERIFIED})`)
+    return GEMINI_PRICES.default
+  }
+  return pricing
 }
 
 function priceFor(model) {
-  if (!model) return GEMINI_PRICES.default
+  if (!model) return getPricingForModel("(none)")
   // Match longest prefix so "gemini-2.5-pro-002" → "gemini-2.5-pro"
   const keys = Object.keys(GEMINI_PRICES).filter((k) => k !== "default")
   const match = keys
     .filter((k) => model.startsWith(k))
     .sort((a, b) => b.length - a.length)[0]
-  return GEMINI_PRICES[match] || GEMINI_PRICES.default
+  return getPricingForModel(match || model)
 }
 
 function estimateCost(model, inputTokens, outputTokens, cachedTokens) {
