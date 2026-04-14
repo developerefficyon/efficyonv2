@@ -794,6 +794,37 @@ async function analyzeGoogleWorkspaceCostLeaksEndpoint(req, res) {
   }
 }
 
+async function revokeGoogleWorkspaceToken(refreshToken) {
+  const endpoint = "revokeGoogleWorkspaceToken"
+
+  if (!refreshToken) {
+    log("warn", endpoint, "No refresh token provided for revocation")
+    return { success: false, error: "No refresh token" }
+  }
+
+  try {
+    log("log", endpoint, "Revoking Google Workspace refresh token...")
+
+    const url = `https://accounts.google.com/o/oauth2/revoke?token=${encodeURIComponent(refreshToken)}`
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    })
+
+    if (response.ok || response.status === 204) {
+      log("log", endpoint, "Google Workspace token revoked successfully")
+      return { success: true }
+    } else {
+      const errorText = await response.text()
+      log("warn", endpoint, `Token revocation returned ${response.status}: ${errorText}`)
+      return { success: false, error: errorText }
+    }
+  } catch (error) {
+    log("error", endpoint, `Token revocation error: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
 module.exports = {
   startGoogleWorkspaceOAuth,
   googleWorkspaceOAuthCallback,
@@ -803,4 +834,5 @@ module.exports = {
   getGoogleWorkspaceLicenses,
   getGoogleWorkspaceReports,
   analyzeGoogleWorkspaceCostLeaksEndpoint,
+  revokeGoogleWorkspaceToken,
 }
