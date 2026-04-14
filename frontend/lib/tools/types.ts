@@ -92,4 +92,12 @@ export interface UnifiedToolConfig {
   // TOASTS
   connectingToast?: string
   connectedToast?: string
+
+  // DELETE FLOW
+  tokenRevocation?: {
+    /** true if the backend calls the provider's revocation API on delete. */
+    automated: boolean
+    /** Shown in the delete dialog when automated is false. Plain text with optional URLs. */
+    manualStepsNote?: string
+  }
 }
