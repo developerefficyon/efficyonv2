@@ -17,6 +17,8 @@ export interface UseOAuthCallbackOptions {
  */
 export function useOAuthCallback(opts: UseOAuthCallbackOptions = {}) {
   const didRunRef = useRef(false)
+  const optsRef = useRef(opts)
+  optsRef.current = opts
 
   useEffect(() => {
     if (didRunRef.current) return
@@ -38,7 +40,7 @@ export function useOAuthCallback(opts: UseOAuthCallbackOptions = {}) {
         description: `Your ${config.label} integration is now active.`,
         duration: 5000,
       })
-      opts.onSuccess?.()
+      optsRef.current.onSuccess?.()
     } else if (status) {
       let description =
         status === "error" ? "Connection failed" : status.replace("error_", "").replace(/_/g, " ")
@@ -51,6 +53,6 @@ export function useOAuthCallback(opts: UseOAuthCallbackOptions = {}) {
       })
     }
 
-    opts.onDone?.()
-  }, [opts])
+    optsRef.current.onDone?.()
+  }, [])
 }
