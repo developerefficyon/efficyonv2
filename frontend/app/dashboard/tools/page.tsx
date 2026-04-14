@@ -1333,6 +1333,14 @@ export default function ToolsPage() {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Surface plan-limit errors the same way OAuth flows do
+        if (res.status === 403 && data?.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: data.message || `Your plan allows up to ${data.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          return
+        }
         throw new Error(data.error || "Failed to connect OpenAI")
       }
 
@@ -1384,6 +1392,14 @@ export default function ToolsPage() {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Surface plan-limit errors the same way OAuth flows do
+        if (res.status === 403 && data?.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: data.message || `Your plan allows up to ${data.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          return
+        }
         throw new Error(data.error || "Failed to connect Anthropic")
       }
 
@@ -1528,6 +1544,14 @@ export default function ToolsPage() {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Surface plan-limit errors the same way OAuth flows do
+        if (res.status === 403 && data?.error === "Integration limit reached") {
+          toast.error("Integration limit reached", {
+            description: data.message || `Your plan allows up to ${data.maxIntegrations} integrations.`,
+          })
+          loadIntegrations()
+          return
+        }
         throw new Error(data.error || "Failed to connect Gemini")
       }
 
