@@ -1,5 +1,5 @@
 import type { UnifiedToolConfig } from "../types"
-import { PendingToolView } from "@/components/tools/pending-tool-view"
+import { ShopifyView } from "@/components/tools/shopify-view"
 
 export const shopifyConfig: UnifiedToolConfig = {
   provider: "Shopify",
@@ -56,6 +56,6 @@ export const shopifyConfig: UnifiedToolConfig = {
     { key: "appCharges", path: "/api/integrations/shopify/app-charges", pick: ["appCharges", "app_charges"], fallback: [] },
   ],
   defaultTab: "shop",
-  viewComponent: PendingToolView,
+  viewComponent: ShopifyView,
   connectingToast: "Redirecting to Shopify to authorize…",
 }
