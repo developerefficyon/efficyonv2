@@ -1,5 +1,5 @@
 import type { UnifiedToolConfig } from "../types"
-import { PendingToolView } from "@/components/tools/pending-tool-view"
+import { QuickBooksView } from "@/components/tools/quickbooks-view"
 
 export const quickbooksConfig: UnifiedToolConfig = {
   provider: "QuickBooks",
@@ -43,6 +43,6 @@ export const quickbooksConfig: UnifiedToolConfig = {
     { key: "accounts", path: "/api/integrations/quickbooks/accounts", pick: ["accounts"], fallback: [] },
   ],
   defaultTab: "company",
-  viewComponent: PendingToolView,
+  viewComponent: QuickBooksView,
   connectingToast: "Redirecting to QuickBooks to authorize…",
 }
