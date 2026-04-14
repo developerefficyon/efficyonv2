@@ -77,6 +77,12 @@ const {
   getStatus: geminiGetStatus,
 } = require("../controllers/geminiUsageController")
 
+// Usage Summary Controller - AI-generated narrative summaries for OpenAI/Anthropic/Gemini
+const {
+  generateAndSaveUsageSummary,
+  listUsageSummaries,
+} = require("../controllers/usageSummaryController")
+
 // Google Workspace OAuth + Admin SDK integration
 const {
   startGoogleWorkspaceOAuth,
@@ -304,6 +310,10 @@ router.delete("/api/integrations/gemini", requireAuth, requireRole("owner", "edi
 router.post("/api/integrations/gemini/sync", requireAuth, requireRole("owner", "editor"), geminiSync)
 router.get("/api/integrations/gemini/usage", requireAuth, requireRole("owner", "editor", "viewer"), geminiGetUsage)
 router.get("/api/integrations/gemini/status", requireAuth, requireRole("owner", "editor", "viewer"), geminiGetStatus)
+
+// Usage Summary routes (AI tools: OpenAI, Anthropic, Gemini)
+router.post("/api/integrations/:id/usage-summary", requireAuth, requireRole("owner", "editor"), generateAndSaveUsageSummary)
+router.get("/api/integrations/:id/usage-summaries", requireAuth, requireRole("owner", "editor", "viewer"), listUsageSummaries)
 
 // Google Workspace OAuth + Directory
 router.get("/api/integrations/googleworkspace/oauth/start", requireAuth, requireRole("owner", "editor"), startGoogleWorkspaceOAuth)
