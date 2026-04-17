@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import type { ToolViewProps } from "@/lib/tools/types"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,14 +23,6 @@ type SlackTeam = {
   name?: string
   domain?: string
   plan?: string | null
-}
-
-type Props = {
-  data: {
-    users?: SlackUser[]
-    team?: SlackTeam | null
-    teamInfo?: SlackTeam | null
-  }
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -66,7 +59,12 @@ function userIsBillableCandidate(u: SlackUser): boolean {
   return true
 }
 
-export function SlackView({ data }: Props) {
+export function SlackView({ info, isLoading }: ToolViewProps) {
+  const data = (info ?? {}) as {
+    users?: SlackUser[]
+    team?: SlackTeam | null
+    teamInfo?: SlackTeam | null
+  }
   const users = data.users ?? []
   const team = data.team ?? data.teamInfo ?? null
   const [filter, setFilter] = useState<Filter>("all")
