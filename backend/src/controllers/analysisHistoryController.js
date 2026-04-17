@@ -81,7 +81,7 @@ async function saveAnalysis(req, res) {
       duplicateQuery = duplicateQuery
         .eq("parameters->>startDate", params.startDate || null)
         .eq("parameters->>endDate", params.endDate || null)
-    } else if (provider === "Microsoft365" || provider === "HubSpot" || provider === "GoogleWorkspace") {
+    } else if (provider === "Microsoft365" || provider === "HubSpot" || provider === "GoogleWorkspace" || provider === "Slack") {
       duplicateQuery = duplicateQuery
         .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
     }
@@ -397,6 +397,15 @@ function extractSummary(analysisData, provider) {
     summary.mediumSeverity = allFindings.filter(f => f.severity === "medium").length
     summary.lowSeverity = allFindings.filter(f => f.severity === "low").length
     summary.healthScore = summaryData.healthScore || null
+  } else if (provider === "Slack") {
+    const summaryData = analysisData.summary || {}
+    const allFindings = analysisData.findings || []
+    summary.totalFindings = summaryData.issuesFound || allFindings.length || 0
+    summary.totalPotentialSavings = summaryData.potentialMonthlySavings || 0
+    summary.highSeverity = allFindings.filter(f => f.severity === "high" || f.severity === "critical").length
+    summary.mediumSeverity = allFindings.filter(f => f.severity === "medium").length
+    summary.lowSeverity = allFindings.filter(f => f.severity === "low" || f.severity === "info").length
+    summary.healthScore = typeof summaryData.healthScore === "number" ? summaryData.healthScore : null
   }
 
   // Calculate health score if not already set

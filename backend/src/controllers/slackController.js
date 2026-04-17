@@ -376,10 +376,11 @@ async function getSlackTeam(req, res) {
   }
 }
 
-const { saveAnalysis } = require("./analysisHistoryController")
 const { analyzeSlackCostLeaks: runAnalysis } = require("../services/slackCostLeakAnalysis")
 
-// Analyze Slack cost leaks — persists to cost_leak_analyses via saveAnalysis
+// Analyze Slack cost leaks — the frontend (analysis-tab.tsx) POSTs the returned
+// payload to /api/analysis-history for persistence, matching the pattern used
+// by Fortnox, HubSpot, Shopify, M365, QuickBooks, and GoogleWorkspace.
 async function analyzeSlackCostLeaksEndpoint(req, res) {
   const endpoint = "GET /api/integrations/slack/cost-leaks"
   const inactivityDays = parseInt(req.query.inactivityDays, 10) || 30
@@ -391,7 +392,7 @@ async function analyzeSlackCostLeaksEndpoint(req, res) {
   const result = await getIntegrationForUser(user)
   if (result.error) return res.status(result.status).json({ error: result.error })
 
-  const { integration, companyId } = result
+  const { integration } = result
   const settings = decryptIntegrationSettings(integration.settings || {})
   const oauthData = decryptOAuthData(settings.oauth_data || integration.oauth_data)
   const accessToken = oauthData?.tokens?.access_token
@@ -418,22 +419,6 @@ async function analyzeSlackCostLeaksEndpoint(req, res) {
       overridePlan,
       overrideSeats,
     })
-
-    // Persist to cost_leak_analyses via the shared history controller
-    try {
-      const saved = await saveAnalysis({
-        companyId,
-        provider: SLACK_PROVIDER,
-        integrationId: integration.id,
-        analysis,
-        triggeredBy: user.id,
-      })
-      if (saved?.id) analysis.analysisId = saved.id
-    } catch (saveError) {
-      log("error", endpoint, `Failed to persist analysis: ${saveError.message}`)
-      // Non-fatal — return the analysis anyway so the user sees findings
-      analysis.persistenceError = saveError.message
-    }
 
     log("log", endpoint, `Analysis completed: ${analysis.summary.issuesFound} findings, $${analysis.summary.potentialMonthlySavings || 0}/mo savings`)
     return res.json(analysis)
