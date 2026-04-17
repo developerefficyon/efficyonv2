@@ -143,10 +143,152 @@ async function getIntegrationForUser(user) {
 
 // --- handlers below, added in subsequent tasks ---
 
+// OAuth Start — redirects the browser to Slack's authorize URL
+async function startSlackOAuth(req, res) {
+  const endpoint = "GET /api/integrations/slack/oauth/start"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+  const { integration, companyId } = result
+
+  const settings = decryptIntegrationSettings(integration?.settings || {})
+  const clientId = settings.client_id || integration?.client_id
+  if (!clientId) {
+    return res.status(400).json({
+      error: "Slack Client ID not configured",
+      details: "Update the integration with your Slack app Client ID and Client Secret.",
+    })
+  }
+
+  const redirectUri =
+    process.env.SLACK_REDIRECT_URI ||
+    "http://localhost:4000/api/integrations/slack/callback"
+
+  // User-token scopes only (no bot token needed for v1)
+  const userScope = "users:read,users:read.email,team:read"
+
+  const authUrl = new URL("https://slack.com/oauth/v2/authorize")
+  authUrl.searchParams.set("client_id", clientId)
+  authUrl.searchParams.set("user_scope", userScope)
+  authUrl.searchParams.set("redirect_uri", redirectUri)
+
+  const state = Buffer.from(JSON.stringify({ company_id: companyId })).toString("base64url")
+  authUrl.searchParams.set("state", state)
+
+  log("log", endpoint, `Starting Slack OAuth for company ${companyId}`)
+  const accept = req.headers.accept || ""
+  if (accept.includes("application/json")) return res.json({ url: authUrl.toString() })
+  return res.redirect(authUrl.toString())
+}
+
+// OAuth Callback — exchanges code for access_token and persists encrypted
+async function slackOAuthCallback(req, res) {
+  const endpoint = "GET /api/integrations/slack/callback"
+  const frontendUrl = process.env.FRONTEND_APP_URL || "http://localhost:3000"
+
+  try {
+    const { code, state, error, error_description } = req.query
+    if (error) {
+      log("error", endpoint, `Slack error: ${error} ${error_description || ""}`)
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error&error=${encodeURIComponent(String(error))}`)
+    }
+    if (!code || !state) {
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_missing_code`)
+    }
+
+    let decoded
+    try {
+      decoded = JSON.parse(Buffer.from(String(state), "base64url").toString("utf8"))
+    } catch {
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_invalid_state`)
+    }
+    const companyId = decoded.company_id
+
+    // Look up the pending integration (case-insensitive)
+    const { data: all } = await supabase
+      .from("company_integrations")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+    const integration = all?.find((i) => i.provider?.toLowerCase() === "slack")
+    if (!integration) {
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_integration_not_found`)
+    }
+
+    const settings = decryptIntegrationSettings(integration.settings || {})
+    const clientId = settings.client_id || integration.client_id
+    const clientSecret = settings.client_secret || integration.client_secret
+    if (!clientId || !clientSecret) {
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_missing_credentials`)
+    }
+
+    const redirectUri =
+      process.env.SLACK_REDIRECT_URI ||
+      "http://localhost:4000/api/integrations/slack/callback"
+
+    // Exchange code for tokens via oauth.v2.access
+    const tokenRes = await fetch(`${SLACK_API}/oauth.v2.access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code: String(code),
+      }).toString(),
+    })
+
+    const tokenJson = await tokenRes.json()
+    if (!tokenJson.ok) {
+      log("error", endpoint, `Token exchange failed: ${tokenJson.error}`)
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_token&details=${encodeURIComponent(tokenJson.error || "unknown")}`)
+    }
+
+    // Slack v2 returns authed_user.access_token for user scopes
+    const userToken = tokenJson.authed_user?.access_token
+    if (!userToken) {
+      log("error", endpoint, "No authed_user.access_token in response")
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_missing_user_token`)
+    }
+
+    const newOauthData = {
+      tokens: {
+        access_token: userToken,
+        // Slack user tokens don't expire; no refresh token flow.
+        expires_at: null,
+        token_type: "user",
+      },
+      team: tokenJson.team || null,
+      authed_user: { id: tokenJson.authed_user?.id || null },
+      scope: tokenJson.authed_user?.scope || "",
+    }
+    const encryptedOauthData = encryptOAuthData(newOauthData)
+    const updatedSettings = { ...(integration.settings || {}), oauth_data: encryptedOauthData }
+
+    const { error: updateError } = await supabase
+      .from("company_integrations")
+      .update({ settings: updatedSettings, status: "connected" })
+      .eq("id", integration.id)
+
+    if (updateError) {
+      log("error", endpoint, `Failed to save tokens: ${updateError.message}`)
+      return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_saving_tokens`)
+    }
+
+    log("log", endpoint, `Slack OAuth completed for integration ${integration.id}`)
+    return res.redirect(`${frontendUrl}/dashboard/tools?slack=connected`)
+  } catch (e) {
+    log("error", endpoint, `Unexpected error: ${e.message}`, { stack: e.stack })
+    return res.redirect(`${frontendUrl}/dashboard/tools?slack=error_unexpected`)
+  }
+}
+
 module.exports = {
-  // OAuth
-  startSlackOAuth:        async (req, res) => res.status(501).json({ error: "not implemented" }),
-  slackOAuthCallback:     async (req, res) => res.status(501).json({ error: "not implemented" }),
+  startSlackOAuth,
+  slackOAuthCallback,
   // Data
   getSlackUsers:          async (req, res) => res.status(501).json({ error: "not implemented" }),
   getSlackTeam:           async (req, res) => res.status(501).json({ error: "not implemented" }),
