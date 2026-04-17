@@ -11,7 +11,6 @@
 
 const crypto = require("crypto")
 const {
-  getPerSeatCost,
   calculatePotentialSavings,
   getPricingDisplayInfo,
   normalizePlanKey,
