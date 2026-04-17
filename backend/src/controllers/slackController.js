@@ -7,7 +7,6 @@
  */
 
 const { supabase } = require("../config/supabase")
-const { analyzeSlackCostLeaks } = require("../services/slackCostLeakAnalysis")
 const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 const SLACK_API = "https://slack.com/api"
