@@ -134,6 +134,16 @@ const {
   disconnectHubSpot,
 } = require("../controllers/hubspotController")
 
+// Slack Controller - Slack OAuth and data operations
+const {
+  startSlackOAuth,
+  slackOAuthCallback,
+  getSlackUsers,
+  getSlackTeam,
+  analyzeSlackCostLeaks,
+  disconnectSlack,
+} = require("../controllers/slackController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -370,6 +380,18 @@ router.post("/api/integrations/hubspot/recommendations/apply", requireAuth, requ
 router.patch("/api/integrations/hubspot/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
 router.delete("/api/integrations/hubspot/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 router.delete("/api/integrations/hubspot/disconnect", requireAuth, requireRole("owner", "editor"), disconnectHubSpot)
+
+// Slack routes
+router.get("/api/integrations/slack/oauth/start", requireAuth, requireRole("owner", "editor"), startSlackOAuth)
+router.get("/api/integrations/slack/callback", slackOAuthCallback)
+router.get("/api/integrations/slack/users", requireAuth, requireRole("owner", "editor", "viewer"), getSlackUsers)
+router.get("/api/integrations/slack/team", requireAuth, requireRole("owner", "editor", "viewer"), getSlackTeam)
+router.get("/api/integrations/slack/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeSlackCostLeaks)
+router.get("/api/integrations/slack/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post("/api/integrations/slack/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
+router.patch("/api/integrations/slack/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
+router.delete("/api/integrations/slack/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
+router.delete("/api/integrations/slack/disconnect", requireAuth, requireRole("owner", "editor"), disconnectSlack)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
