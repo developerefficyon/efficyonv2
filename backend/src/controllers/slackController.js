@@ -377,11 +377,134 @@ async function getSlackTeam(req, res) {
   }
 }
 
+const { saveAnalysis } = require("./analysisHistoryController")
+const { analyzeSlackCostLeaks: runAnalysis } = require("../services/slackCostLeakAnalysis")
+
+// Analyze Slack cost leaks — persists to cost_leak_analyses via saveAnalysis
+async function analyzeSlackCostLeaksEndpoint(req, res) {
+  const endpoint = "GET /api/integrations/slack/cost-leaks"
+  const inactivityDays = parseInt(req.query.inactivityDays, 10) || 30
+
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  const { integration, companyId } = result
+  const settings = decryptIntegrationSettings(integration.settings || {})
+  const oauthData = decryptOAuthData(settings.oauth_data || integration.oauth_data)
+  const accessToken = oauthData?.tokens?.access_token
+  if (!accessToken) return res.status(400).json({ error: "No access token. Please reconnect Slack." })
+
+  const overridePlan = settings.pricing?.tier || null
+  const overrideSeats = settings.pricing?.paid_seats || null
+
+  try {
+    const [members, teamJson, billableJson] = await Promise.all([
+      listAllUsers(accessToken),
+      callSlack("team.info", accessToken),
+      callSlack("team.billableInfo", accessToken).catch((e) => {
+        log("warn", endpoint, `team.billableInfo unavailable: ${e.message}`)
+        return null
+      }),
+    ])
+
+    const analysis = runAnalysis({
+      users: members,
+      billableInfo: billableJson?.billable_info || null,
+      teamInfo: teamJson.team || {},
+      inactivityDays,
+      overridePlan,
+      overrideSeats,
+    })
+
+    // Persist to cost_leak_analyses via the shared history controller
+    try {
+      const saved = await saveAnalysis({
+        companyId,
+        provider: SLACK_PROVIDER,
+        integrationId: integration.id,
+        analysis,
+        triggeredBy: user.id,
+      })
+      if (saved?.id) analysis.analysisId = saved.id
+    } catch (saveError) {
+      log("error", endpoint, `Failed to persist analysis: ${saveError.message}`)
+      // Non-fatal — return the analysis anyway so the user sees findings
+      analysis.persistenceError = saveError.message
+    }
+
+    log("log", endpoint, `Analysis completed: ${analysis.summary.issuesFound} findings, $${analysis.summary.potentialMonthlySavings || 0}/mo savings`)
+    return res.json(analysis)
+  } catch (error) {
+    log("error", endpoint, error.message)
+    if (error.code === "TOKEN_EXPIRED") {
+      return res.status(401).json({ error: error.message, action: "reconnect" })
+    }
+    if (error.code === "RATE_LIMITED") {
+      return res.status(429).json({ error: error.message })
+    }
+    return res.status(500).json({
+      error: error.message || "Failed to analyze Slack cost leaks",
+    })
+  }
+}
+
+// Revoke Slack token (auth.revoke)
+async function revokeSlackToken(accessToken) {
+  if (!accessToken) return { success: false, error: "No access token" }
+  try {
+    const res = await fetch(`${SLACK_API}/auth.revoke`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    })
+    const json = await res.json()
+    if (json.ok && json.revoked) return { success: true }
+    return { success: false, error: json.error || "unknown" }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
+}
+
+async function disconnectSlack(req, res) {
+  const endpoint = "DELETE /api/integrations/slack/disconnect"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  const { integration } = result
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || {})
+  const accessToken = oauthData?.tokens?.access_token
+  if (accessToken) await revokeSlackToken(accessToken)
+
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings, oauth_data: null }
+
+  const { error: updateError } = await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings, status: "disconnected" })
+    .eq("id", integration.id)
+
+  if (updateError) {
+    return res.status(500).json({ error: `Failed to disconnect: ${updateError.message}` })
+  }
+
+  return res.json({ success: true })
+}
+
 module.exports = {
   startSlackOAuth,
   slackOAuthCallback,
   getSlackUsers,
   getSlackTeam,
-  analyzeSlackCostLeaks:  async (req, res) => res.status(501).json({ error: "not implemented" }),
-  disconnectSlack:        async (req, res) => res.status(501).json({ error: "not implemented" }),
+  analyzeSlackCostLeaks: analyzeSlackCostLeaksEndpoint,
+  disconnectSlack,
 }
