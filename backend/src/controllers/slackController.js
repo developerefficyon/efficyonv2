@@ -286,14 +286,102 @@ async function slackOAuthCallback(req, res) {
   }
 }
 
+// Get enriched user list from the connected Slack workspace
+async function getSlackUsers(req, res) {
+  const endpoint = "GET /api/integrations/slack/users"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  const { integration } = result
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
+  const accessToken = oauthData?.tokens?.access_token
+  if (!accessToken) return res.status(400).json({ error: "No access token. Please reconnect Slack." })
+
+  try {
+    const members = await listAllUsers(accessToken)
+    // Trim to the fields the frontend needs
+    const users = members.map((u) => ({
+      id: u.id,
+      name: u.name,
+      real_name: u.real_name,
+      email: u.profile?.email || null,
+      is_bot: !!u.is_bot,
+      deleted: !!u.deleted,
+      is_restricted: !!u.is_restricted,
+      is_ultra_restricted: !!u.is_ultra_restricted,
+      updated: u.updated || null,
+    }))
+    return res.json({ success: true, users, total: users.length })
+  } catch (error) {
+    log("error", endpoint, error.message)
+    if (error.code === "TOKEN_EXPIRED") {
+      return res.status(401).json({ error: error.message, action: "reconnect" })
+    }
+    if (error.code === "RATE_LIMITED") {
+      return res.status(429).json({ error: error.message })
+    }
+    return res.status(500).json({ error: error.message })
+  }
+}
+
+// Get team info + billable seat map
+async function getSlackTeam(req, res) {
+  const endpoint = "GET /api/integrations/slack/team"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  const { integration } = result
+  const oauthData = decryptOAuthData(integration.settings?.oauth_data || integration.oauth_data)
+  const accessToken = oauthData?.tokens?.access_token
+  if (!accessToken) return res.status(400).json({ error: "No access token. Please reconnect Slack." })
+
+  try {
+    const [teamJson, billableJson] = await Promise.all([
+      callSlack("team.info", accessToken),
+      // team.billableInfo may not be available on every plan — catch separately
+      callSlack("team.billableInfo", accessToken).catch((e) => {
+        log("warn", endpoint, `team.billableInfo unavailable: ${e.message}`)
+        return null
+      }),
+    ])
+
+    const teamInfo = teamJson.team
+      ? {
+          id: teamJson.team.id,
+          name: teamJson.team.name,
+          domain: teamJson.team.domain,
+          plan: teamJson.team.plan || null,
+        }
+      : null
+
+    return res.json({
+      success: true,
+      team: teamInfo,
+      billableInfo: billableJson?.billable_info || null,
+      billableSource: billableJson ? "team.billableInfo" : "unavailable",
+    })
+  } catch (error) {
+    log("error", endpoint, error.message)
+    if (error.code === "TOKEN_EXPIRED") {
+      return res.status(401).json({ error: error.message, action: "reconnect" })
+    }
+    return res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   startSlackOAuth,
   slackOAuthCallback,
-  // Data
-  getSlackUsers:          async (req, res) => res.status(501).json({ error: "not implemented" }),
-  getSlackTeam:           async (req, res) => res.status(501).json({ error: "not implemented" }),
-  // Analysis
+  getSlackUsers,
+  getSlackTeam,
   analyzeSlackCostLeaks:  async (req, res) => res.status(501).json({ error: "not implemented" }),
-  // Disconnect
   disconnectSlack:        async (req, res) => res.status(501).json({ error: "not implemented" }),
 }
