@@ -78,9 +78,90 @@ function getCredentialsFromIntegration(integration) {
 
 // --- handlers below, added in subsequent tasks ---
 
+// Validate — performs token exchange + projects.list, marks connected on success
+async function validateGcp(req, res) {
+  const endpoint = "POST /api/integrations/gcp/validate"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+  const { integration } = result
+
+  let credentials
+  try {
+    credentials = getCredentialsFromIntegration(integration)
+  } catch (e) {
+    log("error", endpoint, `Credentials error: ${e.message}`)
+    return res.status(400).json({ error: e.message, code: e.code })
+  }
+
+  try {
+    const { accessToken } = await exchangeServiceAccountKeyForToken(credentials.serviceAccountKey)
+    const projects = await listActiveProjects(accessToken, credentials.organizationId)
+
+    await supabase
+      .from("company_integrations")
+      .update({ status: "connected" })
+      .eq("id", integration.id)
+
+    return res.json({
+      success: true,
+      organizationId: credentials.organizationId,
+      projectCount: projects.length,
+    })
+  } catch (e) {
+    log("error", endpoint, e.message)
+    if (e.code === "SA_UNAUTHORIZED" || e.code === "SA_TOKEN_EXCHANGE_FAILED") {
+      await supabase
+        .from("company_integrations")
+        .update({ status: "expired" })
+        .eq("id", integration.id)
+      return res.status(401).json({
+        error: "Service account key is invalid or revoked. Please paste a fresh key.",
+        code: e.code,
+      })
+    }
+    if (e.code === "MISSING_ORG_ROLE" || e.status === 403) {
+      await supabase
+        .from("company_integrations")
+        .update({ status: "error" })
+        .eq("id", integration.id)
+      return res.status(403).json({
+        error: e.message,
+        code: "MISSING_ORG_ROLE",
+      })
+    }
+    return res.status(500).json({ error: e.message || "Validation failed" })
+  }
+}
+
+// Status — returns connection state without token exchange
+async function getGcpStatus(req, res) {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+  const { integration } = result
+
+  const settings = decryptIntegrationSettings(integration.settings || {})
+  return res.json({
+    success: true,
+    status: {
+      status: integration.status,
+      organizationId: settings.organization_id || null,
+      updatedAt: integration.updated_at,
+      createdAt: integration.created_at,
+    },
+  })
+}
+
 module.exports = {
-  validateGcp:           async (req, res) => res.status(501).json({ error: "not implemented" }),
-  getGcpStatus:          async (req, res) => res.status(501).json({ error: "not implemented" }),
+  validateGcp,
+  getGcpStatus,
   getGcpProjects:        async (req, res) => res.status(501).json({ error: "not implemented" }),
   analyzeGcpCostLeaks:   async (req, res) => res.status(501).json({ error: "not implemented" }),
   disconnectGcp:         async (req, res) => res.status(501).json({ error: "not implemented" }),
