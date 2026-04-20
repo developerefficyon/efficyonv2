@@ -14,6 +14,7 @@ export interface UseToolConnectResult {
   setValues: (v: Record<string, any>) => void
   isConnecting: boolean
   connect: () => Promise<void>
+  connectWithValues: (values: Record<string, any>) => Promise<void>
   reconnect: (integrationId: string) => Promise<void>
   reset: () => void
 }
@@ -45,13 +46,7 @@ export function useToolConnect(
     return null
   }
 
-  const connect = useCallback(async () => {
-    const err = validate()
-    if (err) {
-      toast.error(err)
-      return
-    }
-
+  const connectWithValues = useCallback(async (submitValues: Record<string, any>) => {
     setIsConnecting(true)
     try {
       const accessToken = await getBackendToken()
@@ -61,7 +56,7 @@ export function useToolConnect(
         return
       }
 
-      const body = config.buildConnectRequest(values)
+      const body = config.buildConnectRequest(submitValues)
 
       const res = await fetch(`${API_BASE}${config.connectEndpoint}`, {
         method: "POST",
@@ -110,7 +105,16 @@ export function useToolConnect(
     } finally {
       setIsConnecting(false)
     }
-  }, [config, values, router, onSuccess, reset])
+  }, [config, router, onSuccess, reset])
+
+  const connect = useCallback(async () => {
+    const err = validate()
+    if (err) {
+      toast.error(err)
+      return
+    }
+    await connectWithValues(values)
+  }, [values, connectWithValues, validate])
 
   const reconnect = useCallback(
     async (_integrationId: string) => {
@@ -119,5 +123,5 @@ export function useToolConnect(
     [config, router],
   )
 
-  return { values, setValues, isConnecting, connect, reconnect, reset }
+  return { values, setValues, isConnecting, connect, connectWithValues, reconnect, reset }
 }

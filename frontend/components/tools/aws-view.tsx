@@ -2,6 +2,9 @@
 
 import { useState } from "react"
 import type { ToolViewProps } from "@/lib/tools/types"
+import { getBackendToken } from "@/lib/auth-hooks"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 type Account = {
   id: string
@@ -29,9 +32,11 @@ export function AwsView({ integration, info, isLoading, reload }: ToolViewProps)
     setRefreshingRegions(true)
     setRefreshError(null)
     try {
-      const res = await fetch("/api/integrations/aws/regions/refresh", {
+      const accessToken = await getBackendToken()
+      if (!accessToken) throw new Error("Session expired — please log in again")
+      const res = await fetch(`${API_BASE}/api/integrations/aws/regions/refresh`, {
         method: "POST",
-        credentials: "include",
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))

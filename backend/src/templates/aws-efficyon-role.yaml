@@ -46,7 +46,7 @@ Resources:
                   - compute-optimizer:GetLambdaFunctionRecommendations
                   - compute-optimizer:GetAutoScalingGroupRecommendations
                   - compute-optimizer:GetECSServiceRecommendations
-                  - compute-optimizer:GetRDSDBInstanceRecommendations
+                  - compute-optimizer:GetRDSDatabaseRecommendations
                   - compute-optimizer:GetIdleRecommendations
                   - compute-optimizer:GetRecommendationSummaries
                   - organizations:DescribeOrganization

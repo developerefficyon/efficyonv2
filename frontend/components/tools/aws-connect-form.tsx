@@ -20,19 +20,23 @@ export function AwsConnectForm({ onSubmit, onCancel }: ConnectComponentProps) {
   const [error, setError] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const backendOrigin =
-    (typeof window !== "undefined" && (process.env.NEXT_PUBLIC_API_URL || "")) || ""
+  const backendOrigin = process.env.NEXT_PUBLIC_API_URL || ""
+
+  // CloudFormation fetches templateURL from AWS's servers, not the customer's
+  // browser — so a relative path (or any non-HTTP URL) will silently fail
+  // stack creation. Guard against misconfiguration here.
+  const backendOriginValid = /^https?:\/\//i.test(backendOrigin)
 
   const cloudFormationUrl = useMemo(() => {
-    if (!externalId) return ""
-    const templateUrl = `${backendOrigin || ""}/api/aws/cloudformation-template`
+    if (!externalId || !backendOriginValid) return ""
+    const templateUrl = `${backendOrigin}/api/aws/cloudformation-template`
     const params = new URLSearchParams({
       templateURL: templateUrl,
       stackName: "efficyon-role",
       param_ExternalId: externalId,
     })
     return `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?${params.toString()}`
-  }, [backendOrigin, externalId])
+  }, [backendOrigin, backendOriginValid, externalId])
 
   async function handleSubmit() {
     setError(null)
@@ -119,10 +123,17 @@ export function AwsConnectForm({ onSubmit, onCancel }: ConnectComponentProps) {
             <p className="mt-2">After the stack status becomes <code>CREATE_COMPLETE</code>, copy the <strong>RoleArn</strong> from the <em>Outputs</em> tab and bring it back here.</p>
           </div>
 
+          {!backendOriginValid && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <strong>Configuration error:</strong> <code>NEXT_PUBLIC_API_URL</code> must be a fully-qualified HTTPS URL for the CloudFormation console to fetch our template. Set it in the frontend environment and reload.
+            </div>
+          )}
+
           <a
-            href={cloudFormationUrl}
+            href={backendOriginValid ? cloudFormationUrl : undefined}
             target="_blank"
             rel="noreferrer"
+            aria-disabled={!backendOriginValid}
             className="inline-block rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium"
           >
             Launch CloudFormation in AWS Console ↗
