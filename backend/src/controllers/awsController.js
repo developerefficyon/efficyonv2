@@ -277,8 +277,94 @@ async function refreshAwsRegions(req, res) {
 
   return res.json({ activeRegions, regionsRefreshedAt: nowIso })
 }
-async function analyzeAwsCostLeaksHandler(req, res) { res.status(501).json({ error: "analyze not implemented" }) }
-async function disconnectAws(req, res)  { res.status(501).json({ error: "disconnectAws not implemented" }) }
+async function analyzeAwsCostLeaksHandler(req, res) {
+  const endpoint = "POST /api/integrations/aws/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration, companyId } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Integration is not connected. Re-run validate first." })
+  }
+
+  // Duplicate check: same integration run within last 5 minutes → 409
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data: recent, error: recentErr } = await supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("provider", AWS_PROVIDER)
+    .eq("integration_id", integration.id)
+    .gte("created_at", fiveMinAgo)
+    .limit(1)
+    .maybeSingle()
+  if (recentErr) log("warn", endpoint, "dup-check query failed", recentErr)
+  if (recent) {
+    return res.status(409).json({
+      error: "An analysis was just run for this integration. Please wait a few minutes before re-running.",
+      recentAnalysisId: recent.id,
+    })
+  }
+
+  let credentials
+  try {
+    credentials = await getAwsCredentials(integration)
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  let result
+  try {
+    result = await analyzeAwsCostLeaks(credentials, integration.settings)
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    log("error", endpoint, "analysis failed", { awsCode: e.name, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  // Strip sourceErrors before persistence — they may contain AWS ARNs / diagnostic strings
+  // that shouldn't leak into the stored history row.
+  const { sourceErrors, ...persistedSummary } = result.summary
+
+  // Persist via shared history controller
+  try {
+    await saveAnalysis({
+      companyId,
+      provider: AWS_PROVIDER,
+      integrationId: integration.id,
+      analysisData: { summary: persistedSummary, findings: result.findings },
+      parameters: { organizationId: integration.settings?.organization_id || "" },
+    })
+  } catch (e) {
+    log("error", endpoint, "saveAnalysis failed", { message: e.message })
+    // Return the analysis even if persistence fails; user sees the run, we log the issue.
+  }
+
+  return res.json(result)
+}
+async function disconnectAws(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  // Strip sensitive/identifying fields; keep audit breadcrumb.
+  const priorSettings = integration.settings || {}
+  const nowIso = new Date().toISOString()
+  const cleared = {
+    disconnected_at: nowIso,
+    prior_organization_id: priorSettings.organization_id || null,
+  }
+
+  const { error: updateErr } = await supabase
+    .from("company_integrations")
+    .update({ settings: cleared, status: "disconnected", updated_at: nowIso })
+    .eq("id", integration.id)
+  if (updateErr) return res.status(500).json({ error: "Failed to disconnect" })
+
+  evictCredentials(integration.id)
+  return res.json({ ok: true, disconnectedAt: nowIso })
+}
 async function serveCloudFormationTemplate(req, res) { res.status(501).json({ error: "serveCloudFormationTemplate not implemented" }) }
 
 module.exports = {
