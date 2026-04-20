@@ -182,9 +182,101 @@ async function getAwsStatus(req, res) {
     lastValidatedAt: s.last_validated_at || null,
   })
 }
-async function getAwsAccounts(req, res) { res.status(501).json({ error: "getAwsAccounts not implemented" }) }
-async function getAwsRegions(req, res)  { res.status(501).json({ error: "getAwsRegions not implemented" }) }
-async function refreshAwsRegions(req, res) { res.status(501).json({ error: "refreshAwsRegions not implemented" }) }
+async function getAwsAccounts(req, res) {
+  const endpoint = "GET /api/integrations/aws/accounts"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  let credentials
+  try {
+    credentials = await getAwsCredentials(integration)
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  const orgClient = buildAwsClient(OrganizationsClient, credentials)
+  const accounts = []
+  let next = undefined
+  try {
+    for (let i = 0; i < 10; i++) {
+      const resp = await orgClient.send(new ListAccountsCommand({ MaxResults: 50, NextToken: next }))
+      for (const a of resp.Accounts || []) {
+        accounts.push({
+          id: a.Id,
+          name: a.Name,
+          email: a.Email,
+          status: a.Status,
+          joinedMethod: a.JoinedMethod,
+          joinedTimestamp: a.JoinedTimestamp ? a.JoinedTimestamp.toISOString() : null,
+        })
+      }
+      if (accounts.length >= 500) break
+      next = resp.NextToken
+      if (!next) break
+    }
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    log("error", endpoint, "ListAccounts failed", { awsCode: e.name, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+  return res.json({ accounts })
+}
+async function getAwsRegions(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  const s = integration.settings || {}
+  return res.json({
+    activeRegions: s.active_regions || [],
+    regionsRefreshedAt: s.regions_refreshed_at || null,
+  })
+}
+async function refreshAwsRegions(req, res) {
+  const endpoint = "POST /api/integrations/aws/regions/refresh"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  let credentials
+  try {
+    credentials = await getAwsCredentials(integration)
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  let activeRegions = []
+  try {
+    const accountClient = buildAwsClient(AccountClient, credentials)
+    let next = undefined
+    for (let i = 0; i < 5; i++) {
+      const resp = await accountClient.send(new ListRegionsCommand({
+        MaxResults: 50,
+        RegionOptStatusContains: ["ENABLED", "ENABLED_BY_DEFAULT"],
+        NextToken: next,
+      }))
+      for (const r of resp.Regions || []) if (r.RegionName) activeRegions.push(r.RegionName)
+      next = resp.NextToken
+      if (!next) break
+    }
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    log("error", endpoint, "ListRegions failed", { awsCode: e.name, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  const nowIso = new Date().toISOString()
+  const newSettings = { ...integration.settings, active_regions: activeRegions, regions_refreshed_at: nowIso }
+  const { error: updateErr } = await supabase
+    .from("company_integrations")
+    .update({ settings: newSettings, updated_at: nowIso })
+    .eq("id", integration.id)
+  if (updateErr) return res.status(500).json({ error: "Failed to persist regions" })
+
+  return res.json({ activeRegions, regionsRefreshedAt: nowIso })
+}
 async function analyzeAwsCostLeaksHandler(req, res) { res.status(501).json({ error: "analyze not implemented" }) }
 async function disconnectAws(req, res)  { res.status(501).json({ error: "disconnectAws not implemented" }) }
 async function serveCloudFormationTemplate(req, res) { res.status(501).json({ error: "serveCloudFormationTemplate not implemented" }) }
