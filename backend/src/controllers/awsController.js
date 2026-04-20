@@ -77,8 +77,111 @@ function mapAwsError(e) {
 }
 
 // Handler stubs — filled in by subsequent tasks.
-async function validateAws(req, res)    { res.status(501).json({ error: "validateAws not implemented" }) }
-async function getAwsStatus(req, res)   { res.status(501).json({ error: "getAwsStatus not implemented" }) }
+async function validateAws(req, res) {
+  const endpoint = "POST /api/integrations/aws/validate"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  // 1) AssumeRole
+  let credentials
+  try {
+    credentials = await getAwsCredentials(integration)
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    log("error", endpoint, "AssumeRole failed", { code: e.code, awsCode: e.awsCode, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  // 2) DescribeOrganization — must succeed for management-account scope
+  let org
+  try {
+    const orgClient = buildAwsClient(OrganizationsClient, credentials)
+    const resp = await orgClient.send(new DescribeOrganizationCommand({}))
+    org = resp.Organization
+  } catch (e) {
+    const mapped = mapAwsError(e)
+    log("error", endpoint, "DescribeOrganization failed", { awsCode: e.name, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  const masterAccountId = org?.MasterAccountId
+  const organizationId = org?.Id
+  const { accountId } = parseRoleArn(integration.settings.role_arn)
+  if (!masterAccountId || accountId !== masterAccountId) {
+    return res.status(400).json({
+      error: "The connected account isn't the Organization management account.",
+      hint: `Connect the payer account (${masterAccountId || "unknown"}) instead.`,
+    })
+  }
+
+  // 3) Fetch active regions
+  let activeRegions = []
+  try {
+    const accountClient = buildAwsClient(AccountClient, credentials)
+    let next = undefined
+    for (let i = 0; i < 5; i++) {
+      const resp = await accountClient.send(new ListRegionsCommand({
+        MaxResults: 50,
+        RegionOptStatusContains: ["ENABLED", "ENABLED_BY_DEFAULT"],
+        NextToken: next,
+      }))
+      for (const r of resp.Regions || []) if (r.RegionName) activeRegions.push(r.RegionName)
+      next = resp.NextToken
+      if (!next) break
+    }
+  } catch (e) {
+    // account:ListRegions occasionally errors in older orgs; fall back to a static list.
+    log("warn", endpoint, "ListRegions failed, using fallback", { awsCode: e.name, message: e.message })
+    activeRegions = ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1"]
+  }
+
+  const nowIso = new Date().toISOString()
+  const newSettings = {
+    ...integration.settings,
+    aws_account_id: accountId,
+    organization_id: organizationId,
+    master_account_id: masterAccountId,
+    active_regions: activeRegions,
+    regions_refreshed_at: nowIso,
+    last_validated_at: nowIso,
+  }
+
+  const { error: updateErr } = await supabase
+    .from("company_integrations")
+    .update({ settings: newSettings, status: "connected", updated_at: nowIso })
+    .eq("id", integration.id)
+  if (updateErr) {
+    log("error", endpoint, "update integration failed", updateErr)
+    return res.status(500).json({ error: "Failed to persist validated state" })
+  }
+
+  log("log", endpoint, `validated integration ${integration.id}`, {
+    organizationId, accountCount: null, activeRegions: activeRegions.length,
+  })
+  return res.json({
+    status: "connected",
+    organizationId,
+    masterAccountId,
+    activeRegions,
+    lastValidatedAt: nowIso,
+  })
+}
+async function getAwsStatus(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  const s = integration.settings || {}
+  return res.json({
+    status: integration.status,
+    awsAccountId: s.aws_account_id || null,
+    organizationId: s.organization_id || null,
+    masterAccountId: s.master_account_id || null,
+    activeRegions: s.active_regions || [],
+    regionsRefreshedAt: s.regions_refreshed_at || null,
+    lastValidatedAt: s.last_validated_at || null,
+  })
+}
 async function getAwsAccounts(req, res) { res.status(501).json({ error: "getAwsAccounts not implemented" }) }
 async function getAwsRegions(req, res)  { res.status(501).json({ error: "getAwsRegions not implemented" }) }
 async function refreshAwsRegions(req, res) { res.status(501).json({ error: "refreshAwsRegions not implemented" }) }
