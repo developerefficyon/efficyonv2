@@ -17,6 +17,7 @@ const INTEGRATIONS = [
   { id: "anthropic", label: "Anthropic", color: "#D97757", desc: "AI Spend" },
   { id: "gemini", label: "Gemini", color: "#4285F4", desc: "AI Spend" },
   { id: "googleworkspace", label: "Google Workspace", color: "#4285F4", desc: "Productivity & Identity" },
+  { id: "slack", label: "Slack", color: "#ECB22E", desc: "Communication" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1101,6 +1102,110 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             All requested scopes are read-only. Your OAuth client secret and refresh tokens are encrypted at rest using AES-256-GCM. Effycion will never modify users, groups, or settings in your Workspace tenant. Access can be revoked at any time from <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">admin.google.com &rsaquo; Security &rsaquo; API controls</span>.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Slack Section */}
+      <section id="slack" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "slack" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#ECB22E]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="slack" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Slack</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Communication</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#ECB22E]/50 mt-1">&#8226;</span>A Slack workspace with admin (Owner or Workspace Admin) access</li>
+              <li className="flex items-start gap-2"><span className="text-[#ECB22E]/50 mt-1">&#8226;</span>Permission to install custom apps into your workspace</li>
+              <li className="flex items-start gap-2"><span className="text-[#ECB22E]/50 mt-1">&#8226;</span>Your Slack plan tier (Free, Pro, or Business+) and paid seat count — used to calculate per-seat costs</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="text-[#ECB22E]/80 hover:text-[#ECB22E] inline-flex items-center gap-1 transition-colors">
+                  api.slack.com/apps <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create New App</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">From scratch</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name the app (e.g. <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Effycion Cost Analyzer</span>) and pick the workspace you want to analyze.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#ECB22E" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  In the sidebar, open <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">OAuth & Permissions</span>. Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">User Token Scopes</span>, add these read-only scopes:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>users:read</ScopeBadge>
+                  <ScopeBadge>users:read.email</ScopeBadge>
+                  <ScopeBadge>team:read</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Still in <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">OAuth & Permissions</span>, add a <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Redirect URL</span>: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">&lt;your-backend&gt;/api/integrations/slack/callback</span> and save.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Basic Information</span> and copy the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client ID</span> and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client Secret</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#ECB22E]/80 hover:text-[#ECB22E] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, select Slack, and paste your credentials.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Pick your <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Plan Tier</span> (Free, Pro, Business+) and optionally enter your <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Paid Seats</span>. If left blank, Effycion auto-detects seats after connection.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={8} color="#ECB22E" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. You&apos;ll be redirected to Slack to authorize. After consent, Effycion pulls user, team, and seat data.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About seat data">
+            Slack&apos;s API does not expose billing directly. Effycion uses your selected plan tier and paid-seat count to estimate per-seat cost and flag inactive members. Tier pricing is based on public Slack list prices (Pro ~$8.75/seat, Business+ ~$15/seat).
+          </InfoBox>
+
+          <SecurityBox>
+            All requested scopes are read-only — Effycion can list users and read workspace info but cannot post messages, join channels, or modify any Slack data. Your OAuth client secret and user token are encrypted at rest using AES-256-GCM. Slack user tokens do not expire, so this is a one-time setup; you can revoke access any time from <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">slack.com &rsaquo; Settings & administration &rsaquo; Manage apps</span>.
           </SecurityBox>
         </div>
       </section>
