@@ -1,7 +1,7 @@
 /**
  * AWS Compute Optimizer analysis service.
  *
- * Fans out across active regions. Within each region, six recommendation APIs
+ * Fans out across active regions. Within each region, seven recommendation APIs
  * are called in parallel. Every call uses includeMemberAccounts: true so that
  * a management-account role returns org-wide recommendations.
  *
@@ -16,7 +16,7 @@ const {
   GetLambdaFunctionRecommendationsCommand,
   GetAutoScalingGroupRecommendationsCommand,
   GetECSServiceRecommendationsCommand,
-  GetRDSDBInstanceRecommendationsCommand,
+  GetRDSDatabaseRecommendationsCommand,
   GetIdleRecommendationsCommand,
 } = require("@aws-sdk/client-compute-optimizer")
 
@@ -50,13 +50,13 @@ async function paginate(client, commandCtor, baseParams, extract) {
 }
 
 // Estimated savings in CO responses sit on the "recommendation option" picked;
-// we take the first/best option.
+// AWS nests it under savingsOpportunity.estimatedMonthlySavings.value.
+// We take the first/best option.
 function estimatedSavings(rec) {
   const opt = rec?.recommendationOptions?.[0]
   if (!opt) return { savings: 0, currentCost: 0 }
-  const sv = opt.estimatedMonthlySavings
+  const sv = opt.savingsOpportunity?.estimatedMonthlySavings
   const savings = sv?.value ? Number(sv.value) : 0
-  // currentCost isn't always in the response; fall back to 0.
   return { savings, currentCost: 0 }
 }
 
@@ -98,6 +98,7 @@ function normalizeEBS(rec, region) {
   const opt = rec?.volumeRecommendationOptions?.[0]
   return {
     ...baseFinding({ ...rec, recommendationOptions: rec.volumeRecommendationOptions }, "rightsizing", region),
+    raw: rec,
     id: `co-ebs-${rec.accountId}-${rec.volumeArn}`,
     title: "Over-provisioned EBS volume",
     resource: { type: "ebs-volume", id: rec.volumeArn, accountId: rec.accountId, region },
@@ -112,6 +113,7 @@ function normalizeLambda(rec, region) {
   const opt = rec?.memorySizeRecommendationOptions?.[0]
   return {
     ...baseFinding({ ...rec, recommendationOptions: rec.memorySizeRecommendationOptions }, "rightsizing", region),
+    raw: rec,
     id: `co-lambda-${rec.accountId}-${rec.functionArn}`,
     title: "Under/over-provisioned Lambda function",
     resource: { type: "lambda-function", id: rec.functionArn, accountId: rec.accountId, region },
@@ -138,6 +140,7 @@ function normalizeECS(rec, region) {
   const opt = rec?.serviceRecommendationOptions?.[0]
   return {
     ...baseFinding({ ...rec, recommendationOptions: rec.serviceRecommendationOptions }, "rightsizing", region),
+    raw: rec,
     id: `co-ecs-${rec.accountId}-${rec.serviceArn}`,
     title: "Over/under-provisioned ECS service",
     resource: { type: "ecs-service", id: rec.serviceArn, accountId: rec.accountId, region },
@@ -150,9 +153,10 @@ function normalizeRDS(rec, region) {
   const opt = rec?.instanceRecommendationOptions?.[0]
   return {
     ...baseFinding({ ...rec, recommendationOptions: rec.instanceRecommendationOptions }, "rightsizing", region),
-    id: `co-rds-${rec.accountId}-${rec.instanceArn}`,
+    raw: rec,
+    id: `co-rds-${rec.accountId}-${rec.resourceArn}`,
     title: "Over/under-provisioned RDS instance",
-    resource: { type: "rds-instance", id: rec.instanceArn, accountId: rec.accountId, region },
+    resource: { type: "rds-instance", id: rec.resourceArn, accountId: rec.accountId, region },
     recommendation: opt?.dbInstanceClass ? `Change instance class to ${opt.dbInstanceClass}` : "See Compute Optimizer console for detail",
     actionSteps: ["Open RDS console → modify instance → apply during maintenance window"],
   }
@@ -160,6 +164,8 @@ function normalizeRDS(rec, region) {
 
 function normalizeIdle(rec, region) {
   const savings = Number(rec.savingsOpportunity?.estimatedMonthlySavings?.value || 0)
+  const acct = rec.accountId || "unk"
+  const arn = rec.resourceArn || rec.resourceId || "unk"
   return {
     source: "compute_optimizer",
     severity: null,
@@ -168,9 +174,9 @@ function normalizeIdle(rec, region) {
     currentCost: 0,
     projectedSavings: savings,
     region,
-    id: `co-idle-${rec.accountId}-${rec.resourceArn}`,
+    id: `co-idle-${acct}-${arn}`,
     title: `Idle ${rec.resourceType || "resource"}`,
-    resource: { type: `idle-${(rec.resourceType || "resource").toLowerCase()}`, id: rec.resourceArn, accountId: rec.accountId, region },
+    resource: { type: `idle-${(rec.resourceType || "resource").toLowerCase()}`, id: rec.resourceArn || null, accountId: rec.accountId || null, region },
     recommendation: rec.finding === "Idle" ? "Terminate or stop — no meaningful activity detected" : "See Compute Optimizer console for detail",
     actionSteps: ["Confirm the resource is truly idle", "Stop or terminate if safe"],
     raw: rec,
@@ -188,7 +194,7 @@ async function runRegion(credentials, region) {
     ["lambda", GetLambdaFunctionRecommendationsCommand,     base, (r) => r.lambdaFunctionRecommendations,   normalizeLambda],
     ["asg",    GetAutoScalingGroupRecommendationsCommand,   base, (r) => r.autoScalingGroupRecommendations, normalizeASG],
     ["ecs",    GetECSServiceRecommendationsCommand,         base, (r) => r.ecsServiceRecommendations,       normalizeECS],
-    ["rds",    GetRDSDBInstanceRecommendationsCommand,      base, (r) => r.rdsDBInstanceRecommendations,    normalizeRDS],
+    ["rds",    GetRDSDatabaseRecommendationsCommand,        base, (r) => r.rdsDBRecommendations,            normalizeRDS],
     ["idle",   GetIdleRecommendationsCommand,               base, (r) => r.idleRecommendations,             normalizeIdle],
   ]
   const findings = []
@@ -245,6 +251,10 @@ module.exports = {
   normalizeEC2,
   normalizeEBS,
   normalizeLambda,
+  normalizeASG,
+  normalizeECS,
+  normalizeRDS,
   normalizeIdle,
+  estimatedSavings,
   buildClient,
 }
