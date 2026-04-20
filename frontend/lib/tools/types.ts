@@ -50,6 +50,15 @@ export type AuthType = "oauth" | "apiKey" | "serviceAccount"
 
 export type ToolInfo = Record<string, any>
 
+/**
+ * Props passed to a custom connect component. If a UnifiedToolConfig supplies
+ * `connectComponent`, it replaces the auto-generated declarative form.
+ */
+export interface ConnectComponentProps {
+  onSubmit: (values: Record<string, any>) => Promise<void>
+  onCancel: () => void
+}
+
 export interface ToolViewProps {
   integration: Integration
   info: ToolInfo | null
@@ -74,6 +83,11 @@ export interface UnifiedToolConfig {
   // AUTH & CONNECT
   authType: AuthType
   authFields: AuthField[]
+  /**
+   * If present, replaces the auto-generated declarative connect form.
+   * Used when the tool needs a multi-step wizard (e.g., AWS).
+   */
+  connectComponent?: ComponentType<ConnectComponentProps>
   connectEndpoint: string
   oauthStartEndpoint?: string
   buildConnectRequest: (formValues: Record<string, any>) => Record<string, any>
