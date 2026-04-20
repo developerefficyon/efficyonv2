@@ -87,6 +87,9 @@ async function saveAnalysis(req, res) {
     } else if (provider === "GCP") {
       duplicateQuery = duplicateQuery
         .eq("parameters->>organizationId", params.organizationId || "")
+    } else if (provider === "AWS") {
+      duplicateQuery = duplicateQuery
+        .eq("parameters->>organizationId", params.organizationId || "")
     }
 
     const { data: existingAnalyses, error: dupCheckError } = await duplicateQuery
@@ -417,6 +420,15 @@ function extractSummary(analysisData, provider) {
     summary.mediumSeverity = s.bySeverity?.medium || 0
     summary.lowSeverity = s.bySeverity?.low || 0
     summary.healthScore = typeof s.healthScore === "number" ? s.healthScore : null
+  } else if (provider === "AWS") {
+    const s = analysisData.summary || {}
+    summary.totalFindings = s.totalFindings || 0
+    summary.totalPotentialSavings = s.totalPotentialSavings || 0
+    const bySev = s.findingsBySeverity || {}
+    summary.highSeverity = (bySev.critical || 0) + (bySev.high || 0)
+    summary.mediumSeverity = bySev.medium || 0
+    summary.lowSeverity = bySev.low || 0
+    summary.healthScore = null
   }
 
   // Calculate health score if not already set
