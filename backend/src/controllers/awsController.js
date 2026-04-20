@@ -6,6 +6,8 @@
  * (AssumeRole + external ID) — no OAuth.
  */
 
+const fs = require("fs")
+const path = require("path")
 const { supabase } = require("../config/supabase")
 const { getAwsCredentials, evictCredentials, parseRoleArn } = require("../utils/awsAuth")
 const { analyzeAwsCostLeaks } = require("../services/awsCostLeakAnalysis")
@@ -19,6 +21,16 @@ const {
 const { AccountClient, ListRegionsCommand } = require("@aws-sdk/client-account")
 
 const AWS_PROVIDER = "AWS"
+
+const CF_TEMPLATE_PATH = path.join(__dirname, "..", "templates", "aws-efficyon-role.yaml")
+let cachedTemplate = null
+
+function loadTemplate() {
+  if (cachedTemplate) return cachedTemplate
+  const raw = fs.readFileSync(CF_TEMPLATE_PATH, "utf-8")
+  cachedTemplate = raw
+  return raw
+}
 
 function log(level, endpoint, message, data = null) {
   const timestamp = new Date().toISOString()
@@ -365,7 +377,21 @@ async function disconnectAws(req, res) {
   evictCredentials(integration.id)
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
-async function serveCloudFormationTemplate(req, res) { res.status(501).json({ error: "serveCloudFormationTemplate not implemented" }) }
+async function serveCloudFormationTemplate(req, res) {
+  try {
+    const raw = loadTemplate()
+    const accountId = process.env.AWS_EFFICYON_ACCOUNT_ID
+    if (!accountId || !/^\d{12}$/.test(accountId)) {
+      return res.status(500).type("text/plain").send("AWS_EFFICYON_ACCOUNT_ID env var is missing or invalid on the server.")
+    }
+    const rendered = raw.replace(/\$\{EFFICYON_AWS_ACCOUNT_ID\}/g, accountId)
+    res.set("Content-Type", "application/yaml")
+    res.set("Cache-Control", "public, max-age=300")
+    return res.send(rendered)
+  } catch (e) {
+    return res.status(500).type("text/plain").send("Failed to render template: " + e.message)
+  }
+}
 
 module.exports = {
   validateAws,
