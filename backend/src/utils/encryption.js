@@ -200,6 +200,13 @@ function encryptIntegrationSettings(settings) {
   if (encrypted.api_key) {
     encrypted.api_key = encrypt(encrypted.api_key)
   }
+  if (encrypted.service_account_key) {
+    // GCP service account JSON key — full blob including RSA private key
+    const raw = typeof encrypted.service_account_key === "string"
+      ? encrypted.service_account_key
+      : JSON.stringify(encrypted.service_account_key)
+    encrypted.service_account_key = encrypt(raw)
+  }
 
   // Encrypt OAuth data
   if (encrypted.oauth_data) {
@@ -225,6 +232,9 @@ function decryptIntegrationSettings(settings) {
   }
   if (decrypted.api_key) {
     decrypted.api_key = decrypt(decrypted.api_key)
+  }
+  if (decrypted.service_account_key) {
+    decrypted.service_account_key = decrypt(decrypted.service_account_key)
   }
 
   // Decrypt OAuth data
