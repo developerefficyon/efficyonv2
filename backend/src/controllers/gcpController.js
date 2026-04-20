@@ -159,10 +159,51 @@ async function getGcpStatus(req, res) {
   })
 }
 
+// Projects list — minimum fields for the Data tab
+async function getGcpProjects(req, res) {
+  const endpoint = "GET /api/integrations/gcp/projects"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  let credentials
+  try {
+    credentials = getCredentialsFromIntegration(result.integration)
+  } catch (e) {
+    return res.status(400).json({ error: e.message, code: e.code })
+  }
+
+  try {
+    const { accessToken } = await exchangeServiceAccountKeyForToken(credentials.serviceAccountKey)
+    const projects = await listActiveProjects(accessToken, credentials.organizationId)
+    const trimmed = projects.map((p) => ({
+      projectId: p.projectId || p.name?.split("/").pop(),
+      displayName: p.displayName || p.projectId,
+      state: p.state,
+      createTime: p.createTime,
+    }))
+    return res.json({ success: true, projects: trimmed, total: trimmed.length })
+  } catch (e) {
+    log("error", endpoint, e.message)
+    if (e.code === "SA_UNAUTHORIZED") {
+      return res.status(401).json({ error: "Token expired — please re-validate", action: "reconnect" })
+    }
+    if (e.status === 403 || e.code === "FORBIDDEN") {
+      return res.status(403).json({
+        error: "Service account missing permissions at org level (roles/browser + roles/recommender.viewer required).",
+      })
+    }
+    return res.status(500).json({ error: e.message })
+  }
+}
+
 module.exports = {
   validateGcp,
   getGcpStatus,
-  getGcpProjects:        async (req, res) => res.status(501).json({ error: "not implemented" }),
+  getGcpProjects,
   analyzeGcpCostLeaks:   async (req, res) => res.status(501).json({ error: "not implemented" }),
   disconnectGcp:         async (req, res) => res.status(501).json({ error: "not implemented" }),
 }
