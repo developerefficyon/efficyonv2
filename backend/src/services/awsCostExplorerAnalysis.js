@@ -59,31 +59,44 @@ async function getRightsizingFindings(client) {
     (r) => r.RightsizingRecommendations
   )
   return raw.map((rec) => {
+    const isTerminate = rec.RightsizingType === "Terminate"
     const opt = rec.ModifyRecommendationDetail?.TargetInstances?.[0] || {}
-    const savings = Number(opt.EstimatedMonthlySavings || 0)
+    const savings = isTerminate
+      ? Number(rec.TerminateRecommendationDetail?.EstimatedMonthlySavings || rec.TerminateRecommendationDetail?.EstimatedMonthlyOnDemandCost || 0)
+      : Number(opt.EstimatedMonthlySavings || 0)
+    const region = rec.CurrentInstance?.Region || null
     return {
       id: `ce-rightsize-${rec.AccountId || "unknown"}-${rec.CurrentInstance?.ResourceId || rec.CurrentInstance?.InstanceName || "?"}`,
       source: "cost_explorer",
+      severity: null,
       category: "rightsizing",
-      title: "EC2 right-sizing opportunity",
+      title: isTerminate ? "Idle EC2 instance — terminate candidate" : "EC2 right-sizing opportunity",
+      region,
       resource: {
         type: "ec2-instance",
         id: rec.CurrentInstance?.ResourceId || null,
         accountId: rec.AccountId || null,
-        region: rec.CurrentInstance?.Region || null,
+        region,
       },
       currentCost: Number(rec.CurrentInstance?.MonthlyCost || 0),
       projectedSavings: savings,
       currency: "USD",
-      recommendation:
-        opt.ResourceDetails?.EC2ResourceDetails
+      recommendation: isTerminate
+        ? "Terminate — instance activity is too low to justify its cost"
+        : opt.ResourceDetails?.EC2ResourceDetails
           ? `Switch to ${opt.ResourceDetails.EC2ResourceDetails.InstanceType} (same family, better fit)`
           : "See Cost Explorer for right-sizing detail",
-      actionSteps: [
-        "Review the target instance in AWS Cost Explorer console",
-        "Schedule a maintenance window",
-        "Stop → modify instance type → start",
-      ],
+      actionSteps: isTerminate
+        ? [
+            "Confirm the instance is genuinely unused",
+            "Snapshot volumes if data retention is needed",
+            "Terminate the instance",
+          ]
+        : [
+            "Review the target instance in AWS Cost Explorer console",
+            "Schedule a maintenance window",
+            "Stop → modify instance type → start",
+          ],
       raw: rec,
     }
   })
@@ -107,8 +120,10 @@ async function getSavingsPlansFindings(client) {
     return {
       id: `ce-sp-${rec.AccountId || "org"}-${idx}`,
       source: "cost_explorer",
+      severity: null,
       category: "savings_plan_purchase",
       title: "Compute Savings Plan opportunity",
+      region: null,
       resource: {
         type: "savings-plan",
         id: null,
@@ -147,8 +162,10 @@ async function getReservationFindings(client) {
     return {
       id: `ce-ri-${rec.AccountId || "org"}-${idx}`,
       source: "cost_explorer",
+      severity: null,
       category: "reserved_instance_purchase",
       title: "EC2 Reserved Instance opportunity",
+      region: null,
       resource: {
         type: "reserved-instance",
         id: null,
