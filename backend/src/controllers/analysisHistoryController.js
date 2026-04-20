@@ -84,6 +84,9 @@ async function saveAnalysis(req, res) {
     } else if (provider === "Microsoft365" || provider === "HubSpot" || provider === "GoogleWorkspace" || provider === "Slack") {
       duplicateQuery = duplicateQuery
         .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+    } else if (provider === "GCP") {
+      duplicateQuery = duplicateQuery
+        .eq("parameters->>organizationId", params.organizationId || "")
     }
 
     const { data: existingAnalyses, error: dupCheckError } = await duplicateQuery
@@ -406,6 +409,14 @@ function extractSummary(analysisData, provider) {
     summary.mediumSeverity = allFindings.filter(f => f.severity === "medium").length
     summary.lowSeverity = allFindings.filter(f => f.severity === "low" || f.severity === "info").length
     summary.healthScore = typeof summaryData.healthScore === "number" ? summaryData.healthScore : null
+  } else if (provider === "GCP") {
+    const s = analysisData.summary || {}
+    summary.totalFindings = s.issuesFound || 0
+    summary.totalPotentialSavings = s.potentialMonthlySavings || 0
+    summary.highSeverity = (s.bySeverity?.critical || 0) + (s.bySeverity?.high || 0)
+    summary.mediumSeverity = s.bySeverity?.medium || 0
+    summary.lowSeverity = s.bySeverity?.low || 0
+    summary.healthScore = typeof s.healthScore === "number" ? s.healthScore : null
   }
 
   // Calculate health score if not already set

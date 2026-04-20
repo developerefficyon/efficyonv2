@@ -144,6 +144,15 @@ const {
   disconnectSlack,
 } = require("../controllers/slackController")
 
+// GCP Controller - Google Cloud Recommender-based cost analysis
+const {
+  validateGcp,
+  getGcpStatus,
+  getGcpProjects,
+  analyzeGcpCostLeaks,
+  disconnectGcp,
+} = require("../controllers/gcpController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -392,6 +401,17 @@ router.post("/api/integrations/slack/recommendations/apply", requireAuth, requir
 router.patch("/api/integrations/slack/recommendations/steps", requireAuth, requireRole("owner", "editor"), updateRecommendationSteps)
 router.delete("/api/integrations/slack/recommendations/:id", requireAuth, requireRole("owner"), deleteRecommendation)
 router.delete("/api/integrations/slack/disconnect", requireAuth, requireRole("owner", "editor"), disconnectSlack)
+
+// GCP routes
+router.post(  "/api/integrations/gcp/validate",              requireAuth, requireRole("owner", "editor"),           validateGcp)
+router.get(   "/api/integrations/gcp/status",                requireAuth, requireRole("owner", "editor", "viewer"), getGcpStatus)
+router.get(   "/api/integrations/gcp/projects",              requireAuth, requireRole("owner", "editor", "viewer"), getGcpProjects)
+router.get(   "/api/integrations/gcp/cost-leaks",            requireAuth, requireRole("owner", "editor", "viewer"), analyzeGcpCostLeaks)
+router.get(   "/api/integrations/gcp/recommendations",       requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
+router.post(  "/api/integrations/gcp/recommendations/apply", requireAuth, requireRole("owner", "editor"),           applyRecommendation)
+router.patch( "/api/integrations/gcp/recommendations/steps", requireAuth, requireRole("owner", "editor"),           updateRecommendationSteps)
+router.delete("/api/integrations/gcp/recommendations/:id",   requireAuth, requireRole("owner"),                     deleteRecommendation)
+router.delete("/api/integrations/gcp/disconnect",            requireAuth, requireRole("owner", "editor"),           disconnectGcp)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
