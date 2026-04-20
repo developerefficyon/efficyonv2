@@ -200,10 +200,85 @@ async function getGcpProjects(req, res) {
   }
 }
 
+// Analyze GCP cost leaks — frontend persists the returned payload to
+// /api/analysis-history, matching the Slack/HubSpot pattern.
+async function analyzeGcpCostLeaksEndpoint(req, res) {
+  const endpoint = "GET /api/integrations/gcp/cost-leaks"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  let credentials
+  try {
+    credentials = getCredentialsFromIntegration(result.integration)
+  } catch (e) {
+    return res.status(400).json({ error: e.message, code: e.code })
+  }
+
+  try {
+    const { accessToken } = await exchangeServiceAccountKeyForToken(credentials.serviceAccountKey)
+    const analysis = await analyzeGcpCostLeaks({
+      accessToken,
+      organizationId: credentials.organizationId,
+    })
+
+    log("log", endpoint,
+      `Analysis completed: ${analysis.summary.issuesFound} findings, $${analysis.summary.potentialMonthlySavings || 0}/mo savings`)
+    return res.json(analysis)
+  } catch (e) {
+    log("error", endpoint, e.message)
+    if (e.code === "SA_UNAUTHORIZED") {
+      return res.status(401).json({ error: "Token expired — please re-validate", action: "reconnect" })
+    }
+    if (e.code === "MISSING_ORG_ROLE" || e.status === 403) {
+      return res.status(403).json({
+        error: e.message,
+        code: "MISSING_ORG_ROLE",
+      })
+    }
+    if (e.code === "RATE_LIMITED") {
+      return res.status(429).json({ error: `GCP rate limited. Retry in ${e.retryAfter || 30}s.` })
+    }
+    return res.status(500).json({ error: e.message || "Failed to analyze GCP cost leaks" })
+  }
+}
+
+// Disconnect — there is no revocation endpoint for a service-account key;
+// the customer deletes the key in their GCP console. We clear the stored
+// credentials and mark disconnected.
+async function disconnectGcp(req, res) {
+  const endpoint = "DELETE /api/integrations/gcp/disconnect"
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" })
+  const user = req.user
+  if (!user) return res.status(401).json({ error: "Unauthorized" })
+
+  const result = await getIntegrationForUser(user)
+  if (result.error) return res.status(result.status).json({ error: result.error })
+
+  const { integration } = result
+  const currentSettings = integration.settings || {}
+  const updatedSettings = { ...currentSettings }
+  delete updatedSettings.service_account_key
+  delete updatedSettings.organization_id
+
+  const { error: updateError } = await supabase
+    .from("company_integrations")
+    .update({ settings: updatedSettings, status: "disconnected" })
+    .eq("id", integration.id)
+
+  if (updateError) {
+    return res.status(500).json({ error: `Failed to disconnect: ${updateError.message}` })
+  }
+  return res.json({ success: true })
+}
+
 module.exports = {
   validateGcp,
   getGcpStatus,
   getGcpProjects,
-  analyzeGcpCostLeaks:   async (req, res) => res.status(501).json({ error: "not implemented" }),
-  disconnectGcp:         async (req, res) => res.status(501).json({ error: "not implemented" }),
+  analyzeGcpCostLeaks: analyzeGcpCostLeaksEndpoint,
+  disconnectGcp,
 }
