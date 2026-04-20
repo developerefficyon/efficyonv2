@@ -50,10 +50,21 @@ export function ToolConnectForm({ config, onCancel, onSuccess }: ToolConnectForm
               id={`${config.id}-${field.name}`}
               value={values[field.name] || field.options?.[0]?.value || ""}
               onChange={(e) => setField(field.name, e.target.value)}
-              className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg px-3 py-2.5 text-[13px] focus:border-emerald-500/30 outline-none transition-all"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 0.75rem center",
+                backgroundSize: "12px",
+              }}
+              className="w-full appearance-none bg-white/[0.03] border border-white/[0.06] text-white/80 rounded-lg pl-3 pr-9 py-2.5 text-[13px] focus:border-emerald-500/30 outline-none transition-all cursor-pointer hover:bg-white/[0.05]"
             >
               {field.options?.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  style={{ backgroundColor: "#0a0a0a", color: "rgba(255,255,255,0.85)" }}
+                >
                   {opt.label}
                 </option>
               ))}
