@@ -140,6 +140,29 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
       </>
     ),
   },
+  gcp: {
+    color: "#4285F4",
+    path: (
+      <>
+        <path
+          fill="#4285F4"
+          d="M12 2L2 7.5v9L12 22l10-5.5v-9L12 2zm0 2.3l7.7 4.3-7.7 4.2-7.7-4.2L12 4.3z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 4.3L4.3 8.6l1.9 1L12 6.5z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M12 6.5v4.3l-5.8-3.2z"
+        />
+        <path
+          fill="#34A853"
+          d="M19.7 8.6L12 4.3v2.2l5.8 3.1z"
+        />
+      </>
+    ),
+  },
 }
 
 /**

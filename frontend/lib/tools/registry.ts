@@ -21,6 +21,7 @@ import { anthropicConfig } from "./configs/anthropic"
 import { geminiConfig } from "./configs/gemini"
 import { googleWorkspaceConfig } from "./configs/googleworkspace"
 import { slackConfig } from "./configs/slack"
+import { gcpConfig } from "./configs/gcp"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
@@ -33,6 +34,7 @@ export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Gemini: geminiConfig,
   GoogleWorkspace: googleWorkspaceConfig,
   Slack: slackConfig,
+  GCP: gcpConfig,
 }
 
 /**
