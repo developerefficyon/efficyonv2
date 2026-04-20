@@ -72,7 +72,10 @@ async function analyzeAwsCostLeaks(credentials, settings) {
     totalFindings: findings.length,
     findingsBySeverity: countBy(findings, "severity"),
     findingsBySource: countBy(findings, "source"),
-    analyzedAccounts: uniq(findings.map((f) => f.resource?.accountId)).length,
+    analyzedAccounts: Math.max(
+      uniq(findings.map((f) => f.resource?.accountId)).length,
+      findings.length > 0 ? 1 : 0
+    ),
     analyzedRegions: (settings?.active_regions || []).length,
     partialRegionFailures: uniq(partialRegionFailures),
     sourceErrors,
