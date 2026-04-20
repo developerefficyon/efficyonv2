@@ -43,6 +43,7 @@ export type ToolCategory =
   | "E-Commerce"
   | "AI"
   | "Communication"
+  | "Cloud Infrastructure"
   | "Other"
 
 export type AuthType = "oauth" | "apiKey" | "serviceAccount"
