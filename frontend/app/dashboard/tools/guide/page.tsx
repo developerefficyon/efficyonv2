@@ -19,6 +19,7 @@ const INTEGRATIONS = [
   { id: "googleworkspace", label: "Google Workspace", color: "#4285F4", desc: "Productivity & Identity" },
   { id: "slack", label: "Slack", color: "#ECB22E", desc: "Communication" },
   { id: "aws", label: "Amazon Web Services", color: "#FF9900", desc: "Cloud Infrastructure" },
+  { id: "azure", label: "Microsoft Azure", color: "#0078D4", desc: "Cloud Infrastructure" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1312,6 +1313,106 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             No long-lived AWS credentials are stored. We persist only the role ARN and the external ID — both worthless to an attacker without our own AWS account&apos;s IAM identity. Every analysis run issues a fresh 1-hour STS temporary credential set (cached in-process only). All granted IAM actions are read-only — Effycion cannot modify, create, or delete any resource. Revoke access any time by deleting the IAM role <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">efficyon-cost-analyzer</span> or the CloudFormation stack that created it in your AWS console.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Azure Section */}
+      <section id="azure" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "azure" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#0078D4]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="azure" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Microsoft Azure</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Cloud Infrastructure</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#0078D4]/50 mt-1">&#8226;</span>An Azure AD (Entra ID) tenant with <strong>Global Administrator</strong> access</li>
+              <li className="flex items-start gap-2"><span className="text-[#0078D4]/50 mt-1">&#8226;</span>Permission to assign roles at a subscription or management-group scope</li>
+              <li className="flex items-start gap-2"><span className="text-[#0078D4]/50 mt-1">&#8226;</span>Subscriptions with the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Microsoft.Advisor</span> resource provider registered (default on most)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#0078D4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#0078D4]/80 hover:text-[#0078D4] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, and select <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Microsoft Azure</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#0078D4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Grant consent in Azure AD</span>. You&apos;ll be redirected to{" "}
+                <a href="https://login.microsoftonline.com" target="_blank" rel="noopener noreferrer" className="text-[#0078D4]/80 hover:text-[#0078D4] inline-flex items-center gap-1 transition-colors">
+                  login.microsoftonline.com <ExternalLink className="w-3 h-3" />
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#0078D4" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Sign in as <strong>Global Administrator</strong>. Review the consent screen — only these scopes are requested:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>Azure Service Management / user_impersonation</ScopeBadge>
+                </div>
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Accept</span>. You&apos;ll be redirected back to Effycion.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#0078D4" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Admin consent creates a Service Principal in your tenant but does <strong>not</strong> grant it any subscription access. Assign the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Reader</span> role:
+                </p>
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Open{" "}
+                  <a href="https://portal.azure.com/#view/Microsoft_Azure_ManagementGroups/ManagementGroupBrowseBlade" target="_blank" rel="noopener noreferrer" className="text-[#0078D4]/80 hover:text-[#0078D4] inline-flex items-center gap-1 transition-colors">
+                    Azure Portal → Management Groups <ExternalLink className="w-3 h-3" />
+                  </a>
+                  {" "}→ select your <strong>Tenant Root Group</strong> → <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Access control (IAM)</span> → <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Add role assignment</span> → <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Reader</span> → select member <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer (Azure)</span> → save.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#0078D4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Effycion auto-polls for up to 60 seconds. Once the role assignment propagates, the status flips to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span> and the Data tab shows your subscriptions.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#0078D4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Switch to the Analysis tab and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Run Analysis</span>. Findings normally take 10–30 seconds depending on subscription count.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            Effycion pulls recommendations from <strong>Azure Advisor</strong> (Cost category) — Microsoft&apos;s pre-computed rightsizing, idle-resource, and reserved-instance opportunities. Savings come from Microsoft&apos;s own projections; most are derived from <code>annualSavingsAmount / 12</code>.
+          </InfoBox>
+
+          <SecurityBox>
+            No long-lived Azure credentials are stored. Only the tenant ID is persisted. Every analysis issues a fresh 1-hour OAuth 2.0 app-only token (cached in-process only). All granted permissions are read-only — Effycion cannot modify, create, or delete any Azure resource. Revoke access any time by removing the <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer (Azure)</span> enterprise application from your Entra ID tenant.
           </SecurityBox>
         </div>
       </section>
