@@ -97,6 +97,11 @@ async function saveAnalysis(req, res) {
       duplicateQuery = duplicateQuery
         .eq("parameters->>planTier", params.planTier || "")
         .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+    } else if (provider === "GitHub") {
+      duplicateQuery = duplicateQuery
+        .eq("parameters->>planTier", params.planTier || "")
+        .eq("parameters->>copilotTier", params.copilotTier || "")
+        .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
     }
 
     const { data: existingAnalyses, error: dupCheckError } = await duplicateQuery
@@ -446,6 +451,15 @@ function extractSummary(analysisData, provider) {
     summary.lowSeverity = bySev.low || 0
     summary.healthScore = null
   } else if (provider === "Zoom") {
+    const s = analysisData.summary || {}
+    summary.totalFindings = s.totalFindings || 0
+    summary.totalPotentialSavings = s.totalPotentialSavings || 0
+    const bySev = s.findingsBySeverity || {}
+    summary.highSeverity = (bySev.critical || 0) + (bySev.high || 0)
+    summary.mediumSeverity = bySev.medium || 0
+    summary.lowSeverity = bySev.low || 0
+    summary.healthScore = null
+  } else if (provider === "GitHub") {
     const s = analysisData.summary || {}
     summary.totalFindings = s.totalFindings || 0
     summary.totalPotentialSavings = s.totalPotentialSavings || 0
