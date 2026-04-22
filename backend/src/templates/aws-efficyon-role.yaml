@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Efficyon cross-account cost-analysis role. Grants read-only access to AWS
+  Cost Explorer and Compute Optimizer recommendations, plus org metadata.
+  Trusts the Efficyon backend AWS account; requires an external ID for
+  confused-deputy protection.
+
+Parameters:
+  ExternalId:
+    Type: String
+    Description: Security token provided by Efficyon during connect. Do not edit.
+    MinLength: 16
+    MaxLength: 64
+    AllowedPattern: "^[A-Za-z0-9_-]+$"
+
+Resources:
+  EfficyonCostAnalyzerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: efficyon-cost-analyzer
+      Description: "Read-only role used by Efficyon to pull cost-optimization recommendations"
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "arn:aws:iam::${EFFICYON_AWS_ACCOUNT_ID}:root"
+            Action: "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                "sts:ExternalId": !Ref ExternalId
+      Policies:
+        - PolicyName: EfficyonCostReadOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ce:GetRightsizingRecommendation
+                  - ce:GetSavingsPlansPurchaseRecommendation
+                  - ce:GetReservationPurchaseRecommendation
+                  - ce:GetCostAndUsage
+                  - compute-optimizer:GetEC2InstanceRecommendations
+                  - compute-optimizer:GetEBSVolumeRecommendations
+                  - compute-optimizer:GetLambdaFunctionRecommendations
+                  - compute-optimizer:GetAutoScalingGroupRecommendations
+                  - compute-optimizer:GetECSServiceRecommendations
+                  - compute-optimizer:GetRDSDatabaseRecommendations
+                  - compute-optimizer:GetIdleRecommendations
+                  - compute-optimizer:GetRecommendationSummaries
+                  - organizations:DescribeOrganization
+                  - organizations:ListAccounts
+                  - account:ListRegions
+                  - ec2:DescribeRegions
+                  - iam:GetAccountSummary
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Description: Paste this back into Efficyon to finish connecting.
+    Value: !GetAtt EfficyonCostAnalyzerRole.Arn

@@ -153,6 +153,18 @@ const {
   disconnectGcp,
 } = require("../controllers/gcpController")
 
+// AWS Controller - Cost Explorer + Compute Optimizer cost analysis
+const {
+  validateAws,
+  getAwsStatus,
+  getAwsAccounts,
+  getAwsRegions,
+  refreshAwsRegions,
+  analyzeAwsCostLeaks,
+  disconnectAws,
+  serveCloudFormationTemplate,
+} = require("../controllers/awsController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -412,6 +424,16 @@ router.post(  "/api/integrations/gcp/recommendations/apply", requireAuth, requir
 router.patch( "/api/integrations/gcp/recommendations/steps", requireAuth, requireRole("owner", "editor"),           updateRecommendationSteps)
 router.delete("/api/integrations/gcp/recommendations/:id",   requireAuth, requireRole("owner"),                     deleteRecommendation)
 router.delete("/api/integrations/gcp/disconnect",            requireAuth, requireRole("owner", "editor"),           disconnectGcp)
+
+// AWS routes
+router.get(   "/api/aws/cloudformation-template",              serveCloudFormationTemplate) // NO AUTH - static YAML
+router.post(  "/api/integrations/aws/validate",                requireAuth, requireRole("owner", "editor"),           validateAws)
+router.get(   "/api/integrations/aws/status",                  requireAuth, requireRole("owner", "editor", "viewer"), getAwsStatus)
+router.get(   "/api/integrations/aws/accounts",                requireAuth, requireRole("owner", "editor", "viewer"), getAwsAccounts)
+router.get(   "/api/integrations/aws/regions",                 requireAuth, requireRole("owner", "editor", "viewer"), getAwsRegions)
+router.post(  "/api/integrations/aws/regions/refresh",         requireAuth, requireRole("owner", "editor"),           refreshAwsRegions)
+router.post(  "/api/integrations/aws/cost-leaks",              requireAuth, requireRole("owner", "editor"),           analyzeAwsCostLeaks)
+router.delete("/api/integrations/aws",                         requireAuth, requireRole("owner", "editor"),           disconnectAws)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)

@@ -116,7 +116,42 @@ function ConnectedToolDetail({
 }) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isAutoValidating, setIsAutoValidating] = useState(false)
   const { reconnect, isConnecting: isReconnecting } = useToolConnect(config, onReload)
+
+  // AWS's 3-step wizard leaves the integration at status=pending after the role
+  // ARN is submitted. We auto-fire /validate here so the user doesn't need to
+  // click anything else — spec-intended behavior.
+  useEffect(() => {
+    if (config.provider !== "AWS" || integration.status !== "pending" || isAutoValidating) return
+    let cancelled = false
+    void (async () => {
+      setIsAutoValidating(true)
+      try {
+        const accessToken = await getBackendToken()
+        if (!accessToken) return
+        const res = await fetch(`${API_BASE}/api/integrations/aws/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ integrationId: integration.id }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast.error("AWS validation failed", { description: data?.hint || data?.error || `HTTP ${res.status}` })
+          return
+        }
+        if (!cancelled) {
+          toast.success("AWS connected")
+          await onReload()
+        }
+      } finally {
+        if (!cancelled) setIsAutoValidating(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [config.provider, integration.status, integration.id, isAutoValidating, onReload])
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${integration.tool_name}? This cannot be undone.`)) return
@@ -158,10 +193,17 @@ function ConnectedToolDetail({
       ) : (
         <Card className="bg-white/[0.02] border-white/[0.06]">
           <CardContent className="p-8 text-center">
-            <p className="text-white/40 text-sm">
-              This integration is currently {integration.status}.
-              {canReconnect && " Click Reconnect above to restore access."}
-            </p>
+            {isAutoValidating ? (
+              <p className="text-white/60 text-sm flex items-center justify-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Validating AWS role…
+              </p>
+            ) : (
+              <p className="text-white/40 text-sm">
+                This integration is currently {integration.status}.
+                {canReconnect && " Click Reconnect above to restore access."}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

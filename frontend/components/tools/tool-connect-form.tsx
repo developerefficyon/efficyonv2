@@ -15,9 +15,16 @@ interface ToolConnectFormProps {
 }
 
 export function ToolConnectForm({ config, onCancel, onSuccess }: ToolConnectFormProps) {
-  const { values, setValues, isConnecting, connect } = useToolConnect(config, onSuccess)
+  const { values, setValues, isConnecting, connect, connectWithValues } = useToolConnect(config, onSuccess)
 
   const setField = (name: string, value: string) => setValues({ ...values, [name]: value })
+
+  // Tools that need a multi-step wizard (e.g., AWS) supply a connectComponent
+  // that replaces the declarative authFields form.
+  if (config.connectComponent) {
+    const Wizard = config.connectComponent
+    return <Wizard onSubmit={connectWithValues} onCancel={onCancel} />
+  }
 
   const canSubmit =
     !isConnecting &&
