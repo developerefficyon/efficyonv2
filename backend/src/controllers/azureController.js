@@ -236,8 +236,78 @@ async function refreshAzureSubscriptions(req, res) {
     .eq("id", integration.id)
   return res.json({ subscriptions: subs, subscriptionsRefreshedAt: nowIso })
 }
-async function analyzeAzureCostLeaksHandler(req, res) { res.status(501).json({ error: "analyze not implemented" }) }
-async function disconnectAzure(req, res)            { res.status(501).json({ error: "disconnectAzure not implemented" }) }
+async function analyzeAzureCostLeaksHandler(req, res) {
+  const endpoint = "POST /api/integrations/azure/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration, companyId } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Integration not connected. Re-run validate first." })
+  }
+
+  // Duplicate-check: same tenant within 5 minutes → 409
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data: recent } = await supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("provider", AZURE_PROVIDER)
+    .eq("integration_id", integration.id)
+    .gte("created_at", fiveMinAgo)
+    .limit(1)
+    .maybeSingle()
+  if (recent) {
+    return res.status(409).json({
+      error: "An analysis was just run for this integration. Please wait a few minutes.",
+      recentAnalysisId: recent.id,
+    })
+  }
+
+  let result
+  try {
+    const token = await getAzureAccessToken(integration)
+    result = await analyzeAzureCostLeaks(token, integration.settings)
+  } catch (e) {
+    const mapped = mapAzureError(e)
+    log("error", endpoint, "analysis failed", { code: e.code, azureErrorCode: e.azureErrorCode, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  // Strip sourceErrors before persistence (matches AWS pattern).
+  const { sourceErrors, ...persistedSummary } = result.summary
+  try {
+    await saveAnalysis({
+      companyId,
+      provider: AZURE_PROVIDER,
+      integrationId: integration.id,
+      analysisData: { summary: persistedSummary, findings: result.findings },
+      parameters: { tenantId: integration.settings?.tenant_id || "" },
+    })
+  } catch (e) {
+    log("error", endpoint, "saveAnalysis failed", { message: e.message })
+  }
+
+  return res.json(result)
+}
+
+async function disconnectAzure(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  const nowIso = new Date().toISOString()
+  const priorTenantId = integration.settings?.tenant_id || null
+  await supabase
+    .from("company_integrations")
+    .update({
+      settings: { disconnected_at: nowIso, prior_tenant_id: priorTenantId },
+      status: "disconnected",
+      updated_at: nowIso,
+    })
+    .eq("id", integration.id)
+  evictToken(integration.id)
+  return res.json({ ok: true, disconnectedAt: nowIso })
+}
 
 module.exports = {
   initiateAzureConsent,
