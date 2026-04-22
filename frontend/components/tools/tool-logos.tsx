@@ -200,6 +200,22 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
       </>
     ),
   },
+  zoom: {
+    color: "#2D8CFF",
+    // Simplified Zoom "camera blob" on 24x24 viewBox.
+    path: (
+      <>
+        <path
+          fill="#2D8CFF"
+          d="M1 6c0-1.1.9-2 2-2h11c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V6z"
+        />
+        <path
+          fill="#2D8CFF"
+          d="M17 9l5-3v12l-5-3V9z"
+        />
+      </>
+    ),
+  },
 }
 
 /**
