@@ -119,29 +119,40 @@ function ConnectedToolDetail({
   const [isAutoValidating, setIsAutoValidating] = useState(false)
   const { reconnect, isConnecting: isReconnecting } = useToolConnect(config, onReload)
 
-  // AWS's 3-step wizard leaves the integration at status=pending after the role
-  // ARN is submitted. We auto-fire /validate here so the user doesn't need to
-  // click anything else — spec-intended behavior.
+  // AWS's 3-step wizard and Azure's admin-consent both leave the integration at
+  // status=pending after the user action. We auto-fire /validate here so the
+  // user doesn't need to click anything else — spec-intended behavior.
   useEffect(() => {
-    if (config.provider !== "AWS" || integration.status !== "pending" || isAutoValidating) return
+    if (!["AWS", "Azure"].includes(config.provider) || integration.status !== "pending" || isAutoValidating) return
+    // Guard: only fire validate when the provider-specific prerequisite is in settings.
+    // AWS needs role_arn (set by the wizard); Azure needs tenant_id (set by the
+    // consent-callback). Without these, validate will return 409 and show a
+    // misleading error toast.
+    const settings: any = integration.settings || {}
+    if (config.provider === "AWS" && !settings.role_arn) return
+    if (config.provider === "Azure" && !settings.tenant_id) return
     let cancelled = false
     void (async () => {
       setIsAutoValidating(true)
       try {
         const accessToken = await getBackendToken()
         if (!accessToken) return
-        const res = await fetch(`${API_BASE}/api/integrations/aws/validate`, {
+        const validateEndpoint =
+          config.provider === "AWS"
+            ? "/api/integrations/aws/validate"
+            : "/api/integrations/azure/validate"
+        const res = await fetch(`${API_BASE}${validateEndpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
           body: JSON.stringify({ integrationId: integration.id }),
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
-          toast.error("AWS validation failed", { description: data?.hint || data?.error || `HTTP ${res.status}` })
+          toast.error(`${config.label} validation failed`, { description: data?.hint || data?.error || `HTTP ${res.status}` })
           return
         }
         if (!cancelled) {
-          toast.success("AWS connected")
+          toast.success(`${config.label} connected`)
           await onReload()
         }
       } finally {
@@ -151,7 +162,7 @@ function ConnectedToolDetail({
     return () => {
       cancelled = true
     }
-  }, [config.provider, integration.status, integration.id, isAutoValidating, onReload])
+  }, [config.provider, config.label, integration.status, integration.id, isAutoValidating, onReload])
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${integration.tool_name}? This cannot be undone.`)) return
@@ -196,7 +207,7 @@ function ConnectedToolDetail({
             {isAutoValidating ? (
               <p className="text-white/60 text-sm flex items-center justify-center gap-2">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Validating AWS role…
+                Validating {config.label}…
               </p>
             ) : (
               <p className="text-white/40 text-sm">
