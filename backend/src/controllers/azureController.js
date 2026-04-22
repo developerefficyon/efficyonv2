@@ -10,7 +10,6 @@ const { supabase } = require("../config/supabase")
 const { getAzureAccessToken, evictToken, parseTenantId } = require("../utils/azureAuth")
 const { analyzeAzureCostLeaks } = require("../services/azureCostLeakAnalysis")
 const { listSubscriptions } = require("../services/azureAdvisorAnalysis")
-const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const AZURE_PROVIDER = "Azure"
 const LOGIN_BASE = "https://login.microsoftonline.com"
@@ -274,21 +273,10 @@ async function analyzeAzureCostLeaksHandler(req, res) {
     return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
   }
 
-  // Strip sourceErrors before persistence (matches AWS pattern).
-  const { sourceErrors, ...persistedSummary } = result.summary
-  try {
-    await saveAnalysisDirect({
-      companyId,
-      provider: AZURE_PROVIDER,
-      integrationId: integration.id,
-      analysisData: { summary: persistedSummary, findings: result.findings },
-      parameters: { tenantId: integration.settings?.tenant_id || "" },
-    })
-  } catch (e) {
-    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
-  }
-
-  return res.json(result)
+  // Strip sourceErrors from response. Persistence via the frontend's subsequent
+  // POST /api/analysis-history (matches the 8 older integrations' pattern).
+  const { sourceErrors, ...summaryWithoutSourceErrors } = result.summary
+  return res.json({ summary: summaryWithoutSourceErrors, findings: result.findings })
 }
 
 async function disconnectAzure(req, res) {

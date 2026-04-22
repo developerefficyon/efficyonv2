@@ -11,7 +11,6 @@ const path = require("path")
 const { supabase } = require("../config/supabase")
 const { getAwsCredentials, evictCredentials, parseRoleArn } = require("../utils/awsAuth")
 const { analyzeAwsCostLeaks } = require("../services/awsCostLeakAnalysis")
-const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const {
   OrganizationsClient,
@@ -335,25 +334,12 @@ async function analyzeAwsCostLeaksHandler(req, res) {
     return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
   }
 
-  // Strip sourceErrors before persistence — they may contain AWS ARNs / diagnostic strings
-  // that shouldn't leak into the stored history row.
-  const { sourceErrors, ...persistedSummary } = result.summary
-
-  // Persist via shared history controller
-  try {
-    await saveAnalysisDirect({
-      companyId,
-      provider: AWS_PROVIDER,
-      integrationId: integration.id,
-      analysisData: { summary: persistedSummary, findings: result.findings },
-      parameters: { organizationId: integration.settings?.organization_id || "" },
-    })
-  } catch (e) {
-    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
-    // Return the analysis even if persistence fails; user sees the run, we log the issue.
-  }
-
-  return res.json(result)
+  // Strip sourceErrors from the response summary — they may contain AWS ARNs /
+  // diagnostic strings. Since the frontend posts the response back to
+  // /api/analysis-history for persistence, stripping here keeps them out of
+  // the stored history row too.
+  const { sourceErrors, ...summaryWithoutSourceErrors } = result.summary
+  return res.json({ summary: summaryWithoutSourceErrors, findings: result.findings })
 }
 async function disconnectAws(req, res) {
   const lookup = await getIntegrationForUser(req.user)

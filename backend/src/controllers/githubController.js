@@ -23,7 +23,6 @@ const {
 } = require("../utils/githubAuth")
 const { analyzeGitHubCostLeaks } = require("../services/githubCostLeakAnalysis")
 const { listMembers } = require("../services/githubUsageAnalysis")
-const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const GITHUB_PROVIDER = "GitHub"
 
@@ -336,22 +335,10 @@ async function analyzeGitHubCostLeaksHandler(req, res) {
     return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
   }
 
-  // Strip sourceErrors before persistence (same pattern as Azure/AWS/Zoom — critical).
-  const { sourceErrors, ...persistedSummary } = result.summary
-  try {
-    await saveAnalysisDirect({
-      companyId,
-      provider: GITHUB_PROVIDER,
-      integrationId: integration.id,
-      analysisData: { summary: persistedSummary, findings: result.findings },
-      parameters: { planTier, copilotTier, inactivityDays },
-    })
-  } catch (e) {
-    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
-  }
-
-  // Return full result (sourceErrors intact) to the client.
-  return res.json(result)
+  // Strip sourceErrors from response. Persistence via the frontend's subsequent
+  // POST /api/analysis-history (matches the 8 older integrations' pattern).
+  const { sourceErrors, ...summaryWithoutSourceErrors } = result.summary
+  return res.json({ summary: summaryWithoutSourceErrors, findings: result.findings })
 }
 
 // ---------------------------------------------------------------------------
