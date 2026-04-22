@@ -124,6 +124,13 @@ function ConnectedToolDetail({
   // user doesn't need to click anything else — spec-intended behavior.
   useEffect(() => {
     if (!["AWS", "Azure"].includes(config.provider) || integration.status !== "pending" || isAutoValidating) return
+    // Guard: only fire validate when the provider-specific prerequisite is in settings.
+    // AWS needs role_arn (set by the wizard); Azure needs tenant_id (set by the
+    // consent-callback). Without these, validate will return 409 and show a
+    // misleading error toast.
+    const settings: any = integration.settings || {}
+    if (config.provider === "AWS" && !settings.role_arn) return
+    if (config.provider === "Azure" && !settings.tenant_id) return
     let cancelled = false
     void (async () => {
       setIsAutoValidating(true)
