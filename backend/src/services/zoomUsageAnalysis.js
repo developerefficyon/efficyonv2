@@ -1,10 +1,14 @@
 /**
  * Zoom usage analysis service.
  *
- * Three finding generators:
+ * Two finding generators implemented in v1:
  *   1. Inactive licensed users (last_login_time older than threshold)
  *   2. Unused add-ons (Webinar / Events / Phone licenses with no activity)
- *   3. Tier mismatch (high-tier features untouched in the window)
+ *
+ * Tier-mismatch (deferred): would flag accounts on Business Plus / Enterprise
+ * whose users only touch Pro-tier features. Needs per-user feature-usage
+ * reporting (report:read:user:admin scope + larger API surface) — deferred
+ * from v1.
  */
 
 const API = "https://api.zoom.us/v2"
@@ -80,7 +84,7 @@ function daysBetween(a, b) {
   return Math.floor((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-function findingInactiveUser(user, planTier) {
+function findingInactiveUser(user, planTier, inactivityDays = 30) {
   const price = TIER_PRICING[planTier] ?? TIER_PRICING.pro
   return {
     id: `zoom-inactive-${user.id}`,
@@ -98,7 +102,7 @@ function findingInactiveUser(user, planTier) {
     currentCost: price,
     projectedSavings: price,
     currency: "USD",
-    recommendation: `Downgrade ${user.email} to Basic (free) or revoke the license — no login activity in 30+ days`,
+    recommendation: `Downgrade ${user.email} to Basic (free) or revoke the license — no login activity in ${inactivityDays}+ days`,
     actionSteps: [
       "Confirm the user is truly inactive (check with their manager)",
       "Open Zoom admin → User Management → Users → find the user",
@@ -144,7 +148,7 @@ async function inactiveUserFindings(accessToken, users, planTier, inactivityDays
     if (u.type !== 2) continue // not licensed
     const lastLogin = u.last_login_time ? new Date(u.last_login_time) : null
     const idleDays = lastLogin ? daysBetween(now, lastLogin) : 9999
-    if (idleDays >= threshold) findings.push(findingInactiveUser(u, planTier))
+    if (idleDays >= threshold) findings.push(findingInactiveUser(u, planTier, threshold))
   }
   return findings
 }

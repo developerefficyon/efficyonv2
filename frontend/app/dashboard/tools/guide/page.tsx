@@ -1479,7 +1479,6 @@ export default function SetupGuidePage() {
                   <ScopeBadge>user:read:list_users:admin</ScopeBadge>
                   <ScopeBadge>user:read:user:admin</ScopeBadge>
                   <ScopeBadge>account:read:list_addons:admin</ScopeBadge>
-                  <ScopeBadge>report:read:user:admin</ScopeBadge>
                 </div>
               </div>
             </div>

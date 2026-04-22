@@ -57,7 +57,7 @@ export const zoomConfig: UnifiedToolConfig = {
       "Go to marketplace.zoom.us → sign in as admin",
       "Develop → Build App → Server-to-Server OAuth",
       "Name the app 'Efficyon Cost Analyzer' → Create",
-      "Add scopes: user:read:list_users:admin, user:read:user:admin, account:read:list_addons:admin, report:read:user:admin",
+      "Add scopes: user:read:list_users:admin, user:read:user:admin, account:read:list_addons:admin",
       "Activate the app, then copy Account ID + Client ID + Client Secret here",
     ],
   },
