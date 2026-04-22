@@ -177,6 +177,16 @@ const {
   disconnectAzure,
 } = require("../controllers/azureController")
 
+// Zoom Controller - Zoom S2S OAuth + usage analysis
+const {
+  validateZoom,
+  getZoomStatus,
+  getZoomUsers,
+  getZoomAccount,
+  analyzeZoomCostLeaks,
+  disconnectZoom,
+} = require("../controllers/zoomController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -456,6 +466,14 @@ router.get(   "/api/integrations/azure/subscriptions",           requireAuth, re
 router.post(  "/api/integrations/azure/subscriptions/refresh",   requireAuth, requireRole("owner", "editor"),           refreshAzureSubscriptions)
 router.post(  "/api/integrations/azure/cost-leaks",              requireAuth, requireRole("owner", "editor"),           analyzeAzureCostLeaks)
 router.delete("/api/integrations/azure",                         requireAuth, requireRole("owner", "editor"),           disconnectAzure)
+
+// Zoom routes
+router.post(  "/api/integrations/zoom/validate",     requireAuth, requireRole("owner", "editor"),           validateZoom)
+router.get(   "/api/integrations/zoom/status",       requireAuth, requireRole("owner", "editor", "viewer"), getZoomStatus)
+router.get(   "/api/integrations/zoom/users",        requireAuth, requireRole("owner", "editor", "viewer"), getZoomUsers)
+router.get(   "/api/integrations/zoom/account",      requireAuth, requireRole("owner", "editor", "viewer"), getZoomAccount)
+router.post(  "/api/integrations/zoom/cost-leaks",   requireAuth, requireRole("owner", "editor"),           analyzeZoomCostLeaks)
+router.delete("/api/integrations/zoom",              requireAuth, requireRole("owner", "editor"),           disconnectZoom)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
