@@ -136,10 +136,106 @@ async function handleAzureConsentCallback(req, res) {
 
   return res.redirect(`${frontendBase}/dashboard/tools/${integrationId}?azure_consent=ok`)
 }
-async function validateAzure(req, res)              { res.status(501).json({ error: "validateAzure not implemented" }) }
-async function getAzureStatus(req, res)             { res.status(501).json({ error: "getAzureStatus not implemented" }) }
-async function getAzureSubscriptions(req, res)      { res.status(501).json({ error: "getAzureSubscriptions not implemented" }) }
-async function refreshAzureSubscriptions(req, res)  { res.status(501).json({ error: "refreshAzureSubscriptions not implemented" }) }
+async function validateAzure(req, res) {
+  const endpoint = "POST /api/integrations/azure/validate"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  if (!integration.settings?.tenant_id) {
+    return res.status(409).json({ error: "Consent not granted yet. Complete the admin-consent step first." })
+  }
+
+  // Poll for Reader role: try listSubscriptions up to 12 times, 5s apart = 60s total.
+  let subs = null
+  let lastErr = null
+  for (let i = 0; i < 12; i++) {
+    try {
+      const token = await getAzureAccessToken(integration)
+      subs = await listSubscriptions(token)
+      if (subs.length > 0) break
+      lastErr = new Error("No subscriptions visible yet (Reader role may still be propagating)")
+    } catch (e) {
+      lastErr = e
+      if (e?.azureErrorCode && e.azureErrorCode !== "AuthorizationFailed") break // real error, not propagation
+    }
+    await new Promise((r) => setTimeout(r, 5000))
+  }
+
+  if (!subs || subs.length === 0) {
+    const mapped = mapAzureError(lastErr || new Error("No subscriptions accessible"))
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+
+  const nowIso = new Date().toISOString()
+  await supabase
+    .from("company_integrations")
+    .update({
+      settings: {
+        ...(integration.settings || {}),
+        active_subscriptions: subs,
+        subscriptions_refreshed_at: nowIso,
+        last_validated_at: nowIso,
+      },
+      status: "connected",
+      updated_at: nowIso,
+    })
+    .eq("id", integration.id)
+
+  return res.json({
+    status: "connected",
+    tenantId: integration.settings.tenant_id,
+    subscriptions: subs,
+    lastValidatedAt: nowIso,
+  })
+}
+
+async function getAzureStatus(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const s = lookup.integration.settings || {}
+  return res.json({
+    status: lookup.integration.status,
+    tenantId: s.tenant_id || null,
+    consentGrantedAt: s.consent_granted_at || null,
+    activeSubscriptions: s.active_subscriptions || [],
+    subscriptionsRefreshedAt: s.subscriptions_refreshed_at || null,
+    lastValidatedAt: s.last_validated_at || null,
+  })
+}
+
+async function getAzureSubscriptions(req, res) {
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  return res.json({
+    subscriptions: lookup.integration.settings?.active_subscriptions || [],
+    subscriptionsRefreshedAt: lookup.integration.settings?.subscriptions_refreshed_at || null,
+  })
+}
+
+async function refreshAzureSubscriptions(req, res) {
+  const endpoint = "POST /api/integrations/azure/subscriptions/refresh"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  let subs
+  try {
+    const token = await getAzureAccessToken(integration)
+    subs = await listSubscriptions(token)
+  } catch (e) {
+    const mapped = mapAzureError(e)
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+  const nowIso = new Date().toISOString()
+  await supabase
+    .from("company_integrations")
+    .update({
+      settings: { ...(integration.settings || {}), active_subscriptions: subs, subscriptions_refreshed_at: nowIso },
+      updated_at: nowIso,
+    })
+    .eq("id", integration.id)
+  return res.json({ subscriptions: subs, subscriptionsRefreshedAt: nowIso })
+}
 async function analyzeAzureCostLeaksHandler(req, res) { res.status(501).json({ error: "analyze not implemented" }) }
 async function disconnectAzure(req, res)            { res.status(501).json({ error: "disconnectAzure not implemented" }) }
 
