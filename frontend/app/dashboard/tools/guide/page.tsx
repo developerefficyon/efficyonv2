@@ -20,6 +20,7 @@ const INTEGRATIONS = [
   { id: "slack", label: "Slack", color: "#ECB22E", desc: "Communication" },
   { id: "aws", label: "Amazon Web Services", color: "#FF9900", desc: "Cloud Infrastructure" },
   { id: "azure", label: "Microsoft Azure", color: "#0078D4", desc: "Cloud Infrastructure" },
+  { id: "zoom", label: "Zoom", color: "#2D8CFF", desc: "Productivity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1413,6 +1414,97 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             No long-lived Azure credentials are stored. Only the tenant ID is persisted. Every analysis issues a fresh 1-hour OAuth 2.0 app-only token (cached in-process only). All granted permissions are read-only — Effycion cannot modify, create, or delete any Azure resource. Revoke access any time by removing the <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer (Azure)</span> enterprise application from your Entra ID tenant.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Zoom Section */}
+      <section id="zoom" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "zoom" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#2D8CFF]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="zoom" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Zoom</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#2D8CFF]/50 mt-1">&#8226;</span>A Zoom account with admin access (Owner or Admin role)</li>
+              <li className="flex items-start gap-2"><span className="text-[#2D8CFF]/50 mt-1">&#8226;</span>Permission to create Server-to-Server OAuth apps in your account</li>
+              <li className="flex items-start gap-2"><span className="text-[#2D8CFF]/50 mt-1">&#8226;</span>Your plan tier (Pro / Business / Business Plus / Enterprise) — used for per-seat savings math</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#2D8CFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Go to{" "}
+                <a href="https://marketplace.zoom.us" target="_blank" rel="noopener noreferrer" className="text-[#2D8CFF]/80 hover:text-[#2D8CFF] inline-flex items-center gap-1 transition-colors">
+                  marketplace.zoom.us <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}and sign in with your admin Zoom account.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#2D8CFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Develop</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Build App</span> &rsaquo; select <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Server-to-Server OAuth</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#2D8CFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name the app <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span> and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#2D8CFF" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Scopes</span>, add these read-only admin scopes:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>user:read:list_users:admin</ScopeBadge>
+                  <ScopeBadge>user:read:user:admin</ScopeBadge>
+                  <ScopeBadge>account:read:list_addons:admin</ScopeBadge>
+                  <ScopeBadge>report:read:user:admin</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#2D8CFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Activate</span>. Open <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">App Credentials</span> and copy the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Account ID</span>, <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client ID</span>, and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Client Secret</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#2D8CFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, <Link href="/dashboard/tools" className="text-[#2D8CFF]/80 hover:text-[#2D8CFF] transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Zoom. Paste the three values, pick your plan tier, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. Effycion auto-validates within a few seconds.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About pricing math">
+            Zoom&apos;s API doesn&apos;t expose per-user billing. Effycion uses your selected plan tier and public list prices (Pro $14.99 / Business $21.99 / Business Plus $26.99) to estimate per-seat savings. Enterprise pricing defaults to Business Plus; you can update the plan tier any time by reconnecting.
+          </InfoBox>
+
+          <SecurityBox>
+            All requested scopes are read-only — Effycion can list users and read activity data but cannot modify, create, or delete anything in your Zoom account. Your <code>Client Secret</code> is encrypted at rest with AES-256-GCM before persisting to our database. We mint fresh 1-hour access tokens per analysis (cached in-process only). Revoke access any time by deactivating or deleting the <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> S2S app at marketplace.zoom.us &rsaquo; Develop &rsaquo; Manage.
           </SecurityBox>
         </div>
       </section>
