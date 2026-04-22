@@ -11,7 +11,7 @@ const path = require("path")
 const { supabase } = require("../config/supabase")
 const { getAwsCredentials, evictCredentials, parseRoleArn } = require("../utils/awsAuth")
 const { analyzeAwsCostLeaks } = require("../services/awsCostLeakAnalysis")
-const { saveAnalysis } = require("./analysisHistoryController")
+const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const {
   OrganizationsClient,
@@ -341,7 +341,7 @@ async function analyzeAwsCostLeaksHandler(req, res) {
 
   // Persist via shared history controller
   try {
-    await saveAnalysis({
+    await saveAnalysisDirect({
       companyId,
       provider: AWS_PROVIDER,
       integrationId: integration.id,
@@ -349,7 +349,7 @@ async function analyzeAwsCostLeaksHandler(req, res) {
       parameters: { organizationId: integration.settings?.organization_id || "" },
     })
   } catch (e) {
-    log("error", endpoint, "saveAnalysis failed", { message: e.message })
+    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
     // Return the analysis even if persistence fails; user sees the run, we log the issue.
   }
 

@@ -187,6 +187,16 @@ const {
   disconnectZoom,
 } = require("../controllers/zoomController")
 
+// GitHub Controller - per-customer GitHub App cost analysis
+const {
+  validateGitHub,
+  getGitHubStatus,
+  getGitHubMembers,
+  getGitHubOrg,
+  analyzeGitHubCostLeaks,
+  disconnectGitHub,
+} = require("../controllers/githubController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -474,6 +484,14 @@ router.get(   "/api/integrations/zoom/users",        requireAuth, requireRole("o
 router.get(   "/api/integrations/zoom/account",      requireAuth, requireRole("owner", "editor", "viewer"), getZoomAccount)
 router.post(  "/api/integrations/zoom/cost-leaks",   requireAuth, requireRole("owner", "editor"),           analyzeZoomCostLeaks)
 router.delete("/api/integrations/zoom",              requireAuth, requireRole("owner", "editor"),           disconnectZoom)
+
+// GitHub routes
+router.post(  "/api/integrations/github/validate",     requireAuth, requireRole("owner", "editor"),           validateGitHub)
+router.get(   "/api/integrations/github/status",       requireAuth, requireRole("owner", "editor", "viewer"), getGitHubStatus)
+router.get(   "/api/integrations/github/members",      requireAuth, requireRole("owner", "editor", "viewer"), getGitHubMembers)
+router.get(   "/api/integrations/github/org",          requireAuth, requireRole("owner", "editor", "viewer"), getGitHubOrg)
+router.post(  "/api/integrations/github/cost-leaks",   requireAuth, requireRole("owner", "editor"),           analyzeGitHubCostLeaks)
+router.delete("/api/integrations/github",              requireAuth, requireRole("owner", "editor"),           disconnectGitHub)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
