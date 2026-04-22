@@ -18,7 +18,7 @@ const {
 } = require("../utils/zoomAuth")
 const { analyzeZoomCostLeaks } = require("../services/zoomCostLeakAnalysis")
 const { getAccountInfo, listUsers } = require("../services/zoomUsageAnalysis")
-const { saveAnalysis } = require("./analysisHistoryController")
+const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const ZOOM_PROVIDER = "Zoom"
 
@@ -239,7 +239,7 @@ async function analyzeZoomCostLeaksHandler(req, res) {
   // Strip sourceErrors before persistence (same pattern as Azure/AWS — critical).
   const { sourceErrors, ...persistedSummary } = result.summary
   try {
-    await saveAnalysis({
+    await saveAnalysisDirect({
       companyId,
       provider: ZOOM_PROVIDER,
       integrationId: integration.id,
@@ -247,7 +247,7 @@ async function analyzeZoomCostLeaksHandler(req, res) {
       parameters: { planTier, inactivityDays },
     })
   } catch (e) {
-    log("error", endpoint, "saveAnalysis failed", { message: e.message })
+    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
   }
 
   // Return full result (sourceErrors intact) to the client.

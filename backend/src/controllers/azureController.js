@@ -10,7 +10,7 @@ const { supabase } = require("../config/supabase")
 const { getAzureAccessToken, evictToken, parseTenantId } = require("../utils/azureAuth")
 const { analyzeAzureCostLeaks } = require("../services/azureCostLeakAnalysis")
 const { listSubscriptions } = require("../services/azureAdvisorAnalysis")
-const { saveAnalysis } = require("./analysisHistoryController")
+const { saveAnalysisDirect } = require("./analysisHistoryController")
 
 const AZURE_PROVIDER = "Azure"
 const LOGIN_BASE = "https://login.microsoftonline.com"
@@ -277,7 +277,7 @@ async function analyzeAzureCostLeaksHandler(req, res) {
   // Strip sourceErrors before persistence (matches AWS pattern).
   const { sourceErrors, ...persistedSummary } = result.summary
   try {
-    await saveAnalysis({
+    await saveAnalysisDirect({
       companyId,
       provider: AZURE_PROVIDER,
       integrationId: integration.id,
@@ -285,7 +285,7 @@ async function analyzeAzureCostLeaksHandler(req, res) {
       parameters: { tenantId: integration.settings?.tenant_id || "" },
     })
   } catch (e) {
-    log("error", endpoint, "saveAnalysis failed", { message: e.message })
+    log("error", endpoint, "saveAnalysisDirect failed", { message: e.message })
   }
 
   return res.json(result)

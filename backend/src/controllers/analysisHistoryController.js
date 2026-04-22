@@ -965,8 +965,97 @@ async function getDashboardSummary(req, res) {
   }
 }
 
+/**
+ * Direct-call variant of saveAnalysis for use by server-side controllers
+ * that have already resolved companyId and don't go through an HTTP request.
+ *
+ * Unlike the HTTP handler (which expects `req.user` + `req.body`), this
+ * accepts a plain options object and returns a plain promise (throws on
+ * fatal error, returns { id, duplicate: boolean, duplicateId } otherwise).
+ *
+ * Used by: awsController, azureController, zoomController, githubController.
+ * Matches the same duplicate-check + extractSummary + insert logic as the
+ * HTTP handler but without the req/res layer.
+ */
+async function saveAnalysisDirect({ companyId, provider, integrationId, analysisData, parameters }) {
+  const endpoint = "saveAnalysisDirect"
+  if (!supabase) throw new Error("Supabase not configured")
+  if (!companyId || !provider || !integrationId || !analysisData) {
+    throw new Error("saveAnalysisDirect requires companyId, provider, integrationId, analysisData")
+  }
+
+  // Duplicate-check: mirror the HTTP handler's provider-specific matching.
+  const params = parameters || {}
+  let duplicateQuery = supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("integration_id", integrationId)
+    .eq("provider", provider)
+
+  if (provider === "Fortnox") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>startDate", params.startDate || null)
+      .eq("parameters->>endDate", params.endDate || null)
+  } else if (provider === "Microsoft365" || provider === "HubSpot" || provider === "GoogleWorkspace" || provider === "Slack") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+  } else if (provider === "GCP") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>organizationId", params.organizationId || "")
+  } else if (provider === "AWS") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>organizationId", params.organizationId || "")
+  } else if (provider === "Azure") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>tenantId", params.tenantId || "")
+  } else if (provider === "Zoom") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>planTier", params.planTier || "")
+      .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+  } else if (provider === "GitHub") {
+    duplicateQuery = duplicateQuery
+      .eq("parameters->>planTier", params.planTier || "")
+      .eq("parameters->>copilotTier", params.copilotTier || "")
+      .eq("parameters->>inactivityDays", String(params.inactivityDays || 30))
+  }
+
+  try {
+    const { data: existing } = await duplicateQuery.order("created_at", { ascending: false }).limit(1)
+    if (existing && existing.length > 0) {
+      log("log", endpoint, `Duplicate analysis found for ${provider}, id: ${existing[0].id}`)
+      return { id: existing[0].id, duplicate: true, duplicateId: existing[0].id }
+    }
+  } catch (e) {
+    log("warn", endpoint, `Duplicate check failed, proceeding with save: ${e.message}`)
+  }
+
+  const summary = extractSummary(analysisData, provider)
+
+  const { data: saved, error: saveError } = await supabase
+    .from("cost_leak_analyses")
+    .insert({
+      company_id: companyId,
+      integration_id: integrationId,
+      provider,
+      parameters: params,
+      summary,
+      analysis_data: analysisData,
+    })
+    .select()
+    .single()
+
+  if (saveError) {
+    throw new Error(`Failed to save analysis: ${saveError.message}`)
+  }
+
+  log("log", endpoint, `Analysis saved directly, id: ${saved.id}, provider: ${provider}`)
+  return { id: saved.id, duplicate: false }
+}
+
 module.exports = {
   saveAnalysis,
+  saveAnalysisDirect,
   getAnalysisHistory,
   getAnalysisById,
   deleteAnalysis,
