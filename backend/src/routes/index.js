@@ -165,6 +165,18 @@ const {
   serveCloudFormationTemplate,
 } = require("../controllers/awsController")
 
+// Azure Controller - Azure Advisor cost analysis
+const {
+  initiateAzureConsent,
+  handleAzureConsentCallback,
+  validateAzure,
+  getAzureStatus,
+  getAzureSubscriptions,
+  refreshAzureSubscriptions,
+  analyzeAzureCostLeaks,
+  disconnectAzure,
+} = require("../controllers/azureController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -434,6 +446,16 @@ router.get(   "/api/integrations/aws/regions",                 requireAuth, requ
 router.post(  "/api/integrations/aws/regions/refresh",         requireAuth, requireRole("owner", "editor"),           refreshAwsRegions)
 router.post(  "/api/integrations/aws/cost-leaks",              requireAuth, requireRole("owner", "editor"),           analyzeAwsCostLeaks)
 router.delete("/api/integrations/aws",                         requireAuth, requireRole("owner", "editor"),           disconnectAws)
+
+// Azure routes
+router.get(   "/api/integrations/azure/consent",                 requireAuth, requireRole("owner", "editor"),           initiateAzureConsent)
+router.get(   "/api/integrations/azure/consent-callback",                                                               handleAzureConsentCallback) // NO AUTH — Microsoft redirect
+router.post(  "/api/integrations/azure/validate",                requireAuth, requireRole("owner", "editor"),           validateAzure)
+router.get(   "/api/integrations/azure/status",                  requireAuth, requireRole("owner", "editor", "viewer"), getAzureStatus)
+router.get(   "/api/integrations/azure/subscriptions",           requireAuth, requireRole("owner", "editor", "viewer"), getAzureSubscriptions)
+router.post(  "/api/integrations/azure/subscriptions/refresh",   requireAuth, requireRole("owner", "editor"),           refreshAzureSubscriptions)
+router.post(  "/api/integrations/azure/cost-leaks",              requireAuth, requireRole("owner", "editor"),           analyzeAzureCostLeaks)
+router.delete("/api/integrations/azure",                         requireAuth, requireRole("owner", "editor"),           disconnectAzure)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
