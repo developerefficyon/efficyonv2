@@ -18,6 +18,7 @@ const INTEGRATIONS = [
   { id: "gemini", label: "Gemini", color: "#4285F4", desc: "AI Spend" },
   { id: "googleworkspace", label: "Google Workspace", color: "#4285F4", desc: "Productivity & Identity" },
   { id: "slack", label: "Slack", color: "#ECB22E", desc: "Communication" },
+  { id: "aws", label: "Amazon Web Services", color: "#FF9900", desc: "Cloud Infrastructure" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1206,6 +1207,111 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             All requested scopes are read-only — Effycion can list users and read workspace info but cannot post messages, join channels, or modify any Slack data. Your OAuth client secret and user token are encrypted at rest using AES-256-GCM. Slack user tokens do not expire, so this is a one-time setup; you can revoke access any time from <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">slack.com &rsaquo; Settings & administration &rsaquo; Manage apps</span>.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* AWS Section */}
+      <section id="aws" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "aws" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#FF9900]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="aws" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Amazon Web Services</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Cloud Infrastructure</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#FF9900]/50 mt-1">&#8226;</span>An AWS Organization (one integration covers all member accounts — single-account setups are not yet supported)</li>
+              <li className="flex items-start gap-2"><span className="text-[#FF9900]/50 mt-1">&#8226;</span>Sign-in access to the Organization&apos;s <strong>management (payer) account</strong> with permission to run CloudFormation</li>
+              <li className="flex items-start gap-2"><span className="text-[#FF9900]/50 mt-1">&#8226;</span>AWS Compute Optimizer opted in (free) — enable at <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Compute Optimizer &rsaquo; Get started</span> in the management account if not already on</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Effycion, go to <Link href="/dashboard/tools" className="text-[#FF9900]/80 hover:text-[#FF9900] transition-colors">Tools & Integrations</Link>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span>, and select <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Amazon Web Services</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Generate external ID</span>. A 32-character security token appears — it&apos;s automatically threaded into the CloudFormation template on the next step, so you don&apos;t need to copy it manually.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Launch CloudFormation in AWS Console</span>. A new tab opens the{" "}
+                <a href="https://console.aws.amazon.com/cloudformation/home" target="_blank" rel="noopener noreferrer" className="text-[#FF9900]/80 hover:text-[#FF9900] inline-flex items-center gap-1 transition-colors">
+                  CloudFormation console <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}with the stack template and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">ExternalId</span> pre-filled. Sign in with your <strong>Organization management account</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#FF9900" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Review the IAM role (read-only — actions listed below), check the capabilities acknowledgement, and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create stack</span>. Wait for status <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">CREATE_COMPLETE</span> (~30s).
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>ce:Get*Recommendation</ScopeBadge>
+                  <ScopeBadge>compute-optimizer:Get*</ScopeBadge>
+                  <ScopeBadge>organizations:Describe/ListAccounts</ScopeBadge>
+                  <ScopeBadge>account:ListRegions</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open the stack&apos;s <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Outputs</span> tab and copy the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">RoleArn</span> value — it looks like <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">arn:aws:iam::&lt;account&gt;:role/efficyon-cost-analyzer</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in the Effycion wizard, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">I&apos;ve created the role →</span>, paste the Role ARN, and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Effycion auto-validates the role via AWS STS — you&apos;ll see <em>Validating AWS role…</em> flip to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span> within a few seconds. The Data tab populates with your organization, member accounts, and active regions.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={8} color="#FF9900" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Switch to the Analysis tab and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Run Analysis</span>. Findings normally take 15–60s depending on organization size and number of active regions.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            Efficyon pulls recommendations from two AWS services: <strong>Cost Explorer</strong> (EC2 right-sizing, Savings Plan purchases, Reserved Instance purchases) and <strong>Compute Optimizer</strong> (EC2 / EBS / Lambda / Auto Scaling / ECS / RDS right-sizing plus idle-resource detection). Savings numbers come from AWS&apos;s own cost projections, not Effycion estimates. One management-account role covers every member account in your Organization.
+          </InfoBox>
+
+          <SecurityBox>
+            No long-lived AWS credentials are stored. We persist only the role ARN and the external ID — both worthless to an attacker without our own AWS account&apos;s IAM identity. Every analysis run issues a fresh 1-hour STS temporary credential set (cached in-process only). All granted IAM actions are read-only — Effycion cannot modify, create, or delete any resource. Revoke access any time by deleting the IAM role <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">efficyon-cost-analyzer</span> or the CloudFormation stack that created it in your AWS console.
           </SecurityBox>
         </div>
       </section>
