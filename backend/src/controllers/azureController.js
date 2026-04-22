@@ -56,8 +56,86 @@ function mapAzureError(e) {
 }
 
 // Handler stubs — filled in by Tasks 6–8.
-async function initiateAzureConsent(req, res)       { res.status(501).json({ error: "initiateAzureConsent not implemented" }) }
-async function handleAzureConsentCallback(req, res) { res.status(501).send("handleAzureConsentCallback not implemented") }
+async function initiateAzureConsent(req, res) {
+  const endpoint = "GET /api/integrations/azure/consent"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  const clientId = process.env.AZURE_CLIENT_ID
+  const redirectUri = process.env.AZURE_CONSENT_REDIRECT_URL
+  if (!clientId || !redirectUri) {
+    return res.status(500).json({ error: "Azure app not configured on server." })
+  }
+
+  // Ensure external_id exists (mint if missing).
+  const externalId = integration.settings?.external_id ||
+    require("crypto").randomBytes(16).toString("hex")
+  if (!integration.settings?.external_id) {
+    await supabase
+      .from("company_integrations")
+      .update({ settings: { ...(integration.settings || {}), external_id: externalId } })
+      .eq("id", integration.id)
+  }
+
+  const state = `${integration.id}:${externalId}`
+  const consentUrl =
+    `${LOGIN_BASE}/organizations/v2.0/adminconsent` +
+    `?client_id=${encodeURIComponent(clientId)}` +
+    `&scope=${encodeURIComponent("https://management.azure.com/.default")}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&state=${encodeURIComponent(state)}`
+
+  return res.json({ consentUrl })
+}
+
+async function handleAzureConsentCallback(req, res) {
+  const endpoint = "GET /api/integrations/azure/consent-callback"
+  const { admin_consent, tenant, state, error, error_description } = req.query || {}
+  const frontendBase = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || "/"
+
+  if (!state || typeof state !== "string" || !state.includes(":")) {
+    return res.redirect(`${frontendBase}/dashboard/tools?azure_consent=error&msg=${encodeURIComponent("Missing state")}`)
+  }
+  const [integrationId, externalId] = state.split(":")
+
+  const { data: integration, error: iErr } = await supabase
+    .from("company_integrations").select("*").eq("id", integrationId).maybeSingle()
+  if (iErr || !integration) {
+    return res.redirect(`${frontendBase}/dashboard/tools?azure_consent=error&msg=${encodeURIComponent("Integration not found")}`)
+  }
+  if (integration.settings?.external_id !== externalId) {
+    log("warn", endpoint, "CSRF: external_id mismatch", { integrationId })
+    return res.redirect(`${frontendBase}/dashboard/tools?azure_consent=error&msg=${encodeURIComponent("Security check failed")}`)
+  }
+
+  if (admin_consent !== "True" || !tenant) {
+    const msg = error_description || error || "Consent not granted"
+    return res.redirect(`${frontendBase}/dashboard/tools/${integrationId}?azure_consent=error&msg=${encodeURIComponent(msg)}`)
+  }
+
+  try {
+    parseTenantId(tenant)
+  } catch {
+    return res.redirect(`${frontendBase}/dashboard/tools/${integrationId}?azure_consent=error&msg=${encodeURIComponent("Invalid tenant id")}`)
+  }
+
+  const nowIso = new Date().toISOString()
+  await supabase
+    .from("company_integrations")
+    .update({
+      settings: {
+        ...(integration.settings || {}),
+        tenant_id: tenant,
+        consent_granted_at: nowIso,
+      },
+      status: "pending", // stays pending until validateAzure confirms Reader role + subscriptions
+      updated_at: nowIso,
+    })
+    .eq("id", integrationId)
+
+  return res.redirect(`${frontendBase}/dashboard/tools/${integrationId}?azure_consent=ok`)
+}
 async function validateAzure(req, res)              { res.status(501).json({ error: "validateAzure not implemented" }) }
 async function getAzureStatus(req, res)             { res.status(501).json({ error: "getAzureStatus not implemented" }) }
 async function getAzureSubscriptions(req, res)      { res.status(501).json({ error: "getAzureSubscriptions not implemented" }) }
