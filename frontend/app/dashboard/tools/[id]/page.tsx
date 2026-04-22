@@ -123,7 +123,7 @@ function ConnectedToolDetail({
   // status=pending after the user action. We auto-fire /validate here so the
   // user doesn't need to click anything else — spec-intended behavior.
   useEffect(() => {
-    if (!["AWS", "Azure", "Zoom"].includes(config.provider) || integration.status !== "pending" || isAutoValidating) return
+    if (!["AWS", "Azure", "Zoom", "GitHub"].includes(config.provider) || integration.status !== "pending" || isAutoValidating) return
     // Guard: only fire validate when the provider-specific prerequisite is in settings.
     // AWS needs role_arn (set by the wizard); Azure needs tenant_id (set by the
     // consent-callback). Without these, validate will return 409 and show a
@@ -132,6 +132,7 @@ function ConnectedToolDetail({
     if (config.provider === "AWS" && !settings.role_arn) return
     if (config.provider === "Azure" && !settings.tenant_id) return
     if (config.provider === "Zoom" && !settings._pending_zoom_creds && !settings.client_secret_encrypted) return
+    if (config.provider === "GitHub" && !settings._pending_github_creds && !settings.private_key_encrypted) return
     let cancelled = false
     void (async () => {
       setIsAutoValidating(true)
@@ -141,7 +142,8 @@ function ConnectedToolDetail({
         const validateEndpoint =
           config.provider === "AWS"   ? "/api/integrations/aws/validate"
           : config.provider === "Azure" ? "/api/integrations/azure/validate"
-          : /* Zoom */                  "/api/integrations/zoom/validate"
+          : config.provider === "Zoom"  ? "/api/integrations/zoom/validate"
+          : /* GitHub */                  "/api/integrations/github/validate"
         const res = await fetch(`${API_BASE}${validateEndpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
