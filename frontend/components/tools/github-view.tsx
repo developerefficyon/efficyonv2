@@ -14,19 +14,7 @@ interface GitHubMember {
   role?: string
 }
 
-type FilterTab = "all" | "admins" | "inactive"
-
-const INACTIVE_THRESHOLD_DAYS = 30
-
-function isInactiveMember(member: GitHubMember): boolean {
-  // GitHub member objects don't carry last-activity directly.
-  // The backend flags inactive members; we surface the full list here.
-  // A member is considered "inactive" if their type is "Bot" (never active in
-  // cost terms) or if site_admin is false and role is neither "admin" nor "billing_manager".
-  // In practice the analysis tab shows who is inactive; the data tab shows all members.
-  // For the filter we use a conservative heuristic: bots are considered inactive.
-  return member.type === "Bot"
-}
+type FilterTab = "all" | "admins"
 
 export function GitHubView({ integration, info, isLoading, reload }: ToolViewProps) {
   const [refreshing, setRefreshing] = useState(false)
@@ -60,13 +48,12 @@ export function GitHubView({ integration, info, isLoading, reload }: ToolViewPro
     null
   const lastValidated = settings.last_validated_at || statusInfo?.lastValidatedAt || null
 
-  // Filtered members
+  // Filtered members. Inactive detection happens server-side during analysis;
+  // this tab is a roster view only.
   const adminMembers = allMembers.filter((m) => m.role === "admin" || m.site_admin)
-  const inactiveMembers = allMembers.filter(isInactiveMember)
 
   const filteredMembers = allMembers.filter((m) => {
     if (filter === "admins") return m.role === "admin" || m.site_admin
-    if (filter === "inactive") return isInactiveMember(m)
     return true
   })
 
@@ -85,9 +72,8 @@ export function GitHubView({ integration, info, isLoading, reload }: ToolViewPro
   }
 
   const filterTabs: { key: FilterTab; label: string }[] = [
-    { key: "all",      label: `All (${allMembers.length})` },
-    { key: "admins",   label: `Admins (${adminMembers.length})` },
-    { key: "inactive", label: `Inactive (${inactiveMembers.length})` },
+    { key: "all",    label: `All (${allMembers.length})` },
+    { key: "admins", label: `Admins (${adminMembers.length})` },
   ]
 
   return (

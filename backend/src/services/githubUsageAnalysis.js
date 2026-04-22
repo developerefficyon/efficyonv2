@@ -96,7 +96,7 @@ async function getCopilotBillingSummary(token, org) {
 
 async function getUserRecentEvent(token, username, sinceIso) {
   try {
-    const { body } = await githubRequest(token, `${API}/users/${username}/events?per_page=10`)
+    const { body } = await githubRequest(token, `${API}/users/${username}/events?per_page=100`)
     const events = Array.isArray(body) ? body : []
     const sinceMs = new Date(sinceIso).getTime()
     for (const ev of events) {

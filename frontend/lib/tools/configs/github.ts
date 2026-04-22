@@ -15,7 +15,7 @@ export const githubConfig: UnifiedToolConfig = {
       label: "App ID",
       type: "text",
       required: true,
-      placeholder: "1234567",
+      placeholder: "987654321",
       hint: "GitHub org Settings → Developer settings → GitHub Apps → your app → App ID",
     },
     {

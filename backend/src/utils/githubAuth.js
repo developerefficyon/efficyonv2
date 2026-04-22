@@ -45,7 +45,8 @@ function decryptGitHubCredentials(settings) {
 function signAppJWT({ appId, privateKeyPem }) {
   const now = Math.floor(Date.now() / 1000)
   const header = { alg: "RS256", typ: "JWT" }
-  const payload = { iss: appId, iat: now - 60, exp: now + 600 }
+  // GitHub's JWT spec requires the iss claim to be the App ID as an integer.
+  const payload = { iss: Number(appId), iat: now - 60, exp: now + 600 }
   const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url")
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url")
   const signingInput = `${headerB64}.${payloadB64}`

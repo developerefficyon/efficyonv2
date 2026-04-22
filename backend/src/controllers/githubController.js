@@ -61,11 +61,18 @@ function mapGitHubError(e) {
       hint: "The Private Key you provided couldn't sign a JWT — verify it's the full PEM including BEGIN/END lines.",
     }
   }
-  if (code === "INSTALL_TOKEN_FAILED" || e.httpStatus === 401) {
+  if (code === "INSTALL_TOKEN_FAILED") {
     return {
       status: 401,
       message: e.message,
       hint: "GitHub rejected the App credentials — verify App ID and Private Key match the same GitHub App.",
+    }
+  }
+  if (e.httpStatus === 401) {
+    return {
+      status: 401,
+      message: e.message,
+      hint: "GitHub returned 401 — the installation token may have expired or been revoked. Disconnect and reconnect.",
     }
   }
   if (e.httpStatus === 404) {
