@@ -14,7 +14,7 @@
  * Token cache: 55-minute effective TTL.
  */
 
-const { encryptOAuthData, decryptOAuthData } = require("./encryption")
+const { encrypt, decrypt } = require("./encryption")
 
 const TOKEN_URL = "https://zoom.us/oauth/token"
 const REFRESH_BUFFER_MS = 5 * 60 * 1000
@@ -34,9 +34,9 @@ function encryptZoomCredentials({ accountId, clientId, clientSecret }) {
     throw typedError("CREDS_MISSING", "account_id, client_id, and client_secret are all required")
   }
   return {
-    account_id_encrypted: encryptOAuthData(accountId),
-    client_id_encrypted: encryptOAuthData(clientId),
-    client_secret_encrypted: encryptOAuthData(clientSecret),
+    account_id_encrypted: encrypt(accountId),
+    client_id_encrypted: encrypt(clientId),
+    client_secret_encrypted: encrypt(clientSecret),
   }
 }
 
@@ -44,9 +44,9 @@ function encryptZoomCredentials({ accountId, clientId, clientSecret }) {
  * Decrypt the three credentials from settings. Returns plaintext.
  */
 function decryptZoomCredentials(settings) {
-  const accountId = settings.account_id_encrypted ? decryptOAuthData(settings.account_id_encrypted) : null
-  const clientId = settings.client_id_encrypted ? decryptOAuthData(settings.client_id_encrypted) : null
-  const clientSecret = settings.client_secret_encrypted ? decryptOAuthData(settings.client_secret_encrypted) : null
+  const accountId = settings.account_id_encrypted ? decrypt(settings.account_id_encrypted) : null
+  const clientId = settings.client_id_encrypted ? decrypt(settings.client_id_encrypted) : null
+  const clientSecret = settings.client_secret_encrypted ? decrypt(settings.client_secret_encrypted) : null
   if (!accountId || !clientId || !clientSecret) {
     throw typedError("CREDS_DECRYPT_FAILED", "Unable to decrypt Zoom credentials from settings")
   }
