@@ -101,6 +101,8 @@ export default function ToolsPage() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [selectedTool, setSelectedTool] = useState<string>("")
+  const [modalSearchQuery, setModalSearchQuery] = useState("")
+  const [modalCategoryFilter, setModalCategoryFilter] = useState<string>("all")
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [integrationToDelete, setIntegrationToDelete] = useState<Integration | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -869,6 +871,8 @@ export default function ToolsPage() {
           } else {
             setIsConnecting(false)
             setSelectedTool("")
+            setModalSearchQuery("")
+            setModalCategoryFilter("all")
           }
         }}
       >
@@ -896,49 +900,121 @@ export default function ToolsPage() {
           </div>
 
           <div className="px-6 pb-6">
-            {/* Tool Picker Grid */}
-            {!selectedTool && (
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 -mr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {Object.values(TOOL_REGISTRY).map((tool) => {
-                  const alreadyConnected = integrations.some(
-                    (i) => i.tool_name.toLowerCase().replace(/[\s\-_]+/g, '') === tool.id.replace(/[\s\-_]+/g, '')
-                  )
-                  return (
-                    <button
-                      key={tool.id}
-                      onClick={() => !alreadyConnected && setSelectedTool(tool.id)}
-                      disabled={alreadyConnected}
-                      className={`group relative w-full flex items-center gap-3.5 p-3.5 rounded-xl border transition-all duration-200 text-left ${
-                        alreadyConnected
-                          ? "border-white/[0.03] bg-white/[0.01] opacity-35 cursor-not-allowed"
-                          : "border-white/[0.05] bg-white/[0.015] hover:bg-white/[0.035] cursor-pointer"
-                      }`}
-                      style={!alreadyConnected ? { ["--tool-color" as string]: tool.brandColor } : undefined}
-                    >
-                      <ToolLogo name={tool.id} size={40} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[13px] font-medium text-white/90">{tool.label}</p>
-                          <span className="text-[10px] text-white/20 font-medium tracking-wide uppercase">{tool.category}</span>
+            {/* Tool Picker with search + category filter */}
+            {!selectedTool && (() => {
+              const allTools = Object.values(TOOL_REGISTRY)
+              const modalCategories = ["all", ...Array.from(new Set(allTools.map((t) => t.category)))]
+              const query = modalSearchQuery.trim().toLowerCase()
+              const filteredPickerTools = allTools.filter((tool) => {
+                const matchesCategory = modalCategoryFilter === "all" || tool.category === modalCategoryFilter
+                if (!matchesCategory) return false
+                if (!query) return true
+                return (
+                  tool.label.toLowerCase().includes(query) ||
+                  tool.category.toLowerCase().includes(query) ||
+                  (tool.description?.toLowerCase().includes(query) ?? false)
+                )
+              })
+
+              return (
+                <div className="space-y-3">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25" />
+                    <Input
+                      type="search"
+                      autoComplete="off"
+                      placeholder="Search integrations..."
+                      value={modalSearchQuery}
+                      onChange={(e) => setModalSearchQuery(e.target.value)}
+                      className="pl-9 h-9 bg-white/[0.03] border-white/[0.06] text-white/85 placeholder:text-white/25 text-[12.5px] rounded-lg focus:border-emerald-500/30 focus:bg-white/[0.05] transition-all"
+                    />
+                  </div>
+
+                  {/* Category pills */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {modalCategories.map((cat) => {
+                      const active = modalCategoryFilter === cat
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setModalCategoryFilter(cat)}
+                          className={`h-7 px-2.5 rounded-md text-[11px] font-medium tracking-wide transition-all border ${
+                            active
+                              ? "bg-emerald-500/[0.12] text-emerald-300/90 border-emerald-500/20"
+                              : "bg-white/[0.02] text-white/40 border-white/[0.05] hover:text-white/70 hover:bg-white/[0.04] hover:border-white/[0.08]"
+                          }`}
+                        >
+                          {cat === "all" ? "All" : cat}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Result list */}
+                  <div className="space-y-2 max-h-[52vh] overflow-y-auto pr-1 -mr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                    {filteredPickerTools.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-3">
+                          <Search className="w-4 h-4 text-white/20" />
                         </div>
-                        <p className="text-[11.5px] text-white/25 mt-0.5 truncate">{tool.description}</p>
+                        <p className="text-[12.5px] text-white/40">No integrations match your search</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModalSearchQuery("")
+                            setModalCategoryFilter("all")
+                          }}
+                          className="mt-2 text-[11px] text-emerald-400/70 hover:text-emerald-400 transition-colors"
+                        >
+                          Clear filters
+                        </button>
                       </div>
-                      {alreadyConnected ? (
-                        <span className="shrink-0 flex items-center gap-1 text-[10px] text-emerald-400/50 font-medium bg-emerald-400/[0.06] px-2 py-1 rounded-md">
-                          <CheckCircle className="w-2.5 h-2.5" />
-                          Connected
-                        </span>
-                      ) : (
-                        <svg className="w-4 h-4 text-white/10 group-hover:text-white/30 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                      )}
-                      {!alreadyConnected && (
-                        <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${tool.brandColor}18, 0 0 24px -4px ${tool.brandColor}08` }} />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+                    ) : (
+                      filteredPickerTools.map((tool) => {
+                        const alreadyConnected = integrations.some(
+                          (i) => i.tool_name.toLowerCase().replace(/[\s\-_]+/g, '') === tool.id.replace(/[\s\-_]+/g, '')
+                        )
+                        return (
+                          <button
+                            key={tool.id}
+                            onClick={() => !alreadyConnected && setSelectedTool(tool.id)}
+                            disabled={alreadyConnected}
+                            className={`group relative w-full flex items-center gap-3.5 p-3.5 rounded-xl border transition-all duration-200 text-left ${
+                              alreadyConnected
+                                ? "border-white/[0.03] bg-white/[0.01] opacity-35 cursor-not-allowed"
+                                : "border-white/[0.05] bg-white/[0.015] hover:bg-white/[0.035] cursor-pointer"
+                            }`}
+                            style={!alreadyConnected ? { ["--tool-color" as string]: tool.brandColor } : undefined}
+                          >
+                            <ToolLogo name={tool.id} size={40} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[13px] font-medium text-white/90">{tool.label}</p>
+                                <span className="text-[10px] text-white/20 font-medium tracking-wide uppercase">{tool.category}</span>
+                              </div>
+                              <p className="text-[11.5px] text-white/25 mt-0.5 truncate">{tool.description}</p>
+                            </div>
+                            {alreadyConnected ? (
+                              <span className="shrink-0 flex items-center gap-1 text-[10px] text-emerald-400/50 font-medium bg-emerald-400/[0.06] px-2 py-1 rounded-md">
+                                <CheckCircle className="w-2.5 h-2.5" />
+                                Connected
+                              </span>
+                            ) : (
+                              <svg className="w-4 h-4 text-white/10 group-hover:text-white/30 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                            )}
+                            {!alreadyConnected && (
+                              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none" style={{ boxShadow: `inset 0 0 0 1px ${tool.brandColor}18, 0 0 24px -4px ${tool.brandColor}08` }} />
+                            )}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Selected tool: back button */}
             {selectedTool && (
