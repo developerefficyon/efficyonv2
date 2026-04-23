@@ -876,7 +876,15 @@ export default function ToolsPage() {
           }
         }}
       >
-        <DialogContent className="!bg-[#0c0c0e] !border-white/[0.06] text-white w-[95vw] max-w-[520px] sm:w-full max-h-[90vh] overflow-y-auto rounded-2xl premium-scrollbar p-0 overflow-hidden" style={{ scrollbarColor: 'rgba(255,255,255,0.06) transparent' }}>
+        <DialogContent
+          className="!bg-[#0c0c0e] !border-white/[0.06] text-white max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl premium-scrollbar !p-0 !block !gap-0"
+          style={{
+            scrollbarColor: 'rgba(255,255,255,0.06) transparent',
+            width: 'min(calc(100vw - 2rem), 520px)',
+            maxWidth: '520px',
+            display: 'block',
+          }}
+        >
           {/* Ambient top glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
 
@@ -990,9 +998,9 @@ export default function ToolsPage() {
                           >
                             <ToolLogo name={tool.id} size={40} />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-[13px] font-medium text-white/90">{tool.label}</p>
-                                <span className="text-[10px] text-white/20 font-medium tracking-wide uppercase">{tool.category}</span>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <p className="text-[13px] font-medium text-white/90 truncate">{tool.label}</p>
+                                <span className="text-[10px] text-white/20 font-medium tracking-wide uppercase shrink-0">{tool.category}</span>
                               </div>
                               <p className="text-[11.5px] text-white/25 mt-0.5 truncate">{tool.description}</p>
                             </div>
