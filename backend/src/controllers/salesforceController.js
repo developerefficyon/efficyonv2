@@ -75,6 +75,30 @@ function mapSalesforceError(e) {
 }
 
 // ---------------------------------------------------------------------------
+// SOQL helper — execute a single SOQL query against the integration's instance
+// ---------------------------------------------------------------------------
+async function executeSOQL(integration, soql) {
+  const accessToken = await getAccessToken(integration)
+  const instanceUrl = integration.settings?.instance_url
+  if (!instanceUrl) {
+    const err = new Error("instance_url not set — please reconnect")
+    err.code = "INSTANCE_URL_MISSING"
+    err.httpStatus = 400
+    throw err
+  }
+  const url = `${instanceUrl}/services/data/${API_VERSION}/query?q=${encodeURIComponent(soql)}`
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" } })
+  const body = await r.json().catch(() => ({}))
+  if (!r.ok) {
+    const err = new Error(body[0]?.message || `HTTP ${r.status}`)
+    err.httpStatus = r.status
+    err.salesforceError = body[0]?.errorCode
+    throw err
+  }
+  return body
+}
+
+// ---------------------------------------------------------------------------
 // Handler: startSalesforceOAuth
 // Builds the authorize URL and either redirects or returns JSON.
 // ---------------------------------------------------------------------------
@@ -304,13 +328,89 @@ async function disconnectSalesforce(req, res) {
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
+// ---------------------------------------------------------------------------
+// Handler: getSalesforceUsers
+// Returns the 50 most recent users for the Data tab.
+// ---------------------------------------------------------------------------
+async function getSalesforceUsers(req, res) {
+  const endpoint = "GET /api/integrations/salesforce/users"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const soql =
+      "SELECT Id, Username, Name, Email, IsActive, LastLoginDate, " +
+      "Profile.Name, Profile.UserLicense.MasterLabel, Profile.UserLicense.LicenseDefinitionKey " +
+      "FROM User " +
+      "WHERE UserType = 'Standard' " +
+      "ORDER BY LastLoginDate DESC NULLS LAST " +
+      "LIMIT 50"
+    const result = await executeSOQL(integration, soql)
+    return res.json({ users: result.records || [] })
+  } catch (e) {
+    const mapped = mapSalesforceError(e)
+    log("error", endpoint, "getUsers failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handler: getSalesforceLicenses
+// Returns UserLicense allocation table.
+// ---------------------------------------------------------------------------
+async function getSalesforceLicenses(req, res) {
+  const endpoint = "GET /api/integrations/salesforce/licenses"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const soql =
+      "SELECT Id, MasterLabel, LicenseDefinitionKey, Name, Status, TotalLicenses, UsedLicenses " +
+      "FROM UserLicense " +
+      "ORDER BY MasterLabel"
+    const result = await executeSOQL(integration, soql)
+    return res.json({ licenses: result.records || [] })
+  } catch (e) {
+    const mapped = mapSalesforceError(e)
+    log("error", endpoint, "getLicenses failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handler: getSalesforcePSLs
+// Returns PermissionSetLicense allocation table.
+// ---------------------------------------------------------------------------
+async function getSalesforcePSLs(req, res) {
+  const endpoint = "GET /api/integrations/salesforce/psls"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const soql =
+      "SELECT Id, MasterLabel, DeveloperName, Status, TotalLicenses, UsedLicenses, ExpirationDate " +
+      "FROM PermissionSetLicense " +
+      "ORDER BY MasterLabel"
+    const result = await executeSOQL(integration, soql)
+    return res.json({ psls: result.records || [] })
+  } catch (e) {
+    const mapped = mapSalesforceError(e)
+    log("error", endpoint, "getPSLs failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startSalesforceOAuth,
   salesforceOAuthCallback,
   validateSalesforce,
   getSalesforceStatus,
   disconnectSalesforce,
-  // exported for use by data + analyze handlers added in later tasks:
+  getSalesforceUsers,
+  getSalesforceLicenses,
+  getSalesforcePSLs,
+  executeSOQL,
+  // exported for use by analyze handler added in later tasks:
   getIntegrationForUser,
   mapSalesforceError,
   log,

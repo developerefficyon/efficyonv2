@@ -217,6 +217,9 @@ const {
   validateSalesforce,
   getSalesforceStatus,
   disconnectSalesforce,
+  getSalesforceUsers,
+  getSalesforceLicenses,
+  getSalesforcePSLs,
 } = require("../controllers/salesforceController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -530,6 +533,9 @@ router.get(   "/api/integrations/salesforce/oauth/start", requireAuth, requireRo
 router.get(   "/api/integrations/salesforce/callback",                                                            salesforceOAuthCallback) // NO AUTH — Salesforce browser redirect; state param verifies
 router.post(  "/api/integrations/salesforce/validate",    requireAuth, requireRole("owner", "editor"),           validateSalesforce)
 router.get(   "/api/integrations/salesforce/status",      requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceStatus)
+router.get(   "/api/integrations/salesforce/users",       requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceUsers)
+router.get(   "/api/integrations/salesforce/licenses",    requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceLicenses)
+router.get(   "/api/integrations/salesforce/psls",        requireAuth, requireRole("owner", "editor", "viewer"), getSalesforcePSLs)
 router.delete("/api/integrations/salesforce",             requireAuth, requireRole("owner", "editor"),           disconnectSalesforce)
 
 // QuickBooks routes
