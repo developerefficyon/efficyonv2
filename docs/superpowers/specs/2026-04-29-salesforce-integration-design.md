@@ -203,7 +203,7 @@ quickSetup: {
 Middleware per route — matches the established OAuth-integration pattern in the codebase (see `quickbooks`, `hubspot`, `slack` routes):
 
 ```
-GET    /api/integrations/salesforce/oauth/start    requireAuth + requireRole("owner","editor")           Build authorize URL with HMAC-signed state, return for redirect
+GET    /api/integrations/salesforce/oauth/start    requireAuth + requireRole("owner","editor")           Build authorize URL with base64-encoded JSON state (matches QuickBooks/HubSpot pattern), return for redirect
 GET    /api/integrations/salesforce/callback       (no auth — Salesforce's browser redirect)             Exchange code for tokens, persist, redirect to dashboard
 POST   /api/integrations/salesforce/validate       requireAuth + requireRole("owner","editor")           Manual re-validate (for the "Refresh status" UI button)
 GET    /api/integrations/salesforce/status         requireAuth + requireRole("owner","editor","viewer")  Connection metadata (no Salesforce call)
@@ -214,7 +214,7 @@ POST   /api/integrations/salesforce/cost-leaks     requireAuth + requireRole("ow
 DELETE /api/integrations/salesforce                requireAuth + requireRole("owner","editor")           Disconnect — clear encrypted tokens, evict cache, flip status
 ```
 
-The callback route is the only one without `requireAuth` — Salesforce's browser redirect can't carry our session bearer token, so the HMAC-signed `state` parameter (which encodes `integrationId` + `companyId`) is the authentication mechanism. Pattern matches `googleWorkspaceOAuthCallback`, `fortnoxOAuthCallback`, etc.
+The callback route is the only one without `requireAuth` — Salesforce's browser redirect can't carry our session bearer token, so the `state` parameter (a base64-encoded JSON payload of `{ company_id, integration_id }`) is verified against the company on the callback. Pattern matches `googleWorkspaceOAuthCallback`, `fortnoxOAuthCallback`, `quickbooksOAuthCallback`, etc. — none of which sign the state in the current codebase. Adding HMAC signing across all OAuth integrations is a future security hardening item, not Salesforce-specific.
 
 ### Error handling
 
