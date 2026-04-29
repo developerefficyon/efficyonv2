@@ -18,10 +18,12 @@ const INTEGRATIONS = [
   { id: "gemini", label: "Gemini", color: "#4285F4", desc: "AI Spend" },
   { id: "googleworkspace", label: "Google Workspace", color: "#4285F4", desc: "Productivity & Identity" },
   { id: "slack", label: "Slack", color: "#ECB22E", desc: "Communication" },
+  { id: "gcp", label: "Google Cloud", color: "#4285F4", desc: "Cloud Infrastructure" },
   { id: "aws", label: "Amazon Web Services", color: "#FF9900", desc: "Cloud Infrastructure" },
   { id: "azure", label: "Microsoft Azure", color: "#0078D4", desc: "Cloud Infrastructure" },
   { id: "zoom", label: "Zoom", color: "#2D8CFF", desc: "Productivity" },
   { id: "github", label: "GitHub", color: "#181717", desc: "Developer Tools" },
+  { id: "stripe", label: "Stripe", color: "#635BFF", desc: "Revenue Recovery" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1214,6 +1216,95 @@ export default function SetupGuidePage() {
         </div>
       </section>
 
+      {/* GCP Section */}
+      <section id="gcp" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "gcp" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#4285F4]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="gcp" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Google Cloud</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Cloud Infrastructure</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span>A Google Cloud <strong>Organization</strong> (free Workspace or Cloud Identity tenant — single-project setups are not supported)</li>
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span><strong>Org-level IAM admin</strong> permission (Organization Admin role) to grant the two read roles below</li>
+              <li className="flex items-start gap-2"><span className="text-[#4285F4]/50 mt-1">&#8226;</span>The Recommender API enabled on each project — Google enables it automatically once recommendations exist; otherwise turn it on at <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">APIs & Services &rsaquo; Library</span></li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open the{" "}
+                <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noopener noreferrer" className="text-[#4285F4]/80 hover:text-[#4285F4] inline-flex items-center gap-1 transition-colors">
+                  Service Accounts page <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create Service Account</span>. Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">efficyon-cost-analyzer</span>. Skip the optional &quot;Grant this service account access to project&quot; step — we&apos;ll grant org-level roles instead. Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Done</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open the new service account &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Keys</span> tab &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Add Key</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create new key</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">JSON</span>. A <code className="text-white/40">.json</code> file downloads — keep it safe.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#4285F4" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Switch the IAM scope to your <strong>organization</strong> (top-of-page resource picker). On <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">IAM &amp; Admin &rsaquo; IAM</span>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Grant Access</span>, paste the service account&apos;s email (looks like <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">efficyon-cost-analyzer@&lt;project&gt;.iam.gserviceaccount.com</span>), and grant these two read-only roles:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>roles/recommender.viewer</ScopeBadge>
+                  <ScopeBadge>roles/browser</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Find your Organization ID at <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">IAM &amp; Admin &rsaquo; Settings</span>. Format is <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">organizations/&lt;numeric-id&gt;</span>. Copy it.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Effycion, <Link href="/dashboard/tools" className="text-[#4285F4]/80 hover:text-[#4285F4] transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Google Cloud. Paste the entire JSON key contents and the Organization ID, then click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#4285F4" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Effycion exchanges the JWT for a Google access token and lists your active projects within a few seconds. Switch to the Analysis tab and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Run Analysis</span>. The Recommender API is queried across every active project × 7+ recommender types × locations — expect 30–120s for orgs with many projects.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            Effycion calls Google&apos;s <strong>Recommender API v1</strong> across all ACTIVE projects and seven recommender types: idle VM deletion, wrong machine type, disk downsize, unused IP addresses, and more. Cost projections come straight from <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">primaryImpact.costProjection.cost</span> — Google&apos;s own estimate in nano-units, not Effycion&apos;s. Severity maps to Google&apos;s recommendation priority.
+          </InfoBox>
+
+          <SecurityBox>
+            The service account JSON is encrypted at rest with AES-256-GCM before persisting. The two granted roles are read-only — Effycion can list resources and read recommendations but cannot modify, create, or delete anything. Per analysis we mint a fresh 1-hour OAuth access token from the JWT (cached in-process only). To revoke access at any time, delete the <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">efficyon-cost-analyzer</span> service account or just its JSON key in IAM & Admin &rsaquo; Service Accounts.
+          </SecurityBox>
+        </div>
+      </section>
+
       {/* AWS Section */}
       <section id="aws" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "aws" ? "hidden" : ""}`}>
         <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
@@ -1592,6 +1683,99 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your private key is encrypted at rest with AES-256-GCM before persisting to our database — the plaintext is never stored. All GitHub App permissions are read-only (Members, Administration, Copilot Business). Effycion mints fresh 1-hour installation tokens per analysis (cached in-process only, evicted on disconnect). To revoke access at any time, uninstall the <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> app from your org&apos;s Installed GitHub Apps, or delete it entirely from Developer settings.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Stripe Section */}
+      <section id="stripe" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "stripe" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#635BFF]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="stripe" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Stripe</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Revenue Recovery</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#635BFF]/50 mt-1">&#8226;</span>A Stripe account in <strong>Live</strong> or <strong>Test</strong> mode (we accept both <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">rk_live_</span> and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">rk_test_</span> keys)</li>
+              <li className="flex items-start gap-2"><span className="text-[#635BFF]/50 mt-1">&#8226;</span>Permission to create <strong>Restricted keys</strong> in your Stripe dashboard (Owner or Developer role)</li>
+              <li className="flex items-start gap-2"><span className="text-[#635BFF]/50 mt-1">&#8226;</span>At least some history in the account — Effycion analyzes failed invoices, expiring cards, past-due subscriptions, and disputes from the last 30/90/180 days</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#635BFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open the{" "}
+                <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-[#635BFF]/80 hover:text-[#635BFF] inline-flex items-center gap-1 transition-colors">
+                  Stripe API keys page <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}(or <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer" className="text-[#635BFF]/80 hover:text-[#635BFF] inline-flex items-center gap-1 transition-colors">Test mode keys <ExternalLink className="w-3 h-3" /></a>) and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">+ Create restricted key</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#635BFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#635BFF" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  In the permissions list, set every other resource to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">None</span>, then grant exactly these six <strong className="text-white/50">Read</strong> scopes:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>Charges: Read</ScopeBadge>
+                  <ScopeBadge>Customers: Read</ScopeBadge>
+                  <ScopeBadge>Disputes: Read</ScopeBadge>
+                  <ScopeBadge>Invoices: Read</ScopeBadge>
+                  <ScopeBadge>Payment Intents: Read</ScopeBadge>
+                  <ScopeBadge>Subscriptions: Read</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#635BFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create key</span> and then <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Reveal test/live key</span>. Copy the full <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">rk_live_…</span> or <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">rk_test_…</span> string.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#635BFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Effycion, <Link href="/dashboard/tools" className="text-[#635BFF]/80 hover:text-[#635BFF] transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Stripe. Paste the restricted key and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>. Effycion calls <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">GET /v1/account</span> to validate, captures your account ID and default currency, and flips status to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span> within 1–2 seconds.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#635BFF" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Switch to the Analysis tab, pick a lookback window (30 / 90 / 180 days; default 90), and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Run Analysis</span>. Findings appear with severity badges and a total recoverable amount.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            Effycion runs four checks: <strong>failed payment recovery</strong> (open invoices with ≥1 attempt — recoverable estimate is 65% of the total at risk, the B2B SaaS dunning benchmark), <strong>card-expiry preventable churn</strong> (active subs whose default card expires in the next 60 days), <strong>past-due subscriptions</strong> (status <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">past_due</span> or <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">unpaid</span>), and <strong>disputes</strong> (chargebacks plus the ~$15 Stripe dispute fee). Severity ladder: ≥$500 critical, ≥$100 high, ≥$25 medium, &gt;$0 low. Multi-currency accounts get one finding per currency — no FX conversion.
+          </InfoBox>
+
+          <SecurityBox>
+            Your restricted key is encrypted at rest with AES-256-GCM before persisting — the plaintext is never stored. All six granted scopes are read-only — Effycion cannot create charges, refund customers, or modify any Stripe data. The key is sent directly to the Stripe SDK on each analysis run; no third-party access. To revoke access any time, go to <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Stripe Dashboard &rsaquo; Developers &rsaquo; API keys</span>, find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span>, and click <strong>Roll</strong> or <strong>Delete</strong>.
           </SecurityBox>
         </div>
       </section>

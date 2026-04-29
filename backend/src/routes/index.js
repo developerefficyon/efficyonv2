@@ -197,6 +197,19 @@ const {
   disconnectGitHub,
 } = require("../controllers/githubController")
 
+// Stripe Integration Controller - per-customer restricted API key cost analysis
+// (Distinct from stripeController.js which handles Efficyon's own billing.)
+const {
+  validateStripe,
+  getStripeStatus,
+  disconnectStripe,
+  getStripeAccount,
+  getStripeSubscriptions,
+  getStripeInvoices,
+  getStripeDisputes,
+  analyzeStripeCostLeaks,
+} = require("../controllers/stripeIntegrationController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -492,6 +505,16 @@ router.get(   "/api/integrations/github/members",      requireAuth, requireRole(
 router.get(   "/api/integrations/github/org",          requireAuth, requireRole("owner", "editor", "viewer"), getGitHubOrg)
 router.post(  "/api/integrations/github/cost-leaks",   requireAuth, requireRole("owner", "editor"),           analyzeGitHubCostLeaks)
 router.delete("/api/integrations/github",              requireAuth, requireRole("owner", "editor"),           disconnectGitHub)
+
+// Stripe Integration routes (revenue-leak analysis)
+router.post(  "/api/integrations/stripe/validate",       requireAuth, requireRole("owner", "editor"),           validateStripe)
+router.get(   "/api/integrations/stripe/status",         requireAuth, requireRole("owner", "editor", "viewer"), getStripeStatus)
+router.get(   "/api/integrations/stripe/account",        requireAuth, requireRole("owner", "editor", "viewer"), getStripeAccount)
+router.get(   "/api/integrations/stripe/subscriptions",  requireAuth, requireRole("owner", "editor", "viewer"), getStripeSubscriptions)
+router.get(   "/api/integrations/stripe/invoices",       requireAuth, requireRole("owner", "editor", "viewer"), getStripeInvoices)
+router.get(   "/api/integrations/stripe/disputes",       requireAuth, requireRole("owner", "editor", "viewer"), getStripeDisputes)
+router.post(  "/api/integrations/stripe/cost-leaks",      requireAuth, requireRole("owner", "editor"),           analyzeStripeCostLeaks)
+router.delete("/api/integrations/stripe",                requireAuth, requireRole("owner", "editor"),           disconnectStripe)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
