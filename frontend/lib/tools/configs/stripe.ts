@@ -49,8 +49,11 @@ export const stripeConfig: UnifiedToolConfig = {
   },
   endpoints: [
     { key: "status", path: "/api/integrations/stripe/status" },
+    { key: "subscriptions", path: "/api/integrations/stripe/subscriptions", pick: ["subscriptions"], fallback: [] },
+    { key: "invoices", path: "/api/integrations/stripe/invoices", pick: ["invoices"], fallback: [] },
+    { key: "disputes", path: "/api/integrations/stripe/disputes", pick: ["disputes"], fallback: [] },
   ],
-  defaultTab: "status",
+  defaultTab: "subscriptions",
   viewComponent: StripeView,
   connectingToast: "Validating Stripe credentials…",
   tokenRevocation: {
