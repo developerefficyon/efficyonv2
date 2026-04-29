@@ -27,12 +27,14 @@ import { azureConfig } from "./configs/azure"
 import { zoomConfig } from "./configs/zoom"
 import { githubConfig } from "./configs/github"
 import { stripeConfig } from "./configs/stripe"
+import { salesforceConfig } from "./configs/salesforce"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
   Microsoft365: microsoft365Config,
   HubSpot: hubspotConfig,
   QuickBooks: quickbooksConfig,
+  Salesforce: salesforceConfig,
   Shopify: shopifyConfig,
   OpenAI: openaiConfig,
   Anthropic: anthropicConfig,
