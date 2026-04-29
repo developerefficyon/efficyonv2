@@ -24,6 +24,7 @@ const INTEGRATIONS = [
   { id: "zoom", label: "Zoom", color: "#2D8CFF", desc: "Productivity" },
   { id: "github", label: "GitHub", color: "#181717", desc: "Developer Tools" },
   { id: "stripe", label: "Stripe", color: "#635BFF", desc: "Revenue Recovery" },
+  { id: "salesforce", label: "Salesforce", color: "#00A1E0", desc: "CRM & Sales" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1776,6 +1777,99 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your restricted key is encrypted at rest with AES-256-GCM before persisting — the plaintext is never stored. All six granted scopes are read-only — Effycion cannot create charges, refund customers, or modify any Stripe data. The key is sent directly to the Stripe SDK on each analysis run; no third-party access. To revoke access any time, go to <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Stripe Dashboard &rsaquo; Developers &rsaquo; API keys</span>, find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span>, and click <strong>Roll</strong> or <strong>Delete</strong>.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Salesforce Section */}
+      <section id="salesforce" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "salesforce" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00A1E0]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="salesforce" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Salesforce</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">CRM & Sales</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#00A1E0]/50 mt-1">&#8226;</span>System Administrator (or equivalent) profile in your Salesforce org — required to create a Connected App</li>
+              <li className="flex items-start gap-2"><span className="text-[#00A1E0]/50 mt-1">&#8226;</span>An org of any edition — Production, Developer Edition (free), or Sandbox all work</li>
+              <li className="flex items-start gap-2"><span className="text-[#00A1E0]/50 mt-1">&#8226;</span>~10 minutes for the Connected App to propagate after creation (a Salesforce quirk — first OAuth attempts before propagation usually fail with confusing errors)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In Salesforce: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Setup</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">App Manager</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">New Connected App</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Enter any contact email.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Check <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Enable OAuth Settings</span>. Set the <strong>Callback URL</strong> to your Efficyon callback (local dev: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/salesforce/callback</span>; production: substitute your deployed host).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#00A1E0" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Selected OAuth Scopes</span>, add these three:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>Manage user data via APIs (api)</ScopeBadge>
+                  <ScopeBadge>Perform requests on your behalf at any time (refresh_token, offline_access)</ScopeBadge>
+                  <ScopeBadge>Access the identity URL service (id, profile, email)</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Save the Connected App. <strong>Wait ~10 minutes</strong> for propagation, then open the app and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Manage Consumer Details</span> to copy the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Consumer Key</span> and <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Consumer Secret</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, <Link href="/dashboard/tools" className="text-[#00A1E0]/80 hover:text-[#00A1E0] transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Salesforce. Paste the Consumer Key + Secret, choose <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Production</span> or <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Sandbox</span>, optionally enter your My Domain URL, and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#00A1E0" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Efficyon redirects to Salesforce for OAuth consent. Approve the requested scopes and you&apos;ll be sent back to the dashboard with status <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span>. Switch to the Analysis tab and run analysis.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            Three checks: <strong>inactive licensed users</strong> (active Standard users with no login in the chosen window), <strong>frozen-but-billed users</strong> (frozen via Login Information but still IsActive — the equivalent of Slack&apos;s deactivated-but-billed bug), and <strong>unused PermissionSetLicenses</strong> (paid feature licenses like CPQ or Sales Cloud Einstein attached to inactive users). Pricing uses Salesforce list rates; the summary tells customers to apply their negotiated discount (typical contracts are 30–70% off list).
+          </InfoBox>
+
+          <SecurityBox>
+            Your Consumer Key + Secret + access token + refresh token are encrypted at rest with AES-256-GCM before persisting — plaintext is never stored. The OAuth scopes are read-only-equivalent for our use case (we only call <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">/services/data/.../query</span> with SOQL SELECT statements). Refresh tokens last until revoked or unused for ~6 months. To revoke any time, go to <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Setup &rsaquo; Connected Apps OAuth Usage</span>, find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span>, click <strong>Revoke</strong>; or delete the Connected App entirely from App Manager.
           </SecurityBox>
         </div>
       </section>

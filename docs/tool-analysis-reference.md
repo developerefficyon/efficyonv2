@@ -163,6 +163,20 @@ Checks:
 - **Inactive paid org members** — no public events in the threshold window. Team $4/seat, Enterprise $21/seat.
 - **Copilot over-provisioning** — `total_seats > 1.25 × active_this_cycle`; excess seats reported as surplus.
 
+### Salesforce — License waste
+
+Analysis: [salesforceCostLeakAnalysis.js](../backend/src/services/salesforceCostLeakAnalysis.js)
+Data source: Salesforce REST API + SOQL — `User`, `UserLogin`, `UserLicense`, `PermissionSetLicenseAssign`.
+
+Checks (V1):
+- **Inactive licensed users** — `IsActive = true` Standard users with `LastLoginDate` older than the inactivity window (30 / 60 / 90 days). Severity by license SKU's list price.
+- **Frozen-but-billed users** — `UserLogin.IsFrozen = true` AND `User.IsActive = true`. The user can't log in but still consumes a license slot.
+- **Unused PermissionSetLicenses** — paid PSLs (CPQ, Sales Cloud Einstein, Inbox, High Velocity Sales, etc.) attached to users who haven't logged in within the inactivity window. Unknown PSLs aggregate into a single review-level finding.
+
+Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low — same as AWS/Azure/GCP/Stripe.
+Pricing: list-price defaults; output includes `pricingNote` instructing customers to apply their negotiated discount.
+Inactivity window: user-selectable 30 / 60 / 90 days, default 60.
+
 ### Stripe — Revenue recovery
 
 Analysis: [stripeRevenueLeakAnalysis.js](../backend/src/services/stripeRevenueLeakAnalysis.js)
@@ -239,6 +253,7 @@ Caveats documented in the service:
 | GCP | Cost-leak | idle VMs, wrong machine types, disk downsizing, unused IPs |
 | Zoom | Cost-leak | inactive licensed users, unused add-ons |
 | GitHub | Cost-leak | inactive Copilot seats, inactive paid members, Copilot over-provisioning |
+| Salesforce | Cost-leak | inactive licensed users, frozen-but-billed, unused PermissionSetLicenses |
 | Stripe | Cost-leak (recovery) | failed payment recovery, card-expiry churn, past-due subs, disputes |
 | OpenAI | Usage summary | daily cost + token breakdown by model |
 | Anthropic | Usage summary | daily cost + input/output/cache-read tokens by model |

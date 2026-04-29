@@ -210,6 +210,19 @@ const {
   analyzeStripeCostLeaks,
 } = require("../controllers/stripeIntegrationController")
 
+// Salesforce Integration Controller - per-customer Connected App + OAuth web-server flow
+const {
+  startSalesforceOAuth,
+  salesforceOAuthCallback,
+  validateSalesforce,
+  getSalesforceStatus,
+  disconnectSalesforce,
+  getSalesforceUsers,
+  getSalesforceLicenses,
+  getSalesforcePSLs,
+  analyzeSalesforceCostLeaks,
+} = require("../controllers/salesforceController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -515,6 +528,17 @@ router.get(   "/api/integrations/stripe/invoices",       requireAuth, requireRol
 router.get(   "/api/integrations/stripe/disputes",       requireAuth, requireRole("owner", "editor", "viewer"), getStripeDisputes)
 router.post(  "/api/integrations/stripe/cost-leaks",      requireAuth, requireRole("owner", "editor"),           analyzeStripeCostLeaks)
 router.delete("/api/integrations/stripe",                requireAuth, requireRole("owner", "editor"),           disconnectStripe)
+
+// Salesforce Integration routes (cost-leak analysis)
+router.get(   "/api/integrations/salesforce/oauth/start", requireAuth, requireRole("owner", "editor"),           startSalesforceOAuth)
+router.get(   "/api/integrations/salesforce/callback",                                                            salesforceOAuthCallback) // NO AUTH — Salesforce browser redirect; state param verifies
+router.post(  "/api/integrations/salesforce/validate",    requireAuth, requireRole("owner", "editor"),           validateSalesforce)
+router.get(   "/api/integrations/salesforce/status",      requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceStatus)
+router.get(   "/api/integrations/salesforce/users",       requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceUsers)
+router.get(   "/api/integrations/salesforce/licenses",    requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceLicenses)
+router.get(   "/api/integrations/salesforce/psls",        requireAuth, requireRole("owner", "editor", "viewer"), getSalesforcePSLs)
+router.post(  "/api/integrations/salesforce/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeSalesforceCostLeaks)
+router.delete("/api/integrations/salesforce",             requireAuth, requireRole("owner", "editor"),           disconnectSalesforce)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
