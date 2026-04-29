@@ -235,6 +235,17 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
       />
     ),
   },
+  salesforce: {
+    color: "#00A1E0",
+    // Salesforce cloud — simplified glyph evoking the official cloud mark
+    // without redistributing Salesforce's trademarked vector.
+    path: (
+      <path
+        fill="#00A1E0"
+        d="M9.5 5.5C7.6 5.5 6 7.1 6 9c-.7-.3-1.5-.5-2.3-.5-2.6 0-4.7 2.1-4.7 4.7 0 .8.2 1.6.6 2.3.6 1.1 1.7 1.9 3 2.1.4.1.8.1 1.2.1h13c.4 0 .8 0 1.2-.1 1.3-.2 2.4-1 3-2.1.4-.7.6-1.5.6-2.3 0-2.6-2.1-4.7-4.7-4.7-.8 0-1.6.2-2.3.5 0-1.9-1.6-3.5-3.5-3.5-1.4 0-2.6.8-3.2 2-.6-1.2-1.8-2-3.2-2z"
+      />
+    ),
+  },
 }
 
 /**
