@@ -207,6 +207,7 @@ const {
   getStripeSubscriptions,
   getStripeInvoices,
   getStripeDisputes,
+  analyzeStripeCostLeaks,
 } = require("../controllers/stripeIntegrationController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -512,6 +513,7 @@ router.get(   "/api/integrations/stripe/account",        requireAuth, requireRol
 router.get(   "/api/integrations/stripe/subscriptions",  requireAuth, requireRole("owner", "editor", "viewer"), getStripeSubscriptions)
 router.get(   "/api/integrations/stripe/invoices",       requireAuth, requireRole("owner", "editor", "viewer"), getStripeInvoices)
 router.get(   "/api/integrations/stripe/disputes",       requireAuth, requireRole("owner", "editor", "viewer"), getStripeDisputes)
+router.post(  "/api/integrations/stripe/cost-leaks",      requireAuth, requireRole("owner", "editor"),           analyzeStripeCostLeaks)
 router.delete("/api/integrations/stripe",                requireAuth, requireRole("owner", "editor"),           disconnectStripe)
 
 // QuickBooks routes

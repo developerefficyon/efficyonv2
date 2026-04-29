@@ -20,6 +20,7 @@ const {
   makeClient,
   validateStripeKey,
 } = require("../utils/stripeAuth")
+const { analyzeStripeRevenueLeaks } = require("../services/stripeRevenueLeakAnalysis")
 
 const STRIPE_PROVIDER = "Stripe"
 
@@ -270,6 +271,68 @@ async function getStripeDisputes(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Handler: analyzeStripeCostLeaks
+// Duplicate-check, run aggregator, return findings (frontend persists via
+// /api/analysis-history, matching the GitHub/Zoom pattern).
+// ---------------------------------------------------------------------------
+async function analyzeStripeCostLeaksHandler(req, res) {
+  const endpoint = "POST /api/integrations/stripe/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration, companyId } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Integration not connected. Re-run validate first." })
+  }
+
+  // Parse lookback (30 / 90 / 180 days, default 90)
+  const startDate = req.body?.startDate ? new Date(req.body.startDate) : null
+  const endDate = req.body?.endDate ? new Date(req.body.endDate) : null
+  let lookbackDays = 90
+  if (startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+    lookbackDays = Math.max(1, Math.round((endDate - startDate) / 86400000))
+  }
+  if (![30, 90, 180].includes(lookbackDays)) {
+    // Snap to nearest allowed value
+    lookbackDays = lookbackDays <= 60 ? 30 : lookbackDays <= 135 ? 90 : 180
+  }
+
+  // Duplicate-check: same integration within 5 minutes -> 409
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data: recent } = await supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("provider", STRIPE_PROVIDER)
+    .eq("integration_id", integration.id)
+    .gte("created_at", fiveMinAgo)
+    .limit(1)
+    .maybeSingle()
+  if (recent) {
+    return res.status(409).json({
+      error: "An analysis was just run for this integration. Please wait a few minutes.",
+      recentAnalysisId: recent.id,
+    })
+  }
+
+  try {
+    const restrictedKey = decryptStripeKey(integration.settings)
+    const stripe = makeClient(restrictedKey)
+    const result = await analyzeStripeRevenueLeaks({ stripe, lookbackDays })
+    return res.json({
+      summary: result.summary,
+      findings: result.findings,
+      warnings: result.warnings,
+      parameters: { lookbackDays },
+    })
+  } catch (e) {
+    const mapped = mapStripeError(e)
+    log("error", endpoint, "analysis failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   validateStripe,
   getStripeStatus,
@@ -278,7 +341,8 @@ module.exports = {
   getStripeSubscriptions,
   getStripeInvoices,
   getStripeDisputes,
-  // exported for use by analyze handler added in later tasks:
+  analyzeStripeCostLeaks: analyzeStripeCostLeaksHandler,
+  // exported for use by future handlers:
   getIntegrationForUser,
   mapStripeError,
   log,
