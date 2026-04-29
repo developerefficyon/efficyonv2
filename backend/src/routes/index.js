@@ -220,6 +220,7 @@ const {
   getSalesforceUsers,
   getSalesforceLicenses,
   getSalesforcePSLs,
+  analyzeSalesforceCostLeaks,
 } = require("../controllers/salesforceController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -536,6 +537,7 @@ router.get(   "/api/integrations/salesforce/status",      requireAuth, requireRo
 router.get(   "/api/integrations/salesforce/users",       requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceUsers)
 router.get(   "/api/integrations/salesforce/licenses",    requireAuth, requireRole("owner", "editor", "viewer"), getSalesforceLicenses)
 router.get(   "/api/integrations/salesforce/psls",        requireAuth, requireRole("owner", "editor", "viewer"), getSalesforcePSLs)
+router.post(  "/api/integrations/salesforce/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeSalesforceCostLeaks)
 router.delete("/api/integrations/salesforce",             requireAuth, requireRole("owner", "editor"),           disconnectSalesforce)
 
 // QuickBooks routes
