@@ -76,9 +76,12 @@ export const salesforceConfig: UnifiedToolConfig = {
     note: "Salesforce takes up to 10 minutes for newly-created Connected Apps to propagate. First OAuth attempts before propagation often fail with confusing errors — wait, then retry.",
   },
   endpoints: [
-    { key: "status", path: "/api/integrations/salesforce/status" },
+    { key: "status",    path: "/api/integrations/salesforce/status" },
+    { key: "users",     path: "/api/integrations/salesforce/users", pick: ["users"], fallback: [] },
+    { key: "licenses",  path: "/api/integrations/salesforce/licenses", pick: ["licenses"], fallback: [] },
+    { key: "psls",      path: "/api/integrations/salesforce/psls", pick: ["psls"], fallback: [] },
   ],
-  defaultTab: "status",
+  defaultTab: "users",
   viewComponent: SalesforceView,
   connectingToast: "Redirecting to Salesforce to authorize…",
   tokenRevocation: {
