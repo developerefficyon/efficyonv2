@@ -182,11 +182,103 @@ async function disconnectStripe(req, res) {
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
+// ---------------------------------------------------------------------------
+// Handler: getStripeAccount
+// Returns Stripe account metadata (live, not from settings cache).
+// ---------------------------------------------------------------------------
+async function getStripeAccount(req, res) {
+  const endpoint = "GET /api/integrations/stripe/account"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const restrictedKey = decryptStripeKey(integration.settings)
+    const stripe = makeClient(restrictedKey)
+    const account = await stripe.accounts.retrieve()
+    return res.json({ account })
+  } catch (e) {
+    const mapped = mapStripeError(e)
+    log("error", endpoint, "getAccount failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handler: getStripeSubscriptions
+// Returns most recent 50 subscriptions across all statuses for the Data tab.
+// ---------------------------------------------------------------------------
+async function getStripeSubscriptions(req, res) {
+  const endpoint = "GET /api/integrations/stripe/subscriptions"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const restrictedKey = decryptStripeKey(integration.settings)
+    const stripe = makeClient(restrictedKey)
+    const page = await stripe.subscriptions.list({
+      limit: 50,
+      status: "all",
+      expand: ["data.customer", "data.default_payment_method"],
+    })
+    return res.json({ subscriptions: page.data })
+  } catch (e) {
+    const mapped = mapStripeError(e)
+    log("error", endpoint, "list subscriptions failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handler: getStripeInvoices
+// Returns most recent 50 invoices for the Data tab.
+// ---------------------------------------------------------------------------
+async function getStripeInvoices(req, res) {
+  const endpoint = "GET /api/integrations/stripe/invoices"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const restrictedKey = decryptStripeKey(integration.settings)
+    const stripe = makeClient(restrictedKey)
+    const page = await stripe.invoices.list({ limit: 50, expand: ["data.customer"] })
+    return res.json({ invoices: page.data })
+  } catch (e) {
+    const mapped = mapStripeError(e)
+    log("error", endpoint, "list invoices failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handler: getStripeDisputes
+// Returns most recent 50 disputes for the Data tab.
+// ---------------------------------------------------------------------------
+async function getStripeDisputes(req, res) {
+  const endpoint = "GET /api/integrations/stripe/disputes"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const restrictedKey = decryptStripeKey(integration.settings)
+    const stripe = makeClient(restrictedKey)
+    const page = await stripe.disputes.list({ limit: 50, expand: ["data.charge"] })
+    return res.json({ disputes: page.data })
+  } catch (e) {
+    const mapped = mapStripeError(e)
+    log("error", endpoint, "list disputes failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   validateStripe,
   getStripeStatus,
   disconnectStripe,
-  // exported for use by data + analyze handlers added in later tasks:
+  getStripeAccount,
+  getStripeSubscriptions,
+  getStripeInvoices,
+  getStripeDisputes,
+  // exported for use by analyze handler added in later tasks:
   getIntegrationForUser,
   mapStripeError,
   log,
