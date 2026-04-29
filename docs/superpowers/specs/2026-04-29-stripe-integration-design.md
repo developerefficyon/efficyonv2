@@ -51,7 +51,7 @@ backend/src/
 │     ├─ pastDueSubscriptions.js          subscriptions.list({ status: 'past_due' | 'unpaid' })
 │     └─ disputes.js                      disputes.list({ created.gte })
 ├─ controllers/
-│  └─ stripeController.js                 validate / status / subscriptions / invoices / disputes / analyze / disconnect
+│  └─ stripeIntegrationController.js      validate / status / subscriptions / invoices / disputes / analyze / disconnect (named to avoid collision with existing stripeController.js used for Efficyon's own billing)
 └─ sql/
    └─ 048_stripe_provider.sql             Extends valid_provider CHECK to include 'Stripe'
 ```
