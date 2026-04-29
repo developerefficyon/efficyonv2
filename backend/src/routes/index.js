@@ -197,6 +197,14 @@ const {
   disconnectGitHub,
 } = require("../controllers/githubController")
 
+// Stripe Integration Controller - per-customer restricted API key cost analysis
+// (Distinct from stripeController.js which handles Efficyon's own billing.)
+const {
+  validateStripe,
+  getStripeStatus,
+  disconnectStripe,
+} = require("../controllers/stripeIntegrationController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -492,6 +500,11 @@ router.get(   "/api/integrations/github/members",      requireAuth, requireRole(
 router.get(   "/api/integrations/github/org",          requireAuth, requireRole("owner", "editor", "viewer"), getGitHubOrg)
 router.post(  "/api/integrations/github/cost-leaks",   requireAuth, requireRole("owner", "editor"),           analyzeGitHubCostLeaks)
 router.delete("/api/integrations/github",              requireAuth, requireRole("owner", "editor"),           disconnectGitHub)
+
+// Stripe Integration routes (revenue-leak analysis)
+router.post(  "/api/integrations/stripe/validate",   requireAuth, requireRole("owner", "editor"),           validateStripe)
+router.get(   "/api/integrations/stripe/status",     requireAuth, requireRole("owner", "editor", "viewer"), getStripeStatus)
+router.delete("/api/integrations/stripe",            requireAuth, requireRole("owner", "editor"),           disconnectStripe)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
