@@ -2120,7 +2120,7 @@ export default function SetupGuidePage() {
             <div className="flex items-start gap-3">
               <StepNumber n={4} color="#0052CC" />
               <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
-                Go to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Authorization</span> and set the Callback URL to your Efficyon backend&apos;s <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">/api/integrations/atlassian/callback</span>.
+                Go to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Authorization</span> and set the Callback URL to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/atlassian/callback</span>.
               </p>
             </div>
 
