@@ -223,6 +223,15 @@ const {
   analyzeSalesforceCostLeaks,
 } = require("../controllers/salesforceController")
 
+// Notion Integration Controller - per-customer public OAuth integration
+const {
+  startNotionOAuth,
+  notionOAuthCallback,
+  validateNotion,
+  getNotionStatus,
+  disconnectNotion,
+} = require("../controllers/notionController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -539,6 +548,13 @@ router.get(   "/api/integrations/salesforce/licenses",    requireAuth, requireRo
 router.get(   "/api/integrations/salesforce/psls",        requireAuth, requireRole("owner", "editor", "viewer"), getSalesforcePSLs)
 router.post(  "/api/integrations/salesforce/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeSalesforceCostLeaks)
 router.delete("/api/integrations/salesforce",             requireAuth, requireRole("owner", "editor"),           disconnectSalesforce)
+
+// Notion Integration routes (cost-leak analysis)
+router.get(   "/api/integrations/notion/oauth/start", requireAuth, requireRole("owner", "editor"),           startNotionOAuth)
+router.get(   "/api/integrations/notion/callback",                                                            notionOAuthCallback) // NO AUTH — Notion browser redirect; state param verifies
+router.post(  "/api/integrations/notion/validate",    requireAuth, requireRole("owner", "editor"),           validateNotion)
+router.get(   "/api/integrations/notion/status",      requireAuth, requireRole("owner", "editor", "viewer"), getNotionStatus)
+router.delete("/api/integrations/notion",             requireAuth, requireRole("owner", "editor"),           disconnectNotion)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
