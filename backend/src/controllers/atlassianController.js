@@ -14,6 +14,7 @@
  */
 
 const { supabase } = require("../config/supabase")
+const { analyzeAtlassianCostLeaks } = require("../services/atlassianCostLeakAnalysis")
 const {
   ATLASSIAN_AUTH_HOST,
   REQUIRED_SCOPE,
@@ -402,6 +403,51 @@ async function getAtlassianUsers(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Handler: analyzeAtlassianCostLeaksEndpoint
+// Returns findings; the frontend persists via /api/analysis-history.
+// ---------------------------------------------------------------------------
+async function analyzeAtlassianCostLeaksEndpoint(req, res) {
+  const endpoint = "POST /api/integrations/atlassian/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Atlassian integration is not connected", status: integration.status })
+  }
+  if (!hasOrgAdminScope(integration.settings?.granted_scopes)) {
+    return res.status(403).json({
+      error: "Atlassian Cloud Org Admin permission required.",
+      code: "atlassian_org_admin_required",
+      hint: "Disconnect and reconnect with an Atlassian Cloud Organization Admin account.",
+    })
+  }
+
+  const inactivityDays = Math.max(7, Math.min(365, Number(req.body?.inactivityDays) || 60))
+
+  try {
+    const result = await analyzeAtlassianCostLeaks({
+      listOrgDirectoryUsers,
+      integration,
+      inactivityDays,
+    })
+    return res.json({
+      ...result,
+      parameters: { inactivityDays },
+      org: {
+        id: integration.settings?.org_id || null,
+        name: integration.settings?.org_name || null,
+        cloud_sites: integration.settings?.cloud_sites || [],
+      },
+    })
+  } catch (e) {
+    const mapped = mapAtlassianError(e)
+    log("error", endpoint, "analysis failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, code: mapped.code, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startAtlassianOAuth,
   atlassianOAuthCallback,
@@ -409,6 +455,7 @@ module.exports = {
   getAtlassianStatus,
   disconnectAtlassian,
   getAtlassianUsers,
+  analyzeAtlassianCostLeaksEndpoint,
   // exported for use by data + analyze handlers added in later tasks:
   getIntegrationForUser,
   mapAtlassianError,
