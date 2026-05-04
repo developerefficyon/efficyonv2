@@ -78,7 +78,7 @@ function getCurrencySymbol(currency = "USD") {
  * Currency rate fetcher with 24h in-memory cache and safe fallback.
  * Uses Frankfurter (ECB data, free, no auth).
  *
- * Replaces the hardcoded SEK_TO_USD = 0.095 in costLeakAnalysis.js.
+ * Replaces the hardcoded SEK_TO_USD = 0.095 in fortnoxCostLeakAnalysis.js.
  */
 
 let sekToUsdCache = null

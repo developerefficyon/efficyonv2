@@ -1,6 +1,8 @@
 /**
- * Cost Leak Analysis Service
- * Analyzes Fortnox data to identify potential cost leaks and anomalies
+ * Fortnox cost-leak analysis service
+ * Analyzes Fortnox supplier and customer invoices to identify duplicate
+ * payments, unusual amounts, recurring subscriptions, overdue invoices, and
+ * price increases.
  */
 const crypto = require("crypto")
 const {
@@ -18,7 +20,7 @@ function generateFindingHash(finding) {
 }
 
 // Convert SEK to USD for display (Fortnox uses SEK natively).
-// Module-scoped current rate, set by `analyzeCostLeaks` at entry.
+// Module-scoped current rate, set by `analyzeFortnoxCostLeaks` at entry.
 // Defaults to the fallback so helpers never see `undefined`.
 let SEK_TO_USD = SEK_TO_USD_FALLBACK
 
@@ -563,7 +565,7 @@ function analyzeCustomerInvoices(invoices, options = {}) {
  * @param {boolean} [options.fromFileUpload] - If true, skip SEK→USD conversion
  * @returns {Object} Complete analysis results
  */
-async function analyzeCostLeaks(data, options = {}) {
+async function analyzeFortnoxCostLeaks(data, options = {}) {
   // Refresh the SEK→USD rate once per analyzer run. `getSekToUsdRate` caches
   // internally for 24h and falls back to the hardcoded constant on failure.
   SEK_TO_USD = await getSekToUsdRate()
@@ -780,7 +782,7 @@ function analyzeSubscriptionUsage(data) {
 }
 
 module.exports = {
-  analyzeCostLeaks,
+  analyzeFortnoxCostLeaks,
   analyzeSupplierInvoices,
   analyzeCustomerInvoices,
   generateFindingHash,

@@ -6,7 +6,7 @@
 
 const axios = require("axios")
 const { supabase } = require("../config/supabase")
-const { analyzeCostLeaks } = require("./costLeakAnalysis")
+const { analyzeFortnoxCostLeaks } = require("./fortnoxCostLeakAnalysis")
 const { analyzeM365CostLeaks } = require("./microsoft365CostLeakAnalysis")
 const { analyzeHubSpotCostLeaks } = require("./hubspotCostLeakAnalysis")
 const { calculateCrossplatformMetrics } = require("./comparisonAnalysisService")
@@ -38,7 +38,7 @@ function assembleDataFromUploads(uploads) {
     byIntegration[upload.integration_label][upload.data_type] = upload.file_data
   })
 
-  // Assemble Fortnox data (matches costLeakAnalysis.analyzeCostLeaks input)
+  // Assemble Fortnox data (matches fortnoxCostLeakAnalysis.analyzeFortnoxCostLeaks input)
   if (byIntegration.Fortnox) {
     const f = byIntegration.Fortnox
 
@@ -57,7 +57,7 @@ function assembleDataFromUploads(uploads) {
     const isSaasData = hasSaasInvoices || hasSaasLicenses || hasSaasUsage
 
     if (isSaasData) {
-      // Transform SaaS CSV invoices → supplier invoices format for costLeakAnalysis
+      // Transform SaaS CSV invoices → supplier invoices format for fortnoxCostLeakAnalysis
       const supplierInvoices = hasSaasInvoices
         ? f.invoices.map((inv) => ({
             SupplierNumber: inv.vendor || "",
@@ -471,7 +471,7 @@ async function runTestAnalysis(workspaceId, params) {
     if (analysisType === "standard" || analysisType === "deep") {
       // Run Fortnox invoice analysis (works for both API data and SaaS CSV data)
       if (assembledData.fortnox && integrationLabels.includes("Fortnox")) {
-        result.fortnox = await analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })
+        result.fortnox = await analyzeFortnoxCostLeaks(assembledData.fortnox, { fromFileUpload: true })
       }
 
       // Run SaaS-specific analysis (license utilization, usage, price drift)
@@ -506,7 +506,7 @@ async function runTestAnalysis(workspaceId, params) {
       const fortnoxCompData = assembledData.fortnox
         ? {
             supplierInvoices: assembledData.fortnox.supplierInvoices,
-            costLeaks: result.fortnox || (await analyzeCostLeaks(assembledData.fortnox, { fromFileUpload: true })),
+            costLeaks: result.fortnox || (await analyzeFortnoxCostLeaks(assembledData.fortnox, { fromFileUpload: true })),
           }
         : null
 

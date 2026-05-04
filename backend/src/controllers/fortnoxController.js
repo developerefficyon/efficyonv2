@@ -4,7 +4,7 @@
  */
 
 const { supabase } = require("../config/supabase")
-const { analyzeCostLeaks } = require("../services/costLeakAnalysis")
+const { analyzeFortnoxCostLeaks } = require("../services/fortnoxCostLeakAnalysis")
 const { encryptOAuthData, decryptOAuthData, decryptIntegrationSettings } = require("../utils/encryption")
 
 // Helper for logging
@@ -966,7 +966,7 @@ async function getFortnoxProfile(req, res) {
 }
 
 // Analyze Cost Leaks
-async function analyzeFortnoxCostLeaks(req, res) {
+async function analyzeFortnoxCostLeaksEndpoint(req, res) {
   const endpoint = "GET /api/integrations/fortnox/cost-leaks"
   log("log", endpoint, "Request received")
 
@@ -1072,7 +1072,7 @@ async function analyzeFortnoxCostLeaks(req, res) {
       articles: [],
     }
 
-    const analysis = await analyzeCostLeaks(data)
+    const analysis = await analyzeFortnoxCostLeaks(data)
 
     // Convert SEK amounts to USD for display (Fortnox uses SEK natively)
     // Rate is fetched live from Frankfurter.app (ECB data) and cached for 24 hours
@@ -1246,6 +1246,6 @@ module.exports = {
   getFortnoxAccounts,
   getFortnoxArticles,
   getFortnoxSuppliers,
-  analyzeFortnoxCostLeaks,
+  analyzeFortnoxCostLeaksEndpoint,
   revokeFortnoxToken,
 }

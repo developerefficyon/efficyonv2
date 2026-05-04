@@ -4,7 +4,7 @@
  */
 
 const { detectDataSchema, mapToAnalysisFormat } = require("./fileParsingService")
-const { analyzeCostLeaks } = require("./costLeakAnalysis")
+const { analyzeFortnoxCostLeaks } = require("./fortnoxCostLeakAnalysis")
 const { analyzeM365CostLeaks } = require("./microsoft365CostLeakAnalysis")
 const { analyzeHubSpotCostLeaks } = require("./hubspotCostLeakAnalysis")
 
@@ -46,7 +46,7 @@ async function analyzeUploadedFile(parsedFile, fileName, userHint) {
       case "fortnox": {
         const mapped = mapToAnalysisFormat(rows, "fortnox", columnMapping)
         if (mapped) {
-          analysis = await analyzeCostLeaks(mapped, { fromFileUpload: true })
+          analysis = await analyzeFortnoxCostLeaks(mapped, { fromFileUpload: true })
         }
         break
       }

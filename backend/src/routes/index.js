@@ -111,7 +111,7 @@ const {
   getFortnoxAccounts,
   getFortnoxArticles,
   getFortnoxSuppliers,
-  analyzeFortnoxCostLeaks,
+  analyzeFortnoxCostLeaksEndpoint,
 } = require("../controllers/fortnoxController")
 
 // Microsoft 365 Controller - Microsoft 365 OAuth and data operations
@@ -451,7 +451,7 @@ router.get("/api/integrations/fortnox/vouchers", requireAuth, requireRole("owner
 router.get("/api/integrations/fortnox/accounts", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxAccounts)
 router.get("/api/integrations/fortnox/articles", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxArticles)
 router.get("/api/integrations/fortnox/suppliers", requireAuth, requireRole("owner", "editor", "viewer"), getFortnoxSuppliers)
-router.get("/api/integrations/fortnox/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeFortnoxCostLeaks)
+router.get("/api/integrations/fortnox/cost-leaks", requireAuth, requireRole("owner", "editor", "viewer"), analyzeFortnoxCostLeaksEndpoint)
 router.post("/api/integrations/fortnox/sync-customers", requireAuth, requireRole("owner", "editor"), syncFortnoxCustomers)
 router.get("/api/integrations/fortnox/recommendations", requireAuth, requireRole("owner", "editor", "viewer"), getRecommendations)
 router.post("/api/integrations/fortnox/recommendations/apply", requireAuth, requireRole("owner", "editor"), applyRecommendation)
