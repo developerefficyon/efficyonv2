@@ -219,6 +219,19 @@ Checks (V1, recovery-only):
 Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low — same as AWS/Azure/GCP.
 Lookback: user-selectable 30 / 90 / 180 days, default 90.
 
+### Atlassian (Jira Software + Confluence)
+
+- **Provider key:** `Atlassian`
+- **Auth:** Customer-managed OAuth 2.0 (3LO). Atlassian Cloud Org Admin install required.
+- **Required scopes:** `read:jira-user`, `read:confluence-user.summary`, `read:account`, `read:directory:admin-atlassian`, `offline_access`
+- **Data source:** Atlassian Org Directory API — `GET /admin/v1/orgs/{orgId}/directory/users`
+- **Pricing:** Customer-supplied per-product (`jira_seat_cost_usd`, `confluence_seat_cost_usd`). Tier guidance: Jira Standard ~$7.75 / Premium ~$15.25, Confluence Standard ~$6.05 / Premium ~$11.55 (USD/user/mo annual).
+- **V1 checks:**
+  - `inactive_jira_user` — active user with Jira license, no Jira activity in `inactivityDays`
+  - `inactive_confluence_user` — active user with Confluence license, no Confluence activity in `inactivityDays`
+  - `single_product_dual_seat` — active user with BOTH licenses, only one product used in window (the unused seat is the savings)
+- **Out of V1:** Jira Service Management, Bitbucket Cloud, Compass, multi-org, premium-feature-utilization, deactivated-but-still-licensed cleanup, scheduled syncs.
+
 ---
 
 ## Usage-Summary Tools (AI-consumption)
@@ -285,6 +298,7 @@ Caveats documented in the service:
 | Notion | Cost-leak (thin) | bot seats billed, seat-utilization gap, Notion AI over-provisioning |
 | Linear | Cost-leak | inactive billable users (lastSeenAt-driven) |
 | Stripe | Cost-leak (recovery) | failed payment recovery, card-expiry churn, past-due subs, disputes |
+| Atlassian | Cost-leak | inactive Jira users, inactive Confluence users, single-product dual-seat |
 | OpenAI | Usage summary | daily cost + token breakdown by model |
 | Anthropic | Usage summary | daily cost + input/output/cache-read tokens by model |
 | Gemini | Usage summary | Monitoring-derived usage with optional BigQuery actuals |
