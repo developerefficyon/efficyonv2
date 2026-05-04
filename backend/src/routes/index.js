@@ -245,6 +245,15 @@ const {
   analyzeLinearCostLeaks,
 } = require("../controllers/linearController")
 
+// Atlassian Controller - Atlassian Jira Software + Confluence cost-leak integration
+const {
+  startAtlassianOAuth,
+  atlassianOAuthCallback,
+  validateAtlassian,
+  getAtlassianStatus,
+  disconnectAtlassian,
+} = require("../controllers/atlassianController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -579,6 +588,13 @@ router.get(   "/api/integrations/linear/status",      requireAuth, requireRole("
 router.get(   "/api/integrations/linear/users",       requireAuth, requireRole("owner", "editor", "viewer"), getLinearUsers)
 router.post(  "/api/integrations/linear/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeLinearCostLeaks)
 router.delete("/api/integrations/linear",             requireAuth, requireRole("owner", "editor"),           disconnectLinear)
+
+// Atlassian (Jira Software + Confluence) cost-leak integration
+router.get("/api/integrations/atlassian/oauth/start", requireAuth, requireRole("owner", "editor"), startAtlassianOAuth)
+router.get("/api/integrations/atlassian/callback", atlassianOAuthCallback)
+router.post("/api/integrations/atlassian/validate", requireAuth, requireRole("owner", "editor"), validateAtlassian)
+router.get("/api/integrations/atlassian/status", requireAuth, requireRole("owner", "editor", "viewer"), getAtlassianStatus)
+router.delete("/api/integrations/atlassian", requireAuth, requireRole("owner", "editor"), disconnectAtlassian)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
