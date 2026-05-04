@@ -241,6 +241,7 @@ const {
   validateLinear,
   getLinearStatus,
   disconnectLinear,
+  getLinearUsers,
 } = require("../controllers/linearController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -574,6 +575,7 @@ router.get(   "/api/integrations/linear/oauth/start", requireAuth, requireRole("
 router.get(   "/api/integrations/linear/callback",                                                            linearOAuthCallback) // NO AUTH — Linear browser redirect; state param verifies
 router.post(  "/api/integrations/linear/validate",    requireAuth, requireRole("owner", "editor"),           validateLinear)
 router.get(   "/api/integrations/linear/status",      requireAuth, requireRole("owner", "editor", "viewer"), getLinearStatus)
+router.get(   "/api/integrations/linear/users",       requireAuth, requireRole("owner", "editor", "viewer"), getLinearUsers)
 router.delete("/api/integrations/linear",             requireAuth, requireRole("owner", "editor"),           disconnectLinear)
 
 // QuickBooks routes

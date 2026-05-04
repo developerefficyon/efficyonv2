@@ -21,6 +21,7 @@ const {
   getAccessToken,
   evictToken,
   fetchWorkspace,
+  listAllUsers,
 } = require("../utils/linearAuth")
 
 const LINEAR_PROVIDER = "Linear"
@@ -305,13 +306,33 @@ async function disconnectLinear(req, res) {
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
+// ---------------------------------------------------------------------------
+// Handler: getLinearUsers
+// Returns all workspace users (capped at 1000) for the Data tab.
+// ---------------------------------------------------------------------------
+async function getLinearUsers(req, res) {
+  const endpoint = "GET /api/integrations/linear/users"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const users = await listAllUsers(integration)
+    return res.json({ users })
+  } catch (e) {
+    const mapped = mapLinearError(e)
+    log("error", endpoint, "getUsers failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startLinearOAuth,
   linearOAuthCallback,
   validateLinear,
   getLinearStatus,
   disconnectLinear,
-  // exported for use by data + analyze handlers added in later tasks:
+  getLinearUsers,
+  // exported for use by analyze handler added in later tasks:
   getIntegrationForUser,
   mapLinearError,
   log,
