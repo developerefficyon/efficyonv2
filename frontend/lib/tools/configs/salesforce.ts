@@ -69,7 +69,7 @@ export const salesforceConfig: UnifiedToolConfig = {
       "In Salesforce: Setup → App Manager → New Connected App",
       "Name it 'Efficyon Cost Analyzer', enter any contact email",
       "Check 'Enable OAuth Settings'",
-      "Callback URL: http://localhost:4000/api/integrations/salesforce/callback (use your prod URL when deploying)",
+      "Callback URL: https://efficyonv2.onrender.com/api/integrations/salesforce/callback",
       "Selected OAuth Scopes: 'Manage user data via APIs (api)', 'Perform requests on your behalf at any time (refresh_token, offline_access)', 'Access the identity URL service (id, profile, email)'",
       "Save. Wait ~10 minutes for the App to propagate, then copy the Consumer Key + Secret",
     ],

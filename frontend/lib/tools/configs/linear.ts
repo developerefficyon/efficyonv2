@@ -59,7 +59,7 @@ export const linearConfig: UnifiedToolConfig = {
     steps: [
       "Open Linear → Settings → Account → API",
       "Under 'OAuth applications', click 'Create new'",
-      "Name: 'Efficyon Cost Analyzer'. Redirect URI: http://localhost:4000/api/integrations/linear/callback (use prod URL when deploying)",
+      "Name: 'Efficyon Cost Analyzer'. Redirect URI: https://efficyonv2.onrender.com/api/integrations/linear/callback",
       "Scopes: 'read' (single read scope is enough)",
       "Save. Copy the Client ID + Client Secret from the app's page",
       "Paste them above along with your plan tier, then click Connect",

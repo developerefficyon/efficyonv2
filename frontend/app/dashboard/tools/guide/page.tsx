@@ -1826,7 +1826,7 @@ export default function SetupGuidePage() {
             <div className="flex items-start gap-3">
               <StepNumber n={3} color="#00A1E0" />
               <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
-                Check <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Enable OAuth Settings</span>. Set the <strong>Callback URL</strong> to your Efficyon callback (local dev: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/salesforce/callback</span>; production: substitute your deployed host).
+                Check <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Enable OAuth Settings</span>. Set the <strong>Callback URL</strong> to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/salesforce/callback</span>.
               </p>
             </div>
 
@@ -1916,7 +1916,7 @@ export default function SetupGuidePage() {
             <div className="flex items-start gap-3">
               <StepNumber n={2} color="#000000" />
               <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
-                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/notion/callback</span> (substitute your deployed host in production).
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/notion/callback</span>.
               </p>
             </div>
 
@@ -2008,7 +2008,7 @@ export default function SetupGuidePage() {
             <div className="flex items-start gap-3">
               <StepNumber n={3} color="#5E6AD2" />
               <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
-                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/linear/callback</span> (substitute your deployed host in production).
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/linear/callback</span>.
               </p>
             </div>
 

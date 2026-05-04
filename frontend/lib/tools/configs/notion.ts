@@ -89,7 +89,7 @@ export const notionConfig: UnifiedToolConfig = {
     steps: [
       "Go to https://www.notion.so/my-integrations",
       "Click 'New integration'. Type: Public. Name: 'Efficyon Cost Analyzer'",
-      "Set Redirect URIs to: http://localhost:4000/api/integrations/notion/callback (use prod URL when deploying)",
+      "Set Redirect URIs to: https://efficyonv2.onrender.com/api/integrations/notion/callback",
       "Capabilities: 'Read content' + 'Read user information including email addresses'",
       "Save. Copy OAuth Client ID + Client Secret from the integration's Secrets page",
       "Paste them above along with your plan tier and seat counts, then click Connect",
