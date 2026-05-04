@@ -67,8 +67,9 @@ export const linearConfig: UnifiedToolConfig = {
   },
   endpoints: [
     { key: "status", path: "/api/integrations/linear/status" },
+    { key: "users",  path: "/api/integrations/linear/users", pick: ["users"], fallback: [] },
   ],
-  defaultTab: "status",
+  defaultTab: "users",
   viewComponent: LinearView,
   connectingToast: "Redirecting to Linear to authorize…",
   tokenRevocation: {
