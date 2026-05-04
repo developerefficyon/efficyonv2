@@ -109,10 +109,14 @@ async function startAtlassianOAuth(req, res) {
         jira_seat_cost_usd: Number(pending.jiraSeatCostUsd) || 0,
         confluence_seat_cost_usd: Number(pending.confluenceSeatCostUsd) || 0,
       }
-      await supabase
+      const { error: upgradeError } = await supabase
         .from("company_integrations")
         .update({ settings: newSettings })
         .eq("id", integration.id)
+      if (upgradeError) {
+        log("error", endpoint, "failed to persist encrypted credentials", { message: upgradeError.message })
+        return res.status(500).json({ error: "Failed to save Atlassian credentials — please try again.", hint: null })
+      }
       integration.settings = newSettings
     } catch (e) {
       const mapped = mapAtlassianError(e)
@@ -213,7 +217,7 @@ async function atlassianOAuthCallback(req, res) {
     refresh_token: tokens.refresh_token,
   })
   const nowIso = new Date().toISOString()
-  await supabase
+  const { error: persistError } = await supabase
     .from("company_integrations")
     .update({
       settings: {
@@ -226,6 +230,10 @@ async function atlassianOAuthCallback(req, res) {
       updated_at: nowIso,
     })
     .eq("id", integration.id)
+  if (persistError) {
+    log("error", endpoint, "failed to persist tokens", { message: persistError.message })
+    return res.redirect(`${frontendUrl}/dashboard/tools?atlassian_consent=error&msg=${encodeURIComponent("Failed to save connection — please try again.")}`)
+  }
 
   // Best-effort: enrich with cloud sites + org id
   try {
