@@ -252,6 +252,7 @@ const {
   validateAtlassian,
   getAtlassianStatus,
   disconnectAtlassian,
+  getAtlassianUsers,
 } = require("../controllers/atlassianController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -594,6 +595,7 @@ router.get("/api/integrations/atlassian/oauth/start", requireAuth, requireRole("
 router.get("/api/integrations/atlassian/callback", atlassianOAuthCallback)
 router.post("/api/integrations/atlassian/validate", requireAuth, requireRole("owner", "editor"), validateAtlassian)
 router.get("/api/integrations/atlassian/status", requireAuth, requireRole("owner", "editor", "viewer"), getAtlassianStatus)
+router.get("/api/integrations/atlassian/users", requireAuth, requireRole("owner", "editor", "viewer"), getAtlassianUsers)
 router.delete("/api/integrations/atlassian", requireAuth, requireRole("owner", "editor"), disconnectAtlassian)
 
 // QuickBooks routes

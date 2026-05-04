@@ -29,6 +29,7 @@ const {
   evictToken,
   listAccessibleResources,
   findOrgId,
+  listOrgDirectoryUsers,
   hasOrgAdminScope,
 } = require("../utils/atlassianAuth")
 
@@ -362,12 +363,52 @@ async function disconnectAtlassian(req, res) {
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
+// ---------------------------------------------------------------------------
+// Handler: getAtlassianUsers — feeds the Data tab
+// ---------------------------------------------------------------------------
+async function getAtlassianUsers(req, res) {
+  const endpoint = "GET /api/integrations/atlassian/users"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Atlassian integration is not connected", status: integration.status })
+  }
+  const orgId = integration.settings?.org_id
+  if (!orgId) {
+    return res.status(400).json({ error: "Atlassian org_id missing — please re-validate the integration" })
+  }
+  try {
+    const users = await listOrgDirectoryUsers(integration, orgId)
+    return res.json({
+      org: {
+        id: orgId,
+        name: integration.settings?.org_name || null,
+        cloudSites: integration.settings?.cloud_sites || [],
+      },
+      users,
+      counts: {
+        total: users.length,
+        active: users.filter((u) => u.accountStatus === "active").length,
+        jira: users.filter((u) => u.products.jira).length,
+        confluence: users.filter((u) => u.products.confluence).length,
+        both: users.filter((u) => u.products.jira && u.products.confluence).length,
+      },
+    })
+  } catch (e) {
+    const mapped = mapAtlassianError(e)
+    log("error", endpoint, "users fetch failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, code: mapped.code, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startAtlassianOAuth,
   atlassianOAuthCallback,
   validateAtlassian,
   getAtlassianStatus,
   disconnectAtlassian,
+  getAtlassianUsers,
   // exported for use by data + analyze handlers added in later tasks:
   getIntegrationForUser,
   mapAtlassianError,
