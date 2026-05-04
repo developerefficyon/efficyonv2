@@ -98,8 +98,9 @@ export const notionConfig: UnifiedToolConfig = {
   },
   endpoints: [
     { key: "status", path: "/api/integrations/notion/status" },
+    { key: "users",  path: "/api/integrations/notion/users", pick: ["users"], fallback: [] },
   ],
-  defaultTab: "status",
+  defaultTab: "users",
   viewComponent: NotionView,
   connectingToast: "Redirecting to Notion to authorize…",
   tokenRevocation: {
