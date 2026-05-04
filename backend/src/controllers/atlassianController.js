@@ -352,7 +352,7 @@ async function disconnectAtlassian(req, res) {
     // best-effort only
   }
 
-  await supabase
+  const { error: disconnectError } = await supabase
     .from("company_integrations")
     .update({
       settings: { disconnected_at: nowIso, prior_org_id: priorOrgId },
@@ -361,6 +361,10 @@ async function disconnectAtlassian(req, res) {
     })
     .eq("id", integration.id)
   evictToken(integration.id)
+  if (disconnectError) {
+    log("error", "DELETE /api/integrations/atlassian", "supabase update on disconnect failed", { message: disconnectError.message })
+    return res.status(500).json({ error: "Failed to disconnect — please try again.", hint: null })
+  }
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
@@ -408,7 +412,7 @@ async function getAtlassianUsers(req, res) {
 // Returns findings; the frontend persists via /api/analysis-history.
 // ---------------------------------------------------------------------------
 async function analyzeAtlassianCostLeaksEndpoint(req, res) {
-  const endpoint = "POST /api/integrations/atlassian/cost-leaks"
+  const endpoint = "GET /api/integrations/atlassian/cost-leaks"
   const lookup = await getIntegrationForUser(req.user)
   if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
   const { integration } = lookup
@@ -424,7 +428,7 @@ async function analyzeAtlassianCostLeaksEndpoint(req, res) {
     })
   }
 
-  const inactivityDays = Math.max(7, Math.min(365, Number(req.body?.inactivityDays) || 60))
+  const inactivityDays = Math.max(7, Math.min(365, Number(req.query?.inactivityDays) || 60))
 
   try {
     const result = await analyzeAtlassianCostLeaks({
@@ -434,6 +438,7 @@ async function analyzeAtlassianCostLeaksEndpoint(req, res) {
     })
     return res.json({
       ...result,
+      overallSummary: result.summary,
       parameters: { inactivityDays },
       org: {
         id: integration.settings?.org_id || null,

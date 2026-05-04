@@ -92,9 +92,8 @@ export const atlassianConfig: UnifiedToolConfig = {
 
   // DATA FETCHING
   endpoints: [
-    { key: "status",    path: "/api/integrations/atlassian/status" },
-    { key: "users",     path: "/api/integrations/atlassian/users",      pick: ["users"],     fallback: [] },
-    { key: "costLeaks", path: "/api/integrations/atlassian/cost-leaks", pick: ["costLeaks"], fallback: [] },
+    { key: "status", path: "/api/integrations/atlassian/status" },
+    { key: "users",  path: "/api/integrations/atlassian/users", pick: ["users"], fallback: [] },
   ],
   defaultTab: "users",
 
