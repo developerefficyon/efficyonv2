@@ -26,6 +26,7 @@ const INTEGRATIONS = [
   { id: "stripe", label: "Stripe", color: "#635BFF", desc: "Revenue Recovery" },
   { id: "salesforce", label: "Salesforce", color: "#00A1E0", desc: "CRM & Sales" },
   { id: "notion", label: "Notion", color: "#000000", desc: "Productivity" },
+  { id: "linear", label: "Linear", color: "#5E6AD2", desc: "Productivity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1960,6 +1961,97 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your Client ID + Secret + access token are encrypted at rest with AES-256-GCM before persisting. The OAuth scopes are read-only — Efficyon can list users but cannot read or modify any pages, blocks, or databases. Notion access tokens don&apos;t expire (no refresh logic needed). To revoke any time: Notion → Settings & members → Connections → find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> → Disconnect.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Linear Section */}
+      <section id="linear" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "linear" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#5E6AD2]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="linear" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Linear</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#5E6AD2]/50 mt-1">&#8226;</span>Workspace admin permissions in Linear</li>
+              <li className="flex items-start gap-2"><span className="text-[#5E6AD2]/50 mt-1">&#8226;</span>Permission to create OAuth applications under Settings → API</li>
+              <li className="flex items-start gap-2"><span className="text-[#5E6AD2]/50 mt-1">&#8226;</span>Knowledge of your plan tier (Standard / Plus / Enterprise)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open Linear &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Settings</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Account</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">API</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">OAuth applications</span>, click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create new</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/linear/callback</span> (substitute your deployed host in production).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#5E6AD2" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Set <strong>Scopes</strong> to:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>read</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Save. Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the OAuth app&apos;s page.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, <Link href="/dashboard/tools" className="text-[#5E6AD2]/80 hover:text-[#5E6AD2] transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Linear. Paste the Client ID + Secret. Pick your plan tier. Click Connect.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#5E6AD2" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Approve the OAuth consent in Linear. You&apos;ll be redirected back to the dashboard with status <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span>. Switch to the Analysis tab and run analysis.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            One V1 check: <strong>inactive billable users</strong>. Linear bills per active user per workspace, so any user with <code>active = true</code> who hasn&apos;t logged in within your chosen window (30 / 60 / 90 / 180 days; default 60) is flagged. Pricing uses Linear list rates — Standard $8, Plus $14, Enterprise $25 default. Apply your negotiated discount for actual savings.
+          </InfoBox>
+
+          <SecurityBox>
+            Your Client ID + Secret + access token + refresh token are encrypted at rest with AES-256-GCM before persisting. The OAuth scope is <code>read</code> only — Efficyon can list users and read workspace info but cannot create or modify any Linear data. Access tokens expire in ~10 hours and we refresh them automatically using the refresh token. To revoke any time: Linear &rsaquo; Settings &rsaquo; Account &rsaquo; API &rsaquo; OAuth applications &rsaquo; <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> &rsaquo; Revoke.
           </SecurityBox>
         </div>
       </section>
