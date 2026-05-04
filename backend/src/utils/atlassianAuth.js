@@ -161,11 +161,23 @@ async function getAccessToken(integration) {
   if (cached && cached.expiresAt > Date.now() + REFRESH_BUFFER_MS) return cached.access_token
 
   const settings = integration.settings || {}
-  const { clientId, clientSecret } = decryptOAuthCreds(settings)
+  let clientId, clientSecret
+  try {
+    ;({ clientId, clientSecret } = decryptOAuthCreds(settings))
+  } catch (e) {
+    evictToken(integration.id)
+    throw e
+  }
   const { refresh_token } = decryptTokens(settings)
-  if (!refresh_token) throw typedError("REFRESH_TOKEN_MISSING", "No refresh token stored — please reconnect")
+  if (!refresh_token) {
+    evictToken(integration.id)
+    throw typedError("REFRESH_TOKEN_MISSING", "No refresh token stored — please reconnect")
+  }
 
   const result = await refreshAccessToken({ clientId, clientSecret, refreshToken: refresh_token })
+  if (!result.access_token) {
+    throw typedError("OAUTH_REFRESH_FAILED", "Refresh response missing access_token")
+  }
   const expiresIn = result.expires_in || 3600 // default 1h
   const expiresAt = Date.now() + expiresIn * 1000
   tokenCache.set(integration.id, { access_token: result.access_token, expiresAt })
@@ -295,6 +307,7 @@ function mapDirectoryUser(raw) {
 
   const products = { jira: null, confluence: null, other: [] }
   for (const p of productAccess) {
+    if (!p || typeof p !== "object") continue
     const pid = (p.id || p.key || p.product || "").toLowerCase()
     const entry = {
       id: pid,
