@@ -24,6 +24,7 @@ const {
   notionGet,
   listAllUsers,
 } = require("../utils/notionAuth")
+const { analyzeNotionCostLeaks } = require("../services/notionCostLeakAnalysis")
 
 const NOTION_PROVIDER = "Notion"
 
@@ -294,6 +295,54 @@ async function getNotionUsers(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Handler: analyzeNotionCostLeaks
+// Duplicate-check, run aggregator, return findings (frontend persists via
+// /api/analysis-history, matching the GitHub/Stripe/Salesforce pattern).
+// ---------------------------------------------------------------------------
+async function analyzeNotionCostLeaksHandler(req, res) {
+  const endpoint = "POST /api/integrations/notion/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration, companyId } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Integration not connected. Re-validate first." })
+  }
+
+  // Duplicate-check: same integration within 5 minutes -> 409
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data: recent } = await supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("provider", NOTION_PROVIDER)
+    .eq("integration_id", integration.id)
+    .gte("created_at", fiveMinAgo)
+    .limit(1)
+    .maybeSingle()
+  if (recent) {
+    return res.status(409).json({
+      error: "An analysis was just run for this integration. Please wait a few minutes.",
+      recentAnalysisId: recent.id,
+    })
+  }
+
+  try {
+    const result = await analyzeNotionCostLeaks({ listAllUsers, integration })
+    return res.json({
+      summary: result.summary,
+      findings: result.findings,
+      warnings: result.warnings,
+      parameters: {},
+    })
+  } catch (e) {
+    const mapped = mapNotionError(e)
+    log("error", endpoint, "analysis failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startNotionOAuth,
   notionOAuthCallback,
@@ -301,7 +350,7 @@ module.exports = {
   getNotionStatus,
   disconnectNotion,
   getNotionUsers,
-  // exported for use by analyze handler added in later tasks:
+  analyzeNotionCostLeaks: analyzeNotionCostLeaksHandler,
   getIntegrationForUser,
   mapNotionError,
   log,

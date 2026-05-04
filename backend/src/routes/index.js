@@ -231,6 +231,7 @@ const {
   getNotionStatus,
   disconnectNotion,
   getNotionUsers,
+  analyzeNotionCostLeaks,
 } = require("../controllers/notionController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -556,6 +557,7 @@ router.get(   "/api/integrations/notion/callback",                              
 router.post(  "/api/integrations/notion/validate",    requireAuth, requireRole("owner", "editor"),           validateNotion)
 router.get(   "/api/integrations/notion/status",      requireAuth, requireRole("owner", "editor", "viewer"), getNotionStatus)
 router.get(   "/api/integrations/notion/users",       requireAuth, requireRole("owner", "editor", "viewer"), getNotionUsers)
+router.post(  "/api/integrations/notion/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeNotionCostLeaks)
 router.delete("/api/integrations/notion",             requireAuth, requireRole("owner", "editor"),           disconnectNotion)
 
 // QuickBooks routes
