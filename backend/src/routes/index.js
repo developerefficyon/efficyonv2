@@ -230,6 +230,7 @@ const {
   validateNotion,
   getNotionStatus,
   disconnectNotion,
+  getNotionUsers,
 } = require("../controllers/notionController")
 
 // QuickBooks Controller - QuickBooks OAuth and data operations
@@ -554,6 +555,7 @@ router.get(   "/api/integrations/notion/oauth/start", requireAuth, requireRole("
 router.get(   "/api/integrations/notion/callback",                                                            notionOAuthCallback) // NO AUTH — Notion browser redirect; state param verifies
 router.post(  "/api/integrations/notion/validate",    requireAuth, requireRole("owner", "editor"),           validateNotion)
 router.get(   "/api/integrations/notion/status",      requireAuth, requireRole("owner", "editor", "viewer"), getNotionStatus)
+router.get(   "/api/integrations/notion/users",       requireAuth, requireRole("owner", "editor", "viewer"), getNotionUsers)
 router.delete("/api/integrations/notion",             requireAuth, requireRole("owner", "editor"),           disconnectNotion)
 
 // QuickBooks routes

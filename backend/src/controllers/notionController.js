@@ -22,6 +22,7 @@ const {
   decodeState,
   exchangeCodeForToken,
   notionGet,
+  listAllUsers,
 } = require("../utils/notionAuth")
 
 const NOTION_PROVIDER = "Notion"
@@ -274,13 +275,33 @@ async function disconnectNotion(req, res) {
   return res.json({ ok: true, disconnectedAt: nowIso })
 }
 
+// ---------------------------------------------------------------------------
+// Handler: getNotionUsers
+// Returns all workspace users (capped at 1000) for the Data tab.
+// ---------------------------------------------------------------------------
+async function getNotionUsers(req, res) {
+  const endpoint = "GET /api/integrations/notion/users"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration } = lookup
+  try {
+    const users = await listAllUsers(integration)
+    return res.json({ users })
+  } catch (e) {
+    const mapped = mapNotionError(e)
+    log("error", endpoint, "getUsers failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startNotionOAuth,
   notionOAuthCallback,
   validateNotion,
   getNotionStatus,
   disconnectNotion,
-  // exported for use by data + analyze handlers added in later tasks:
+  getNotionUsers,
+  // exported for use by analyze handler added in later tasks:
   getIntegrationForUser,
   mapNotionError,
   log,
