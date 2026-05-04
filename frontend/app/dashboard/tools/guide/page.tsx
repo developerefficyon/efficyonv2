@@ -25,6 +25,7 @@ const INTEGRATIONS = [
   { id: "github", label: "GitHub", color: "#181717", desc: "Developer Tools" },
   { id: "stripe", label: "Stripe", color: "#635BFF", desc: "Revenue Recovery" },
   { id: "salesforce", label: "Salesforce", color: "#00A1E0", desc: "CRM & Sales" },
+  { id: "notion", label: "Notion", color: "#000000", desc: "Productivity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -1870,6 +1871,95 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your Consumer Key + Secret + access token + refresh token are encrypted at rest with AES-256-GCM before persisting — plaintext is never stored. The OAuth scopes are read-only-equivalent for our use case (we only call <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">/services/data/.../query</span> with SOQL SELECT statements). Refresh tokens last until revoked or unused for ~6 months. To revoke any time, go to <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Setup &rsaquo; Connected Apps OAuth Usage</span>, find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span>, click <strong>Revoke</strong>; or delete the Connected App entirely from App Manager.
+          </SecurityBox>
+        </div>
+      </section>
+
+      {/* Notion Section */}
+      <section id="notion" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "notion" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="notion" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Notion</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-white/40 mt-1">&#8226;</span>Workspace owner permissions in your Notion workspace</li>
+              <li className="flex items-start gap-2"><span className="text-white/40 mt-1">&#8226;</span>Permission to create public integrations at notion.so/my-integrations</li>
+              <li className="flex items-start gap-2"><span className="text-white/40 mt-1">&#8226;</span>Knowledge of your plan tier + seat count (we ask for them at connect — Notion&apos;s API doesn&apos;t expose billing)</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#000000" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open{" "}
+                <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white inline-flex items-center gap-1 transition-colors">
+                  notion.so/my-integrations <ExternalLink className="w-3 h-3" />
+                </a>
+                {" "}and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">+ New integration</span>. Choose <strong>Public</strong> (not Internal).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#000000" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>. Set the Redirect URI to <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">http://localhost:4000/api/integrations/notion/callback</span> (substitute your deployed host in production).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#000000" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Set <strong>Capabilities</strong> to:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>Read content</ScopeBadge>
+                  <ScopeBadge>Read user information including email addresses</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#000000" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Save. From the integration&apos;s <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Secrets</span> page, copy the <strong>OAuth Client ID</strong> and <strong>Client Secret</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#000000" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, <Link href="/dashboard/tools" className="text-white/60 hover:text-white transition-colors">Tools & Integrations</Link> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect New Tool</span> &rsaquo; Notion. Paste the Client ID + Secret. Pick your plan tier. Enter your total paid seats (look it up in Notion → Settings → Plans). Indicate whether you have Notion AI and how many AI seats. Click Connect.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#000000" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Approve the OAuth consent in Notion. You&apos;ll be redirected back to the dashboard with status <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">connected</span>. Switch to the Analysis tab and run analysis.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings (and what's missing)">
+            Three checks: <strong>bot detection</strong> (every <code>type === &quot;bot&quot;</code> member is flagged so you can verify your seat count excludes them), <strong>seat-utilization gap</strong> (your entered seat count minus actual humans, priced at your plan rate), and <strong>Notion AI over-provisioning</strong> (only if you have AI). Pricing uses Notion list rates; the summary tells you to apply your negotiated discount. <strong>Note:</strong> Notion&apos;s public API doesn&apos;t expose per-user login activity, so V1 doesn&apos;t flag individual inactive users — that requires Audit Log API access (Enterprise only) and is on the V2 roadmap.
+          </InfoBox>
+
+          <SecurityBox>
+            Your Client ID + Secret + access token are encrypted at rest with AES-256-GCM before persisting. The OAuth scopes are read-only — Efficyon can list users but cannot read or modify any pages, blocks, or databases. Notion access tokens don&apos;t expire (no refresh logic needed). To revoke any time: Notion → Settings & members → Connections → find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> → Disconnect.
           </SecurityBox>
         </div>
       </section>

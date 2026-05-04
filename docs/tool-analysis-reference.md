@@ -177,6 +177,21 @@ Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low — s
 Pricing: list-price defaults; output includes `pricingNote` instructing customers to apply their negotiated discount.
 Inactivity window: user-selectable 30 / 60 / 90 days, default 60.
 
+### Notion — Seat math (thin V1)
+
+Analysis: [notionCostLeakAnalysis.js](../backend/src/services/notionCostLeakAnalysis.js)
+Data source: Notion REST API v1 — `/v1/users` (cursor-paginated).
+
+Checks (V1, thin — Notion's public API has no per-user activity timestamp):
+- **Bot users billed as paid seats** — flags every `type === "bot"` member; one finding per bot at the customer's plan price. Bots are free in Notion's billing but customers sometimes include them in their seat count.
+- **Seat-utilization gap** — customer-entered `total_seats` minus actual person count. If positive, finding fires with `gap × plan_price` savings.
+- **Notion AI over-provisioning** — only fires if customer indicated `has_ai === true`. Compares `ai_seats` vs person count at $10/seat/mo.
+
+Pricing: list-price defaults — Plus $10, Business $18, Enterprise $25 (default — varies by contract). `pricingNote` in summary explains.
+Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low — same as everything else.
+**Customer-supplied at connect:** plan tier, total seats, has-AI flag, AI seats. Notion's API exposes neither billing nor login activity; these are required.
+**No inactive-user detection in V1.** Page edit history scanning + Audit Log API integration deferred to V2.
+
 ### Stripe — Revenue recovery
 
 Analysis: [stripeRevenueLeakAnalysis.js](../backend/src/services/stripeRevenueLeakAnalysis.js)
@@ -254,6 +269,7 @@ Caveats documented in the service:
 | Zoom | Cost-leak | inactive licensed users, unused add-ons |
 | GitHub | Cost-leak | inactive Copilot seats, inactive paid members, Copilot over-provisioning |
 | Salesforce | Cost-leak | inactive licensed users, frozen-but-billed, unused PermissionSetLicenses |
+| Notion | Cost-leak (thin) | bot seats billed, seat-utilization gap, Notion AI over-provisioning |
 | Stripe | Cost-leak (recovery) | failed payment recovery, card-expiry churn, past-due subs, disputes |
 | OpenAI | Usage summary | daily cost + token breakdown by model |
 | Anthropic | Usage summary | daily cost + input/output/cache-read tokens by model |

@@ -28,6 +28,7 @@ import { zoomConfig } from "./configs/zoom"
 import { githubConfig } from "./configs/github"
 import { stripeConfig } from "./configs/stripe"
 import { salesforceConfig } from "./configs/salesforce"
+import { notionConfig } from "./configs/notion"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
@@ -36,6 +37,7 @@ export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   QuickBooks: quickbooksConfig,
   Salesforce: salesforceConfig,
   Shopify: shopifyConfig,
+  Notion: notionConfig,
   OpenAI: openaiConfig,
   Anthropic: anthropicConfig,
   Gemini: geminiConfig,
