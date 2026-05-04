@@ -192,6 +192,19 @@ Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low — s
 **Customer-supplied at connect:** plan tier, total seats, has-AI flag, AI seats. Notion's API exposes neither billing nor login activity; these are required.
 **No inactive-user detection in V1.** Page edit history scanning + Audit Log API integration deferred to V2.
 
+### Linear — Inactive billable users
+
+Analysis: [linearCostLeakAnalysis.js](../backend/src/services/linearCostLeakAnalysis.js)
+Data source: Linear GraphQL API — `users` query with `lastSeenAt`.
+
+Checks (V1, focused — one strong check):
+- **Inactive billable users** — `active = true` users with `lastSeenAt` older than the inactivity window (30 / 60 / 90 / 180 days). One finding per user at the customer's plan price.
+
+Pricing: list-price defaults — Standard $8, Plus $14, Enterprise $25. `pricingNote` in summary explains.
+Severity ladder: ≥$500/mo critical, ≥$100 high, ≥$25 medium, >$0 low.
+Inactivity window: user-selectable, default 60 days.
+**Customer-supplied at connect:** plan tier only. Linear's per-active-user pricing means we don't need a separate seat-count input — the bill IS `active_count × plan_price`.
+
 ### Stripe — Revenue recovery
 
 Analysis: [stripeRevenueLeakAnalysis.js](../backend/src/services/stripeRevenueLeakAnalysis.js)
@@ -270,6 +283,7 @@ Caveats documented in the service:
 | GitHub | Cost-leak | inactive Copilot seats, inactive paid members, Copilot over-provisioning |
 | Salesforce | Cost-leak | inactive licensed users, frozen-but-billed, unused PermissionSetLicenses |
 | Notion | Cost-leak (thin) | bot seats billed, seat-utilization gap, Notion AI over-provisioning |
+| Linear | Cost-leak | inactive billable users (lastSeenAt-driven) |
 | Stripe | Cost-leak (recovery) | failed payment recovery, card-expiry churn, past-due subs, disputes |
 | OpenAI | Usage summary | daily cost + token breakdown by model |
 | Anthropic | Usage summary | daily cost + input/output/cache-read tokens by model |

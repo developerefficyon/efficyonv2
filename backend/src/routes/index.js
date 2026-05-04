@@ -234,6 +234,17 @@ const {
   analyzeNotionCostLeaks,
 } = require("../controllers/notionController")
 
+// Linear Integration Controller - per-customer OAuth application
+const {
+  startLinearOAuth,
+  linearOAuthCallback,
+  validateLinear,
+  getLinearStatus,
+  disconnectLinear,
+  getLinearUsers,
+  analyzeLinearCostLeaks,
+} = require("../controllers/linearController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -559,6 +570,15 @@ router.get(   "/api/integrations/notion/status",      requireAuth, requireRole("
 router.get(   "/api/integrations/notion/users",       requireAuth, requireRole("owner", "editor", "viewer"), getNotionUsers)
 router.post(  "/api/integrations/notion/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeNotionCostLeaks)
 router.delete("/api/integrations/notion",             requireAuth, requireRole("owner", "editor"),           disconnectNotion)
+
+// Linear Integration routes (cost-leak analysis)
+router.get(   "/api/integrations/linear/oauth/start", requireAuth, requireRole("owner", "editor"),           startLinearOAuth)
+router.get(   "/api/integrations/linear/callback",                                                            linearOAuthCallback) // NO AUTH — Linear browser redirect; state param verifies
+router.post(  "/api/integrations/linear/validate",    requireAuth, requireRole("owner", "editor"),           validateLinear)
+router.get(   "/api/integrations/linear/status",      requireAuth, requireRole("owner", "editor", "viewer"), getLinearStatus)
+router.get(   "/api/integrations/linear/users",       requireAuth, requireRole("owner", "editor", "viewer"), getLinearUsers)
+router.post(  "/api/integrations/linear/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeLinearCostLeaks)
+router.delete("/api/integrations/linear",             requireAuth, requireRole("owner", "editor"),           disconnectLinear)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)

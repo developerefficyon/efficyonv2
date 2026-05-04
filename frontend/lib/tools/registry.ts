@@ -29,6 +29,7 @@ import { githubConfig } from "./configs/github"
 import { stripeConfig } from "./configs/stripe"
 import { salesforceConfig } from "./configs/salesforce"
 import { notionConfig } from "./configs/notion"
+import { linearConfig } from "./configs/linear"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
@@ -38,6 +39,7 @@ export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Salesforce: salesforceConfig,
   Shopify: shopifyConfig,
   Notion: notionConfig,
+  Linear: linearConfig,
   OpenAI: openaiConfig,
   Anthropic: anthropicConfig,
   Gemini: geminiConfig,
