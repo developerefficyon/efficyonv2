@@ -23,6 +23,7 @@ const {
   fetchWorkspace,
   listAllUsers,
 } = require("../utils/linearAuth")
+const { analyzeLinearCostLeaks } = require("../services/linearCostLeakAnalysis")
 
 const LINEAR_PROVIDER = "Linear"
 
@@ -325,6 +326,56 @@ async function getLinearUsers(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Handler: analyzeLinearCostLeaks
+// ---------------------------------------------------------------------------
+async function analyzeLinearCostLeaksHandler(req, res) {
+  const endpoint = "POST /api/integrations/linear/cost-leaks"
+  const lookup = await getIntegrationForUser(req.user)
+  if (lookup.error) return res.status(lookup.status).json({ error: lookup.error })
+  const { integration, companyId } = lookup
+
+  if (integration.status !== "connected") {
+    return res.status(409).json({ error: "Integration not connected. Re-validate first." })
+  }
+
+  // Parse inactivity window (30 / 60 / 90 / 180, default 60)
+  let inactivityDays = parseInt(req.body?.inactivityDays, 10)
+  if (![30, 60, 90, 180].includes(inactivityDays)) inactivityDays = 60
+
+  // Duplicate-check: same integration within 5 minutes -> 409
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data: recent } = await supabase
+    .from("cost_leak_analyses")
+    .select("id, created_at")
+    .eq("company_id", companyId)
+    .eq("provider", LINEAR_PROVIDER)
+    .eq("integration_id", integration.id)
+    .gte("created_at", fiveMinAgo)
+    .limit(1)
+    .maybeSingle()
+  if (recent) {
+    return res.status(409).json({
+      error: "An analysis was just run for this integration. Please wait a few minutes.",
+      recentAnalysisId: recent.id,
+    })
+  }
+
+  try {
+    const result = await analyzeLinearCostLeaks({ listAllUsers, integration, inactivityDays })
+    return res.json({
+      summary: result.summary,
+      findings: result.findings,
+      warnings: result.warnings,
+      parameters: { inactivityDays },
+    })
+  } catch (e) {
+    const mapped = mapLinearError(e)
+    log("error", endpoint, "analysis failed", { code: e.code, message: e.message })
+    return res.status(mapped.status).json({ error: mapped.message, hint: mapped.hint })
+  }
+}
+
 module.exports = {
   startLinearOAuth,
   linearOAuthCallback,
@@ -332,7 +383,7 @@ module.exports = {
   getLinearStatus,
   disconnectLinear,
   getLinearUsers,
-  // exported for use by analyze handler added in later tasks:
+  analyzeLinearCostLeaks: analyzeLinearCostLeaksHandler,
   getIntegrationForUser,
   mapLinearError,
   log,
