@@ -31,7 +31,7 @@ async function check({ users, account, settings }) {
         check: "seat_tier_overprovisioning",
         title: `Seat tier overprovisioned: paying for ${maxUsers} seats, ${activeCount} active`,
         currency: "USD",
-        currentValue: maxUsers * seatCost * 12,
+        currentValue: annualSavings,
         potentialSavings: annualSavings,
         evidence: [`tier:${maxUsers}`, `active:${activeCount}`, `recommended:${lower}`],
         action: `Plan billed at ${maxUsers} seats but only ${activeCount} active members. Drop to the ${lower}-seat tier (Admin → Billing) to save ${seatsFreed} seats × $${seatCost}/mo.`,
