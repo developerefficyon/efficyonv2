@@ -256,6 +256,17 @@ const {
   analyzeAtlassianCostLeaksEndpoint,
 } = require("../controllers/atlassianController")
 
+// monday.com Controller - cost-leak integration
+const {
+  startMondayOAuth,
+  mondayOAuthCallback,
+  validateMonday,
+  getMondayStatus,
+  disconnectMonday,
+  getMondayUsers,
+  analyzeMondayCostLeaksEndpoint,
+} = require("../controllers/mondayController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -599,6 +610,15 @@ router.get("/api/integrations/atlassian/status", requireAuth, requireRole("owner
 router.get("/api/integrations/atlassian/users", requireAuth, requireRole("owner", "editor", "viewer"), getAtlassianUsers)
 router.get("/api/integrations/atlassian/cost-leaks", requireAuth, requireRole("owner", "editor"), analyzeAtlassianCostLeaksEndpoint)
 router.delete("/api/integrations/atlassian", requireAuth, requireRole("owner", "editor"), disconnectAtlassian)
+
+// monday.com cost-leak integration
+router.get(   "/api/integrations/monday/oauth/start", requireAuth, requireRole("owner", "editor"),           startMondayOAuth)
+router.get(   "/api/integrations/monday/callback",                                                            mondayOAuthCallback) // NO AUTH — monday browser redirect; state param verifies
+router.post(  "/api/integrations/monday/validate",    requireAuth, requireRole("owner", "editor"),           validateMonday)
+router.get(   "/api/integrations/monday/status",      requireAuth, requireRole("owner", "editor", "viewer"), getMondayStatus)
+router.get(   "/api/integrations/monday/users",       requireAuth, requireRole("owner", "editor", "viewer"), getMondayUsers)
+router.get(   "/api/integrations/monday/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeMondayCostLeaksEndpoint)
+router.delete("/api/integrations/monday",             requireAuth, requireRole("owner", "editor"),           disconnectMonday)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
