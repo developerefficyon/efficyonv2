@@ -468,6 +468,14 @@ function extractSummary(analysisData, provider) {
     summary.mediumSeverity = bySev.medium || 0
     summary.lowSeverity = bySev.low || 0
     summary.healthScore = null
+  } else if (provider === "Atlassian") {
+    const s = analysisData.summary || {}
+    summary.totalFindings = s.totalFindings || 0
+    summary.totalPotentialSavings = s.totalPotentialSavings || 0
+    summary.highSeverity = (s.criticalSeverity || 0) + (s.highSeverity || 0)
+    summary.mediumSeverity = s.mediumSeverity || 0
+    summary.lowSeverity = s.lowSeverity || 0
+    summary.healthScore = typeof s.healthScore === "number" ? s.healthScore : null
   }
 
   // Calculate health score if not already set
