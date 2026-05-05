@@ -276,6 +276,19 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
       />
     ),
   },
+  monday: {
+    color: "#FF3D57",
+    // monday.com logomark — three vertical bars (red/yellow/teal) approximated.
+    // simple-icons does not include monday's official logo, so this is a
+    // brand-faithful three-bar glyph.
+    path: (
+      <>
+        <rect x="3"  y="6" width="3.5" height="12" rx="1.75" fill="#FF3D57" />
+        <rect x="10.25" y="6" width="3.5" height="12" rx="1.75" fill="#FFCB00" />
+        <rect x="17.5"  y="6" width="3.5" height="12" rx="1.75" fill="#00CA72" />
+      </>
+    ),
+  },
 }
 
 /**

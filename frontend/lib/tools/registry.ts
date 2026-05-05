@@ -31,6 +31,7 @@ import { salesforceConfig } from "./configs/salesforce"
 import { notionConfig } from "./configs/notion"
 import { linearConfig } from "./configs/linear"
 import { atlassianConfig } from "./configs/atlassian"
+import { mondayConfig } from "./configs/monday"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
@@ -53,6 +54,7 @@ export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Zoom: zoomConfig,
   GitHub: githubConfig,
   Atlassian: atlassianConfig,
+  monday: mondayConfig,
 }
 
 /**

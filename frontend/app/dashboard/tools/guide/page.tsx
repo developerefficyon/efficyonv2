@@ -28,6 +28,7 @@ const INTEGRATIONS = [
   { id: "notion", label: "Notion", color: "#000000", desc: "Productivity" },
   { id: "linear", label: "Linear", color: "#5E6AD2", desc: "Productivity" },
   { id: "atlassian", label: "Atlassian", color: "#0052CC", desc: "Productivity" },
+  { id: "monday", label: "monday.com", color: "#FF3D57", desc: "Productivity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -2163,6 +2164,99 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your Client ID + Secret + access token + refresh token are encrypted at rest with AES-256-GCM before persisting. All scopes are read-only — Efficyon cannot create or modify any Jira issues, Confluence pages, or user data. Access tokens are refreshed automatically using <code>offline_access</code>. To revoke any time: developer.atlassian.com/console/myapps/ &rsaquo; find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> &rsaquo; delete or revoke.
+          </SecurityBox>
+        </div>
+      </section>
+
+      <section id="monday" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "monday" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#FF3D57]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="monday" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">monday.com</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#FF3D57]/50 mt-1">&#8226;</span>Admin access on monday.com</li>
+              <li className="flex items-start gap-2"><span className="text-[#FF3D57]/50 mt-1">&#8226;</span>Access to the monday.com Developer Center</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                In monday.com, click your avatar &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Developers</span> &rsaquo; <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Build apps</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Create app</span> and name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#FF3D57" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Open <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">OAuth &amp; Permissions</span> and add these scopes:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>me:read</ScopeBadge>
+                  <ScopeBadge>users:read</ScopeBadge>
+                  <ScopeBadge>account:read</ScopeBadge>
+                  <ScopeBadge>boards:read</ScopeBadge>
+                  <ScopeBadge>updates:read</ScopeBadge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Redirect URLs</span> add: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/monday/callback</span> (use your production host when deployed).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Basic Information</span> tab.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, open the monday.com tile, paste both values plus your per-seat cost, and click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#FF3D57" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Approve consent on the monday.com screen as an <strong>Admin user</strong>.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            V1 checks: <strong>inactive users</strong> (licensed users with no activity within the inactivity window), <strong>seat-tier overprovisioning</strong> (account is on a higher seat tier than utilized), <strong>view-only members on paid plans</strong> (guests or viewers consuming paid seats), and <strong>pending invites</strong> (outstanding invites holding seats). Inactivity window default: 60 days.
+          </InfoBox>
+
+          <SecurityBox>
+            Your Client ID + Secret + access token are encrypted at rest with AES-256-GCM before persisting. All scopes are read-only — Efficyon cannot create or modify any monday.com boards, items, or user data. To revoke any time: monday.com Developer Center &rsaquo; find <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> &rsaquo; delete or revoke.
           </SecurityBox>
         </div>
       </section>
