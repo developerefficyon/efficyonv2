@@ -33,6 +33,7 @@ import { linearConfig } from "./configs/linear"
 import { atlassianConfig } from "./configs/atlassian"
 import { mondayConfig } from "./configs/monday"
 import { asanaConfig } from "./configs/asana"
+import { airtableConfig } from "./configs/airtable"
 
 export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Fortnox: fortnoxConfig,
@@ -57,6 +58,7 @@ export const TOOL_REGISTRY: Record<string, UnifiedToolConfig> = {
   Atlassian: atlassianConfig,
   monday: mondayConfig,
   asana: asanaConfig,
+  airtable: airtableConfig,
 }
 
 /**

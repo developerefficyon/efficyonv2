@@ -30,6 +30,7 @@ const INTEGRATIONS = [
   { id: "atlassian", label: "Atlassian", color: "#0052CC", desc: "Productivity" },
   { id: "monday", label: "monday.com", color: "#FF3D57", desc: "Productivity" },
   { id: "asana", label: "Asana", color: "#F06A6A", desc: "Productivity" },
+  { id: "airtable", label: "Airtable", color: "#FCB400", desc: "Productivity" },
 ] as const
 
 function StepNumber({ n, color }: { n: number; color: string }) {
@@ -2350,6 +2351,99 @@ export default function SetupGuidePage() {
 
           <SecurityBox>
             Your Client ID + Secret + access + refresh tokens are encrypted at rest with AES-256-GCM before persisting. The <span className="font-mono text-white/40">default</span> scope is broad but Efficyon only ever issues read calls (<span className="font-mono text-white/40">/users/me</span>, <span className="font-mono text-white/40">/workspace_memberships</span>, <span className="font-mono text-white/40">/tasks</span>). On disconnect, Efficyon revokes the OAuth token automatically. To remove the app entirely: Asana &rsaquo; My profile &rsaquo; Apps &rsaquo; <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> &rsaquo; Deauthorize.
+          </SecurityBox>
+        </div>
+      </section>
+
+      <section id="airtable" className={`rounded-2xl border border-white/[0.05] bg-[#0c0c0e]/80 backdrop-blur-xl p-0 overflow-hidden ${activeTab !== "airtable" ? "hidden" : ""}`}>
+        <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.04]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#FCB400]/20 to-transparent" />
+          <div className="flex items-center gap-3">
+            <ToolLogo name="airtable" size={32} />
+            <div>
+              <h3 className="text-[16px] font-semibold text-white/90 tracking-[-0.01em]">Airtable</h3>
+              <p className="text-[11.5px] text-white/25 mt-0.5">Productivity</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider mb-2.5">Prerequisites</p>
+            <ul className="text-[12.5px] text-white/35 space-y-1.5">
+              <li className="flex items-start gap-2"><span className="text-[#FCB400]/50 mt-1">&#8226;</span>Workspace owner on Airtable</li>
+              <li className="flex items-start gap-2"><span className="text-[#FCB400]/50 mt-1">&#8226;</span>Access to the Airtable Builder Hub</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3.5">
+            <p className="text-[12px] font-medium text-white/40 uppercase tracking-wider">Steps</p>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={1} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Open <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">airtable.com/create/oauth</span> (Builder Hub &rsaquo; OAuth integrations).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={2} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Register new OAuth integration</span> and name it <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Efficyon Cost Analyzer</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={3} color="#FCB400" />
+              <div className="pt-1 space-y-2">
+                <p className="text-[12.5px] text-white/40 leading-relaxed">
+                  Add the following read-only scopes:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <ScopeBadge>user.email:read</ScopeBadge>
+                  <ScopeBadge>schema.bases:read</ScopeBadge>
+                </div>
+                <p className="text-[11.5px] text-white/30 leading-relaxed">
+                  Member listing and per-user inactive checks need <span className="font-mono text-white/45">enterprise.scim.usersAndGroups:read</span> on Enterprise plans — V1 skips those checks gracefully without it.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={4} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Under <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Redirect URLs</span> add: <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">https://efficyonv2.onrender.com/api/integrations/airtable/callback</span> (use your production host when deployed).
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={5} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the integration's detail page.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={6} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Back in Efficyon, open the Airtable tile, paste both values plus your plan tier, per-seat cost, and seat counts (subscribed/active), then click <span className="font-mono text-white/55 bg-white/[0.04] px-1.5 py-0.5 rounded text-[11px]">Connect</span>.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <StepNumber n={7} color="#FCB400" />
+              <p className="text-[12.5px] text-white/40 leading-relaxed pt-1">
+                Approve consent on the Airtable screen as the <strong>workspace owner</strong>.
+              </p>
+            </div>
+          </div>
+
+          <InfoBox title="About findings">
+            V1 checks: <strong>seat overprovisioning</strong> (subscribed seats &gt; active seats from your input), <strong>plan-tier overspec</strong> (Business plan with a base count that fits Team's 50-base ceiling), plus placeholders for <strong>inactive user</strong> and <strong>editor misclassified</strong> that activate once Enterprise SCIM scopes are granted. Without Enterprise, only the connecting user is visible via the public OAuth API.
+          </InfoBox>
+
+          <SecurityBox>
+            Your Client ID + Secret + access + refresh tokens (and the PKCE verifier during the OAuth handshake) are encrypted at rest with AES-256-GCM before persisting. Scopes are read-only — Efficyon cannot create or modify any Airtable bases, records, or workspace settings. On disconnect, Efficyon revokes the OAuth token automatically. To remove the integration entirely: airtable.com/create/oauth &rsaquo; <span className="font-mono text-white/40 bg-white/[0.04] px-1 py-0.5 rounded text-[10px]">Efficyon Cost Analyzer</span> &rsaquo; Revoke or delete.
           </SecurityBox>
         </div>
       </section>

@@ -278,6 +278,17 @@ const {
   analyzeAsanaCostLeaksEndpoint,
 } = require("../controllers/asanaController")
 
+// Airtable Controller - cost-leak integration
+const {
+  startAirtableOAuth,
+  airtableOAuthCallback,
+  validateAirtable,
+  getAirtableStatus,
+  disconnectAirtable,
+  getAirtableUsers,
+  analyzeAirtableCostLeaksEndpoint,
+} = require("../controllers/airtableController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -639,6 +650,15 @@ router.get(   "/api/integrations/asana/status",      requireAuth, requireRole("o
 router.get(   "/api/integrations/asana/users",       requireAuth, requireRole("owner", "editor", "viewer"), getAsanaUsers)
 router.get(   "/api/integrations/asana/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeAsanaCostLeaksEndpoint)
 router.delete("/api/integrations/asana",             requireAuth, requireRole("owner", "editor"),           disconnectAsana)
+
+// Airtable cost-leak integration
+router.get(   "/api/integrations/airtable/oauth/start", requireAuth, requireRole("owner", "editor"),           startAirtableOAuth)
+router.get(   "/api/integrations/airtable/callback",                                                            airtableOAuthCallback) // NO AUTH — Airtable browser redirect; state param verifies
+router.post(  "/api/integrations/airtable/validate",    requireAuth, requireRole("owner", "editor"),           validateAirtable)
+router.get(   "/api/integrations/airtable/status",      requireAuth, requireRole("owner", "editor", "viewer"), getAirtableStatus)
+router.get(   "/api/integrations/airtable/users",       requireAuth, requireRole("owner", "editor", "viewer"), getAirtableUsers)
+router.get(   "/api/integrations/airtable/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeAirtableCostLeaksEndpoint)
+router.delete("/api/integrations/airtable",             requireAuth, requireRole("owner", "editor"),           disconnectAirtable)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
