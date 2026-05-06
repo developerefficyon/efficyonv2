@@ -15,8 +15,11 @@ import type { ReactNode } from "react"
 export interface ToolBrand {
   /** Hex color used for the icon fill and the rounded background tint. */
   color: string
-  /** The 24×24 path content (children of the inner <svg viewBox="0 0 24 24">). */
+  /** Path content. By default authored in a 24×24 viewBox; override via `viewBox`. */
   path: ReactNode
+  /** Optional viewBox override for `path` if the source SVG uses different
+   * coordinates (e.g. the official monday.com SVG is 132×127). */
+  viewBox?: string
 }
 
 export const TOOL_BRANDS: Record<string, ToolBrand> = {
@@ -268,24 +271,42 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
   },
   atlassian: {
     color: "#0052CC",
-    // Atlassian stacked-A mark from simple-icons.
+    // Atlassian — official two-tone stacked-A mark from Atlassian's brand
+    // assets (worldvectorlogo). Left A in primary #0052CC, right A in
+    // #2684FF — the iconic two-toned rendering.
+    viewBox: "0 0 146 146",
     path: (
-      <path
-        fill="currentColor"
-        d="M7.12 11.084a.679.679 0 0 0-1.15.105L.132 22.978a.703.703 0 0 0 .628 1.018h8.16a.671.671 0 0 0 .628-.395c1.78-3.682.701-9.273-2.428-12.517zm4.323-5.34a15.456 15.456 0 0 0-.91 15.252.704.704 0 0 0 .628.39h8.16a.704.704 0 0 0 .628-1.018S13.823 7.382 12.557 4.853a.69.69 0 0 0-1.114-.001z"
-      />
+      <>
+        <path
+          fill="#0052CC"
+          d="M43 67a4.14 4.14 0 0 0-5.79-.78A4.29 4.29 0 0 0 36 67.73L.45 138.85a4.25 4.25 0 0 0 1.9 5.7 4.18 4.18 0 0 0 1.9.45h49.53a4.08 4.08 0 0 0 3.8-2.35C68.27 120.57 61.79 87 43 67z"
+        />
+        <path
+          fill="#2684FF"
+          d="M69.13 2.28a93.82 93.82 0 0 0-5.48 92.61l23.88 47.76a4.25 4.25 0 0 0 3.8 2.35h49.52a4.24 4.24 0 0 0 4.25-4.25 4.31 4.31 0 0 0-.44-1.9L76.36 2.26a4 4 0 0 0-7.23 0z"
+        />
+      </>
     ),
   },
   monday: {
-    color: "#FF3D57",
-    // monday.com logomark — three vertical bars (red/yellow/teal) approximated.
-    // simple-icons does not include monday's official logo, so this is a
-    // brand-faithful three-bar glyph.
+    color: "#FB275D",
+    // monday.com — official avatar mark from monday.com's brand resources
+    // (cdn.prod.website-files.com/.../monday.com-2.svg). Two slanted droplets
+    // (pink #FB275D, yellow #FFCC00) plus a green dot (#00CA72) whose negative
+    // space forms the "m". Native SVG viewBox is 132×127; cropped to 0 22 132 78
+    // to remove empty top/bottom padding so the mark fills the icon tile.
+    viewBox: "0 22 132 78",
     path: (
       <>
-        <rect x="3"  y="6" width="3.5" height="12" rx="1.75" fill="#FF3D57" />
-        <rect x="10.25" y="6" width="3.5" height="12" rx="1.75" fill="#FFCB00" />
-        <rect x="17.5"  y="6" width="3.5" height="12" rx="1.75" fill="#00CA72" />
+        <path
+          fill="#FB275D"
+          d="M21.4 93.7968C16.0264 93.792 11.0788 90.9938 8.47805 86.4887C5.87734 81.9835 6.03321 76.4811 8.88514 72.1177L35.4949 31.4164C38.2281 26.9846 43.2559 24.3225 48.6268 24.4636C53.9977 24.6047 58.8658 27.5266 61.3414 32.0953C63.817 36.6639 63.5103 42.1598 60.5403 46.4495L33.9464 87.1508C31.2415 91.292 26.4989 93.8042 21.4 93.7968Z"
+        />
+        <path
+          fill="#FFCC00"
+          d="M66.7371 93.7968C61.3723 93.792 56.4328 91.0004 53.8364 86.506C51.2399 82.0116 51.3955 76.5222 54.2428 72.1692L80.8011 31.5645C83.4914 27.0681 88.5369 24.3423 93.9481 24.462C99.3593 24.5817 104.268 27.5277 106.738 32.1383C109.209 36.7489 108.845 42.2843 105.79 46.5619L79.2315 87.1665C76.5369 91.2888 71.8165 93.7937 66.7371 93.7968V93.7968Z"
+        />
+        <circle cx="110.939" cy="79.1898" r="17.3898" fill="#00CA72" />
       </>
     ),
   },
@@ -349,7 +370,7 @@ export function ToolLogo({ name, size = 40 }: { name?: string; size?: number }) 
         strokeOpacity={0.1}
       />
       <g transform={`translate(${offset} ${offset})`}>
-        <svg viewBox="0 0 24 24" width={inner} height={inner}>
+        <svg viewBox={brand.viewBox || "0 0 24 24"} width={inner} height={inner}>
           {brand.path}
         </svg>
       </g>
