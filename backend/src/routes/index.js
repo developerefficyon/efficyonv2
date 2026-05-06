@@ -267,6 +267,17 @@ const {
   analyzeMondayCostLeaksEndpoint,
 } = require("../controllers/mondayController")
 
+// Asana Controller - cost-leak integration
+const {
+  startAsanaOAuth,
+  asanaOAuthCallback,
+  validateAsana,
+  getAsanaStatus,
+  disconnectAsana,
+  getAsanaUsers,
+  analyzeAsanaCostLeaksEndpoint,
+} = require("../controllers/asanaController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -619,6 +630,15 @@ router.get(   "/api/integrations/monday/status",      requireAuth, requireRole("
 router.get(   "/api/integrations/monday/users",       requireAuth, requireRole("owner", "editor", "viewer"), getMondayUsers)
 router.get(   "/api/integrations/monday/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeMondayCostLeaksEndpoint)
 router.delete("/api/integrations/monday",             requireAuth, requireRole("owner", "editor"),           disconnectMonday)
+
+// Asana cost-leak integration
+router.get(   "/api/integrations/asana/oauth/start", requireAuth, requireRole("owner", "editor"),           startAsanaOAuth)
+router.get(   "/api/integrations/asana/callback",                                                            asanaOAuthCallback) // NO AUTH — Asana browser redirect; state param verifies
+router.post(  "/api/integrations/asana/validate",    requireAuth, requireRole("owner", "editor"),           validateAsana)
+router.get(   "/api/integrations/asana/status",      requireAuth, requireRole("owner", "editor", "viewer"), getAsanaStatus)
+router.get(   "/api/integrations/asana/users",       requireAuth, requireRole("owner", "editor", "viewer"), getAsanaUsers)
+router.get(   "/api/integrations/asana/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeAsanaCostLeaksEndpoint)
+router.delete("/api/integrations/asana",             requireAuth, requireRole("owner", "editor"),           disconnectAsana)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)
