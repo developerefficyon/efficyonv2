@@ -289,6 +289,24 @@ const {
   analyzeAirtableCostLeaksEndpoint,
 } = require("../controllers/airtableController")
 
+// Visma eAccounting Controller - cost-leak integration
+const {
+  startVismaOAuth,
+  vismaOAuthCallback,
+  validateVisma,
+  getVismaStatus,
+  disconnectVisma,
+  getVismaCompany,
+  getVismaCustomers,
+  getVismaSuppliers,
+  getVismaCustomerInvoices,
+  getVismaSupplierInvoices,
+  getVismaArticles,
+  getVismaAccounts,
+  getVismaVouchers,
+  analyzeVismaCostLeaksEndpoint,
+} = require("../controllers/vismaController")
+
 // QuickBooks Controller - QuickBooks OAuth and data operations
 const {
   startQuickBooksOAuth,
@@ -659,6 +677,22 @@ router.get(   "/api/integrations/airtable/status",      requireAuth, requireRole
 router.get(   "/api/integrations/airtable/users",       requireAuth, requireRole("owner", "editor", "viewer"), getAirtableUsers)
 router.get(   "/api/integrations/airtable/cost-leaks",  requireAuth, requireRole("owner", "editor"),           analyzeAirtableCostLeaksEndpoint)
 router.delete("/api/integrations/airtable",             requireAuth, requireRole("owner", "editor"),           disconnectAirtable)
+
+// Visma eAccounting cost-leak integration
+router.get(   "/api/integrations/visma/oauth/start",     requireAuth, requireRole("owner", "editor"),           startVismaOAuth)
+router.get(   "/api/integrations/visma/callback",                                                                vismaOAuthCallback) // NO AUTH — Visma browser redirect; state param verifies
+router.post(  "/api/integrations/visma/validate",        requireAuth, requireRole("owner", "editor"),           validateVisma)
+router.get(   "/api/integrations/visma/status",          requireAuth, requireRole("owner", "editor", "viewer"), getVismaStatus)
+router.get(   "/api/integrations/visma/company",         requireAuth, requireRole("owner", "editor", "viewer"), getVismaCompany)
+router.get(   "/api/integrations/visma/customers",       requireAuth, requireRole("owner", "editor", "viewer"), getVismaCustomers)
+router.get(   "/api/integrations/visma/suppliers",       requireAuth, requireRole("owner", "editor", "viewer"), getVismaSuppliers)
+router.get(   "/api/integrations/visma/invoices",        requireAuth, requireRole("owner", "editor", "viewer"), getVismaCustomerInvoices)
+router.get(   "/api/integrations/visma/supplier-invoices", requireAuth, requireRole("owner", "editor", "viewer"), getVismaSupplierInvoices)
+router.get(   "/api/integrations/visma/articles",        requireAuth, requireRole("owner", "editor", "viewer"), getVismaArticles)
+router.get(   "/api/integrations/visma/accounts",        requireAuth, requireRole("owner", "editor", "viewer"), getVismaAccounts)
+router.get(   "/api/integrations/visma/vouchers",        requireAuth, requireRole("owner", "editor", "viewer"), getVismaVouchers)
+router.get(   "/api/integrations/visma/cost-leaks",      requireAuth, requireRole("owner", "editor", "viewer"), analyzeVismaCostLeaksEndpoint)
+router.delete("/api/integrations/visma",                 requireAuth, requireRole("owner", "editor"),           disconnectVisma)
 
 // QuickBooks routes
 router.get("/api/integrations/quickbooks/oauth/start", requireAuth, requireRole("owner", "editor"), startQuickBooksOAuth)

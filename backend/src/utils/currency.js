@@ -114,6 +114,50 @@ async function getSekToUsdRate() {
   }
 }
 
+// Generic multi-currency rate cache (Frankfurter, ECB data).
+// Keyed by `${from}->USD`. Used by Visma which may be in SEK / NOK / EUR / DKK.
+const RATE_CACHE = new Map() // key -> { rate, fetchedAt }
+const FALLBACK_RATES_TO_USD = {
+  SEK: SEK_TO_USD_FALLBACK,
+  NOK: 0.094,
+  DKK: 0.144,
+  EUR: 1.07,
+  GBP: 1.27,
+  USD: 1.0,
+}
+
+/**
+ * Returns the current {fromCurrency}→USD rate.
+ * Caches in-memory for 24h; falls back to a hardcoded value on fetch failure.
+ * Returns 1.0 for USD or unknown currencies (caller should leave amounts native).
+ */
+async function getRateToUsd(fromCurrency) {
+  const code = (fromCurrency || "USD").toString().toUpperCase()
+  if (code === "USD") return 1.0
+  const fallback = FALLBACK_RATES_TO_USD[code]
+  if (fallback === undefined) {
+    log("warn", `No fallback rate for ${code} — returning 1.0 (amounts will display in native currency)`)
+    return 1.0
+  }
+  const cacheKey = `${code}->USD`
+  const now = Date.now()
+  const cached = RATE_CACHE.get(cacheKey)
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) return cached.rate
+  try {
+    const res = await fetch(`https://api.frankfurter.app/latest?from=${code}&to=USD`)
+    if (!res.ok) throw new Error(`Frankfurter returned ${res.status}`)
+    const data = await res.json()
+    const rate = data?.rates?.USD
+    if (typeof rate !== "number") throw new Error("Missing USD rate in response")
+    RATE_CACHE.set(cacheKey, { rate, fetchedAt: now })
+    log("log", `Live rate fetched: 1 ${code} = ${rate} USD`)
+    return rate
+  } catch (err) {
+    log("warn", `Live rate fetch failed for ${code} (${err.message}) — using fallback ${fallback}`)
+    return fallback
+  }
+}
+
 module.exports = {
   INTEGRATION_CURRENCIES,
   getCurrencyForIntegration,
@@ -121,5 +165,7 @@ module.exports = {
   formatCurrencyForIntegration,
   getCurrencySymbol,
   getSekToUsdRate,
+  getRateToUsd,
   SEK_TO_USD_FALLBACK,
+  FALLBACK_RATES_TO_USD,
 }

@@ -320,6 +320,17 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
       />
     ),
   },
+  visma: {
+    color: "#E60028",
+    // Visma "infinity" / dual-loop mark (simplified glyph in Visma red).
+    // Visma's official wordmark uses this stylized lemniscate symbol.
+    path: (
+      <path
+        fill="#E60028"
+        d="M6.5 7C3.46 7 1 9.46 1 12.5S3.46 18 6.5 18c1.86 0 3.5-.92 4.5-2.34A5.5 5.5 0 0 0 17.5 18c3.04 0 5.5-2.46 5.5-5.5S20.54 7 17.5 7c-1.86 0-3.5.92-4.5 2.34A5.5 5.5 0 0 0 6.5 7Zm0 2.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm11 0a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+      />
+    ),
+  },
   airtable: {
     color: "#FCB400",
     // Airtable three-shape mark (yellow square + red triangle + blue stripe + dot)

@@ -3,6 +3,7 @@
 // Map integration types to their default currencies
 export const INTEGRATION_CURRENCIES: Record<string, string> = {
   fortnox: "SEK",
+  visma: "SEK",
   quickbooks: "USD",
   xero: "USD",
   stripe: "USD",

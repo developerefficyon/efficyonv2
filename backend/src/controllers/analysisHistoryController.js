@@ -500,6 +500,15 @@ function extractSummary(analysisData, provider) {
     summary.mediumSeverity = s.mediumSeverity || 0
     summary.lowSeverity = s.lowSeverity || 0
     summary.healthScore = typeof s.healthScore === "number" ? s.healthScore : null
+  } else if (provider === "Visma") {
+    // Same overallSummary shape as Fortnox (totalFindings / totalPotentialSavings
+    // / highSeverity / mediumSeverity / lowSeverity).
+    const overall = analysisData.overallSummary || {}
+    summary.totalFindings = overall.totalFindings || 0
+    summary.totalPotentialSavings = overall.totalPotentialSavings || 0
+    summary.highSeverity = overall.highSeverity || 0
+    summary.mediumSeverity = overall.mediumSeverity || 0
+    summary.lowSeverity = overall.lowSeverity || 0
   }
 
   // Calculate health score if not already set
