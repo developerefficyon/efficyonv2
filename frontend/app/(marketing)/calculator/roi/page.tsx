@@ -9,6 +9,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
@@ -509,6 +510,8 @@ export default function ROICalculatorPage() {
           ))}
         </div>
       </section>
+
+      <RelatedLinks variant="calculator" />
 
       <EditorialFinalCTA
         title="Stop modeling."
