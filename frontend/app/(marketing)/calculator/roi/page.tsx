@@ -10,6 +10,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 /* ------------------------------------------------------------------ */
 /*  Pricing tiers (preserved)                                         */
@@ -160,6 +161,10 @@ export default function ROICalculatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Calculators", path: "/calculator" }, { name: "Optimization ROI Calculator", path: "/calculator/roi" }])]) }}
       />
 
       {/* HERO */}

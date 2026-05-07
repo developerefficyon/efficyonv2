@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Free SaaS Calculators & Tools | Efficyon",
@@ -51,32 +52,38 @@ const CALCULATORS = [
 ] as const
 
 export default function CalculatorIndexPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Free SaaS Calculators & Tools",
-    description:
-      "Interactive SaaS cost calculators to help businesses optimize their software spending.",
-    url: absoluteUrl("/calculator"),
-    mainEntity: CALCULATORS.map((calc) => ({
-      "@type": "WebApplication",
-      name: calc.title,
-      url: absoluteUrl(`/calculator/${calc.slug}`),
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-    })),
-  }
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Free SaaS Calculators & Tools",
+      description:
+        "Interactive SaaS cost calculators to help businesses optimize their software spending.",
+      url: absoluteUrl("/calculator"),
+      mainEntity: CALCULATORS.map((calc) => ({
+        "@type": "WebApplication",
+        name: calc.title,
+        url: absoluteUrl(`/calculator/${calc.slug}`),
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      })),
+    },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Calculators", path: "/calculator" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

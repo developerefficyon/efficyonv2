@@ -9,6 +9,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 /* ------------------------------------------------------------------ */
 /*  Industry benchmark data (preserved)                               */
@@ -144,6 +145,10 @@ export default function SaaSCostCalculatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Calculators", path: "/calculator" }, { name: "SaaS Cost Calculator", path: "/calculator/saas-cost" }])]) }}
       />
 
       {/* HERO */}

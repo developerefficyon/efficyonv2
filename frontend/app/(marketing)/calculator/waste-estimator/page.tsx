@@ -9,6 +9,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 /* ------------------------------------------------------------------ */
 /*  Audit recency multipliers (preserved)                             */
@@ -175,6 +176,10 @@ export default function WasteEstimatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Calculators", path: "/calculator" }, { name: "SaaS Waste Estimator", path: "/calculator/waste-estimator" }])]) }}
       />
 
       {/* HERO */}
