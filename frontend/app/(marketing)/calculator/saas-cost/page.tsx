@@ -8,6 +8,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 /* ------------------------------------------------------------------ */
 /*  Industry benchmark data (preserved)                               */
@@ -118,7 +119,7 @@ export default function SaaSCostCalculatorPage() {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       name: "SaaS Cost Calculator",
-      url: "https://www.efficyon.com/calculator/saas-cost",
+      url: absoluteUrl("/calculator/saas-cost"),
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:

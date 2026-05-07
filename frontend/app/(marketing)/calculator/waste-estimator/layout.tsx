@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Waste Estimator: How Much Are You Losing? | Efficyon",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "SaaS Waste Estimator | Efficyon",
     description:
       "How much is your company losing to SaaS waste? Estimate unused license costs, duplicate tool spending, and overprovisioning waste instantly.",
-    url: "https://www.efficyon.com/calculator/waste-estimator",
+    url: absoluteUrl("/calculator/waste-estimator"),
     type: "website",
   },
 }

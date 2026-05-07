@@ -8,6 +8,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 /* ------------------------------------------------------------------ */
 /*  Audit recency multipliers (preserved)                             */
@@ -151,7 +152,7 @@ export default function WasteEstimatorPage() {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       name: "SaaS Waste Estimator",
-      url: "https://www.efficyon.com/calculator/waste-estimator",
+      url: absoluteUrl("/calculator/waste-estimator"),
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:

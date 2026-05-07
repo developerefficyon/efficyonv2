@@ -9,6 +9,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 /* ------------------------------------------------------------------ */
 /*  Pricing tiers (preserved)                                         */
@@ -136,7 +137,7 @@ export default function ROICalculatorPage() {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       name: "SaaS Optimization ROI Calculator",
-      url: "https://www.efficyon.com/calculator/roi",
+      url: absoluteUrl("/calculator/roi"),
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Cost Calculator: How Much Should Your Company Spend? | Efficyon",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "SaaS Cost Calculator | Efficyon",
     description:
       "How much should your company spend on SaaS? Use our free calculator to compare your spending against industry benchmarks and identify potential savings.",
-    url: "https://www.efficyon.com/calculator/saas-cost",
+    url: absoluteUrl("/calculator/saas-cost"),
     type: "website",
   },
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Optimization ROI Calculator | Efficyon",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "SaaS Optimization ROI Calculator | Efficyon",
     description:
       "Calculate your potential ROI from SaaS cost optimization. See projected savings, payback period, and 3-year net returns.",
-    url: "https://www.efficyon.com/calculator/roi",
+    url: absoluteUrl("/calculator/roi"),
     type: "website",
   },
 }

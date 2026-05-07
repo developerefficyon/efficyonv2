@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Free SaaS Calculators & Tools | Efficyon",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Free SaaS Calculators & Tools | Efficyon",
     description:
       "Free interactive SaaS calculators to estimate your software costs, calculate ROI from optimization, and identify subscription waste.",
-    url: "https://www.efficyon.com/calculator",
+    url: absoluteUrl("/calculator"),
   },
 }
 
@@ -56,11 +57,11 @@ export default function CalculatorIndexPage() {
     name: "Free SaaS Calculators & Tools",
     description:
       "Interactive SaaS cost calculators to help businesses optimize their software spending.",
-    url: "https://www.efficyon.com/calculator",
+    url: absoluteUrl("/calculator"),
     mainEntity: CALCULATORS.map((calc) => ({
       "@type": "WebApplication",
       name: calc.title,
-      url: `https://www.efficyon.com/calculator/${calc.slug}`,
+      url: absoluteUrl(`/calculator/${calc.slug}`),
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       offers: {
