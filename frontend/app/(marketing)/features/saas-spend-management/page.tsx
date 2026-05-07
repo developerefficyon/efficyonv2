@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Complete SaaS Spend Management in One Platform",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Complete SaaS Spend Management in One Platform | Efficyon",
     description:
       "Full SaaS spend visibility with real-time dashboards, budget controls, forecasting, and department allocation. Replace your spreadsheet without losing the spreadsheet's clarity.",
-    url: "https://www.efficyon.com/features/saas-spend-management",
+    url: absoluteUrl("/features/saas-spend-management"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function SaaSSpendManagementPage() {
       name: "Efficyon SaaS Spend Management",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/saas-spend-management",
+      url: absoluteUrl("/features/saas-spend-management"),
       description:
         "Complete SaaS spend management platform with real-time dashboards, budget controls, forecasting, and department allocation in one unified view.",
       offers: {

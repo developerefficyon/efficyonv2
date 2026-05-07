@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Cost Optimization That Pays for Itself",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "SaaS Cost Optimization That Pays for Itself | Efficyon",
     description:
       "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
-    url: "https://www.efficyon.com/features/saas-cost-optimization",
+    url: absoluteUrl("/features/saas-cost-optimization"),
     type: "website",
   },
 }
@@ -32,7 +33,7 @@ export default function SaaSCostOptimizationPage() {
       name: "Efficyon SaaS Cost Optimization",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/saas-cost-optimization",
+      url: absoluteUrl("/features/saas-cost-optimization"),
       description:
         "AI-powered SaaS cost optimization platform that analyzes usage data, detects waste, and delivers actionable savings recommendations.",
       offers: {

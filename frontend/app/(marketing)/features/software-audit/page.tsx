@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Automated Software Audits in Minutes, Not Months",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Automated Software Audits in Minutes, Not Months | Efficyon",
     description:
       "Continuously updated software inventory, license compliance tracking, and audit-ready reports. Replace the annual spreadsheet scramble with a feed.",
-    url: "https://www.efficyon.com/features/software-audit",
+    url: absoluteUrl("/features/software-audit"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function SoftwareAuditPage() {
       name: "Efficyon Software Audit Tool",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/software-audit",
+      url: absoluteUrl("/features/software-audit"),
       description:
         "Automated software audit tool that provides complete software inventory, license compliance tracking, and audit-ready reports with continuous monitoring.",
       offers: {

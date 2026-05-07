@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Find Every Unused License Draining Your Budget",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Find Every Unused License Draining Your Budget | Efficyon",
     description:
       "Detect unused and underutilized SaaS licenses automatically. Efficyon analyzes 90-day activity windows to identify idle seats, departed-employee licenses, and overprovisioned tiers.",
-    url: "https://www.efficyon.com/features/unused-license-detection",
+    url: absoluteUrl("/features/unused-license-detection"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function UnusedLicenseDetectionPage() {
       name: "Efficyon Unused License Detection",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/unused-license-detection",
+      url: absoluteUrl("/features/unused-license-detection"),
       description:
         "Unused software license detection tool that analyzes real usage data to identify idle seats, departed employee licenses, and overprovisioned subscription tiers.",
       offers: {

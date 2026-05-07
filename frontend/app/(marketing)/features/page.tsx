@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Features - SaaS Cost Optimization Tools",
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     title: "Features - SaaS Cost Optimization Tools | Efficyon",
     description:
       "Explore Efficyon's full suite of SaaS cost optimization features. From subscription tracking and duplicate payment detection to AI-powered cost analysis and automated software audits.",
-    url: "https://www.efficyon.com/features",
+    url: absoluteUrl("/features"),
     type: "website",
   },
 }
@@ -92,7 +93,7 @@ export default function FeaturesIndexPage() {
     name: "Efficyon",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    url: "https://www.efficyon.com/features",
+    url: absoluteUrl("/features"),
     description:
       "AI-powered SaaS cost optimization platform with subscription tracking, duplicate payment detection, unused license detection, spend management, AI cost analysis, and automated software audits.",
     offers: {

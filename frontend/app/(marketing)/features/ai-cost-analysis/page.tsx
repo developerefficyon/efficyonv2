@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "AI Cost Analysis That Finds What Humans Miss",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "AI Cost Analysis That Finds What Humans Miss | Efficyon",
     description:
       "Continuous, explainable cost analysis tuned on accounting + usage data — not generic finance. Pattern recognition, anomaly detection, and prioritized recommendations across your entire stack.",
-    url: "https://www.efficyon.com/features/ai-cost-analysis",
+    url: absoluteUrl("/features/ai-cost-analysis"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function AICostAnalysisPage() {
       name: "Efficyon AI Cost Analysis",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/ai-cost-analysis",
+      url: absoluteUrl("/features/ai-cost-analysis"),
       description:
         "AI-powered cost analysis that uses pattern recognition and anomaly detection on accounting and usage data to surface optimization opportunities.",
       offers: {

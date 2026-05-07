@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Stop Paying Twice for the Same Software",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Stop Paying Twice for the Same Software | Efficyon",
     description:
       "Detect duplicate invoices, overlapping SaaS tools, and redundant subscriptions. Pattern-matching across accounting, expense, and usage data — the kind of leak no spreadsheet catches.",
-    url: "https://www.efficyon.com/features/duplicate-payment-detection",
+    url: absoluteUrl("/features/duplicate-payment-detection"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function DuplicatePaymentDetectionPage() {
       name: "Efficyon Duplicate Payment Detection",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/duplicate-payment-detection",
+      url: absoluteUrl("/features/duplicate-payment-detection"),
       description:
         "AI-powered duplicate payment detection software that identifies overlapping SaaS tools, redundant subscriptions, and duplicate invoices across your organization.",
       offers: {

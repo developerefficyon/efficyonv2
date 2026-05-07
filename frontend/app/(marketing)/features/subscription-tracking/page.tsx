@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Subscription Tracking That Never Misses a Renewal",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Subscription Tracking That Never Misses a Renewal | Efficyon",
     description:
       "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
-    url: "https://www.efficyon.com/features/subscription-tracking",
+    url: absoluteUrl("/features/subscription-tracking"),
     type: "website",
   },
 }
@@ -31,7 +32,7 @@ export default function SubscriptionTrackingPage() {
       name: "Efficyon Subscription Tracking",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://www.efficyon.com/features/subscription-tracking",
+      url: absoluteUrl("/features/subscription-tracking"),
       description:
         "Centralized SaaS subscription tracking platform with renewal alerts, cost trend analysis, shadow IT detection, and department-level spend breakdowns.",
       offers: {
