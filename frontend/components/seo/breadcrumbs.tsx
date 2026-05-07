@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { absoluteUrl } from "@/lib/site"
 
 interface BreadcrumbItem {
   label: string
@@ -19,7 +20,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
       "@type": "ListItem",
       position: index + 1,
       name: item.label,
-      item: `https://www.efficyon.com${item.href}`,
+      item: absoluteUrl(item.href),
     })),
   }
 

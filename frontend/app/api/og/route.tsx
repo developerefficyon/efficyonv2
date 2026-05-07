@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og"
+import { absoluteUrl } from "@/lib/site"
 
 export const runtime = "edge"
 
@@ -19,7 +20,7 @@ export async function GET() {
       >
         {/* Logo */}
         <img
-          src="https://www.efficyon.com/logo.png"
+          src={absoluteUrl("/logo.png")}
           width={120}
           height={120}
           style={{ marginBottom: 32 }}
