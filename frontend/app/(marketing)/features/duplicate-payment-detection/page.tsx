@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -124,14 +125,22 @@ export default function DuplicatePaymentDetectionPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>"Orphan" subscriptions — tied to people who left, paid through a card nobody audits.</span>
+                <span>&ldquo;Orphan&rdquo; subscriptions — tied to people who left, paid through a card nobody audits. See{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    unused license detection
+                  </Link>
+                  {" "}for the seat-level view of the same problem.</span>
               </li>
             </ul>
           </div>
           <div>
             <EditorialMonoLabel>Why manual review misses it</EditorialMonoLabel>
             <p className="mt-6 text-[16px] leading-[1.75] text-white/65">
-              Spotting redundancy requires comparing accounting data against a functional taxonomy of tools and a usage signal — three datasets that almost never sit in the same place. Efficyon does the comparison continuously so the pattern emerges automatically.
+              Spotting redundancy requires comparing accounting data against a functional taxonomy of tools and a usage signal — three datasets that almost never sit in the same place. Efficyon does the comparison continuously so the pattern emerges automatically. This feeds directly into your{" "}
+              <Link href="/features/software-audit" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                software audit
+              </Link>
+              .
             </p>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -117,7 +118,11 @@ export default function SaaSCostOptimizationPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>No centralized view of which tools are actually being used, by whom, and how often. Finance is flying blind.</span>
+                <span>No centralized view of which tools are actually being used, by whom, and how often. Finance is flying blind — this is where{" "}
+                  <Link href="/features/subscription-tracking" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    subscription tracking
+                  </Link>
+                  {" "}starts.</span>
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
@@ -125,7 +130,11 @@ export default function SaaSCostOptimizationPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>Decentralized buying creates duplicate subscriptions nobody catches until the annual audit — if then.</span>
+                <span>Decentralized buying creates{" "}
+                  <Link href="/features/duplicate-payment-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    duplicate subscriptions
+                  </Link>
+                  {" "}nobody catches until the annual audit — if then.</span>
               </li>
             </ul>
           </div>

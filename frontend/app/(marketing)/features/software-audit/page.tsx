@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -120,7 +121,11 @@ export default function SoftwareAuditPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>Compliance risk: over-deployment exposes you to vendor true-up penalties that can run into tens of thousands.</span>
+                <span>Compliance risk: over-deployment exposes you to vendor true-up penalties that can run into tens of thousands. Continuous{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    unused license detection
+                  </Link>
+                  {" "}is the first-line defence.</span>
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
@@ -134,7 +139,11 @@ export default function SoftwareAuditPage() {
               Audits fail because they're a periodic snapshot of a continuously changing system. The fix isn't a better project — it's making the inventory and compliance status live, then exporting it on demand.
             </p>
             <p className="mt-5 text-[16px] leading-[1.75] text-white/55">
-              That's the entire shape of this feature.
+              That's the entire shape of this feature. The same data feeds{" "}
+              <Link href="/features/saas-spend-management" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                spend management
+              </Link>
+              , so your cost picture and your compliance picture stay in sync.
             </p>
           </div>
         </div>

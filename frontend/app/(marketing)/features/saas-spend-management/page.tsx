@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -120,7 +121,11 @@ export default function SaaSSpendManagementPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>SaaS appears as generic line items with no context: which tool, who uses it, whether it delivers value.</span>
+                <span>SaaS appears as generic line items with no context: which tool, who uses it, whether it delivers value. That's where{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    unused license detection
+                  </Link>
+                  {" "}fills the gap.</span>
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
@@ -134,7 +139,11 @@ export default function SaaSSpendManagementPage() {
               The spreadsheet was built for a stack of 8 tools. The modern stack is 80. Every reconciliation cycle drifts further from reality, and the time spent maintaining the sheet is the same money you're trying to save.
             </p>
             <p className="mt-5 text-[16px] leading-[1.75] text-white/55">
-              The fix is to make the data the source — not the report.
+              The fix is to make the data the source — not the report. Layer in{" "}
+              <Link href="/features/ai-cost-analysis" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                AI cost analysis
+              </Link>
+              {" "}to surface patterns the dashboard alone won't catch.
             </p>
           </div>
         </div>

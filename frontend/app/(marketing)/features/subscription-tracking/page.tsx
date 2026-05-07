@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -124,7 +125,11 @@ export default function SubscriptionTrackingPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>Shadow IT bypasses procurement entirely — security risks and budget overruns surface only at quarter close.</span>
+                <span>Shadow IT bypasses procurement entirely — security risks and budget overruns surface only at quarter close. Pair with{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    unused license detection
+                  </Link>
+                  {" "}to catch idle seats alongside shadow tools.</span>
               </li>
             </ul>
           </div>
@@ -134,7 +139,11 @@ export default function SubscriptionTrackingPage() {
               The classic case: one person leaves, owns three subscriptions on a corporate card, and the renewals continue silently for two years. Multiplied across a 50-person org, that's a structural leak no spreadsheet will catch.
             </p>
             <p className="mt-5 text-[16px] leading-[1.75] text-white/55">
-              The fix isn't a better spreadsheet — it's a feed.
+              The fix isn't a better spreadsheet — it's a feed. Combined with{" "}
+              <Link href="/features/saas-spend-management" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                spend management
+              </Link>
+              , the full picture of what you pay and what gets used lives in one place.
             </p>
           </div>
         </div>

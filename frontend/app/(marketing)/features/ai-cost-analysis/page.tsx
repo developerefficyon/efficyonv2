@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -120,7 +121,11 @@ export default function AICostAnalysisPage() {
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
-                <span>The interesting patterns only emerge cross-tool — and the cross-tool view requires a dataset no human is curating.</span>
+                <span>The interesting patterns only emerge cross-tool — and the cross-tool view requires a dataset no human is curating. Cross-tool patterns include{" "}
+                  <Link href="/features/duplicate-payment-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    duplicate payments
+                  </Link>
+                  {" "}that hide across departments.</span>
               </li>
               <li className="flex gap-4">
                 <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
@@ -131,7 +136,11 @@ export default function AICostAnalysisPage() {
           <div>
             <EditorialMonoLabel>What "explainable" means here</EditorialMonoLabel>
             <p className="mt-6 text-[16px] leading-[1.75] text-white/65">
-              We're not selling a black box. Every finding lists the rule or model that produced it, the underlying invoices and activity windows, and the assumptions behind the modeled dollar value. You can audit any recommendation before acting on it — that's the contract.
+              We're not selling a black box. Every finding lists the rule or model that produced it, the underlying invoices and activity windows, and the assumptions behind the modeled dollar value. You can audit any recommendation before acting on it — that's the contract. This is the engine that powers{" "}
+              <Link href="/features/saas-cost-optimization" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                SaaS cost optimization
+              </Link>
+              {" "}across the platform.
             </p>
           </div>
         </div>
