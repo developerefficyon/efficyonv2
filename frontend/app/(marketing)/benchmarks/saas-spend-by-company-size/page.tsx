@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import { companySizeBenchmarks } from "@/lib/benchmark-data"
 import { ArrowLeft } from "lucide-react"
@@ -9,22 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, datasetLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Average SaaS Spend by Company Size: 2026 Benchmarks",
   description:
     "How much do companies spend on SaaS by size? Comprehensive 2026 benchmarks covering startups (1-10 employees) through enterprises (500+), with per-employee breakdowns and optimization targets.",
-  alternates: {
-    canonical: "/benchmarks/saas-spend-by-company-size",
-  },
-  openGraph: {
-    title: "Average SaaS Spend by Company Size: 2026 Benchmarks | Efficyon",
-    description:
-      "Comprehensive 2026 benchmarks for SaaS spending by company size, from startups to enterprises.",
-    url: absoluteUrl("/benchmarks/saas-spend-by-company-size"),
-    type: "article",
-  },
-}
+  path: "/benchmarks/saas-spend-by-company-size",
+})
 
 export default function SaasSpendByCompanySizePage() {
   const jsonLd = {

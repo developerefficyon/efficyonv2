@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import {
   departmentBenchmarks,
@@ -12,22 +11,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, datasetLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Software Cost Per Employee: What's Normal in 2026?",
   description:
     "What's a normal software cost per employee? 2026 benchmarks by department (Engineering, Sales, Marketing, HR, Finance, Support) with year-over-year trends and a guide to calculating yours.",
-  alternates: {
-    canonical: "/benchmarks/subscription-cost-per-employee",
-  },
-  openGraph: {
-    title: "Software Cost Per Employee: What's Normal in 2026? | Efficyon",
-    description:
-      "Department-level software cost benchmarks per employee with year-over-year trends for 2026.",
-    url: absoluteUrl("/benchmarks/subscription-cost-per-employee"),
-    type: "article",
-  },
-}
+  path: "/benchmarks/subscription-cost-per-employee",
+})
 
 export default function SubscriptionCostPerEmployeePage() {
   const jsonLd = {

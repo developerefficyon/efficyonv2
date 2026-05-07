@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "SaaS Spend Benchmarks & Data",
   description:
     "SaaS spend benchmarks by company size, industry, and department. Compare your software costs to industry averages and discover optimization opportunities with 2026 data.",
-  alternates: {
-    canonical: "/benchmarks",
-  },
-  openGraph: {
-    title: "SaaS Spend Benchmarks & Data | Efficyon",
-    description:
-      "SaaS spend benchmarks by company size, industry, and department. Compare your software costs to industry averages with 2026 data.",
-    url: absoluteUrl("/benchmarks"),
-    type: "website",
-  },
-}
+  path: "/benchmarks",
+})
 
 const BENCHMARKS = [
   {

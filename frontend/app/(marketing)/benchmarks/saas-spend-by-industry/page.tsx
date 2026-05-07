@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import { industryBenchmarks } from "@/lib/benchmark-data"
 import { ArrowLeft } from "lucide-react"
@@ -9,22 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, datasetLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "SaaS Spend Benchmarks by Industry: 2026 Data",
   description:
     "How does your industry compare in SaaS spending? 2026 benchmarks for technology, finance, healthcare, marketing, e-commerce, education, and manufacturing with waste percentages and top tools.",
-  alternates: {
-    canonical: "/benchmarks/saas-spend-by-industry",
-  },
-  openGraph: {
-    title: "SaaS Spend Benchmarks by Industry: 2026 Data | Efficyon",
-    description:
-      "Industry-specific SaaS spending benchmarks with waste percentages and top tools per sector.",
-    url: absoluteUrl("/benchmarks/saas-spend-by-industry"),
-    type: "article",
-  },
-}
+  path: "/benchmarks/saas-spend-by-industry",
+})
 
 export default function SaasSpendByIndustryPage() {
   const jsonLd = {
