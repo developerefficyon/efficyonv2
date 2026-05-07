@@ -302,7 +302,11 @@ export default function SaasSpendByCompanySizePage() {
               SaaS spending scales with company size — but not proportionally.
               The relationship is shaped by industry, growth stage, technical
               complexity, and procurement maturity. Smaller companies tend to
-              spend more per employee because fixed-cost tools amortize over
+              spend more{" "}
+              <Link href="/benchmarks/subscription-cost-per-employee" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                per employee
+              </Link>{" "}
+              because fixed-cost tools amortize over
               fewer users; enterprises benefit from volume discounts but
               accumulate sprawl that eats those savings back.
             </p>
@@ -325,7 +329,11 @@ export default function SaasSpendByCompanySizePage() {
               $200K+/month across 200+ tools. Procurement teams exist, but
               shadow IT and legacy contracts persist. Absolute dollar savings
               are largest here — even a 10% reduction on $200K/month is
-              $240K/year.
+              $240K/year. Use the{" "}
+              <Link href="/calculator/roi" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                ROI calculator
+              </Link>{" "}
+              to model the potential for your stack.
             </p>
           </div>
         </div>

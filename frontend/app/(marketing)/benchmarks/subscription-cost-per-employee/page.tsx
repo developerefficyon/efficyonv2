@@ -348,7 +348,11 @@ export default function SubscriptionCostPerEmployeePage() {
           <span style={{ color: GREEN }}>✦</span>{" "}
           <span className="text-white/85">Skip the manual work.</span> Efficyon
           automates this entire calculation by connecting to your accounting system and
-          SaaS tools — accurate per-employee breakdowns by department, in minutes.
+          SaaS tools — accurate per-employee breakdowns by department, in minutes. Try the{" "}
+          <Link href="/calculator/waste-estimator" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+            waste estimator
+          </Link>
+          {" "}to get a quick baseline before connecting.
         </p>
       </section>
 
@@ -377,7 +381,11 @@ export default function SubscriptionCostPerEmployeePage() {
               <strong className="text-white/85">Sales &amp; marketing</strong> spend
               $150–$400/employee. CRM, sales engagement, prospecting, analytics,
               creative, email — both departments are prone to tool overlap. Consolidating
-              CRM, email, and analytics suites typically reduces department SaaS by 20–30%.
+              CRM, email, and analytics suites typically reduces department SaaS by 20–30%. See{" "}
+              <Link href="/benchmarks/saas-spend-by-industry" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                industry breakdowns
+              </Link>{" "}
+              to compare these patterns by sector.
             </p>
             <p>
               <strong className="text-white/85">The trend is decelerating, not

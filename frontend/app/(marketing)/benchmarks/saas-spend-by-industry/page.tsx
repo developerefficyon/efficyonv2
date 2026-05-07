@@ -326,6 +326,11 @@ export default function SaasSpendByIndustryPage() {
               among the highest spenders ($200–$350/employee/month). Developer tooling,
               cloud infrastructure, observability, and design tools stack up fast.
               Cloud alone often represents 40–60% of a tech company&apos;s SaaS bill.
+              Compare how{" "}
+              <Link href="/benchmarks/saas-spend-by-company-size" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                company size
+              </Link>{" "}
+              shifts these numbers further.
             </p>
             <p>
               <strong className="text-white/85">Marketing agencies</strong> have the
@@ -339,7 +344,11 @@ export default function SaasSpendByIndustryPage() {
               compliance-driven pricing pressure. HIPAA, SOC 2, and PCI-DSS push teams
               toward higher tiers — often org-wide when only a subset of users handles
               regulated data. Right-sizing compliance tiers can reduce costs 15–25%
-              without compromising posture.
+              without compromising posture. Use the{" "}
+              <Link href="/calculator/saas-cost" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                SaaS cost calculator
+              </Link>{" "}
+              to model the right-size scenario for your team.
             </p>
             <p>
               <strong className="text-white/85">Education &amp; manufacturing</strong>{" "}
