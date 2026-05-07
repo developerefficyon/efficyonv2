@@ -155,6 +155,17 @@ export function Navbar() {
     </Link>
   )
 
+  const demoButtonElement = (
+    <a
+      href="https://calendly.com/melker-lowenbrand-efficyon/30min"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="px-5 py-2.5 text-sm font-medium text-gray-200 rounded-lg hover:text-white hover:bg-white/5 transition-all duration-300 w-full sm:w-auto text-center"
+    >
+      Book a Demo
+    </a>
+  )
+
   const signupButtonElement = (
     <div className="relative group w-full sm:w-auto">
       <div
@@ -208,6 +219,7 @@ export function Navbar() {
 
         <div className="hidden sm:flex items-center gap-2 sm:gap-3">
           {loginButtonElement}
+          {demoButtonElement}
           {signupButtonElement}
         </div>
 
@@ -273,6 +285,7 @@ export function Navbar() {
         </nav>
         <div className="flex flex-col items-center space-y-4 mt-4 w-full sm:hidden">
           {loginButtonElement}
+          {demoButtonElement}
           {signupButtonElement}
         </div>
       </div>

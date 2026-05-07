@@ -186,6 +186,15 @@ function Hero() {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <a
+            href="https://calendly.com/melker-lowenbrand-efficyon/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-[14px] text-[14px] font-medium text-white transition-all hover:border-white/30 hover:bg-white/10"
+          >
+            Book a demo
+            <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:rotate-45" />
+          </a>
+          <a
             href="#how"
             className="group inline-flex items-center gap-2 text-[14px] text-white/65 transition-colors hover:text-white"
           >
