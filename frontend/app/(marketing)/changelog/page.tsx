@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,18 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Changelog — what we shipped, ordered most recent first",
   description:
     "Every integration, check, and feature we've shipped. Built in public, updated monthly. The closest thing to a team photo we have.",
-  alternates: { canonical: "/changelog" },
-  openGraph: {
-    title: "Efficyon Changelog — what we shipped",
-    description: "Built in public, updated monthly.",
-    url: absoluteUrl("/changelog"),
-  },
-}
+  path: "/changelog",
+})
 
 interface Release {
   date: string

@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,19 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "About — Built in Gothenburg, Sweden, for teams who like their numbers honest",
   description:
     "Why we built Efficyon, what we believe, and how we work. Cost intelligence for SaaS-heavy teams, made by a small team in Gothenburg, Sweden.",
-  alternates: { canonical: "/about" },
-  openGraph: {
-    title: "About Efficyon — Cost intelligence for SaaS-heavy teams",
-    description:
-      "Why we built Efficyon, what we believe, and how we work. Made by a small team in Gothenburg, Sweden.",
-    url: absoluteUrl("/about"),
-  },
-}
+  path: "/about",
+})
 
 const PRINCIPLES = [
   {
