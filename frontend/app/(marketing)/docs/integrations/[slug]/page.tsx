@@ -9,6 +9,7 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { INTEGRATION_DOCS, getDoc } from "@/lib/integration-docs"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -39,22 +40,29 @@ export default async function IntegrationDocPage({ params }: PageProps) {
   const doc = getDoc(slug)
   if (!doc) notFound()
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    headline: `Connect ${doc.name} to Efficyon`,
-    description: doc.blurb,
-    url: absoluteUrl(`/docs/integrations/${doc.slug}`),
-    proficiencyLevel: "Beginner",
-    dependencies: doc.prerequisites.join("; "),
-    publisher: { "@type": "Organization", name: "Efficyon" },
-  }
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      headline: `Connect ${doc.name} to Efficyon`,
+      description: doc.blurb,
+      url: absoluteUrl(`/docs/integrations/${doc.slug}`),
+      proficiencyLevel: "Beginner",
+      dependencies: doc.prerequisites.join("; "),
+      publisher: { "@type": "Organization", name: "Efficyon" },
+    },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Setup Docs", path: "/docs/integrations" },
+      { name: doc.name, path: `/docs/integrations/${doc.slug}` },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

@@ -6,8 +6,9 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl } from "@/lib/site"
 import { INTEGRATION_DOCS } from "@/lib/integration-docs"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Integration setup guides — connect any system to Efficyon",
@@ -22,8 +23,19 @@ export const metadata: Metadata = {
 }
 
 export default function IntegrationDocsIndex() {
+  const ld = [
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Setup Docs", path: "/docs/integrations" },
+    ]),
+  ]
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
+      />
       <EditorialPageHero
         eyebrow="Docs · Integration setup"
         title="Connect any system,"

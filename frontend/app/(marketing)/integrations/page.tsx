@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Integrations - Connect Your Tools",
@@ -121,29 +122,35 @@ const live = INTEGRATIONS.filter((i) => i.status === "live")
 const upcoming = INTEGRATIONS.filter((i) => i.status === "coming-soon")
 
 export default function IntegrationsIndexPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Efficyon Integrations",
-    description:
-      "Connect your accounting and billing platforms to Efficyon for automated SaaS cost analysis and optimization.",
-    url: absoluteUrl("/integrations"),
-    mainEntity: {
-      "@type": "ItemList",
-      itemListElement: live.map((integration, index) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        name: `${integration.name} Integration`,
-        url: absoluteUrl(`/integrations/${integration.slug}`),
-      })),
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Efficyon Integrations",
+      description:
+        "Connect your accounting and billing platforms to Efficyon for automated SaaS cost analysis and optimization.",
+      url: absoluteUrl("/integrations"),
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: live.map((integration, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: `${integration.name} Integration`,
+          url: absoluteUrl(`/integrations/${integration.slug}`),
+        })),
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Integrations", path: "/integrations" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

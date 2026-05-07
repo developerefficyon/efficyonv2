@@ -8,6 +8,7 @@ import {
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export function generateMetadata(): Metadata {
   return {
@@ -149,6 +150,10 @@ export default function XeroIntegrationPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Integrations", path: "/integrations" }, { name: "Xero", path: "/integrations/xero" }])]) }}
       />
 
       <EditorialPageHero
