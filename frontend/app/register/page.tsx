@@ -6,11 +6,12 @@ import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, ArrowRight } from "lucide-react"
-import { MarketingShell } from "@/components/marketing/editorial"
+import { MarketingShell, EditorialNav } from "@/components/marketing/editorial"
 
 export default function RegisterPage() {
   return (
     <MarketingShell>
+      <EditorialNav />
       <Suspense
         fallback={
           <div className="flex min-h-screen items-center justify-center">
@@ -100,7 +101,7 @@ function RegisterContent() {
   }
 
   return (
-    <div className="relative z-10 mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-6 py-20 md:px-12">
+    <div className="relative z-10 mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-6 pb-20 pt-[120px] md:px-12">
       <div className="grid w-full gap-16 md:grid-cols-[1fr_1fr] md:items-center">
         {/* Left — editorial intro */}
         <div className="hidden md:block">
