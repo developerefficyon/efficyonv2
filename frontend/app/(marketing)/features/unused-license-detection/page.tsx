@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Find Every Unused License Draining Your Budget",
   description:
-    "Detect unused and underutilized SaaS licenses automatically. Efficyon analyzes 90-day activity windows to identify idle seats, departed-employee licenses, and overprovisioned tiers.",
+    "Unused license detection: 90-day activity windows surface idle seats, departed-employee accounts, and overprovisioned tiers across every SaaS tool.",
   path: "/features/unused-license-detection",
 })
 

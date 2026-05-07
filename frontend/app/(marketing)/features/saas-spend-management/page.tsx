@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Complete SaaS Spend Management in One Platform",
   description:
-    "Full SaaS spend visibility with real-time dashboards, budget controls, forecasting, and department allocation. Replace your spreadsheet without losing the spreadsheet's clarity.",
+    "SaaS spend management platform: unified dashboards, real-time budget controls, forecasting, and department-level cost allocation.",
   path: "/features/saas-spend-management",
 })
 

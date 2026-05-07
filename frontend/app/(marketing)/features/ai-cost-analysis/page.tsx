@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "AI Cost Analysis That Finds What Humans Miss",
   description:
-    "Continuous, explainable cost analysis tuned on accounting + usage data — not generic finance. Pattern recognition, anomaly detection, and prioritized recommendations across your entire stack.",
+    "AI cost analysis: continuous pattern recognition + anomaly detection on accounting and usage data to surface waste and savings opportunities.",
   path: "/features/ai-cost-analysis",
 })
 

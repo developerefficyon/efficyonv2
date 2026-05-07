@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Automated Software Audits in Minutes, Not Months",
   description:
-    "Continuously updated software inventory, license compliance tracking, and audit-ready reports. Replace the annual spreadsheet scramble with a feed.",
+    "Automated software audit: continuous inventory, license compliance tracking, and audit-ready reports — replace quarterly spreadsheet scrambles.",
   path: "/features/software-audit",
 })
 

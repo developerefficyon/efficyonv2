@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Stop Paying Twice for the Same Software",
   description:
-    "Detect duplicate invoices, overlapping SaaS tools, and redundant subscriptions. Pattern-matching across accounting, expense, and usage data — the kind of leak no spreadsheet catches.",
+    "Duplicate payment detection: pattern-match across accounting, expense, and usage data to find overlapping tools and redundant subscriptions.",
   path: "/features/duplicate-payment-detection",
 })
 

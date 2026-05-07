@@ -13,7 +13,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "SaaS Cost Optimization That Pays for Itself",
   description:
-    "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
+    "SaaS cost optimization software: connect accounting + identity to surface unused licenses, duplicate subscriptions, and renewal risk in one view.",
   path: "/features/saas-cost-optimization",
 })
 

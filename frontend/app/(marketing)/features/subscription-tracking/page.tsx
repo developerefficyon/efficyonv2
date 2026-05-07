@@ -12,7 +12,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Subscription Tracking That Never Misses a Renewal",
   description:
-    "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
+    "Subscription tracking software for SaaS: centralize renewals, monitor cost trends, detect shadow IT, and break costs down by department.",
   path: "/features/subscription-tracking",
 })
 
