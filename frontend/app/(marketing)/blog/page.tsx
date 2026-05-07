@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,22 +8,14 @@ import {
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getFeaturedPost } from "@/lib/blog-data"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Blog - SaaS Cost Optimization Insights | Efficyon",
   description:
     "Expert insights on reducing software spend, eliminating SaaS waste, and maximizing ROI. Guides, analysis, and actionable tips from the Efficyon team.",
-  openGraph: {
-    title: "Blog - SaaS Cost Optimization Insights | Efficyon",
-    description:
-      "Expert insights on reducing software spend, eliminating SaaS waste, and maximizing ROI.",
-    type: "website",
-    url: absoluteUrl("/blog"),
-  },
-  alternates: {
-    canonical: "/blog",
-  },
-}
+  path: "/blog",
+})
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {

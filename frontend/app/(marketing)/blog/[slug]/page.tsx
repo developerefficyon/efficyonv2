@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import {
@@ -12,6 +11,7 @@ import {
 import { absoluteUrl } from "@/lib/site"
 import { blogPosts, getBlogPost, getRelatedPosts } from "@/lib/blog-data"
 import { articleLd, breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>
@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-}: BlogPostPageProps): Promise<Metadata> {
+}: BlogPostPageProps) {
   const { slug } = await params
   const post = getBlogPost(slug)
 
@@ -35,24 +35,16 @@ export async function generateMetadata({
     }
   }
 
-  return {
+  return pageMetadata({
     title: `${post.title} | Efficyon Blog`,
     description: post.description,
-    openGraph: {
-      title: post.title,
-      description: post.description,
-      type: "article",
-      publishedTime: post.publishDate,
-      modifiedTime: post.updatedDate,
-      authors: [post.author],
-      tags: post.tags,
-      url: absoluteUrl(`/blog/${post.slug}`),
-      images: [{ url: absoluteUrl(post.image), width: 1200, height: 630, alt: post.title }],
-    },
-    alternates: {
-      canonical: `/blog/${post.slug}`,
-    },
-  }
+    path: `/blog/${post.slug}`,
+    type: "article",
+    publishedTime: post.publishDate,
+    modifiedTime: post.updatedDate,
+    authors: [post.author],
+    image: absoluteUrl(post.image),
+  })
 }
 
 function formatDate(dateString: string): string {
