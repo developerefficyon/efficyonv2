@@ -6,6 +6,7 @@ import { DM_Sans, Instrument_Serif } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
 import { CookieConsent } from "@/components/marketing/cookie-consent"
+import { SITE_URL } from "@/lib/site"
 import "./globals.css"
 
 const dmSans = DM_Sans({
@@ -23,8 +24,6 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 })
 
-const siteUrl = "https://efficyon.com"
-
 export const metadata: Metadata = {
   title: {
     default: "Efficyon - AI-Powered SaaS Cost Optimization Platform",
@@ -32,13 +31,13 @@ export const metadata: Metadata = {
   },
   description:
     "Turn SaaS sprawl into financial clarity. Compare spend with real usage to reveal unused licenses and hidden savings.",
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
-    url: siteUrl,
+    url: SITE_URL,
     title: "Efficyon",
     description: "Your SaaS stack is leaking money. We'll find it.",
     siteName: "Efficyon",
