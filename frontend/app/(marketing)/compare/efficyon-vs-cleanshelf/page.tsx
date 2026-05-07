@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import {
   EditorialPageHero,
@@ -9,22 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export async function generateMetadata() {
+  return pageMetadata({
     title: "Cleanshelf Alternative - Modern SaaS Cost Optimization | Efficyon",
     description:
       "Cleanshelf was acquired by Zylo and is no longer independently developed. Efficyon is a modern, actively maintained alternative for SaaS cost optimization, priced for SMB and mid-market.",
-    alternates: {
-      canonical: "/compare/efficyon-vs-cleanshelf",
-    },
-    openGraph: {
-      title: "Looking for a Cleanshelf Alternative? Try Efficyon",
-      description:
-        "Cleanshelf was acquired by Zylo. Efficyon is the modern, actively developed alternative for SaaS cost optimization.",
-      url: absoluteUrl("/compare/efficyon-vs-cleanshelf"),
-    },
-  }
+    path: "/compare/efficyon-vs-cleanshelf",
+  })
 }
 
 const SIDE_BY_SIDE = [

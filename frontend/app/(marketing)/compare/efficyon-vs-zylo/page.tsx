@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,22 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export async function generateMetadata() {
+  return pageMetadata({
     title: "Zylo Alternative - Efficyon vs Zylo SaaS Management Comparison",
     description:
       "Zylo is the established enterprise SaaS management platform. Efficyon is the AI-driven cost layer for SMB and mid-market. Different scopes, very different price points.",
-    alternates: {
-      canonical: "/compare/efficyon-vs-zylo",
-    },
-    openGraph: {
-      title: "Efficyon vs Zylo: Which SaaS Management Platform Is Right for You?",
-      description:
-        "An honest read on Efficyon and Zylo. Different company sizes, different problems, different prices.",
-      url: absoluteUrl("/compare/efficyon-vs-zylo"),
-    },
-  }
+    path: "/compare/efficyon-vs-zylo",
+  })
 }
 
 const SIDE_BY_SIDE = [

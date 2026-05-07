@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,6 +7,7 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, itemListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
 const LISTICLE_TOOLS = [
   { name: "Efficyon", url: SITE_URL, description: "SaaS cost intelligence — accounting + identity, EU-hosted." },
@@ -20,21 +20,13 @@ const LISTICLE_TOOLS = [
   { name: "Spreadsheets", url: absoluteUrl("/compare/efficyon-vs-spreadsheets"), description: "The status quo." },
 ]
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export async function generateMetadata() {
+  return pageMetadata({
     title: "Best SaaS Cost Optimization Tools in 2026 - Complete Guide",
     description:
       "An opinionated guide to the eight common approaches to SaaS cost optimization in 2026: Efficyon, Zylo, Torii, Productiv, Cleanshelf, Vendr, Cledara, and the spreadsheet status quo.",
-    alternates: {
-      canonical: "/compare/best-saas-cost-optimization-tools",
-    },
-    openGraph: {
-      title: "Best SaaS Cost Optimization Tools in 2026: Complete Guide",
-      description:
-        "Opinionated guide to eight approaches to SaaS cost optimization in 2026 — what each tool actually does, who it is built for, and how the pricing model works.",
-      url: absoluteUrl("/compare/best-saas-cost-optimization-tools"),
-    },
-  }
+    path: "/compare/best-saas-cost-optimization-tools",
+  })
 }
 
 const TOOLS = [

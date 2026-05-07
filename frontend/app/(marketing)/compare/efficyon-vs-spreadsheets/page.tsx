@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,22 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export async function generateMetadata() {
+  return pageMetadata({
     title: "Spreadsheets vs SaaS Management Software - Why Manual Tracking Costs More",
     description:
       "A spreadsheet works for ten subscriptions and breaks at forty. The math behind manual SaaS tracking — labor, gaps, missed savings — and where automation starts to pay for itself.",
-    alternates: {
-      canonical: "/compare/efficyon-vs-spreadsheets",
-    },
-    openGraph: {
-      title: "Why Spreadsheets Are Costing You More Than a SaaS Management Tool",
-      description:
-        "The structural cost of manual SaaS tracking — labor, data gaps, missed savings — and where automation starts to pay for itself.",
-      url: absoluteUrl("/compare/efficyon-vs-spreadsheets"),
-    },
-  }
+    path: "/compare/efficyon-vs-spreadsheets",
+  })
 }
 
 const SIDE_BY_SIDE = [

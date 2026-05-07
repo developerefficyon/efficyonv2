@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export async function generateMetadata() {
+  return pageMetadata({
     title: "Torii Alternative - Efficyon vs Torii SaaS Management Compared",
     description:
       "Torii is a strong IT-workflow automation platform. Efficyon is an AI-driven cost intelligence layer. Different jobs, different prices.",
-    alternates: {
-      canonical: "/compare/efficyon-vs-torii",
-    },
-    openGraph: {
-      title: "Efficyon vs Torii: SaaS Management Compared",
-      description:
-        "Torii excels at IT workflow automation. Efficyon focuses on the spend-vs-usage gap and cost recommendations.",
-      url: absoluteUrl("/compare/efficyon-vs-torii"),
-    },
-  }
+    path: "/compare/efficyon-vs-torii",
+  })
 }
 
 const SIDE_BY_SIDE = [

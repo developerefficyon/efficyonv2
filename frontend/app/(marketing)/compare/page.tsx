@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,21 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Compare SaaS Management Tools",
   description:
     "Honest comparisons of Efficyon against Zylo, Torii, Productiv, Cleanshelf, spreadsheets, and more. Structural differences, not fabricated benchmarks.",
-  alternates: {
-    canonical: "/compare",
-  },
-  openGraph: {
-    title: "Compare SaaS Management Tools | Efficyon",
-    description:
-      "Honest comparisons of Efficyon against Zylo, Torii, Productiv, Cleanshelf, spreadsheets, and more.",
-    url: absoluteUrl("/compare"),
-  },
-}
+  path: "/compare",
+})
 
 const COMPARISONS = [
   {
