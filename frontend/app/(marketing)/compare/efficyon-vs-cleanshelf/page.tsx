@@ -14,13 +14,13 @@ export async function generateMetadata() {
   return pageMetadata({
     title: `Efficyon vs Cleanshelf: ${CURRENT_YEAR} Comparison`,
     description:
-      "Cleanshelf was acquired by Zylo and is no longer independently developed. Efficyon is a modern, actively maintained alternative for SaaS cost optimization, priced for SMB and mid-market.",
+      "Cleanshelf was acquired by Zylo in 2021 and is no longer independently developed. Efficyon is a modern, actively maintained alternative for SaaS cost optimization, priced for SMB and mid-market.",
     path: "/compare/efficyon-vs-cleanshelf",
   })
 }
 
 const SIDE_BY_SIDE = [
-  { feature: "Status", efficyon: "Actively developed (pre-launch)", cleanshelf: "Acquired by Zylo" },
+  { feature: "Status", efficyon: "Actively developed (pre-launch)", cleanshelf: "Acquired by Zylo in 2021" },
   { feature: "Pricing", efficyon: "$39–$119/mo · custom for enterprise", cleanshelf: "Now available only via Zylo enterprise contracts" },
   { feature: "Primary surface", efficyon: "Spend-vs-usage analysis with AI recommendations", cleanshelf: "Spend tracking and basic optimization suggestions" },
   { feature: "Accounting integration", efficyon: "Direct (Fortnox, Visma, QuickBooks, Xero)", cleanshelf: "Limited; relied on contract data" },
@@ -34,7 +34,7 @@ export default function EfficyonVsCleanshelfPage() {
     "@type": "WebPage",
     name: "Looking for a Cleanshelf Alternative? Try Efficyon",
     description:
-      "Cleanshelf was acquired by Zylo and is no longer independently developed. Efficyon is a modern alternative for SaaS cost optimization.",
+      "Cleanshelf was acquired by Zylo in 2021 and is no longer independently developed. Efficyon is a modern alternative for SaaS cost optimization.",
     url: absoluteUrl("/compare/efficyon-vs-cleanshelf"),
   }
 
@@ -47,7 +47,7 @@ export default function EfficyonVsCleanshelfPage() {
         name: "What happened to Cleanshelf?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Cleanshelf was acquired by Zylo. Since the acquisition, the product has been integrated into Zylo's enterprise platform and is no longer available as an independent tool. Existing customers were transitioned to Zylo.",
+          text: "Cleanshelf was acquired by Zylo in 2021. Since the acquisition, the product has been integrated into Zylo's enterprise platform and is no longer available as an independent tool. Existing customers were transitioned to Zylo.",
         },
       },
       {
@@ -96,7 +96,7 @@ export default function EfficyonVsCleanshelfPage() {
         eyebrow="Compare · vs Cleanshelf"
         title="Cleanshelf was acquired."
         italic="Efficyon picks up the brief."
-        body="Cleanshelf was a focused, accessible spend management tool. After Zylo acquired it, the independent product effectively stopped — and existing customers were rolled into an enterprise contract. If that was the wrong size for you, this page is about what changed and what now fits."
+        body="Cleanshelf was a focused, accessible spend management tool. After Zylo acquired it in 2021, the independent product effectively stopped — and existing customers were rolled into an enterprise contract. If that was the wrong size for you, this page is about what changed and what now fits."
         primaryCta={{ label: "Start free analysis", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
       />
@@ -193,7 +193,7 @@ export default function EfficyonVsCleanshelfPage() {
           {[
             {
               q: "What happened to Cleanshelf?",
-              a: "Acquired by Zylo. Integrated into the Zylo enterprise platform. No longer sold as an independent product; existing customers were transitioned to Zylo contracts.",
+              a: "Acquired by Zylo in 2021. Integrated into the Zylo enterprise platform. No longer sold as an independent product; existing customers were transitioned to Zylo contracts.",
             },
             {
               q: "Is Efficyon a structural replacement?",
