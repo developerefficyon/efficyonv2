@@ -6,15 +6,6 @@ export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 export const alt = "Efficyon — SaaS tool analysis"
 
-export async function generateImageMetadata() {
-  return saasTools.map((t) => ({
-    id: t.slug,
-    alt: `${t.name} — ${t.category}`,
-    size,
-    contentType,
-  }))
-}
-
 export default function OG({ params }: { params: { slug: string } }) {
   const tool = saasTools.find((t) => t.slug === params.slug)
   const name = tool?.name ?? "SaaS Tool"
