@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Why Spreadsheets Are Costing You More Than a SaaS Management Tool",
       description:
         "The structural cost of manual SaaS tracking — labor, data gaps, missed savings — and where automation starts to pay for itself.",
-      url: "https://www.efficyon.com/compare/efficyon-vs-spreadsheets",
+      url: absoluteUrl("/compare/efficyon-vs-spreadsheets"),
     },
   }
 }
@@ -50,7 +51,7 @@ export default function EfficyonVsSpreadsheetsPage() {
     name: "Why Spreadsheets Are Costing You More Than a SaaS Management Tool",
     description:
       "Structural analysis of the cost of tracking SaaS subscriptions in spreadsheets versus a dedicated tool.",
-    url: "https://www.efficyon.com/compare/efficyon-vs-spreadsheets",
+    url: absoluteUrl("/compare/efficyon-vs-spreadsheets"),
   }
 
   const faqJsonLd = {

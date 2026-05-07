@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -19,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Efficyon vs Productiv: SaaS Intelligence Platforms Compared",
       description:
         "Productiv measures adoption depth across enterprise SaaS. Efficyon measures the gap between spend and usage and recommends action.",
-      url: "https://www.efficyon.com/compare/efficyon-vs-productiv",
+      url: absoluteUrl("/compare/efficyon-vs-productiv"),
     },
   }
 }
@@ -41,7 +42,7 @@ export default function EfficyonVsProductivPage() {
     name: "Efficyon vs Productiv: SaaS Intelligence Platforms Compared",
     description:
       "Comparison of Efficyon and Productiv. Different jobs: cost intelligence vs engagement analytics.",
-    url: "https://www.efficyon.com/compare/efficyon-vs-productiv",
+    url: absoluteUrl("/compare/efficyon-vs-productiv"),
   }
 
   const faqJsonLd = {

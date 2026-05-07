@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Efficyon vs Zylo: Which SaaS Management Platform Is Right for You?",
       description:
         "An honest read on Efficyon and Zylo. Different company sizes, different problems, different prices.",
-      url: "https://www.efficyon.com/compare/efficyon-vs-zylo",
+      url: absoluteUrl("/compare/efficyon-vs-zylo"),
     },
   }
 }
@@ -42,7 +43,7 @@ export default function EfficyonVsZyloPage() {
     name: "Efficyon vs Zylo: SaaS Management Platform Comparison",
     description:
       "Honest comparison of Efficyon and Zylo. Different scopes, different prices, different target customers.",
-    url: "https://www.efficyon.com/compare/efficyon-vs-zylo",
+    url: absoluteUrl("/compare/efficyon-vs-zylo"),
   }
 
   const faqJsonLd = {

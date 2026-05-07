@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Looking for a Cleanshelf Alternative? Try Efficyon",
       description:
         "Cleanshelf was acquired by Zylo. Efficyon is the modern, actively developed alternative for SaaS cost optimization.",
-      url: "https://www.efficyon.com/compare/efficyon-vs-cleanshelf",
+      url: absoluteUrl("/compare/efficyon-vs-cleanshelf"),
     },
   }
 }
@@ -41,7 +42,7 @@ export default function EfficyonVsCleanshelfPage() {
     name: "Looking for a Cleanshelf Alternative? Try Efficyon",
     description:
       "Cleanshelf was acquired by Zylo and is no longer independently developed. Efficyon is a modern alternative for SaaS cost optimization.",
-    url: "https://www.efficyon.com/compare/efficyon-vs-cleanshelf",
+    url: absoluteUrl("/compare/efficyon-vs-cleanshelf"),
   }
 
   const faqJsonLd = {

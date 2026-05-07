@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Compare SaaS Management Tools",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "Compare SaaS Management Tools | Efficyon",
     description:
       "Honest comparisons of Efficyon against Zylo, Torii, Productiv, Cleanshelf, spreadsheets, and more.",
-    url: "https://www.efficyon.com/compare",
+    url: absoluteUrl("/compare"),
   },
 }
 
@@ -74,14 +75,14 @@ export default function ComparePage() {
     name: "Compare SaaS Management Tools | Efficyon",
     description:
       "Honest comparisons of Efficyon against other SaaS management and cost optimization tools.",
-    url: "https://www.efficyon.com/compare",
+    url: absoluteUrl("/compare"),
     mainEntity: {
       "@type": "ItemList",
       itemListElement: COMPARISONS.map((c, i) => ({
         "@type": "ListItem",
         position: i + 1,
         name: c.name,
-        url: `https://www.efficyon.com/compare/${c.slug}`,
+        url: absoluteUrl(`/compare/${c.slug}`),
       })),
     },
   }

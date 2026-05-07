@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -19,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Efficyon vs Torii: SaaS Management Compared",
       description:
         "Torii excels at IT workflow automation. Efficyon focuses on the spend-vs-usage gap and cost recommendations.",
-      url: "https://www.efficyon.com/compare/efficyon-vs-torii",
+      url: absoluteUrl("/compare/efficyon-vs-torii"),
     },
   }
 }
@@ -41,7 +42,7 @@ export default function EfficyonVsToriiPage() {
     name: "Efficyon vs Torii: SaaS Management Compared",
     description:
       "Comparison of Efficyon and Torii. Different jobs: cost intelligence vs IT workflow automation.",
-    url: "https://www.efficyon.com/compare/efficyon-vs-torii",
+    url: absoluteUrl("/compare/efficyon-vs-torii"),
   }
 
   const faqJsonLd = {

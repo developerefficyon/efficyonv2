@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -19,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Best SaaS Cost Optimization Tools in 2026: Complete Guide",
       description:
         "Opinionated guide to eight approaches to SaaS cost optimization in 2026 — what each tool actually does, who it is built for, and how the pricing model works.",
-      url: "https://www.efficyon.com/compare/best-saas-cost-optimization-tools",
+      url: absoluteUrl("/compare/best-saas-cost-optimization-tools"),
     },
   }
 }
@@ -123,7 +124,7 @@ export default function BestSaaSToolsPage() {
     name: "Best SaaS Cost Optimization Tools in 2026: Complete Guide",
     description:
       "Opinionated guide to eight approaches to SaaS cost optimization in 2026.",
-    url: "https://www.efficyon.com/compare/best-saas-cost-optimization-tools",
+    url: absoluteUrl("/compare/best-saas-cost-optimization-tools"),
   }
 
   const faqJsonLd = {
