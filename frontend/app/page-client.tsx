@@ -30,7 +30,7 @@ function useReveal<T extends HTMLElement>() {
   return { ref, shown }
 }
 
-export default function HomePage() {
+export default function HomePageClient() {
   return (
     <div
       className="min-h-screen text-white antialiased selection:bg-[color:var(--green)] selection:text-black"
