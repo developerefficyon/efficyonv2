@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialMonoLabel,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -109,6 +110,12 @@ export default function EfficyonVsSpreadsheetsPage() {
         body="At ten subscriptions a sheet is fine. By forty it is a part-time job. By a hundred it is wrong more often than it is right — and it still cannot see usage. This page is the structural argument for when the math stops working."
         primaryCta={{ label: "Start free analysis", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/compare-spreadsheets"
+        label="Side-by-side · Spreadsheet vs Efficyon"
+        meta="1920 × 1080 · 30fps · same input data, two outputs"
       />
 
       <EditorialSection>

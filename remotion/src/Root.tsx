@@ -5,6 +5,12 @@ import {
   defaultHeroLoopProps,
   type HeroLoopProps,
 } from "./HeroLoop/HeroLoop";
+import {
+  CompareLoop,
+  CompareLoopSchema,
+  defaultCompareSpreadsheetsProps,
+  defaultCompareZyloProps,
+} from "./CompareLoop/CompareLoop";
 
 const FPS = 30;
 // Intro 0.6s + (4 vendors × 1.4s) + total summary 1.4s + outro fade 0.6s ≈ 8.2s.
@@ -137,6 +143,28 @@ export const Root: React.FC = () => {
         schema={HeroLoopSchema}
         defaultProps={xeroProps}
         durationInFrames={D}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+
+      {/* ─── Compare videos — 12s for the longer "punchline" beat ─── */}
+      <Composition
+        id="CompareSpreadsheets"
+        component={CompareLoop}
+        schema={CompareLoopSchema}
+        defaultProps={defaultCompareSpreadsheetsProps}
+        durationInFrames={FPS * 12}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CompareZylo"
+        component={CompareLoop}
+        schema={CompareLoopSchema}
+        defaultProps={defaultCompareZyloProps}
+        durationInFrames={FPS * 12}
         fps={FPS}
         width={1920}
         height={1080}

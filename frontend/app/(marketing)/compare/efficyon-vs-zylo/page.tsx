@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialMonoLabel,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -101,6 +102,12 @@ export default function EfficyonVsZyloPage() {
         body="Zylo earned its position. It is one of the most established SaaS management platforms in the world, with deep discovery, governance, and benchmarking built for organizations measured in thousands of employees. We are not pretending it is bad — we are scoped for a different size of company at a very different price point."
         primaryCta={{ label: "Start free analysis", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/compare-zylo"
+        label="Side-by-side · Zylo vs Efficyon"
+        meta="1920 × 1080 · 30fps · same discovery data, different decisions"
       />
 
       <EditorialSection>

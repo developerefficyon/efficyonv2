@@ -14,6 +14,9 @@
     "render:stripe": "remotion render src/index.ts HeroLoopStripe ../frontend/public/videos/integration-stripe.mp4",
     "render:xero": "remotion render src/index.ts HeroLoopXero ../frontend/public/videos/integration-xero.mp4",
     "render:all-integrations": "npm run render:fortnox && npm run render:quickbooks && npm run render:stripe && npm run render:xero",
+    "render:compare-spreadsheets": "remotion render src/index.ts CompareSpreadsheets ../frontend/public/videos/compare-spreadsheets.mp4",
+    "render:compare-zylo": "remotion render src/index.ts CompareZylo ../frontend/public/videos/compare-zylo.mp4",
+    "render:all-compares": "npm run render:compare-spreadsheets && npm run render:compare-zylo",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
