@@ -7,7 +7,18 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
-import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { breadcrumbListLd, itemListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
+
+const LISTICLE_TOOLS = [
+  { name: "Efficyon", url: SITE_URL, description: "SaaS cost intelligence — accounting + identity, EU-hosted." },
+  { name: "Zylo", url: "https://zylo.com", description: "Enterprise SaaS management platform." },
+  { name: "Torii", url: "https://toriihq.com", description: "Mid-market SaaS management with workflow automation." },
+  { name: "Productiv", url: "https://productiv.com", description: "Application engagement analytics for enterprise." },
+  { name: "Cleanshelf", url: "https://www.cleanshelf.com", description: "Acquired by Zylo in 2021; legacy SaaS-management product." },
+  { name: "Vendr", url: "https://vendr.com", description: "SaaS buying + procurement, not pure spend visibility." },
+  { name: "Cledara", url: "https://cledara.com", description: "Subscription management with virtual cards." },
+  { name: "Spreadsheets", url: absoluteUrl("/compare/efficyon-vs-spreadsheets"), description: "The status quo." },
+]
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -187,7 +198,7 @@ export default function BestSaaSToolsPage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Compare", path: "/compare" }, { name: "Best SaaS Cost Optimization Tools", path: "/compare/best-saas-cost-optimization-tools" }])]) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Compare", path: "/compare" }, { name: "Best SaaS Cost Optimization Tools", path: "/compare/best-saas-cost-optimization-tools" }]), itemListLd(LISTICLE_TOOLS), softwareApplicationLd({ name: "Efficyon", description: "SaaS cost intelligence — accounting + identity, EU-hosted.", url: SITE_URL, category: "BusinessApplication" })]) }}
       />
 
       <EditorialPageHero
