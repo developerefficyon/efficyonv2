@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import {
@@ -18,6 +17,7 @@ import {
   getRelatedTools,
 } from "@/lib/saas-tools-data"
 import { breadcrumbListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateStaticParams() {
   return saasTools.map((tool) => ({
@@ -29,7 +29,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>
-}): Promise<Metadata> {
+}) {
   const { slug } = await params
   const tool = getToolBySlug(slug)
 
@@ -39,19 +39,12 @@ export async function generateMetadata({
     }
   }
 
-  return {
+  return pageMetadata({
     title: `${tool.name} Cost Analysis & Optimization`,
     description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable tips to reduce your ${tool.name} spending by 25% or more.`,
-    alternates: {
-      canonical: `/tools/${tool.slug}`,
-    },
-    openGraph: {
-      title: `${tool.name} Cost Analysis & Optimization | Efficyon`,
-      description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable tips to reduce spending.`,
-      url: absoluteUrl(`/tools/${tool.slug}`),
-      type: "website",
-    },
-  }
+    path: `/tools/${tool.slug}`,
+    type: "website",
+  })
 }
 
 function generateSeoContent(tool: ReturnType<typeof getToolBySlug>) {

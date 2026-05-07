@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -10,22 +9,14 @@ import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { saasTools, getAllCategories } from "@/lib/saas-tools-data"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { ToolsFilterList } from "./tools-filter-list"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "SaaS Tool Cost Analysis",
   description:
     "Cost analysis and optimization tips for 50+ popular SaaS tools. Discover how to reduce spending on Slack, Salesforce, AWS, Jira, and more with data-driven insights from Efficyon.",
-  alternates: {
-    canonical: "/tools",
-  },
-  openGraph: {
-    title: "SaaS Tool Cost Analysis | Efficyon",
-    description:
-      "Cost analysis and optimization tips for 50+ popular SaaS tools. Discover how to reduce spending on Slack, Salesforce, AWS, Jira, and more.",
-    url: absoluteUrl("/tools"),
-    type: "website",
-  },
-}
+  path: "/tools",
+})
 
 const PILLARS = [
   { val: "50+", label: "Tools analyzed across the directory" },
