@@ -11,6 +11,7 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getBlogPost, getRelatedPosts } from "@/lib/blog-data"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>
@@ -71,37 +72,44 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const relatedPosts = getRelatedPosts(slug, 3)
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.description,
-    author: {
-      "@type": "Organization",
-      name: post.author,
-    },
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
-      logo: {
-        "@type": "ImageObject",
-        url: absoluteUrl("/logo.png"),
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title,
+      description: post.description,
+      author: {
+        "@type": "Organization",
+        name: post.author,
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+        logo: {
+          "@type": "ImageObject",
+          url: absoluteUrl("/logo.png"),
+        },
+      },
+      datePublished: post.publishDate,
+      dateModified: post.updatedDate,
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": absoluteUrl(`/blog/${post.slug}`),
       },
     },
-    datePublished: post.publishDate,
-    dateModified: post.updatedDate,
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": absoluteUrl(`/blog/${post.slug}`),
-    },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Blog", path: "/blog" },
+      { name: post.title, path: `/blog/${post.slug}` },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       {/* Article hero */}

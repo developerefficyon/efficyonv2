@@ -8,6 +8,7 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getFeaturedPost } from "@/lib/blog-data"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Blog - SaaS Cost Optimization Insights | Efficyon",
@@ -37,25 +38,31 @@ export default function BlogPage() {
   const featuredPost = getFeaturedPost()
   const otherPosts = blogPosts.filter((post) => !post.featured)
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Blog",
-    name: "Efficyon Blog",
-    description:
-      "Expert insights on SaaS cost optimization, software spend management, and maximizing ROI.",
-    url: absoluteUrl("/blog"),
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      name: "Efficyon Blog",
+      description:
+        "Expert insights on SaaS cost optimization, software spend management, and maximizing ROI.",
+      url: absoluteUrl("/blog"),
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Blog", path: "/blog" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero
