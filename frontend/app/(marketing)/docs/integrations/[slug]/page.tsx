@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps) {
   if (!doc) return { title: "Integration setup — Efficyon" }
   return pageMetadata({
     title: `${doc.name} setup guide — connect ${doc.name} to Efficyon`,
-    description: doc.blurb,
+    description: doc.metaDescription,
     path: `/docs/integrations/${doc.slug}`,
   })
 }

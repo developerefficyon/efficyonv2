@@ -13,7 +13,7 @@ import { pageMetadata } from "@/lib/seo/metadata"
 export const metadata = pageMetadata({
   title: "Solutions - SaaS Cost Optimization by Role",
   description:
-    "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises. Find the right solution for your role and team size.",
+    "Efficyon delivers tailored SaaS cost optimization for startups, finance teams, IT managers, CFOs, and enterprises. Find the right workflow for your role.",
   path: "/solutions",
 })
 

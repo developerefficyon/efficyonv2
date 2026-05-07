@@ -25,6 +25,7 @@ export interface IntegrationDoc {
   category: string
   region: string
   blurb: string
+  metaDescription: string
   prerequisites: string[]
   scopes: DocScope[]
   steps: DocStep[]
@@ -41,6 +42,8 @@ export const INTEGRATION_DOCS: IntegrationDoc[] = [
     region: "Sweden",
     blurb:
       "Connect your Fortnox accounting system to Efficyon. Read-only, multi-currency, VAT-aware. Takes about 5 minutes for a Fortnox admin and roughly 10 minutes for the first scan to surface findings.",
+    metaDescription:
+      "Connect Fortnox to Efficyon: read-only OAuth pulls invoices, suppliers, and accounts. Multi-currency, VAT-aware, ~5 min setup. Built for Swedish SMBs.",
     prerequisites: [
       "A Fortnox admin or developer account with permission to authorize new apps.",
       "Active Fortnox plans: Bokföring, Fakturering, or Komplett (any tier — invoice + supplier endpoints exist on all of them).",
@@ -117,6 +120,8 @@ export const INTEGRATION_DOCS: IntegrationDoc[] = [
     region: "United States · Canada",
     blurb:
       "Connect QuickBooks Online to Efficyon. Read-only, real-time sync, no chart-of-accounts surgery required. Setup takes about 5 minutes; the first SaaS-spend categorization completes within 10–15 minutes.",
+    metaDescription:
+      "Connect QuickBooks to Efficyon: read-only OAuth syncs your full ledger. Auto-categorize SaaS subscriptions. Real-time, no exports. ~5 min setup.",
     prerequisites: [
       "A QuickBooks Online account with admin or company-administrator privileges.",
       "Either Simple Start, Essentials, Plus, or Advanced — all four tiers expose the bills + vendors endpoints we need.",
@@ -178,6 +183,8 @@ export const INTEGRATION_DOCS: IntegrationDoc[] = [
     region: "Global",
     blurb:
       "Connect Stripe to Efficyon to analyze every SaaS subscription billed through your account. Read-only restricted-key auth; setup takes 3 minutes. The first analysis surfaces price drift, dead retries, and overlap within 5 minutes.",
+    metaDescription:
+      "Connect Stripe to Efficyon: analyze every Stripe-billed subscription, track payment trends, and catch billing anomalies before they hit your books.",
     prerequisites: [
       "A Stripe account with permission to create restricted API keys (typically the account owner or a developer with API key access).",
       "Subscriptions actually billed through Stripe — Efficyon analyzes what runs through your account, so the more SaaS-on-Stripe you have, the more we can surface.",
@@ -249,6 +256,8 @@ export const INTEGRATION_DOCS: IntegrationDoc[] = [
     region: "United Kingdom · Australia · New Zealand",
     blurb:
       "Connect Xero to Efficyon for cost-leak analysis across one or many entities. Read-only, multi-currency, multi-org. Setup takes ~5 minutes per organization; the first scan completes within 10–15 minutes.",
+    metaDescription:
+      "Connect Xero to Efficyon: complete SaaS spend visibility through Xero. Multi-currency, multi-org, with department-level analysis. ~5 min OAuth setup.",
     prerequisites: [
       "A Xero account with the role 'Adviser' or 'Standard' on every organization you want to connect.",
       "Active Xero subscription on Standard, Premium, or Ultimate plan (Starter and Ledger plans don't expose the bills API).",
