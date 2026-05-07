@@ -8,6 +8,7 @@ import {
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Features - SaaS Cost Optimization Tools",
@@ -87,29 +88,35 @@ const PILLARS = [
 ] as const
 
 export default function FeaturesIndexPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Efficyon",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    url: absoluteUrl("/features"),
-    description:
-      "AI-powered SaaS cost optimization platform with subscription tracking, duplicate payment detection, unused license detection, spend management, AI cost analysis, and automated software audits.",
-    offers: {
-      "@type": "AggregateOffer",
-      lowPrice: "39",
-      highPrice: "119",
-      priceCurrency: "USD",
-      offerCount: "3",
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Efficyon",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: absoluteUrl("/features"),
+      description:
+        "AI-powered SaaS cost optimization platform with subscription tracking, duplicate payment detection, unused license detection, spend management, AI cost analysis, and automated software audits.",
+      offers: {
+        "@type": "AggregateOffer",
+        lowPrice: "39",
+        highPrice: "119",
+        priceCurrency: "USD",
+        offerCount: "3",
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Features", path: "/features" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

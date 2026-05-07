@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Stop Paying Twice for the Same Software",
@@ -83,13 +84,18 @@ export default function DuplicatePaymentDetectionPage() {
         },
       ],
     },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Features", path: "/features" },
+      { name: "Duplicate Payment Detection", path: "/features/duplicate-payment-detection" },
+    ]),
   ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <EditorialPageHero

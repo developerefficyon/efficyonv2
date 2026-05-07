@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "AI Cost Analysis That Finds What Humans Miss",
@@ -83,13 +84,18 @@ export default function AICostAnalysisPage() {
         },
       ],
     },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Features", path: "/features" },
+      { name: "AI Cost Analysis", path: "/features/ai-cost-analysis" },
+    ]),
   ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <EditorialPageHero

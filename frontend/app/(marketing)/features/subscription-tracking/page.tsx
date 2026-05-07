@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Subscription Tracking That Never Misses a Renewal",
@@ -83,13 +84,18 @@ export default function SubscriptionTrackingPage() {
         },
       ],
     },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Features", path: "/features" },
+      { name: "Subscription Tracking", path: "/features/subscription-tracking" },
+    ]),
   ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <EditorialPageHero

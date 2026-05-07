@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Complete SaaS Spend Management in One Platform",
@@ -83,13 +84,18 @@ export default function SaaSSpendManagementPage() {
         },
       ],
     },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Features", path: "/features" },
+      { name: "SaaS Spend Management", path: "/features/saas-spend-management" },
+    ]),
   ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <EditorialPageHero
