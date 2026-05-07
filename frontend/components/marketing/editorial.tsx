@@ -640,7 +640,7 @@ export function IntegrationVideoFrame({
         }}
         className="transition-all duration-700 ease-out"
       >
-        <div className="mb-4 flex items-center justify-between text-[11px] text-white/45 font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.2em]">
+        <div className="mb-4 flex items-center text-[11px] text-white/45 font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.2em]">
           <div className="flex items-center gap-3">
             <span
               className="inline-block h-1.5 w-1.5 animate-pulse rounded-full"
@@ -648,7 +648,6 @@ export function IntegrationVideoFrame({
             />
             <span>// {label}</span>
           </div>
-          <span className="hidden md:inline">↳ rendered with Remotion</span>
         </div>
 
         <div
