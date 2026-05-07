@@ -11,7 +11,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
-import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { breadcrumbListLd, datasetLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Software Cost Per Employee: What's Normal in 2026?",
@@ -54,7 +54,7 @@ export default function SubscriptionCostPerEmployeePage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "Software Cost per Employee", path: "/benchmarks/subscription-cost-per-employee" }])]) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "Software Cost per Employee", path: "/benchmarks/subscription-cost-per-employee" }]), datasetLd({ name: "Software Cost Per Employee — 2026", description: "Departmental and role-level breakdowns of monthly software cost per employee, sourced from third-party data.", url: absoluteUrl("/benchmarks/subscription-cost-per-employee"), datePublished: "2026-03-01", dateModified: "2026-03-01", variableMeasured: ["Monthly cost per employee", "Cost per department", "Year-over-year trend"] })]) }}
       />
 
       {/* HERO */}

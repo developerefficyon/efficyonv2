@@ -8,7 +8,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
-import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { breadcrumbListLd, datasetLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Average SaaS Spend by Company Size: 2026 Benchmarks",
@@ -51,7 +51,7 @@ export default function SaasSpendByCompanySizePage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "SaaS Spend by Company Size", path: "/benchmarks/saas-spend-by-company-size" }])]) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "SaaS Spend by Company Size", path: "/benchmarks/saas-spend-by-company-size" }]), datasetLd({ name: "SaaS Spend by Company Size — 2026", description: "Per-employee SaaS spend benchmarks across company-size bands, sourced from third-party industry data.", url: absoluteUrl("/benchmarks/saas-spend-by-company-size"), datePublished: "2026-03-01", dateModified: "2026-03-01", variableMeasured: ["Monthly SaaS spend per employee", "Tool count per employee", "Waste percentage"] })]) }}
       />
 
       {/* HERO */}
