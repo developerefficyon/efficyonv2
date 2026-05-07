@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,21 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Free SaaS Calculators & Tools | Efficyon",
   description:
     "Free interactive SaaS calculators to estimate your software costs, calculate ROI from optimization, and identify subscription waste. Make data-driven decisions about your SaaS stack.",
-  alternates: {
-    canonical: "/calculator",
-  },
-  openGraph: {
-    title: "Free SaaS Calculators & Tools | Efficyon",
-    description:
-      "Free interactive SaaS calculators to estimate your software costs, calculate ROI from optimization, and identify subscription waste.",
-    url: absoluteUrl("/calculator"),
-  },
-}
+  path: "/calculator",
+})
 
 const CALCULATORS = [
   {

@@ -1,28 +1,11 @@
-import type { Metadata } from "next"
-import { absoluteUrl } from "@/lib/site"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "SaaS Optimization ROI Calculator | Efficyon",
   description:
     "Calculate your potential return on investment from SaaS cost optimization. Estimate savings from license optimization, duplicate elimination, and time savings with payback period and 3-year projections.",
-  keywords: [
-    "saas roi calculator",
-    "saas optimization roi",
-    "software optimization return on investment",
-    "saas savings calculator",
-    "license optimization roi",
-  ],
-  alternates: {
-    canonical: "/calculator/roi",
-  },
-  openGraph: {
-    title: "SaaS Optimization ROI Calculator | Efficyon",
-    description:
-      "Calculate your potential ROI from SaaS cost optimization. See projected savings, payback period, and 3-year net returns.",
-    url: absoluteUrl("/calculator/roi"),
-    type: "website",
-  },
-}
+  path: "/calculator/roi",
+})
 
 export default function ROILayout({
   children,
