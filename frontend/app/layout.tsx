@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { DM_Sans, Instrument_Serif } from "next/font/google"
@@ -68,6 +69,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-XSFPYTCFEL" />
+        <Script
+          id="google-analytics"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-XSFPYTCFEL');
+            `,
+          }}
+        />
+      </head>
       <body className={`font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${dmSans.variable} ${instrumentSerif.variable}`}>
         <Providers>
           {children}
