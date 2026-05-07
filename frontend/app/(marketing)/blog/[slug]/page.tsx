@@ -9,9 +9,9 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl } from "@/lib/site"
 import { blogPosts, getBlogPost, getRelatedPosts } from "@/lib/blog-data"
-import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { articleLd, breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>
@@ -47,6 +47,7 @@ export async function generateMetadata({
       authors: [post.author],
       tags: post.tags,
       url: absoluteUrl(`/blog/${post.slug}`),
+      images: [{ url: absoluteUrl(post.image), width: 1200, height: 630, alt: post.title }],
     },
     alternates: {
       canonical: `/blog/${post.slug}`,
@@ -73,31 +74,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const relatedPosts = getRelatedPosts(slug, 3)
 
   const ld = [
-    {
-      "@context": "https://schema.org",
-      "@type": "Article",
+    articleLd({
       headline: post.title,
       description: post.description,
-      author: {
-        "@type": "Organization",
-        name: post.author,
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Efficyon",
-        url: SITE_URL,
-        logo: {
-          "@type": "ImageObject",
-          url: absoluteUrl("/logo.png"),
-        },
-      },
+      url: absoluteUrl(`/blog/${post.slug}`),
+      image: absoluteUrl(post.image),
       datePublished: post.publishDate,
       dateModified: post.updatedDate,
-      mainEntityOfPage: {
-        "@type": "WebPage",
-        "@id": absoluteUrl(`/blog/${post.slug}`),
-      },
-    },
+      authorName: post.author,
+    }),
     breadcrumbListLd([
       { name: "Home", path: "/" },
       { name: "Blog", path: "/blog" },

@@ -12,6 +12,7 @@ export interface BlogPost {
   category: "Guide" | "Analysis" | "Tips" | "Industry" | "Strategy"
   tags: string[]
   featured: boolean
+  image: string
 }
 
 export const blogPosts: BlogPost[] = [
@@ -37,6 +38,7 @@ export const blogPosts: BlogPost[] = [
       "optimization framework",
     ],
     featured: true,
+    image: "/og-image.png",
     content: `
 <h2>What Is SaaS Cost Optimization?</h2>
 <p>SaaS cost optimization is the systematic process of analyzing, managing, and reducing spending on software-as-a-service subscriptions while maintaining or improving the value those tools deliver to your organization. It goes far beyond simply canceling unused subscriptions&mdash;it involves aligning every dollar of software spend with actual business outcomes.</p>
@@ -167,6 +169,7 @@ export const blogPosts: BlogPost[] = [
       "procurement",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Why You Need a Software Subscription Audit</h2>
 <p>If you have not audited your company's software subscriptions in the past six months, you are almost certainly overspending. Research consistently shows that <strong>25&ndash;30% of SaaS spend is wasted</strong> on licenses, tools, and tiers that deliver no value to the organization.</p>
@@ -302,6 +305,7 @@ export const blogPosts: BlogPost[] = [
       "cost control",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>What Is SaaS Sprawl?</h2>
 <p>SaaS sprawl occurs when an organization accumulates an uncontrolled number of software subscriptions&mdash;many of which overlap, go unused, or operate outside the visibility of IT and finance teams. It is the natural consequence of how modern software is purchased: with a credit card, in minutes, by anyone in the organization.</p>
@@ -408,6 +412,7 @@ export const blogPosts: BlogPost[] = [
       "budget optimization",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Why CFOs Must Own Software Spend Management</h2>
 <p>Software has quietly become the second-largest expense for most companies, trailing only payroll. For a typical 200-person company, annual SaaS spend now exceeds <strong>$1.2 million</strong>&mdash;and it grows by 15&ndash;20% each year without active management. Yet in most organizations, no single person has complete visibility into this spend.</p>
@@ -539,6 +544,7 @@ export const blogPosts: BlogPost[] = [
       "quick wins",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>The Silent Drain on Your Budget</h2>
 <p>Unused SaaS subscriptions are the most straightforward form of software waste, and they are remarkably common. Studies show that the average company has <strong>at least 10 completely unused paid subscriptions</strong> quietly auto-renewing every month or year. The median waste from unused subscriptions alone is $18,000 per year for companies with 50&ndash;200 employees.</p>
@@ -620,6 +626,7 @@ export const blogPosts: BlogPost[] = [
       "budget planning",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>2026 SaaS Spend Per Employee: The Numbers</h2>
 <p>Understanding how your company's software spend compares to industry benchmarks is essential for identifying optimization opportunities. Based on aggregated data from thousands of companies, here are the 2026 benchmarks for SaaS spend per employee:</p>
@@ -722,6 +729,7 @@ export const blogPosts: BlogPost[] = [
       "IT governance",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Is SaaS Sprawl Costing You Money?</h2>
 <p>SaaS sprawl does not announce itself. It creeps in gradually&mdash;one new tool here, a free trial conversion there&mdash;until one day you realize your software spend has doubled and nobody can explain why. Here are the ten most reliable warning signs that your organization has a sprawl problem, along with what to do about each one.</p>
@@ -794,6 +802,7 @@ export const blogPosts: BlogPost[] = [
       "financial analysis",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>The Basic SaaS ROI Formula</h2>
 <p>At its simplest, ROI measures the return you get from an investment relative to its cost:</p>
@@ -905,6 +914,7 @@ export const blogPosts: BlogPost[] = [
       "cost psychology",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>The Psychology of Subscription Accumulation</h2>
 <p>Why do intelligent, cost-conscious organizations routinely overspend on software by 30% or more? The answer lies not in negligence but in the psychology of subscription-based purchasing. Several well-documented cognitive biases create an environment where subscriptions accumulate far faster than they are reviewed or eliminated.</p>
@@ -989,6 +999,7 @@ export const blogPosts: BlogPost[] = [
       "IT policy",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Why Most Software Procurement Policies Fail</h2>
 <p>Most companies either have no software procurement policy (leading to unchecked <a href="/blog/saas-sprawl-hidden-cost">SaaS sprawl</a>) or have a policy so rigid that employees work around it (leading to shadow IT, which is arguably worse). The key to a policy that works is finding the balance between governance and agility.</p>
@@ -1101,6 +1112,7 @@ export const blogPosts: BlogPost[] = [
       "infrastructure",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Beyond the Sticker Price</h2>
 <p>The SaaS vs. on-premise debate has evolved significantly. In 2026, the question is no longer "should we move to the cloud?" but rather "what is the right mix of SaaS and on-premise for our specific needs?" Making that decision wisely requires looking far beyond subscription fees and license costs to understand the total cost of ownership on both sides.</p>
@@ -1191,6 +1203,7 @@ export const blogPosts: BlogPost[] = [
       "renewal strategy",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Why SaaS Contracts Are More Negotiable Than You Think</h2>
 <p>Most companies pay list price for their SaaS subscriptions because they never ask for a discount. But SaaS vendors build significant margin into their pricing and expect to negotiate, especially for mid-market and enterprise deals. Even self-service pricing can often be discounted with a phone call.</p>
@@ -1280,6 +1293,7 @@ export const blogPosts: BlogPost[] = [
       "productivity",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>How Duplicates Happen</h2>
 <p>Software duplication is one of the most common and costly forms of <a href="/blog/saas-sprawl-hidden-cost">SaaS sprawl</a>. It happens organically through predictable patterns:</p>
@@ -1392,6 +1406,7 @@ export const blogPosts: BlogPost[] = [
       "software catalog",
     ],
     featured: false,
+    image: "/og-image.png",
     content: `
 <h2>Why You Need a SaaS Inventory</h2>
 <p>A SaaS inventory is the foundation of effective software spend management. Without a complete, accurate list of every tool your organization uses, you cannot optimize costs, manage security, or make informed decisions about your software stack.</p>
