@@ -6,6 +6,7 @@ import {
   EditorialEyebrow,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -258,6 +259,8 @@ export default function ForCFOPage() {
           </div>
         </div>
       </EditorialSection>
+
+      <RelatedLinks variant="solutions" />
 
       <EditorialFinalCTA
         title="Make SaaS the line"

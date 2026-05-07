@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -148,6 +149,8 @@ export default function SolutionsHubPage() {
           ))}
         </div>
       </EditorialSection>
+
+      <RelatedLinks variant="solutions" />
 
       <EditorialFinalCTA
         title="Not sure which path fits?"
