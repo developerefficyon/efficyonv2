@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,7 +21,7 @@ export function generateMetadata(): Metadata {
       title: "Fortnox + Efficyon: Automated SaaS Cost Analysis",
       description:
         "Connect Fortnox to Efficyon for automated invoice import, SaaS expense categorization, and AI-powered cost optimization. Built for Swedish SMBs and finance teams.",
-      url: "https://www.efficyon.com/integrations/fortnox",
+      url: absoluteUrl("/integrations/fortnox"),
     },
     keywords: [
       "fortnox cost analysis",
@@ -114,7 +115,7 @@ export default function FortnoxIntegrationPage() {
     operatingSystem: "Web",
     description:
       "Connect Fortnox accounting to Efficyon for automated SaaS cost analysis, invoice import, and AI-powered expense optimization.",
-    url: "https://www.efficyon.com/integrations/fortnox",
+    url: absoluteUrl("/integrations/fortnox"),
     offers: {
       "@type": "AggregateOffer",
       lowPrice: "39",
@@ -125,7 +126,7 @@ export default function FortnoxIntegrationPage() {
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

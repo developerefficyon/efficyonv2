@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,7 +21,7 @@ export function generateMetadata(): Metadata {
       title: "Stripe + Efficyon: Subscription Billing Analysis",
       description:
         "Connect Stripe to Efficyon to track recurring SaaS payments, surface billing anomalies, and analyze subscription cost trends with AI-powered analytics.",
-      url: "https://www.efficyon.com/integrations/stripe",
+      url: absoluteUrl("/integrations/stripe"),
     },
     keywords: [
       "stripe subscription analytics",
@@ -114,7 +115,7 @@ export default function StripeIntegrationPage() {
     operatingSystem: "Web",
     description:
       "Connect Stripe to Efficyon for subscription billing analysis, recurring payment tracking, and AI-powered SaaS cost optimization.",
-    url: "https://www.efficyon.com/integrations/stripe",
+    url: absoluteUrl("/integrations/stripe"),
     offers: {
       "@type": "AggregateOffer",
       lowPrice: "39",
@@ -125,7 +126,7 @@ export default function StripeIntegrationPage() {
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

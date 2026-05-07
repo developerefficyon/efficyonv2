@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,7 +21,7 @@ export function generateMetadata(): Metadata {
       title: "QuickBooks + Efficyon: Smart SaaS Spend Tracking",
       description:
         "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization. Built for US and Canadian SMBs.",
-      url: "https://www.efficyon.com/integrations/quickbooks",
+      url: absoluteUrl("/integrations/quickbooks"),
     },
     keywords: [
       "quickbooks saas cost tracking",
@@ -114,7 +115,7 @@ export default function QuickBooksIntegrationPage() {
     operatingSystem: "Web",
     description:
       "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization.",
-    url: "https://www.efficyon.com/integrations/quickbooks",
+    url: absoluteUrl("/integrations/quickbooks"),
     offers: {
       "@type": "AggregateOffer",
       lowPrice: "39",
@@ -125,7 +126,7 @@ export default function QuickBooksIntegrationPage() {
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

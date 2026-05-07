@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,7 +21,7 @@ export function generateMetadata(): Metadata {
       title: "Xero + Efficyon: Automated Software Spend Management",
       description:
         "Connect Xero to Efficyon for automated SaaS cost analysis with multi-currency, multi-org, and tracking-category-aware breakdowns. Built for UK, AU, and NZ teams.",
-      url: "https://www.efficyon.com/integrations/xero",
+      url: absoluteUrl("/integrations/xero"),
     },
     keywords: [
       "xero software spend management",
@@ -114,7 +115,7 @@ export default function XeroIntegrationPage() {
     operatingSystem: "Web",
     description:
       "Connect Xero accounting to Efficyon for automated SaaS cost analysis with multi-currency support, multi-org rollups, and tracking-category-aware breakdowns.",
-    url: "https://www.efficyon.com/integrations/xero",
+    url: absoluteUrl("/integrations/xero"),
     offers: {
       "@type": "AggregateOffer",
       lowPrice: "39",
@@ -125,7 +126,7 @@ export default function XeroIntegrationPage() {
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

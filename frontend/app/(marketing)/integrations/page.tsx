@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Integrations - Connect Your Tools",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     title: "Integrations - Connect Your Tools | Efficyon",
     description:
       "Integrate Efficyon with your accounting and billing platforms for automated SaaS cost analysis. Connect Fortnox, Stripe, QuickBooks, Xero, and more.",
-    url: "https://www.efficyon.com/integrations",
+    url: absoluteUrl("/integrations"),
   },
 }
 
@@ -114,14 +115,14 @@ export default function IntegrationsIndexPage() {
     name: "Efficyon Integrations",
     description:
       "Connect your accounting and billing platforms to Efficyon for automated SaaS cost analysis and optimization.",
-    url: "https://www.efficyon.com/integrations",
+    url: absoluteUrl("/integrations"),
     mainEntity: {
       "@type": "ItemList",
       itemListElement: INTEGRATIONS.map((integration, index) => ({
         "@type": "ListItem",
         position: index + 1,
         name: `${integration.name} Integration`,
-        url: `https://www.efficyon.com/integrations/${integration.slug}`,
+        url: absoluteUrl(`/integrations/${integration.slug}`),
       })),
     },
   }
