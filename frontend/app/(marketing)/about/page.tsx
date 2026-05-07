@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "About — Built in Gothenburg, Sweden, for teams who like their numbers honest",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     title: "About Efficyon — Cost intelligence for SaaS-heavy teams",
     description:
       "Why we built Efficyon, what we believe, and how we work. Made by a small team in Gothenburg, Sweden.",
-    url: "https://www.efficyon.com/about",
+    url: absoluteUrl("/about"),
   },
 }
 
@@ -66,13 +67,13 @@ export default function AboutPage() {
     "@context": "https://schema.org",
     "@type": "AboutPage",
     name: "About Efficyon",
-    url: "https://www.efficyon.com/about",
+    url: absoluteUrl("/about"),
     description:
       "Why we built Efficyon, what we believe, and how we work. Made in Gothenburg, Sweden.",
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
       foundingLocation: {
         "@type": "Place",
         name: "Gothenburg, Sweden",

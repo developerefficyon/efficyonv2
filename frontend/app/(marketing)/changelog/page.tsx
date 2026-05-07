@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Changelog — what we shipped, ordered most recent first",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Efficyon Changelog — what we shipped",
     description: "Built in public, updated monthly.",
-    url: "https://www.efficyon.com/changelog",
+    url: absoluteUrl("/changelog"),
   },
 }
 
@@ -117,7 +118,7 @@ export default function ChangelogPage() {
     "@type": "Blog",
     name: "Efficyon Changelog",
     description: "Every integration, check, and feature we ship.",
-    url: "https://www.efficyon.com/changelog",
+    url: absoluteUrl("/changelog"),
     blogPost: RELEASES.map((r) => ({
       "@type": "BlogPosting",
       headline: r.title,
