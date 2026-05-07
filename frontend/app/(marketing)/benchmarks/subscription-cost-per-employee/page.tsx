@@ -11,6 +11,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Software Cost Per Employee: What's Normal in 2026?",
@@ -50,6 +51,10 @@ export default function SubscriptionCostPerEmployeePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "Software Cost per Employee", path: "/benchmarks/subscription-cost-per-employee" }])]) }}
       />
 
       {/* HERO */}

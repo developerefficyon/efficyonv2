@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "SaaS Spend Benchmarks & Data",
@@ -52,25 +53,31 @@ const BENCHMARKS = [
 ] as const
 
 export default function BenchmarksIndexPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "SaaS Spend Benchmarks & Industry Data",
-    description:
-      "SaaS spend benchmarks by company size, industry, and department with 2026 data.",
-    url: absoluteUrl("/benchmarks"),
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "SaaS Spend Benchmarks & Industry Data",
+      description:
+        "SaaS spend benchmarks by company size, industry, and department with 2026 data.",
+      url: absoluteUrl("/benchmarks"),
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Benchmarks", path: "/benchmarks" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

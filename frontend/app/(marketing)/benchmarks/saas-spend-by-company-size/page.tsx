@@ -8,6 +8,7 @@ import {
   GREEN,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Average SaaS Spend by Company Size: 2026 Benchmarks",
@@ -47,6 +48,10 @@ export default function SaasSpendByCompanySizePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Benchmarks", path: "/benchmarks" }, { name: "SaaS Spend by Company Size", path: "/benchmarks/saas-spend-by-company-size" }])]) }}
       />
 
       {/* HERO */}
