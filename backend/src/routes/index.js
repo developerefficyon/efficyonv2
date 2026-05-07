@@ -363,11 +363,13 @@ const {
 // Auth Controller - login
 const { loginHandler } = require("../controllers/authController")
 
-// Email Controller - Resend email sending
+// Email Controller - Resend email sending + marketing newsletter
 const {
   registerUserHandler,
   sendVerificationEmailHandler,
   sendPasswordResetEmailHandler,
+  newsletterSubscribeHandler,
+  newsletterUnsubscribeHandler,
 } = require("../controllers/emailController")
 
 // Chat Controller - chat conversations and history
@@ -792,6 +794,10 @@ router.post("/api/auth/login", loginHandler)
 // Email Routes (public - no auth required for sending emails)
 router.post("/api/email/send-verification", sendVerificationEmailHandler)
 router.post("/api/email/send-password-reset", sendPasswordResetEmailHandler)
+
+// Marketing newsletter (public - footer signup form)
+router.post("/api/email/newsletter-subscribe", newsletterSubscribeHandler)
+router.get("/api/email/newsletter-unsubscribe", newsletterUnsubscribeHandler)
 
 // Chat Conversation Routes
 router.get("/api/chat/conversations", requireAuth, requireRole("owner", "editor", "viewer"), getConversations)

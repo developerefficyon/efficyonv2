@@ -246,9 +246,131 @@ async function sendPasswordResetEmailHandler(req, res) {
   }
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Newsletter subscribe — public, no auth.
+   Idempotent: re-subscribing reactivates a previously-unsubscribed row,
+   does nothing for an already-active row.
+   ────────────────────────────────────────────────────────────── */
+async function newsletterSubscribeHandler(req, res) {
+  const endpoint = "POST /api/email/newsletter-subscribe"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    log("error", endpoint, "Supabase not configured")
+    return res.status(500).json({ error: "Newsletter unavailable right now" })
+  }
+
+  let { email, source } = req.body || {}
+
+  // Validate + normalize
+  if (typeof email !== "string") {
+    return res.status(400).json({ error: "Email is required" })
+  }
+  email = email.trim().toLowerCase()
+
+  // Lightweight email shape check — backend boundary, not a marketing tool.
+  // Matches the frontend regex; real validation happens at send time.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Please enter a valid email" })
+  }
+
+  if (email.length > 320) {
+    return res.status(400).json({ error: "Email too long" })
+  }
+
+  if (typeof source === "string") {
+    source = source.slice(0, 64) // bounded; the frontend self-tags freely
+  } else {
+    source = null
+  }
+
+  // Capture client metadata for audit, but don't leak it back to the caller.
+  const ip =
+    (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    null
+  const userAgent = (req.headers["user-agent"] || "").toString().slice(0, 256) || null
+
+  try {
+    // Upsert by email. If the address already exists in `unsubscribed` state,
+    // re-activate it. If it's already active, this becomes a no-op write.
+    const { data, error } = await supabase
+      .from("newsletter_subscribers")
+      .upsert(
+        {
+          email,
+          source,
+          status: "active",
+          ip_address: ip,
+          user_agent: userAgent,
+          unsubscribed_at: null,
+        },
+        { onConflict: "email" }
+      )
+      .select("id")
+      .single()
+
+    if (error) {
+      log("error", endpoint, "Upsert failed:", error.message)
+      return res.status(500).json({ error: "Could not subscribe right now" })
+    }
+
+    log("log", endpoint, "Subscribed:", email, "id:", data?.id)
+    return res.json({ ok: true })
+  } catch (err) {
+    log("error", endpoint, "Unexpected error:", err?.message || err)
+    return res.status(500).json({ error: "Could not subscribe right now" })
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Newsletter unsubscribe — single-click via token in email footer.
+   GET so it works from any email client without forms.
+   ────────────────────────────────────────────────────────────── */
+async function newsletterUnsubscribeHandler(req, res) {
+  const endpoint = "GET /api/email/newsletter-unsubscribe"
+  log("log", endpoint, "Request received")
+
+  if (!supabase) {
+    return res.status(500).json({ error: "Unsubscribe unavailable right now" })
+  }
+
+  const token = (req.query?.token || "").toString().trim()
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+    return res.status(400).json({ error: "Invalid unsubscribe token" })
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("newsletter_subscribers")
+      .update({ status: "unsubscribed", unsubscribed_at: new Date().toISOString() })
+      .eq("unsubscribe_token", token)
+      .select("id")
+      .maybeSingle()
+
+    if (error) {
+      log("error", endpoint, "Update failed:", error.message)
+      return res.status(500).json({ error: "Could not unsubscribe right now" })
+    }
+    if (!data) {
+      // Token didn't match anything — return ok anyway so we don't help token-guessers
+      // distinguish valid from invalid tokens.
+      return res.json({ ok: true })
+    }
+
+    log("log", endpoint, "Unsubscribed id:", data.id)
+    return res.json({ ok: true })
+  } catch (err) {
+    log("error", endpoint, "Unexpected error:", err?.message || err)
+    return res.status(500).json({ error: "Could not unsubscribe right now" })
+  }
+}
+
 module.exports = {
   registerUserHandler,
   sendVerificationEmailHandler,
   sendPasswordResetEmailHandler,
+  newsletterSubscribeHandler,
+  newsletterUnsubscribeHandler,
 }
 
