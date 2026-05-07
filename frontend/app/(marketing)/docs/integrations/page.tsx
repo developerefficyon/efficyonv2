@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { INTEGRATION_DOCS } from "@/lib/integration-docs"
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Efficyon · Integration setup guides",
     description: "Step-by-step setup for every integration we support.",
-    url: "https://www.efficyon.com/docs/integrations",
+    url: absoluteUrl("/docs/integrations"),
   },
 }
 

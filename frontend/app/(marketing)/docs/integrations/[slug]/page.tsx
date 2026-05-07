@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { INTEGRATION_DOCS, getDoc } from "@/lib/integration-docs"
 
 interface PageProps {
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: `${doc.name} × Efficyon — setup guide`,
       description: doc.blurb,
-      url: `https://www.efficyon.com/docs/integrations/${doc.slug}`,
+      url: absoluteUrl(`/docs/integrations/${doc.slug}`),
     },
   }
 }
@@ -43,7 +44,7 @@ export default async function IntegrationDocPage({ params }: PageProps) {
     "@type": "TechArticle",
     headline: `Connect ${doc.name} to Efficyon`,
     description: doc.blurb,
-    url: `https://www.efficyon.com/docs/integrations/${doc.slug}`,
+    url: absoluteUrl(`/docs/integrations/${doc.slug}`),
     proficiencyLevel: "Beginner",
     dependencies: doc.prerequisites.join("; "),
     publisher: { "@type": "Organization", name: "Efficyon" },
