@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Stop Paying Twice for the Same Software",
   description:
     "Detect duplicate invoices, overlapping SaaS tools, and redundant subscriptions. Pattern-matching across accounting, expense, and usage data — the kind of leak no spreadsheet catches.",
-  alternates: {
-    canonical: "/features/duplicate-payment-detection",
-  },
-  openGraph: {
-    title: "Stop Paying Twice for the Same Software | Efficyon",
-    description:
-      "Detect duplicate invoices, overlapping SaaS tools, and redundant subscriptions. Pattern-matching across accounting, expense, and usage data — the kind of leak no spreadsheet catches.",
-    url: absoluteUrl("/features/duplicate-payment-detection"),
-    type: "website",
-  },
-}
+  path: "/features/duplicate-payment-detection",
+})
 
 export default function DuplicatePaymentDetectionPage() {
   const jsonLd = [

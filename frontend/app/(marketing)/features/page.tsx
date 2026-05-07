@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,20 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Features - SaaS Cost Optimization Tools",
   description:
     "Explore Efficyon's full suite of SaaS cost optimization features. From subscription tracking and duplicate payment detection to AI-powered cost analysis and automated software audits.",
-  alternates: { canonical: "/features" },
-  openGraph: {
-    title: "Features - SaaS Cost Optimization Tools | Efficyon",
-    description:
-      "Explore Efficyon's full suite of SaaS cost optimization features. From subscription tracking and duplicate payment detection to AI-powered cost analysis and automated software audits.",
-    url: absoluteUrl("/features"),
-    type: "website",
-  },
-}
+  path: "/features",
+})
 
 const FEATURES = [
   {

@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "AI Cost Analysis That Finds What Humans Miss",
   description:
     "Continuous, explainable cost analysis tuned on accounting + usage data — not generic finance. Pattern recognition, anomaly detection, and prioritized recommendations across your entire stack.",
-  alternates: {
-    canonical: "/features/ai-cost-analysis",
-  },
-  openGraph: {
-    title: "AI Cost Analysis That Finds What Humans Miss | Efficyon",
-    description:
-      "Continuous, explainable cost analysis tuned on accounting + usage data — not generic finance. Pattern recognition, anomaly detection, and prioritized recommendations across your entire stack.",
-    url: absoluteUrl("/features/ai-cost-analysis"),
-    type: "website",
-  },
-}
+  path: "/features/ai-cost-analysis",
+})
 
 export default function AICostAnalysisPage() {
   const jsonLd = [

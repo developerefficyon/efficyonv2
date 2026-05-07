@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,22 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "SaaS Cost Optimization That Pays for Itself",
   description:
     "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
-  alternates: {
-    canonical: "/features/saas-cost-optimization",
-  },
-  openGraph: {
-    title: "SaaS Cost Optimization That Pays for Itself | Efficyon",
-    description:
-      "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
-    url: absoluteUrl("/features/saas-cost-optimization"),
-    type: "website",
-  },
-}
+  path: "/features/saas-cost-optimization",
+})
 
 export default function SaaSCostOptimizationPage() {
   const jsonLd = [

@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Automated Software Audits in Minutes, Not Months",
   description:
     "Continuously updated software inventory, license compliance tracking, and audit-ready reports. Replace the annual spreadsheet scramble with a feed.",
-  alternates: {
-    canonical: "/features/software-audit",
-  },
-  openGraph: {
-    title: "Automated Software Audits in Minutes, Not Months | Efficyon",
-    description:
-      "Continuously updated software inventory, license compliance tracking, and audit-ready reports. Replace the annual spreadsheet scramble with a feed.",
-    url: absoluteUrl("/features/software-audit"),
-    type: "website",
-  },
-}
+  path: "/features/software-audit",
+})
 
 export default function SoftwareAuditPage() {
   const jsonLd = [

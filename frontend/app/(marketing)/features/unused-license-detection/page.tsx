@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Find Every Unused License Draining Your Budget",
   description:
     "Detect unused and underutilized SaaS licenses automatically. Efficyon analyzes 90-day activity windows to identify idle seats, departed-employee licenses, and overprovisioned tiers.",
-  alternates: {
-    canonical: "/features/unused-license-detection",
-  },
-  openGraph: {
-    title: "Find Every Unused License Draining Your Budget | Efficyon",
-    description:
-      "Detect unused and underutilized SaaS licenses automatically. Efficyon analyzes 90-day activity windows to identify idle seats, departed-employee licenses, and overprovisioned tiers.",
-    url: absoluteUrl("/features/unused-license-detection"),
-    type: "website",
-  },
-}
+  path: "/features/unused-license-detection",
+})
 
 export default function UnusedLicenseDetectionPage() {
   const jsonLd = [

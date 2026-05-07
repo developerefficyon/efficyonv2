@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Subscription Tracking That Never Misses a Renewal",
   description:
     "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
-  alternates: {
-    canonical: "/features/subscription-tracking",
-  },
-  openGraph: {
-    title: "Subscription Tracking That Never Misses a Renewal | Efficyon",
-    description:
-      "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
-    url: absoluteUrl("/features/subscription-tracking"),
-    type: "website",
-  },
-}
+  path: "/features/subscription-tracking",
+})
 
 export default function SubscriptionTrackingPage() {
   const jsonLd = [

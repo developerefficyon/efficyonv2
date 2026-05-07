@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,22 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Complete SaaS Spend Management in One Platform",
   description:
     "Full SaaS spend visibility with real-time dashboards, budget controls, forecasting, and department allocation. Replace your spreadsheet without losing the spreadsheet's clarity.",
-  alternates: {
-    canonical: "/features/saas-spend-management",
-  },
-  openGraph: {
-    title: "Complete SaaS Spend Management in One Platform | Efficyon",
-    description:
-      "Full SaaS spend visibility with real-time dashboards, budget controls, forecasting, and department allocation. Replace your spreadsheet without losing the spreadsheet's clarity.",
-    url: absoluteUrl("/features/saas-spend-management"),
-    type: "website",
-  },
-}
+  path: "/features/saas-spend-management",
+})
 
 export default function SaaSSpendManagementPage() {
   const jsonLd = [
