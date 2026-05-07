@@ -5,6 +5,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, itemListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -331,6 +332,8 @@ export default function BestSaaSToolsPage() {
           ))}
         </dl>
       </EditorialSection>
+
+      <RelatedLinks variant="compare" />
 
       <EditorialFinalCTA
         title="Pick the tool that fits."

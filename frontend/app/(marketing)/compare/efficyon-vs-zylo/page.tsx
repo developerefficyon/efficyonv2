@@ -6,6 +6,7 @@ import {
   EditorialMonoLabel,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -230,6 +231,8 @@ export default function EfficyonVsZyloPage() {
           ))}
         </dl>
       </EditorialSection>
+
+      <RelatedLinks variant="compare" />
 
       <EditorialFinalCTA
         title="If you are 5,000+,"
