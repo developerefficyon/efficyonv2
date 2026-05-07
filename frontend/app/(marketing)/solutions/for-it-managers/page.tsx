@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,23 +7,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "Software Asset Management for IT Teams - Shadow IT, Surfaced",
     description:
       "Software asset management for IT teams. Detect shadow IT through accounting data, find departed employees with active seats, and tie license usage to identity. Read-only access, EU-hosted.",
-    alternates: {
-      canonical: "/solutions/for-it-managers",
-    },
-    openGraph: {
-      title: "Software Asset Management for IT Teams | Efficyon",
-      description:
-        "Detect shadow IT, surface departed-employee seats, and tie license usage to identity data. Read-only access, EU-hosted.",
-      url: absoluteUrl("/solutions/for-it-managers"),
-      type: "website",
-    },
-  }
+    path: "/solutions/for-it-managers",
+  })
 }
 
 export default function ForITManagersPage() {

@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,23 +7,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "Enterprise SaaS Cost Intelligence - Read-Only, EU-Hosted",
     description:
       "Enterprise SaaS cost intelligence. Read-only access to accounting and usage data, EU hosting, and an integration surface that fits next to your ERP and identity provider. Pre-launch — designed for procurement-grade scrutiny.",
-    alternates: {
-      canonical: "/solutions/for-enterprise",
-    },
-    openGraph: {
-      title: "Enterprise SaaS Cost Intelligence | Efficyon",
-      description:
-        "Read-only access, EU hosting, and an integration surface that fits next to your ERP and identity provider.",
-      url: absoluteUrl("/solutions/for-enterprise"),
-      type: "website",
-    },
-  }
+    path: "/solutions/for-enterprise",
+  })
 }
 
 export default function ForEnterprisePage() {

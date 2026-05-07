@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,23 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "SaaS Spend Intelligence for CFOs - Board-Ready Reporting",
     description:
       "Strategic SaaS cost intelligence for CFOs. Board-ready dashboards, modeled forecasting, department-level allocation, and read-only access to the second-largest line item after payroll.",
-    alternates: {
-      canonical: "/solutions/for-cfo",
-    },
-    openGraph: {
-      title: "Strategic SaaS Cost Intelligence for CFOs | Efficyon",
-      description:
-        "Board-ready dashboards, modeled forecasts, and department-level allocation for the line item nobody can explain.",
-      url: absoluteUrl("/solutions/for-cfo"),
-      type: "website",
-    },
-  }
+    path: "/solutions/for-cfo",
+  })
 }
 
 export default function ForCFOPage() {

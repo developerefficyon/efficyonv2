@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,23 +7,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "SaaS Spend Visibility for Finance Teams - Retire the Spreadsheet",
     description:
       "Centralized SaaS spend tracking for finance teams. Auto-categorize subscriptions, allocate to departments, generate audit-ready reports. Replace the manual reconciliation spreadsheet without losing its clarity.",
-    alternates: {
-      canonical: "/solutions/for-finance-teams",
-    },
-    openGraph: {
-      title: "SaaS Spend Visibility for Finance Teams | Efficyon",
-      description:
-        "Auto-categorize SaaS spend, allocate by department, and generate audit-ready reports without the manual reconciliation spreadsheet.",
-      url: absoluteUrl("/solutions/for-finance-teams"),
-      type: "website",
-    },
-  }
+    path: "/solutions/for-finance-teams",
+  })
 }
 
 export default function ForFinanceTeamsPage() {

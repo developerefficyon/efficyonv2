@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,22 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Solutions - SaaS Cost Optimization by Role",
   description:
     "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises. Find the right solution for your role and team size.",
-  alternates: {
-    canonical: "/solutions",
-  },
-  openGraph: {
-    title: "Solutions - SaaS Cost Optimization by Role | Efficyon",
-    description:
-      "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises.",
-    url: absoluteUrl("/solutions"),
-    type: "website",
-  },
-}
+  path: "/solutions",
+})
 
 const SOLUTIONS = [
   {

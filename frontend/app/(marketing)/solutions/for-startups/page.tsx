@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,23 +7,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "SaaS Cost Optimization for Startups - Preserve the Runway",
     description:
       "Cost intelligence for startups burning runway on SaaS sprawl. Find the trial that auto-converted, the duplicate stack two co-founders set up, and the seat counts that haven't kept up with the team. 5× fee refund guarantee.",
-    alternates: {
-      canonical: "/solutions/for-startups",
-    },
-    openGraph: {
-      title: "SaaS Cost Optimization for Startups | Efficyon",
-      description:
-        "Stop burning runway on SaaS sprawl. Find the trial that auto-converted, the duplicate stack, and the seats that haven't kept up. 5× fee refund guarantee.",
-      url: absoluteUrl("/solutions/for-startups"),
-      type: "website",
-    },
-  }
+    path: "/solutions/for-startups",
+  })
 }
 
 export default function ForStartupsPage() {
