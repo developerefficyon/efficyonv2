@@ -11,13 +11,13 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl } from "@/lib/site"
 import {
   saasTools,
   getToolBySlug,
   getRelatedTools,
 } from "@/lib/saas-tools-data"
-import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { breadcrumbListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export async function generateStaticParams() {
   return saasTools.map((tool) => ({
@@ -87,24 +87,12 @@ export default async function ToolAnalysisPage({
   const seoContent = generateSeoContent(tool)
 
   const ld = [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      name: `${tool.name} Cost Analysis & Optimization`,
-      description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable optimization tips.`,
+    softwareApplicationLd({
+      name: tool.name,
+      description: tool.description ?? `${tool.name} — ${tool.category}`,
       url: absoluteUrl(`/tools/${tool.slug}`),
-      publisher: {
-        "@type": "Organization",
-        name: "Efficyon",
-        url: SITE_URL,
-      },
-      about: {
-        "@type": "SoftwareApplication",
-        name: tool.name,
-        url: tool.website,
-        applicationCategory: tool.category,
-      },
-    },
+      category: tool.category,
+    }),
     breadcrumbListLd([
       { name: "Home", path: "/" },
       { name: "Tools Directory", path: "/tools" },
