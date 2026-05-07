@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -19,7 +20,7 @@ export function generateMetadata(): Metadata {
       title: "SaaS Spend Visibility for Finance Teams | Efficyon",
       description:
         "Auto-categorize SaaS spend, allocate by department, and generate audit-ready reports without the manual reconciliation spreadsheet.",
-      url: "https://www.efficyon.com/solutions/for-finance-teams",
+      url: absoluteUrl("/solutions/for-finance-teams"),
       type: "website",
     },
   }
@@ -32,11 +33,11 @@ export default function ForFinanceTeamsPage() {
     name: "SaaS Spend Visibility for Finance Teams | Efficyon",
     description:
       "Centralized SaaS spend tracking, auto-categorization, department allocation, and audit-ready reports for finance teams.",
-    url: "https://www.efficyon.com/solutions/for-finance-teams",
+    url: absoluteUrl("/solutions/for-finance-teams"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,7 +21,7 @@ export function generateMetadata(): Metadata {
       title: "Strategic SaaS Cost Intelligence for CFOs | Efficyon",
       description:
         "Board-ready dashboards, modeled forecasts, and department-level allocation for the line item nobody can explain.",
-      url: "https://www.efficyon.com/solutions/for-cfo",
+      url: absoluteUrl("/solutions/for-cfo"),
       type: "website",
     },
   }
@@ -33,11 +34,11 @@ export default function ForCFOPage() {
     name: "Strategic SaaS Cost Intelligence for CFOs | Efficyon",
     description:
       "Board-ready SaaS dashboards, modeled forecasting, and department-level allocation for financial leaders.",
-    url: "https://www.efficyon.com/solutions/for-cfo",
+    url: absoluteUrl("/solutions/for-cfo"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

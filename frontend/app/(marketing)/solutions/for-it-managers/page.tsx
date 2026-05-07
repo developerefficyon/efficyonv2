@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -19,7 +20,7 @@ export function generateMetadata(): Metadata {
       title: "Software Asset Management for IT Teams | Efficyon",
       description:
         "Detect shadow IT, surface departed-employee seats, and tie license usage to identity data. Read-only access, EU-hosted.",
-      url: "https://www.efficyon.com/solutions/for-it-managers",
+      url: absoluteUrl("/solutions/for-it-managers"),
       type: "website",
     },
   }
@@ -32,11 +33,11 @@ export default function ForITManagersPage() {
     name: "Software Asset Management for IT Teams | Efficyon",
     description:
       "Shadow IT discovery, license usage tied to identity, and departed-employee seat detection — anchored in accounting and identity data.",
-    url: "https://www.efficyon.com/solutions/for-it-managers",
+    url: absoluteUrl("/solutions/for-it-managers"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

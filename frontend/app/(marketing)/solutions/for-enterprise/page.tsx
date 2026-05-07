@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -19,7 +20,7 @@ export function generateMetadata(): Metadata {
       title: "Enterprise SaaS Cost Intelligence | Efficyon",
       description:
         "Read-only access, EU hosting, and an integration surface that fits next to your ERP and identity provider.",
-      url: "https://www.efficyon.com/solutions/for-enterprise",
+      url: absoluteUrl("/solutions/for-enterprise"),
       type: "website",
     },
   }
@@ -32,11 +33,11 @@ export default function ForEnterprisePage() {
     name: "Enterprise SaaS Cost Intelligence | Efficyon",
     description:
       "Enterprise SaaS cost intelligence with read-only access, EU hosting, and deep integration with ERP and identity providers.",
-    url: "https://www.efficyon.com/solutions/for-enterprise",
+    url: absoluteUrl("/solutions/for-enterprise"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

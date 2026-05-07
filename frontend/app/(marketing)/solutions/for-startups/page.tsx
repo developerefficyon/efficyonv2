@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export function generateMetadata(): Metadata {
   return {
@@ -19,7 +20,7 @@ export function generateMetadata(): Metadata {
       title: "SaaS Cost Optimization for Startups | Efficyon",
       description:
         "Stop burning runway on SaaS sprawl. Find the trial that auto-converted, the duplicate stack, and the seats that haven't kept up. 5× fee refund guarantee.",
-      url: "https://www.efficyon.com/solutions/for-startups",
+      url: absoluteUrl("/solutions/for-startups"),
       type: "website",
     },
   }
@@ -32,11 +33,11 @@ export default function ForStartupsPage() {
     name: "SaaS Cost Optimization for Startups | Efficyon",
     description:
       "Cost intelligence for startups: surface the SaaS waste that's quietly compounding before it eats the runway.",
-    url: "https://www.efficyon.com/solutions/for-startups",
+    url: absoluteUrl("/solutions/for-startups"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

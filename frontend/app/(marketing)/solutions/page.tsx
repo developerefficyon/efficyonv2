@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Solutions - SaaS Cost Optimization by Role",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "Solutions - SaaS Cost Optimization by Role | Efficyon",
     description:
       "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises.",
-    url: "https://www.efficyon.com/solutions",
+    url: absoluteUrl("/solutions"),
     type: "website",
   },
 }
@@ -69,11 +70,11 @@ export default function SolutionsHubPage() {
     name: "Solutions - SaaS Cost Optimization by Role | Efficyon",
     description:
       "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises.",
-    url: "https://www.efficyon.com/solutions",
+    url: absoluteUrl("/solutions"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 
