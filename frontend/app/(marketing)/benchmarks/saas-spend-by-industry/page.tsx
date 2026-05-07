@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Spend Benchmarks by Industry: 2026 Data",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "SaaS Spend Benchmarks by Industry: 2026 Data | Efficyon",
     description:
       "Industry-specific SaaS spending benchmarks with waste percentages and top tools per sector.",
-    url: "https://www.efficyon.com/benchmarks/saas-spend-by-industry",
+    url: absoluteUrl("/benchmarks/saas-spend-by-industry"),
     type: "article",
   },
 }
@@ -31,13 +32,13 @@ export default function SaasSpendByIndustryPage() {
     headline: "SaaS Spend Benchmarks by Industry: 2026 Data",
     description:
       "Industry-specific SaaS spending benchmarks for 2026 covering seven major sectors.",
-    url: "https://www.efficyon.com/benchmarks/saas-spend-by-industry",
+    url: absoluteUrl("/benchmarks/saas-spend-by-industry"),
     datePublished: "2026-03-01",
     dateModified: "2026-03-01",
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

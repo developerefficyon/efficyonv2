@@ -10,6 +10,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Software Cost Per Employee: What's Normal in 2026?",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     title: "Software Cost Per Employee: What's Normal in 2026? | Efficyon",
     description:
       "Department-level software cost benchmarks per employee with year-over-year trends for 2026.",
-    url: "https://www.efficyon.com/benchmarks/subscription-cost-per-employee",
+    url: absoluteUrl("/benchmarks/subscription-cost-per-employee"),
     type: "article",
   },
 }
@@ -34,13 +35,13 @@ export default function SubscriptionCostPerEmployeePage() {
     headline: "Software Cost Per Employee: What's Normal in 2026?",
     description:
       "Department-level benchmarks for software subscription costs per employee in 2026.",
-    url: "https://www.efficyon.com/benchmarks/subscription-cost-per-employee",
+    url: absoluteUrl("/benchmarks/subscription-cost-per-employee"),
     datePublished: "2026-03-01",
     dateModified: "2026-03-01",
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "SaaS Spend Benchmarks & Data",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: "SaaS Spend Benchmarks & Data | Efficyon",
     description:
       "SaaS spend benchmarks by company size, industry, and department. Compare your software costs to industry averages with 2026 data.",
-    url: "https://www.efficyon.com/benchmarks",
+    url: absoluteUrl("/benchmarks"),
     type: "website",
   },
 }
@@ -57,11 +58,11 @@ export default function BenchmarksIndexPage() {
     name: "SaaS Spend Benchmarks & Industry Data",
     description:
       "SaaS spend benchmarks by company size, industry, and department with 2026 data.",
-    url: "https://www.efficyon.com/benchmarks",
+    url: absoluteUrl("/benchmarks"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 

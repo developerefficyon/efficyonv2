@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Average SaaS Spend by Company Size: 2026 Benchmarks",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "Average SaaS Spend by Company Size: 2026 Benchmarks | Efficyon",
     description:
       "Comprehensive 2026 benchmarks for SaaS spending by company size, from startups to enterprises.",
-    url: "https://www.efficyon.com/benchmarks/saas-spend-by-company-size",
+    url: absoluteUrl("/benchmarks/saas-spend-by-company-size"),
     type: "article",
   },
 }
@@ -31,13 +32,13 @@ export default function SaasSpendByCompanySizePage() {
     headline: "Average SaaS Spend by Company Size: 2026 Benchmarks",
     description:
       "Comprehensive benchmarks for SaaS spending by company size in 2026.",
-    url: "https://www.efficyon.com/benchmarks/saas-spend-by-company-size",
+    url: absoluteUrl("/benchmarks/saas-spend-by-company-size"),
     datePublished: "2026-03-01",
     dateModified: "2026-03-01",
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 
