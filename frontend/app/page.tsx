@@ -505,7 +505,7 @@ function Findings() {
             </p>
             <figcaption className="mt-6 flex items-center gap-3 text-[12px] uppercase tracking-[0.16em] text-white/45 font-[family-name:var(--font-geist-mono)]">
               <span className="h-px w-8" style={{ background: "var(--green)" }} />
-              The Efficyon team · Stockholm
+              The Efficyon team · Gothenburg
             </figcaption>
           </figure>
 
@@ -916,7 +916,7 @@ function Footer() {
             you pay and what you actually use.
           </p>
           <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
-            Built in Stockholm · EU-hosted
+            Built in Gothenburg · EU-hosted
           </p>
         </div>
 
