@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import {
   EditorialPageHero,
@@ -10,6 +9,7 @@ import {
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { INTEGRATION_DOCS, getDoc } from "@/lib/integration-docs"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -19,20 +19,15 @@ export async function generateStaticParams() {
   return INTEGRATION_DOCS.map((doc) => ({ slug: doc.slug }))
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
   const doc = getDoc(slug)
   if (!doc) return { title: "Integration setup — Efficyon" }
-  return {
+  return pageMetadata({
     title: `${doc.name} setup guide — connect ${doc.name} to Efficyon`,
     description: doc.blurb,
-    alternates: { canonical: `/docs/integrations/${doc.slug}` },
-    openGraph: {
-      title: `${doc.name} × Efficyon — setup guide`,
-      description: doc.blurb,
-      url: absoluteUrl(`/docs/integrations/${doc.slug}`),
-    },
-  }
+    path: `/docs/integrations/${doc.slug}`,
+  })
 }
 
 export default async function IntegrationDocPage({ params }: PageProps) {

@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,18 +8,14 @@ import {
 import { absoluteUrl } from "@/lib/site"
 import { INTEGRATION_DOCS } from "@/lib/integration-docs"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Integration setup guides — connect any system to Efficyon",
   description:
     "Step-by-step setup guides for every integration Efficyon supports. Read-only OAuth, multi-currency, contracted refundable.",
-  alternates: { canonical: "/docs/integrations" },
-  openGraph: {
-    title: "Efficyon · Integration setup guides",
-    description: "Step-by-step setup for every integration we support.",
-    url: absoluteUrl("/docs/integrations"),
-  },
-}
+  path: "/docs/integrations",
+})
 
 export default function IntegrationDocsIndex() {
   const ld = [
