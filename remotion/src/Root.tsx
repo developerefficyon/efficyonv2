@@ -2,7 +2,9 @@ import { Composition } from "remotion";
 import { HeroLoop } from "./HeroLoop/HeroLoop";
 
 const FPS = 30;
-const DURATION_SECONDS = 8;
+// Intro 0.6s + (4 vendors × 1.4s) + total summary 1.4s + outro fade 0.6s ≈ 8.2s.
+// 10s gives a small safety margin and a clean seamless loop.
+const DURATION_SECONDS = 10;
 
 export const Root: React.FC = () => {
   return (

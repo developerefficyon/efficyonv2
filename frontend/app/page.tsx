@@ -42,6 +42,7 @@ export default function HomePage() {
       <NavBar />
       <Hero />
       <Numbers />
+      <Integrations />
       <HowItWorks />
       <Findings />
       <Pricing />
@@ -205,7 +206,7 @@ function Numbers() {
   const items = [
     {
       val: "$18.5k",
-      sub: "average annual savings found",
+      sub: "modeled leak in a typical 18-person stack",
       tone: "green",
     },
     {
@@ -215,8 +216,8 @@ function Numbers() {
       tone: "white",
     },
     {
-      val: "30%",
-      sub: "guaranteed reduction in license cost",
+      val: "5×",
+      sub: "fee refund guarantee — or you don't pay",
       tone: "green",
     },
   ] as const
@@ -245,6 +246,77 @@ function Numbers() {
           </div>
         ))}
       </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────── INTEGRATIONS ─────────────────────────── */
+function Integrations() {
+  const tools = [
+    { name: "Fortnox", weight: 600 },
+    { name: "Microsoft 365", weight: 500 },
+    { name: "HubSpot", weight: 600 },
+    { name: "QuickBooks", weight: 500 },
+    { name: "Xero", weight: 600 },
+    { name: "Stripe", weight: 500 },
+    { name: "Shopify", weight: 600 },
+    { name: "Google Workspace", weight: 500 },
+    { name: "Visma", weight: 600 },
+    { name: "OpenAI", weight: 500 },
+    { name: "Anthropic", weight: 600 },
+    { name: "Asana", weight: 500 },
+    { name: "Airtable", weight: 600 },
+  ]
+
+  return (
+    <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+      <div className="mb-12 flex flex-wrap items-baseline justify-between gap-4">
+        <div className="flex items-baseline gap-3">
+          <p
+            className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ Connects to
+          </p>
+          <h3 className="text-[20px] tracking-[-0.01em] text-white/70">
+            <span className="font-[family-name:var(--font-instrument-serif)] italic text-white">
+              The systems you already use.
+            </span>
+          </h3>
+        </div>
+        <Link
+          href="/integrations"
+          className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45 transition-colors hover:text-white"
+        >
+          See all integrations →
+        </Link>
+      </div>
+
+      <ul className="flex flex-wrap items-baseline gap-x-10 gap-y-6">
+        {tools.map((t, i) => (
+          <li
+            key={t.name}
+            className="group flex items-baseline gap-3 transition-colors"
+          >
+            <span
+              className="font-[family-name:var(--font-geist-mono)] text-[11px] tabular-nums text-white/25"
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span
+              className="text-[clamp(20px,2vw,28px)] tracking-[-0.015em] text-white/55 transition-colors group-hover:text-white"
+              style={{ fontWeight: t.weight }}
+            >
+              {t.name}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-12 max-w-[600px] text-[13.5px] leading-[1.7] text-white/40">
+        Read-only OAuth on every connection. We never write, modify, or delete —
+        guaranteed in your contract. New integrations ship every month.
+      </p>
     </section>
   )
 }
@@ -395,10 +467,10 @@ function Findings() {
           <div className="mt-7 flex items-baseline justify-between gap-6 pt-2">
             <div>
               <p className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
-                Total — 18-person company
+                Sample scan · illustrative 18-person stack
               </p>
               <p className="mt-1 text-[12px] text-white/35">
-                Compounds annually. This is a single month&apos;s scan.
+                Numbers compound annually. Your scan will surface different ones.
               </p>
             </div>
             <div className="text-right">
@@ -415,20 +487,25 @@ function Findings() {
           </div>
         </div>
 
-        {/* Right column — editorial pull-quote + security */}
+        {/* Right column — founder's note + security */}
         <aside className="space-y-12 md:pt-20">
           <figure>
-            <p className="font-[family-name:var(--font-instrument-serif)] text-[28px] leading-[1.4] tracking-[-0.01em] text-white/85">
-              <span style={{ color: "var(--green)" }}>“</span>
-              We thought our stack was clean. The first Efficyon report
-              <em className="not-italic" style={{ color: "var(--green)" }}> found $14k </em>
-              we&apos;d been paying out, every year, for licenses no one had touched
-              in months.
-              <span style={{ color: "var(--green)" }}>”</span>
+            <p
+              className="mb-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45"
+            >
+              ✦ Founder&apos;s note
+            </p>
+            <p className="font-[family-name:var(--font-instrument-serif)] text-[26px] leading-[1.45] tracking-[-0.005em] text-white/85">
+              We&apos;re early — no wall of customer logos yet. We&apos;re shipping the
+              opposite: <em className="not-italic" style={{ color: "var(--green)" }}>read-only access</em>,
+              a clear contract, and a refund if we don&apos;t find at least
+              <em className="not-italic" style={{ color: "var(--green)" }}> 5× our fee</em> in
+              the first 30 days. The math doesn&apos;t care how many customers we have.
+              The leak is sitting in your stack right now.
             </p>
             <figcaption className="mt-6 flex items-center gap-3 text-[12px] uppercase tracking-[0.16em] text-white/45 font-[family-name:var(--font-geist-mono)]">
               <span className="h-px w-8" style={{ background: "var(--green)" }} />
-              CFO · 42-person SaaS company
+              The Efficyon team · Stockholm
             </figcaption>
           </figure>
 
