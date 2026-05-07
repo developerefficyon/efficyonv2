@@ -17,6 +17,7 @@ import {
   getToolBySlug,
   getRelatedTools,
 } from "@/lib/saas-tools-data"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export async function generateStaticParams() {
   return saasTools.map((tool) => ({
@@ -85,30 +86,37 @@ export default async function ToolAnalysisPage({
   ).toLocaleString()
   const seoContent = generateSeoContent(tool)
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: `${tool.name} Cost Analysis & Optimization`,
-    description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable optimization tips.`,
-    url: absoluteUrl(`/tools/${tool.slug}`),
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: `${tool.name} Cost Analysis & Optimization`,
+      description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable optimization tips.`,
+      url: absoluteUrl(`/tools/${tool.slug}`),
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+      },
+      about: {
+        "@type": "SoftwareApplication",
+        name: tool.name,
+        url: tool.website,
+        applicationCategory: tool.category,
+      },
     },
-    about: {
-      "@type": "SoftwareApplication",
-      name: tool.name,
-      url: tool.website,
-      applicationCategory: tool.category,
-    },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Tools Directory", path: "/tools" },
+      { name: tool.name, path: `/tools/${tool.slug}` },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

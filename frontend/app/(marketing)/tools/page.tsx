@@ -8,6 +8,7 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { saasTools, getAllCategories } from "@/lib/saas-tools-data"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { ToolsFilterList } from "./tools-filter-list"
 
 export const metadata: Metadata = {
@@ -35,25 +36,31 @@ const PILLARS = [
 export default function ToolsIndexPage() {
   const categories = getAllCategories()
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "SaaS Tool Cost Analysis",
-    description:
-      "Cost analysis and optimization tips for 50+ popular SaaS tools.",
-    url: absoluteUrl("/tools"),
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "SaaS Tool Cost Analysis",
+      description:
+        "Cost analysis and optimization tips for 50+ popular SaaS tools.",
+      url: absoluteUrl("/tools"),
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Tools Directory", path: "/tools" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero
