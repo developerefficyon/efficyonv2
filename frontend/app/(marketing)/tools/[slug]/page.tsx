@@ -15,9 +15,11 @@ import {
   saasTools,
   getToolBySlug,
   getRelatedTools,
+  type SaasToolData,
 } from "@/lib/saas-tools-data"
 import { breadcrumbListLd, softwareApplicationLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
+import { categoryIntro } from "./category-intros"
 
 export async function generateStaticParams() {
   return saasTools.map((tool) => ({
@@ -47,14 +49,27 @@ export async function generateMetadata({
   })
 }
 
-function generateSeoContent(tool: ReturnType<typeof getToolBySlug>) {
-  if (!tool) return [] as string[]
-
+function generateSeoContent(
+  tool: SaasToolData
+): { heading: string; body: string }[] {
+  const lowercasedFirstWaste = `${tool.signatureWastePattern.charAt(0).toLowerCase()}${tool.signatureWastePattern.slice(1)}`
   return [
-    `Managing ${tool.name} costs effectively requires a strategic approach that goes beyond simply counting licenses. As one of the most widely used tools in the ${tool.category.toLowerCase()} space, ${tool.name} delivers significant value to teams that use it actively. The challenge arises when organizations scale their ${tool.name} deployment without regularly auditing whether every seat, feature, and tier is being fully utilized. Starting at ${tool.startingPrice}, individual costs appear manageable, but companies with ${tool.idealFor.toLowerCase()} frequently discover that their aggregate ${tool.name} spend has grown to ${tool.typicalCompanySpend} per month without corresponding increases in usage or value delivered.`,
-    `The most effective ${tool.name} optimization strategy begins with a thorough usage audit. This means examining not just who has access, but how each user interacts with the platform. Many organizations find that 20-30% of their licensed users are low-activity or inactive, creating an immediate opportunity to reclaim costs by downgrading or removing those seats. Beyond license count, the tier each user is assigned to matters significantly. ${tool.name}'s ${tool.pricingModel.toLowerCase()} model means that placing users on a higher tier than they need compounds costs across every seat in the organization.`,
-    `Organizations that take a proactive approach to ${tool.name} cost management typically achieve savings of 15-30% within the first quarter. This involves establishing a regular cadence of license reviews, setting up automated alerts for usage thresholds, and creating clear policies for when new seats or upgrades are justified. Rather than treating ${tool.name} as a fixed cost, the most cost-efficient organizations treat it as a variable expense that should be continuously optimized based on actual usage data and business needs.`,
-    `Efficyon helps companies automate this entire process for ${tool.name} and every other tool in their stack. By connecting your ${tool.name} account alongside your financial data, Efficyon provides a complete picture of cost versus value for each subscription. Our AI engine identifies the specific ${tool.name} waste patterns most relevant to your organization and delivers prioritized recommendations ranked by potential savings impact.`,
+    {
+      heading: `Where ${tool.name} sits in the market`,
+      body: `${categoryIntro(tool.category)}\n\n${tool.marketPosition} ${tool.signatureWastePattern}`,
+    },
+    {
+      heading: `What ${tool.name} costs`,
+      body: `${tool.name} is typically priced at ${tool.commonPriceRange}. Pricing varies by tier and contract length; the patterns below describe the waste we see most often regardless of which tier a customer is on.`,
+    },
+    {
+      heading: `Common waste patterns`,
+      body: tool.commonWastePatterns.map((p) => `- ${p}`).join("\n"),
+    },
+    {
+      heading: `How Efficyon analyzes ${tool.name} spend`,
+      body: `Efficyon ingests your accounting data (Fortnox, QuickBooks, Stripe, Xero) and identity data (Microsoft 365, Google Workspace) and matches activity against billing. For ${tool.name}, that surfaces ${lowercasedFirstWaste} The findings appear in your dashboard with the contract month they applied to and the dollar value at stake.`,
+    },
   ]
 }
 
@@ -277,9 +292,42 @@ export default async function ToolAnalysisPage({
           title={`Optimizing ${tool.name}`}
           italic="costs, in full."
         />
-        <div className="mx-auto max-w-[68ch] space-y-7 font-[family-name:var(--font-dm-sans)] text-[17px] leading-[1.8] text-white/70">
-          {seoContent.map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
+        <div className="mx-auto max-w-[68ch] space-y-10 font-[family-name:var(--font-dm-sans)] text-[17px] leading-[1.8] text-white/70">
+          {seoContent.map((section, index) => (
+            <div key={index} className="space-y-4">
+              <h3 className="text-[22px] font-medium leading-[1.25] tracking-[-0.02em] text-white">
+                {section.heading}
+              </h3>
+              {section.body.split("\n\n").map((paragraph, pIdx) => {
+                if (paragraph.includes("\n- ")) {
+                  const lines = paragraph.split("\n").filter(Boolean)
+                  return (
+                    <ul
+                      key={pIdx}
+                      className="list-disc space-y-2 pl-5 marker:text-white/30"
+                    >
+                      {lines.map((line, lIdx) => (
+                        <li key={lIdx}>{line.replace(/^- /, "")}</li>
+                      ))}
+                    </ul>
+                  )
+                }
+                if (paragraph.startsWith("- ")) {
+                  const lines = paragraph.split("\n").filter(Boolean)
+                  return (
+                    <ul
+                      key={pIdx}
+                      className="list-disc space-y-2 pl-5 marker:text-white/30"
+                    >
+                      {lines.map((line, lIdx) => (
+                        <li key={lIdx}>{line.replace(/^- /, "")}</li>
+                      ))}
+                    </ul>
+                  )
+                }
+                return <p key={pIdx}>{paragraph}</p>
+              })}
+            </div>
           ))}
         </div>
       </EditorialSection>
