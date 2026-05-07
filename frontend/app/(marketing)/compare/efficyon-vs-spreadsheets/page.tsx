@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -243,7 +244,15 @@ export default function EfficyonVsSpreadsheetsPage() {
           {[
             {
               q: "How much time does spreadsheet tracking really take?",
-              a: "Industry surveys put it at 20–40 hours per month for a mid-sized stack. At typical finance/IT rates, that translates to four-figure monthly labor cost — usually distributed across one or two people who would rather be doing something else.",
+              a: (
+                <>
+                  Industry surveys put it at 20–40 hours per month for a mid-sized stack. At typical{" "}
+                  <Link href="/solutions/for-finance-teams" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    finance
+                  </Link>
+                  /IT rates, that translates to four-figure monthly labor cost — usually distributed across one or two people who would rather be doing something else.
+                </>
+              ),
             },
             {
               q: "Why are spreadsheets inaccurate?",
@@ -255,7 +264,15 @@ export default function EfficyonVsSpreadsheetsPage() {
             },
             {
               q: "What can a dedicated tool find that we can't?",
-              a: "Usage patterns showing underutilized licenses, overlapping tools doing the same job, tier mismatches, mid-cycle pricing changes, and recommendations with dollar amounts attached. Things a human can find given infinite time — but rarely does.",
+              a: (
+                <>
+                  Usage patterns showing{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    underutilised licenses
+                  </Link>
+                  , overlapping tools doing the same job, tier mismatches, mid-cycle pricing changes, and recommendations with dollar amounts attached. Things a human can find given infinite time — but rarely does.
+                </>
+              ),
             },
           ].map((item) => (
             <div key={item.q} className="grid gap-6 py-10 md:grid-cols-[1fr_2fr] md:gap-12">

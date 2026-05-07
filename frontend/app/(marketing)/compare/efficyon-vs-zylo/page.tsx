@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -119,7 +120,11 @@ export default function EfficyonVsZyloPage() {
         <div className="grid gap-12 md:grid-cols-2">
           <p className="text-[16px] leading-[1.75] text-white/70">
             Zylo's strengths are scope: extensive shadow-IT discovery, vendor management workflows,
-            compliance and governance tooling, and a benchmarking dataset built from thousands of customers.
+            compliance and governance tooling, and a{" "}
+            <Link href="/benchmarks" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+              benchmarking dataset
+            </Link>{" "}
+            built from thousands of customers.
             For procurement and IT teams in large enterprises, that scope is worth the price tag.
           </p>
           <p className="text-[16px] leading-[1.75] text-white/55">
@@ -219,7 +224,15 @@ export default function EfficyonVsZyloPage() {
             },
             {
               q: "Is migration realistic?",
-              a: "If you are leaving an enterprise contract you have already paid for, migration is a project. Efficyon rebuilds inventory by connecting to accounting plus your live tools, which is light by comparison — but the procurement question is the larger one.",
+              a: (
+                <>
+                  If you are leaving an enterprise contract you have already paid for, migration is a project. Efficyon rebuilds inventory by connecting to accounting plus your live tools, which is light by comparison — but the procurement question is the larger one. If you came from{" "}
+                  <Link href="/compare/efficyon-vs-cleanshelf" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    Cleanshelf
+                  </Link>
+                  , the transition path is shorter still.
+                </>
+              ),
             },
           ].map((item) => (
             <div key={item.q} className="grid gap-6 py-10 md:grid-cols-[1fr_2fr] md:gap-12">

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -166,7 +167,11 @@ export default function EfficyonVsProductivPage() {
           <div className="border-l border-white/[0.08] pl-6">
             <EditorialMonoLabel green>Efficyon, in your inbox</EditorialMonoLabel>
             <p className="mt-4 font-[family-name:var(--font-instrument-serif)] text-[20px] italic leading-[1.5] text-white/80">
-              &ldquo;Three actions this month — modeled total $7,400 / yr. Consolidating two project tools, downgrading nine licenses, removing one unused subscription.&rdquo;
+              &ldquo;Three actions this month — modeled total $7,400 / yr. Consolidating two project tools, downgrading nine{" "}
+              <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                unused licenses
+              </Link>
+              , removing one unused subscription.&rdquo;
             </p>
           </div>
           <div className="border-l border-white/[0.08] pl-6">
@@ -190,7 +195,7 @@ export default function EfficyonVsProductivPage() {
             <ul className="mt-5 space-y-3 text-[15px] leading-[1.7] text-white/70">
               <li>Cost reduction is your primary goal, not adoption measurement.</li>
               <li>You are SMB or mid-market and an enterprise contract is a non-starter.</li>
-              <li>You want recommendations with dollar amounts, not engagement scores.</li>
+              <li>You want recommendations with dollar amounts, not engagement scores. Our <Link href="/features/saas-spend-management" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">spend management</Link> surface covers the full picture.</li>
               <li>Direct accounting integration matters to you.</li>
             </ul>
           </div>

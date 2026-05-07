@@ -272,12 +272,29 @@ export default function BestSaaSToolsPage() {
             },
             {
               question: "How do we automate IT lifecycle work?",
-              answer: "Torii. Workflow automation is its main surface.",
+              answer: (
+                <>
+                  <Link href="/compare/efficyon-vs-torii" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    Torii
+                  </Link>
+                  . Workflow automation is its main surface.
+                </>
+              ),
             },
             {
               question: "We are 5,000+ people — give us governance.",
-              answer:
-                "Zylo or Productiv, depending on whether you weight discovery or adoption analytics.",
+              answer: (
+                <>
+                  <Link href="/compare/efficyon-vs-zylo" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    Zylo
+                  </Link>{" "}
+                  or{" "}
+                  <Link href="/compare/efficyon-vs-productiv" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    Productiv
+                  </Link>
+                  , depending on whether you weight discovery or adoption analytics.
+                </>
+              ),
             },
             {
               question: "We need to negotiate contracts better.",

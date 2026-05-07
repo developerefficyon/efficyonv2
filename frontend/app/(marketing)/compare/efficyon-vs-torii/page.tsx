@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -199,7 +200,15 @@ export default function EfficyonVsToriiPage() {
             },
             {
               q: "Can I use both?",
-              a: "Yes — and some organizations do. The surfaces are complementary rather than overlapping. Run Torii for IT operations, run a cost tool for finance.",
+              a: (
+                <>
+                  Yes — and some organizations do. The surfaces are complementary rather than overlapping. Run Torii for IT operations, run a cost tool for{" "}
+                  <Link href="/solutions/for-finance-teams" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    finance
+                  </Link>
+                  .
+                </>
+              ),
             },
             {
               q: "How does pricing compare?",
@@ -211,7 +220,15 @@ export default function EfficyonVsToriiPage() {
             },
             {
               q: "Which one cuts cost faster?",
-              a: "Efficyon, structurally — that is what it is built for. Torii can identify unused licenses as a side effect of its workflow data, but the cost-recommendation surface is light by comparison.",
+              a: (
+                <>
+                  Efficyon, structurally — that is what it is built for. Torii can identify{" "}
+                  <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                    unused licenses
+                  </Link>{" "}
+                  as a side effect of its workflow data, but the cost-recommendation surface is light by comparison.
+                </>
+              ),
             },
           ].map((item) => (
             <div key={item.q} className="grid gap-6 py-10 md:grid-cols-[1fr_2fr] md:gap-12">

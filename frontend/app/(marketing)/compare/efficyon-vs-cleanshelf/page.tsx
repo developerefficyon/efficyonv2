@@ -116,9 +116,12 @@ export default function EfficyonVsCleanshelfPage() {
             was a clean, opinionated take on the problem.
           </p>
           <p className="text-[16px] leading-[1.75] text-white/55">
-            What it did not do — heavy AI-driven analysis, deep usage tracking, accounting-level cost
-            accuracy — was reasonable for the time. The category has since moved on, and so has the product:
-            it is now part of Zylo, and that is a different scope at a different price.
+            What it did not do — heavy AI-driven analysis, deep{" "}
+            <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+              unused license detection
+            </Link>
+            , accounting-level cost accuracy — was reasonable for the time. The category has since moved on,
+            and so has the product: it is now part of Zylo, and that is a different scope at a different price.
           </p>
         </div>
       </EditorialSection>
@@ -167,7 +170,7 @@ export default function EfficyonVsCleanshelfPage() {
             <EditorialMonoLabel green>Choose Efficyon</EditorialMonoLabel>
             <ul className="mt-5 space-y-3 text-[15px] leading-[1.7] text-white/70">
               <li>You valued Cleanshelf&apos;s accessibility and want a similarly priced alternative.</li>
-              <li>You want usage-side analysis and dollar-attached recommendations, not just spend tracking.</li>
+              <li>You want usage-side analysis and dollar-attached recommendations, not just spend tracking. See our <Link href="/calculator/roi" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">ROI calculator</Link> for a quick estimate.</li>
               <li>Your accounting lives in Fortnox, Visma, QuickBooks, or Xero and you want direct integration.</li>
               <li>You are comfortable working with a pre-launch product that ships frequently.</li>
             </ul>
