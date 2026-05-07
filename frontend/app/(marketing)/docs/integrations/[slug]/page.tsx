@@ -6,6 +6,7 @@ import {
   EditorialFinalCTA,
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { INTEGRATION_DOCS, getDoc } from "@/lib/integration-docs"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
@@ -191,6 +192,8 @@ export default async function IntegrationDocPage({ params }: PageProps) {
           ))}
         </div>
       </EditorialSection>
+
+      <RelatedLinks variant="integrations" />
 
       <EditorialFinalCTA
         title={`Ready to connect ${doc.name}?`}

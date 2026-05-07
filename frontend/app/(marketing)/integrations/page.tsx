@@ -5,6 +5,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -212,6 +213,8 @@ export default function IntegrationsIndexPage() {
           </div>
         </section>
       )}
+
+      <RelatedLinks variant="integrations" />
 
       <EditorialFinalCTA
         title="Don't see your stack?"
