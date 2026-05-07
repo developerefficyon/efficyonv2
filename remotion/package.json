@@ -1,0 +1,28 @@
+{
+  "name": "efficyon-remotion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Programmatic video assets for Efficyon — hero loops, integration demos, social cuts.",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "studio": "remotion studio src/index.ts",
+    "render:hero": "remotion render src/index.ts HeroLoop ../frontend/public/videos/hero-loop.mp4",
+    "render:hero-webm": "remotion render src/index.ts HeroLoop ../frontend/public/videos/hero-loop.webm --codec=vp9",
+    "render:hero-square": "remotion render src/index.ts HeroLoopSquare ../frontend/public/videos/hero-loop-square.mp4",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.0",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

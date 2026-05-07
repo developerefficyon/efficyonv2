@@ -1,663 +1,907 @@
+"use client"
+
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Spotlight } from "@/components/ui/spotlight"
-import { AnimatedHeroVisual } from "@/components/animated-hero-visual"
-import AnimatedGradientBackground from "@/components/ui/animated-gradient-background"
-import { SparklesCore } from "@/components/ui/sparkles"
-import { BentoGrid, BentoCard } from "@/components/ui/bento-grid"
-import { Navbar } from "@/components/ui/navbar"
-import { Pricing } from "@/components/ui/pricing"
-import { ROICalculator } from "@/components/roi-calculator"
-import { DashboardPreview } from "@/components/dashboard-preview"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Input } from "@/components/ui/input"
-import {
-  CheckCircle,
-  ArrowRight,
-  TrendingUp,
-  Clock,
-  DollarSign,
-  BarChart3,
-  Workflow,
-  Brain,
-  Zap,
-  Shield,
-  Mail,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Calculator,
-  LineChart,
-  Target,
-} from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { ArrowUpRight, ArrowRight } from "lucide-react"
+
+/* ──────────────────────────────────────────────────────────────
+   Efficyon — Editorial Homepage
+   Dark · Refined · Green-accent · Serif-italic punctuation
+   ────────────────────────────────────────────────────────────── */
+
+const GREEN = "#00D17A"
+const GREEN_SOFT = "rgba(0, 209, 122, 0.14)"
+
+/* tiny hook: reveal-on-scroll */
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!ref.current) return
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setShown(true),
+      { threshold: 0.12 }
+    )
+    io.observe(ref.current)
+    return () => io.disconnect()
+  }, [])
+  return { ref, shown }
+}
 
 export default function HomePage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "Efficyon",
-    url: "https://www.efficyon.com",
-    logo: "https://www.efficyon.com/favicon.ico",
-    description:
-      "AI-powered SaaS cost optimization platform that helps businesses identify unused licenses, overlapping tools, and hidden savings.",
-    contactPoint: {
-      "@type": "ContactPoint",
-      email: "info@efficyon.com",
-      contactType: "customer service",
-    },
-  }
+  return (
+    <div
+      className="min-h-screen text-white antialiased selection:bg-[color:var(--green)] selection:text-black"
+      style={{
+        ["--green" as string]: GREEN,
+        ["--green-soft" as string]: GREEN_SOFT,
+        background: "#080809",
+      } as React.CSSProperties}
+    >
+      <BackgroundTexture />
+      <NavBar />
+      <Hero />
+      <Numbers />
+      <HowItWorks />
+      <Findings />
+      <Pricing />
+      <FinalCTA />
+      <Footer />
+    </div>
+  )
+}
+
+/* ───────────────────────── BACKGROUND ───────────────────────── */
+function BackgroundTexture() {
+  return (
+    <>
+      {/* radial green wash, top-left */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 12% -10%, rgba(0,209,122,0.10), transparent 60%), radial-gradient(ellipse 50% 40% at 95% 5%, rgba(0,209,122,0.05), transparent 65%)",
+        }}
+      />
+      {/* faint grain */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.035] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        }}
+      />
+    </>
+  )
+}
+
+/* ─────────────────────────── NAV ─────────────────────────── */
+function NavBar() {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-black">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      {/* Navigation Component */}
-      <Navbar />
+    <nav
+      className={`fixed inset-x-0 top-0 z-50 h-[64px] backdrop-blur-md transition-colors ${
+        scrolled ? "border-b border-white/[0.07]" : "border-b border-transparent"
+      }`}
+      style={{ background: "rgba(8,8,9,0.78)" }}
+    >
+      <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-6 md:px-12">
+        <Link href="/" className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.01em]">
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: "var(--green)", boxShadow: "0 0 12px var(--green)" }}
+          />
+          <span>Efficyon</span>
+          <span
+            className="hidden md:inline-block translate-y-[1px] font-[family-name:var(--font-instrument-serif)] text-[14px] italic text-white/40"
+          >
+            / cost intelligence
+          </span>
+        </Link>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-        <div className="container mx-auto px-4">
-          <Card className="w-full h-[500px] bg-black/[0.96] relative overflow-hidden border-none">
-            <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" />
-
-            <div className="flex h-full">
-              {/* Left content */}
-              <div className="flex-1 p-8 relative z-10 flex flex-col justify-center">
-                <h1 className="text-4xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-balance">
-                  Turn SaaS sprawl into financial clarity.
-                </h1>
-                <p className="mt-4 text-neutral-300 max-w-lg">
-                  Efficyon compares SaaS spend with real usage across your tools to reveal unused licenses, mispriced
-                  tools, and quiet inefficiencies across your software stack.
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                  <Button size="lg" className="bg-white text-black hover:bg-gray-100">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                  >
-                    See How It Works
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-8 text-sm text-neutral-400 mt-6">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
-                    <span>90-Day Pilot</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
-                    <span>AI-Driven Analysis</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right content */}
-              <div className="flex-1 relative">
-                <AnimatedHeroVisual />
-              </div>
-            </div>
-          </Card>
+        <div className="hidden items-center gap-9 md:flex">
+          <a href="#how" className="text-[13px] text-white/60 transition-colors hover:text-white">
+            How it works
+          </a>
+          <a href="#findings" className="text-[13px] text-white/60 transition-colors hover:text-white">
+            What we find
+          </a>
+          <a href="#pricing" className="text-[13px] text-white/60 transition-colors hover:text-white">
+            Pricing
+          </a>
+          <Link href="/login" className="text-[13px] text-white/60 transition-colors hover:text-white">
+            Login
+          </Link>
         </div>
-      </section>
 
-      {/* Feature highlights Section */}
-      <section className="py-16 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center space-y-2">
-              <div className="h-12 w-12 bg-green-900/40 rounded-full flex items-center justify-center mx-auto">
-                <TrendingUp className="h-6 w-6 text-green-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Cost meets usage</h3>
-              <p className="text-gray-400 text-sm">
-                SaaS spend shown alongside real usage data.
+        <Link
+          href="/register"
+          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/15 bg-white px-4 py-[7px] text-[13px] font-medium text-black transition-all hover:bg-[color:var(--green)] hover:text-black"
+        >
+          Book a demo
+          <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:rotate-45" />
+        </Link>
+      </div>
+    </nav>
+  )
+}
+
+/* ─────────────────────────── HERO ─────────────────────────── */
+function Hero() {
+  return (
+    <section className="relative z-10 mx-auto max-w-[1240px] px-6 pb-24 pt-[180px] md:px-12 md:pb-32 md:pt-[200px]">
+      <div className="mb-12 flex items-center gap-3">
+        <span
+          className="inline-block h-1.5 w-1.5 animate-pulse rounded-full"
+          style={{ background: "var(--green)" }}
+        />
+        <span className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/55">
+          SaaS Cost Intelligence — Live ✦ EU-hosted
+        </span>
+      </div>
+
+      <h1 className="max-w-[12ch] text-[clamp(56px,8vw,112px)] font-medium leading-[0.94] tracking-[-0.045em] text-white">
+        Stop paying for{" "}
+        <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+          SaaS
+        </span>{" "}
+        you{" "}
+        <span
+          className="font-[family-name:var(--font-instrument-serif)] font-normal italic"
+          style={{ color: "var(--green)" }}
+        >
+          don&apos;t use.
+        </span>
+      </h1>
+
+      <div className="mt-12 grid items-end gap-10 md:grid-cols-[1.4fr_1fr]">
+        <p className="max-w-[520px] text-[18px] font-light leading-[1.65] text-white/65">
+          Efficyon connects your accounting data with your actual license usage —
+          and shows you exactly where the money is leaking. Every month. In dollars,
+          not dashboards.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-5">
+          <Link
+            href="/register"
+            className="group inline-flex items-center gap-2 rounded-full px-6 py-[14px] text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(0,209,122,0.35)]"
+            style={{ background: "var(--green)" }}
+          >
+            Book a free demo
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <a
+            href="#how"
+            className="group inline-flex items-center gap-2 text-[14px] text-white/65 transition-colors hover:text-white"
+          >
+            See how it works
+            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Editorial signature line */}
+      <div className="mt-24 flex items-center gap-6 text-[12px] text-white/40">
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <span className="font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.18em]">
+          № 001 · The new way to manage SaaS spend
+        </span>
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────── NUMBERS ─────────────────────────── */
+function Numbers() {
+  const items = [
+    {
+      val: "$18.5k",
+      sub: "average annual savings found",
+      tone: "green",
+    },
+    {
+      val: "10",
+      unit: "min",
+      sub: "to connect & run your first analysis",
+      tone: "white",
+    },
+    {
+      val: "30%",
+      sub: "guaranteed reduction in license cost",
+      tone: "green",
+    },
+  ] as const
+
+  return (
+    <section className="relative z-10 mx-auto max-w-[1240px] px-6 md:px-12">
+      <div className="grid grid-cols-1 divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
+        {items.map((it, i) => (
+          <div key={i} className="px-0 py-12 md:px-12">
+            <div className="mb-3 flex items-baseline gap-2">
+              <span
+                className="text-[clamp(48px,5.5vw,72px)] font-medium leading-none tracking-[-0.04em]"
+                style={{ color: it.tone === "green" ? "var(--green)" : "white" }}
+              >
+                {it.val}
+              </span>
+              {"unit" in it && it.unit && (
+                <span className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/55">
+                  {it.unit}
+                </span>
+              )}
+            </div>
+            <p className="font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.16em] text-white/45">
+              {it.sub}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────── HOW IT WORKS ─────────────────────────── */
+function HowItWorks() {
+  const steps = [
+    {
+      num: "01",
+      title: "Connect your systems",
+      body: "Link Fortnox, Microsoft 365, HubSpot, QuickBooks and more in under 10 minutes. Read-only access — we never modify your data, guaranteed in writing.",
+    },
+    {
+      num: "02",
+      title: "We find the gaps",
+      body: "Efficyon cross-references what you pay against who actually uses what — surfacing dormant licenses, unnoticed price hikes, and forgotten tools.",
+    },
+    {
+      num: "03",
+      title: "You act on it",
+      body: "Get a clear monthly report with exactly what to cut, downgrade, or renegotiate — with dollar savings per action. You decide what to do.",
+    },
+  ]
+
+  return (
+    <section id="how" className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-32 md:px-12">
+      <div className="mb-20 grid gap-12 md:grid-cols-[1fr_1.4fr] md:items-end">
+        <div>
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ How it works
+          </p>
+          <h2 className="text-[clamp(36px,4.2vw,60px)] font-medium leading-[1.02] tracking-[-0.035em]">
+            Three steps to{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              clarity.
+            </span>
+          </h2>
+        </div>
+        <p className="max-w-[460px] text-[16px] leading-[1.7] text-white/55 md:justify-self-end md:text-right">
+          The whole flow takes less than the average meeting about your SaaS budget.
+          Then it runs every month, in the background, forever.
+        </p>
+      </div>
+
+      <div className="grid gap-12 md:grid-cols-3 md:gap-16">
+        {steps.map((s, i) => {
+          return <StepCard key={s.num} {...s} index={i} />
+        })}
+      </div>
+    </section>
+  )
+}
+
+function StepCard({
+  num,
+  title,
+  body,
+  index,
+}: {
+  num: string
+  title: string
+  body: string
+  index: number
+}) {
+  const { ref, shown } = useReveal<HTMLDivElement>()
+  return (
+    <div
+      ref={ref}
+      style={{
+        transitionDelay: `${index * 90}ms`,
+        opacity: shown ? 1 : 0,
+        transform: shown ? "translateY(0)" : "translateY(18px)",
+      }}
+      className="transition-all duration-700 ease-out"
+    >
+      <div className="mb-6 flex items-center gap-4">
+        <span className="font-[family-name:var(--font-geist-mono)] text-[12px] tracking-[0.1em] text-white/30">
+          {num}
+        </span>
+        <span className="h-px w-10" style={{ background: "var(--green)" }} />
+      </div>
+      <h3 className="mb-3 text-[22px] font-medium tracking-[-0.015em] text-white">
+        {title}
+      </h3>
+      <p className="text-[14.5px] leading-[1.75] text-white/55">{body}</p>
+    </div>
+  )
+}
+
+/* ─────────────────────────── FINDINGS ─────────────────────────── */
+function Findings() {
+  const rows = [
+    {
+      tool: "Microsoft 365",
+      desc: "10 over-provisioned licenses — Business Premium used only for email",
+      amount: "$6,200",
+    },
+    {
+      tool: "HubSpot",
+      desc: "5 of 8 seats unused or barely active for the past 90 days",
+      amount: "$4,300",
+    },
+    {
+      tool: "Intercom",
+      desc: "Tool already replaced internally — still being billed monthly",
+      amount: "$3,250",
+    },
+    {
+      tool: "Price drift",
+      desc: "Unnoticed 15–25% renewal increases across three SaaS vendors",
+      amount: "$2,700",
+    },
+  ]
+
+  return (
+    <section
+      id="findings"
+      className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-32 md:px-12"
+    >
+      <div className="grid gap-20 md:grid-cols-[1.35fr_1fr] md:gap-24">
+        <div>
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ What we find
+          </p>
+          <h2 className="mb-7 max-w-[12ch] text-[clamp(36px,4.2vw,60px)] font-medium leading-[1.02] tracking-[-0.035em]">
+            The waste hides{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              in the gap.
+            </span>
+          </h2>
+          <p className="mb-14 max-w-[440px] text-[15.5px] leading-[1.75] text-white/55">
+            No one is watching both sides at once — what you&apos;re paying for and what
+            your team actually uses. That&apos;s where the money disappears.
+          </p>
+
+          <div className="border-t border-white/[0.08]">
+            {rows.map((r, i) => (
+              <FindingRow key={r.tool} {...r} index={i} />
+            ))}
+          </div>
+
+          <div className="mt-7 flex items-baseline justify-between gap-6 pt-2">
+            <div>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+                Total — 18-person company
+              </p>
+              <p className="mt-1 text-[12px] text-white/35">
+                Compounds annually. This is a single month&apos;s scan.
               </p>
             </div>
-            <div className="text-center space-y-2">
-              <div className="h-12 w-12 bg-blue-900/40 rounded-full flex items-center justify-center mx-auto">
-                <Brain className="h-6 w-6 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Cross-tool visibility</h3>
-              <p className="text-gray-400 text-sm">Insights that only appear when systems are viewed together.</p>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="h-12 w-12 bg-orange-900/40 rounded-full flex items-center justify-center mx-auto">
-                <Target className="h-6 w-6 text-orange-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Clear, actionable insights</h3>
-              <p className="text-gray-400 text-sm">Findings you can actually act on.</p>
+            <div className="text-right">
+              <span
+                className="text-[clamp(40px,4.5vw,56px)] font-medium leading-none tracking-[-0.035em]"
+                style={{ color: "var(--green)" }}
+              >
+                $18,500
+              </span>
+              <span className="ml-1 font-[family-name:var(--font-instrument-serif)] text-[24px] italic text-white/55">
+                /yr
+              </span>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ROI Calculator Section */}
-      <section id="calculator" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Instant ROI Calculator</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              See your potential savings instantly. Adjust the sliders below - calculations update in real-time
+        {/* Right column — editorial pull-quote + security */}
+        <aside className="space-y-12 md:pt-20">
+          <figure>
+            <p className="font-[family-name:var(--font-instrument-serif)] text-[28px] leading-[1.4] tracking-[-0.01em] text-white/85">
+              <span style={{ color: "var(--green)" }}>“</span>
+              We thought our stack was clean. The first Efficyon report
+              <em className="not-italic" style={{ color: "var(--green)" }}> found $14k </em>
+              we&apos;d been paying out, every year, for licenses no one had touched
+              in months.
+              <span style={{ color: "var(--green)" }}>”</span>
+            </p>
+            <figcaption className="mt-6 flex items-center gap-3 text-[12px] uppercase tracking-[0.16em] text-white/45 font-[family-name:var(--font-geist-mono)]">
+              <span className="h-px w-8" style={{ background: "var(--green)" }} />
+              CFO · 42-person SaaS company
+            </figcaption>
+          </figure>
+
+          <div className="border-t border-white/[0.08] pt-10">
+            <p
+              className="mb-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45"
+            >
+              Security &amp; access
+            </p>
+            <p className="text-[14px] leading-[1.7] text-white/60">
+              Efficyon uses read-only access to your systems. Our code makes only
+              <span className="font-[family-name:var(--font-geist-mono)] text-white/80"> GET </span>
+              requests — it is technically impossible for us to write, modify, or
+              delete anything in your accounts. Guaranteed in your contract.
             </p>
           </div>
-          <ROICalculator />
+        </aside>
+      </div>
+    </section>
+  )
+}
+
+function FindingRow({
+  tool,
+  desc,
+  amount,
+  index,
+}: {
+  tool: string
+  desc: string
+  amount: string
+  index: number
+}) {
+  const { ref, shown } = useReveal<HTMLDivElement>()
+  return (
+    <div
+      ref={ref}
+      style={{
+        transitionDelay: `${index * 80}ms`,
+        opacity: shown ? 1 : 0,
+        transform: shown ? "translateX(0)" : "translateX(-12px)",
+      }}
+      className="grid grid-cols-[110px_1fr_auto] items-baseline gap-6 border-b border-white/[0.08] py-5 transition-all duration-500 ease-out hover:bg-white/[0.015]"
+    >
+      <span className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.16em] text-white/55">
+        {tool}
+      </span>
+      <span className="text-[14.5px] leading-[1.5] text-white/85">{desc}</span>
+      <span
+        className="text-right text-[20px] font-medium tracking-[-0.02em]"
+        style={{ color: "var(--green)" }}
+      >
+        {amount}
+        <span className="ml-1 text-[12px] text-white/40 font-[family-name:var(--font-geist-mono)]">/yr</span>
+      </span>
+    </div>
+  )
+}
+
+/* ─────────────────────────── PRICING ─────────────────────────── */
+type Billing = "6mo" | "monthly" | "yearly"
+
+interface Plan {
+  name: string
+  tag: string
+  description: string
+  prices: Record<Billing, { value: string; suffix: string }>
+  features: string[]
+  cta: string
+  ctaHref: string
+  highlight: boolean
+  custom?: boolean
+}
+
+const PLANS: Plan[] = [
+  {
+    name: "Startup",
+    tag: "1–10 employees",
+    description: "Get your first audit running in under 10 minutes.",
+    prices: {
+      "6mo": { value: "$199", suffix: "for 6 months" },
+      monthly: { value: "$39", suffix: "per month" },
+      yearly: { value: "$31", suffix: "per month, billed yearly" },
+    },
+    features: [
+      "AI-driven process analysis",
+      "Monthly optimization reports",
+      "Email support",
+      "Basic integrations",
+      "ROI tracking",
+      "5 integrations",
+      "10 monthly tokens",
+      "Up to 3 team members",
+    ],
+    cta: "Try free",
+    ctaHref: "/register",
+    highlight: false,
+  },
+  {
+    name: "Growth",
+    tag: "Most popular · 11–50 employees",
+    description: "Everything you need to keep waste out of the stack.",
+    prices: {
+      "6mo": { value: "$599", suffix: "for 6 months" },
+      monthly: { value: "$119", suffix: "per month" },
+      yearly: { value: "$95", suffix: "per month, billed yearly" },
+    },
+    features: [
+      "Everything in Startup, plus —",
+      "Advanced AI analysis",
+      "Custom automations",
+      "Priority support",
+      "API integrations",
+      "Team training included",
+      "15 integrations",
+      "50 monthly tokens",
+      "Up to 10 team members",
+    ],
+    cta: "Try free",
+    ctaHref: "/register",
+    highlight: true,
+  },
+  {
+    name: "Enterprise",
+    tag: "50+ employees",
+    description: "For finance & IT teams that need control, SLAs and depth.",
+    prices: {
+      "6mo": { value: "Custom", suffix: "tailored pricing" },
+      monthly: { value: "Custom", suffix: "tailored pricing" },
+      yearly: { value: "Custom", suffix: "tailored pricing" },
+    },
+    features: [
+      "Everything in Growth, plus —",
+      "Dedicated team",
+      "Custom AI model",
+      "On-premise deployment",
+      "SLA guarantee",
+      "Quarterly strategy review",
+      "Unlimited integrations",
+      "200 monthly tokens",
+      "Unlimited team members",
+    ],
+    cta: "Contact us",
+    ctaHref: "#contact",
+    highlight: false,
+    custom: true,
+  },
+]
+
+function Pricing() {
+  const [billing, setBilling] = useState<Billing>("monthly")
+
+  return (
+    <section
+      id="pricing"
+      className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-32 md:px-12"
+    >
+      <div className="mb-16 grid gap-12 md:grid-cols-2 md:items-end">
+        <div>
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ Pricing
+          </p>
+          <h2 className="text-[clamp(36px,4.2vw,60px)] font-medium leading-[1.02] tracking-[-0.035em]">
+            Simple, honest{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              pricing.
+            </span>
+          </h2>
         </div>
-      </section>
+        <p className="max-w-[460px] text-[16px] leading-[1.7] text-white/55 md:justify-self-end">
+          The savings we find typically pay for the subscription many times over.
+          All plans include our 90-day ROI guarantee — we only win when you do.
+        </p>
+      </div>
 
-      {/* Dashboard Preview Section */}
-      <section id="dashboard" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium mb-4">
-              <Zap className="h-4 w-4" />
-              Get AI Help - New!
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Dashboard Preview</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Real-time insights and intelligent recommendations. See exactly how Efficyon transforms your processes
-              with live data and concrete action plans.
-            </p>
-          </div>
-          <DashboardPreview />
+      <BillingToggle billing={billing} setBilling={setBilling} />
+
+      <div className="mt-2 border-t border-white/[0.08]">
+        {PLANS.map((p, i) => (
+          <PlanRow key={p.name} plan={p} billing={billing} index={i} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function BillingToggle({
+  billing,
+  setBilling,
+}: {
+  billing: Billing
+  setBilling: (b: Billing) => void
+}) {
+  const opts: { id: Billing; label: string; note?: string }[] = [
+    { id: "6mo", label: "6 months" },
+    { id: "monthly", label: "Monthly" },
+    { id: "yearly", label: "Yearly", note: "save ~20%" },
+  ]
+  return (
+    <div className="mb-10 flex flex-wrap items-center gap-2">
+      <span className="mr-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/40">
+        Billed —
+      </span>
+      <div className="inline-flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+        {opts.map((o) => {
+          const active = billing === o.id
+          return (
+            <button
+              key={o.id}
+              onClick={() => setBilling(o.id)}
+              className={`relative rounded-full px-4 py-1.5 text-[12.5px] font-medium tracking-[-0.005em] transition-colors ${
+                active ? "text-black" : "text-white/55 hover:text-white"
+              }`}
+              style={active ? { background: "var(--green)" } : undefined}
+            >
+              {o.label}
+              {o.note && (
+                <span
+                  className={`ml-1.5 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.1em] ${
+                    active ? "text-black/60" : "text-white/30"
+                  }`}
+                >
+                  · {o.note}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function PlanRow({
+  plan,
+  billing,
+  index,
+}: {
+  plan: Plan
+  billing: Billing
+  index: number
+}) {
+  const { ref, shown } = useReveal<HTMLDivElement>()
+  const price = plan.prices[billing]
+  const isCustom = plan.custom
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        transitionDelay: `${index * 90}ms`,
+        opacity: shown ? 1 : 0,
+        transform: shown ? "translateY(0)" : "translateY(14px)",
+      }}
+      className="group relative grid grid-cols-1 gap-8 border-b border-white/[0.08] py-12 transition-all duration-500 ease-out md:grid-cols-[220px_1fr_auto] md:gap-14"
+    >
+      {plan.highlight && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 h-full w-px"
+          style={{ background: "var(--green)" }}
+        />
+      )}
+
+      <div className={plan.highlight ? "pl-4 md:pl-6" : ""}>
+        <h3 className="text-[26px] font-medium tracking-[-0.025em] transition-colors group-hover:[color:var(--green)]">
+          {plan.name}
+        </h3>
+        <p
+          className={`mt-1 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.16em] ${
+            plan.highlight ? "" : "text-white/45"
+          }`}
+          style={plan.highlight ? { color: "var(--green)" } : undefined}
+        >
+          {plan.tag}
+        </p>
+        <p className="mt-4 max-w-[200px] text-[13.5px] leading-[1.55] text-white/55">
+          {plan.description}
+        </p>
+      </div>
+
+      <ul className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+        {plan.features.map((f) => (
+          <li key={f} className="flex items-baseline gap-3 text-[14px] text-white/70">
+            <span
+              className="mt-[6px] inline-block h-[3px] w-[3px] flex-shrink-0 rounded-full"
+              style={{ background: "var(--green)" }}
+            />
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-col items-start md:items-end">
+        <div className="flex items-baseline">
+          <span
+            key={`${plan.name}-${billing}`}
+            className={`animate-[fadeIn_0.35s_ease] text-[44px] font-medium leading-none tracking-[-0.04em] ${
+              isCustom
+                ? "font-[family-name:var(--font-instrument-serif)] italic font-normal text-[34px]"
+                : ""
+            }`}
+          >
+            {price.value}
+          </span>
         </div>
-      </section>
+        <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.14em] text-white/45 md:text-right">
+          {price.suffix}
+        </p>
+        <Link
+          href={plan.ctaHref}
+          className={`mt-5 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-medium transition-all ${
+            plan.highlight
+              ? "text-black hover:opacity-90 hover:shadow-[0_8px_24px_rgba(0,209,122,0.3)]"
+              : "border border-white/15 text-white hover:border-white/40"
+          }`}
+          style={plan.highlight ? { background: "var(--green)" } : undefined}
+        >
+          {plan.cta}
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </div>
+  )
+}
 
-      {/* Problem & Solution Section */}
-      <section className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">Still paying for software you don&apos;t fully use?</h2>
-              <div className="space-y-4 text-gray-300">
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  Licenses that exist on paper but see little real activity
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  Multiple tools covering the same jobs across teams
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  Time lost moving between systems that don&apos;t talk to each other
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  Limited visibility into how software spend relates to actual usage
-                </p>
-              </div>
-            </div>
+/* ─────────────────────────── FINAL CTA ─────────────────────────── */
+function FinalCTA() {
+  return (
+    <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-36 md:px-12">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-32 top-1/2 -z-10 h-[340px] w-[340px] -translate-y-1/2 rounded-full opacity-60 blur-[80px]"
+        style={{ background: "radial-gradient(circle, rgba(0,209,122,0.35), transparent 70%)" }}
+      />
 
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-white">Efficyon Finds the Hidden Savings</h3>
-              <div className="space-y-4 text-gray-300">
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Eliminate unused and underutilized licenses
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Consolidate overlapping tools into optimized stacks
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Automate workflows to save hours every week
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  ROI guarantee within 90 days
-                </p>
-              </div>
-            </div>
-          </div>
+      <p
+        className="mb-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+        style={{ color: "var(--green)" }}
+      >
+        ✦ Get started
+      </p>
+
+      <h2 className="max-w-[14ch] text-[clamp(48px,6.5vw,96px)] font-medium leading-[0.96] tracking-[-0.045em]">
+        See what we{" "}
+        <span
+          className="font-[family-name:var(--font-instrument-serif)] font-normal italic"
+          style={{ color: "var(--green)" }}
+        >
+          find
+        </span>{" "}
+        in your stack.
+      </h2>
+
+      <p className="mt-10 max-w-[480px] text-[16px] leading-[1.7] text-white/55">
+        20 minutes. No commitment. We&apos;ll connect to one system, run your first
+        analysis, and show you the numbers. If we don&apos;t find at least 5× what you&apos;d
+        pay us — you walk.
+      </p>
+
+      <div className="mt-12 flex flex-wrap items-center gap-6">
+        <Link
+          href="/register"
+          className="group inline-flex items-center gap-2 rounded-full px-7 py-4 text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(0,209,122,0.35)]"
+          style={{ background: "var(--green)" }}
+        >
+          Book a free demo
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          href="/register"
+          className="text-[14px] text-white/65 transition-colors hover:text-white"
+        >
+          Or start free →
+        </Link>
+      </div>
+
+      <ul className="mt-10 flex flex-wrap gap-x-8 gap-y-3 font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.14em] text-white/45">
+        {["No credit card", "Read-only access", "Cancel anytime", "EU-hosted data"].map((t) => (
+          <li key={t} className="flex items-center gap-2">
+            <span className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--green)" }} />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/* ─────────────────────────── FOOTER ─────────────────────────── */
+function Footer() {
+  return (
+    <footer className="relative z-10 border-t border-white/[0.08]">
+      <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-12">
+        <div>
+          <Link href="/" className="flex items-center gap-2 text-[16px] font-medium tracking-[-0.01em]">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: "var(--green)", boxShadow: "0 0 12px var(--green)" }}
+            />
+            Efficyon
+          </Link>
+          <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-white/45">
+            Cost intelligence for SaaS-heavy teams. We watch the gap between what
+            you pay and what you actually use.
+          </p>
+          <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
+            Built in Stockholm · EU-hosted
+          </p>
         </div>
-      </section>
 
-      {/* Services Section */}
-      <section id="services" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">How Efficyon Saves You Money</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Two main sources of savings through AI-powered analysis
-            </p>
-          </div>
-
-          <BentoGrid className="lg:grid-rows-3">
-            <BentoCard
-              name="Direct License Savings"
-              className="lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
-              Icon={DollarSign}
-              description="Reduce actual costs by ~25% of license expenses. Eliminate unused licenses, remove overlapping tools, and optimize license levels across your organization."
-              href="#"
-              cta="Learn more"
-            />
-            <BentoCard
-              name="Time Savings Value"
-              className="lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
-              Icon={Clock}
-              description="Recover productivity through faster workflows and less tool switching. Average savings of ~0.9 hours per month per employee."
-              href="#"
-              cta="Learn more"
-            />
-            <BentoCard
-              name="AI-Powered Analysis"
-              className="lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
-              Icon={Brain}
-              description="Intelligent algorithms continuously analyze your tool usage patterns to identify optimization opportunities."
-              href="#"
-              cta="Learn more"
-            />
-            <BentoCard
-              name="Integration Analysis"
-              className="lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
-              Icon={Workflow}
-              description="Connect with 50+ popular business tools including Microsoft 365, Slack, Salesforce, HubSpot, and more."
-              href="#"
-              cta="Learn more"
-            />
-            <BentoCard
-              name="Actionable Recommendations"
-              className="lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
-              Icon={LineChart}
-              description="Get prioritized, concrete action plans with estimated savings for each recommendation. Track implementation progress in real-time."
-              href="#"
-              cta="Learn more"
-            />
-          </BentoGrid>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-black">
-        <Pricing
-          title="Transparent Pricing"
-          description="Simple pricing, guaranteed value. Our pricing is based on company size and complexity. All plans include ROI guarantee."
-          plans={[
-            {
-              name: "Startup",
-              price: "199",
-              monthlyPrice: "39",
-              yearlyPrice: "31",
-              period: "6 months",
-              features: [
-                "AI-driven process analysis",
-                "Monthly optimization reports",
-                "Email support",
-                "Basic integrations",
-                "ROI tracking",
-                "5 integrations",
-                "10 monthly tokens",
-                "Up to 3 team members",
-              ],
-              description: "For companies with 1-10 employees",
-              buttonText: "Try Free",
-              href: "#contact",
-              isPopular: false,
-            },
-            {
-              name: "Growth",
-              price: "599",
-              monthlyPrice: "119",
-              yearlyPrice: "95",
-              period: "6 months",
-              features: [
-                "Everything in Startup +",
-                "Advanced AI analysis",
-                "Custom automations",
-                "Priority support",
-                "API integrations",
-                "Team training included",
-                "15 integrations",
-                "50 monthly tokens",
-                "Up to 10 team members",
-              ],
-              description: "For companies with 11-50 employees",
-              buttonText: "Try Free",
-              href: "#contact",
-              isPopular: true,
-            },
-            {
-              name: "Enterprise",
-              price: "Custom",
-              yearlyPrice: "Custom",
-              period: "",
-              features: [
-                "Everything in Growth +",
-                "Dedicated team",
-                "Custom AI model",
-                "On-premise deployment",
-                "SLA guarantee",
-                "Quarterly strategy review",
-                "Unlimited integrations",
-                "200 monthly tokens",
-                "Unlimited team members",
-              ],
-              description: "For companies with 50+ employees",
-              buttonText: "Contact Us",
-              href: "#contact",
-              isPopular: false,
-            },
+        <FooterCol
+          title="Product"
+          items={[
+            ["Features", "/features"],
+            ["Integrations", "/integrations"],
+            ["Solutions", "/solutions"],
+            ["Pricing", "#pricing"],
           ]}
         />
-        <p className="text-center text-gray-400 text-sm mt-4">
-          <Shield className="inline h-4 w-4 mr-1" />
-          All plans include 90-day ROI guarantee
-        </p>
-      </section>
-
-      {/* FAQ Section */}
-      <section id="faq" className="py-24 bg-black">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Frequently Asked Questions</h2>
-            <p className="text-xl text-gray-300">Everything you need to know about Efficyon</p>
-          </div>
-
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="item-1" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does the ROI guarantee work?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                We guarantee measurable ROI within 90 days of implementation. If you don't see the projected savings,
-                we'll continue working with you at no additional cost until you do, or provide a full refund.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-2" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                Which systems does Efficyon integrate with?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                We integrate with 50+ popular business tools including Microsoft 365, Google Workspace, Slack,
-                Salesforce, HubSpot, Fortnox, Jira, Asana, Notion, and many more. Our API also allows custom
-                integrations.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-3" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How quickly do we see results?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Most companies see their first actionable recommendations within 2 weeks. Full analysis and
-                implementation typically takes 30-60 days, with measurable savings appearing within the first quarter.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-4" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                Is it secure to connect our systems?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Absolutely. We use bank-level encryption, are SOC 2 compliant, and never store sensitive business data.
-                Our integrations use read-only access where possible, and all data is processed in secure, isolated
-                environments.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-5" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                What does Efficyon cost after the pilot phase?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Pricing depends on company size and complexity. Startup plans begin at $39/month, Growth at $119/month,
-                and Enterprise pricing is customized. All plans include our ROI guarantee.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-6" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does Efficyon differ from traditional consulting?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Unlike traditional consultants who provide one-time recommendations, Efficyon's AI continuously monitors
-                and optimizes your systems. You get real-time insights, automatic detection of new savings
-                opportunities, and ongoing optimization - not just a static report.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative py-24 overflow-hidden">
-        <AnimatedGradientBackground
-          Breathing={true}
-          gradientColors={["#0A0A0A", "#2979FF", "#FF80AB", "#FF6D00", "#FFD600", "#00E676", "#3D5AFE"]}
-          gradientStops={[35, 50, 60, 70, 80, 90, 100]}
+        <FooterCol
+          title="Resources"
+          items={[
+            ["Blog", "/blog"],
+            ["ROI Calculator", "/calculator/roi"],
+            ["SaaS Benchmarks", "/benchmarks"],
+            ["Compare", "/compare"],
+          ]}
         />
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="relative h-32 w-full flex flex-col items-center justify-center">
-              <div className="w-full absolute inset-0">
-                <SparklesCore
-                  id="ctasparticles"
-                  background="transparent"
-                  minSize={0.6}
-                  maxSize={1.4}
-                  particleDensity={100}
-                  className="w-full h-full"
-                  particleColor="#FFFFFF"
-                  speed={0.8}
-                />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 relative z-20 text-balance">
-                Ready to optimize your business costs?
-              </h2>
-            </div>
+        <FooterCol
+          title="Company"
+          items={[
+            ["Login", "/login"],
+            ["Privacy", "/privacy"],
+            ["Terms", "/terms"],
+            ["Contact", "mailto:info@efficyon.com"],
+          ]}
+        />
+      </div>
 
-            <p className="text-xl text-gray-300">
-              Join leading companies that have increased efficiency by 25%+ and saved thousands annually with AI-powered
-              cost optimization.
-            </p>
+      <div className="mx-auto flex max-w-[1240px] flex-col items-start justify-between gap-3 border-t border-white/[0.08] px-6 py-6 text-[12px] text-white/40 md:flex-row md:items-center md:px-12">
+        <span className="font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.14em]">
+          © 2026 Efficyon AB
+        </span>
+        <span className="font-[family-name:var(--font-instrument-serif)] italic text-white/35">
+          The waste hides in the gap.
+        </span>
+      </div>
+    </footer>
+  )
+}
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
-                <Link href="#contact">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Book a Demo
-                </Link>
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400">
-              <span>No credit card required</span>
-              <span>•</span>
-              <span>5-minute setup</span>
-              <span>•</span>
-              <span>Cancel anytime</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-24 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 max-w-md">
-          <div className="text-center space-y-4 mb-8">
-            <h2 className="text-2xl font-bold text-white">Contact Us</h2>
-            <p className="text-gray-300">Leave your details and we'll contact you</p>
-          </div>
-
-          <form className="space-y-4">
-            <div>
-              <Input
-                type="text"
-                placeholder="Your name"
-                className="bg-black/50 border-white/20 text-white placeholder:text-gray-500"
-              />
-            </div>
-            <div>
-              <Input
-                type="email"
-                placeholder="your@email.com"
-                className="bg-black/50 border-white/20 text-white placeholder:text-gray-500"
-              />
-            </div>
-            <Button className="w-full bg-white text-black hover:bg-gray-100">Send</Button>
-          </form>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="relative py-20 bg-black border-t border-white/10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/90" />
-
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-12">
-            {/* Company Info */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-white">Efficyon</h3>
-                <p className="text-gray-300 leading-relaxed">
-                  AI-powered cost optimization platform that helps businesses identify savings and increase efficiency.
-                </p>
-              </div>
-
-              <div className="flex space-x-4">
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Linkedin className="h-5 w-5" />
-                </a>
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Twitter className="h-5 w-5" />
-                </a>
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-              </div>
-
-              <div className="flex items-center space-x-3 text-gray-300">
-                <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                  <Mail className="h-4 w-4" />
-                </div>
-                <a href="mailto:info@efficyon.com" className="hover:text-white transition-colors duration-300 text-sm">
-                  info@efficyon.com
-                </a>
-              </div>
-            </div>
-
-            {/* Product */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">Product</h4>
-              <ul className="space-y-3">
-                {[
-                  { name: "All Features", href: "/features" },
-                  { name: "Cost Optimization", href: "/features/saas-cost-optimization" },
-                  { name: "Subscription Tracking", href: "/features/subscription-tracking" },
-                  { name: "Duplicate Detection", href: "/features/duplicate-payment-detection" },
-                  { name: "Integrations", href: "/integrations" },
-                  { name: "Solutions", href: "/solutions" },
-                ].map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Resources */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">Resources</h4>
-              <ul className="space-y-3">
-                {[
-                  { name: "Blog", href: "/blog" },
-                  { name: "ROI Calculator", href: "/calculator/roi" },
-                  { name: "SaaS Benchmarks", href: "/benchmarks" },
-                  { name: "Tool Analysis", href: "/tools" },
-                  { name: "Compare", href: "/compare" },
-                ].map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">Company</h4>
-              <ul className="space-y-3">
-                {[
-                  { name: "Pricing", href: "#pricing" },
-                  { name: "FAQ", href: "#faq" },
-                  { name: "Contact", href: "#contact" },
-                  { name: "Privacy Policy", href: "/privacy" },
-                  { name: "Terms of Service", href: "/terms" },
-                ].map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Section */}
-          <div className="border-t border-white/10 mt-16 pt-8">
-            <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
-              <p className="text-gray-400 text-center lg:text-left">© 2026 Efficyon. All rights reserved.</p>
-
-              <div className="flex flex-wrap justify-center lg:justify-end space-x-8">
-                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
-                  Privacy Policy
-                </a>
-                <a href="/terms" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
-                  Terms of Service
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+function FooterCol({ title, items }: { title: string; items: [string, string][] }) {
+  return (
+    <div>
+      <p className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.2em] text-white/45">
+        {title}
+      </p>
+      <ul className="space-y-3">
+        {items.map(([label, href]) => (
+          <li key={label}>
+            <Link
+              href={href}
+              className="text-[13.5px] text-white/65 transition-colors hover:text-white"
+            >
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
