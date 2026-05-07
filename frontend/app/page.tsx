@@ -42,14 +42,352 @@ export default function HomePage() {
       <BackgroundTexture />
       <NavBar />
       <Hero />
+      <TrustStrip />
       <Numbers />
       <Integrations />
       <HowItWorks />
+      <HomeROICalculator />
       <Findings />
       <Pricing />
+      <HomeFAQ />
       <FinalCTA />
       <Footer />
     </div>
+  )
+}
+
+/* ───────────────────────── TRUST STRIP ───────────────────────── */
+function TrustStrip() {
+  const items = [
+    "Read-only OAuth",
+    "EU-hosted · Gothenburg",
+    "GDPR-aligned",
+    "30-day fee refund",
+    "Cancel anytime",
+  ]
+  return (
+    <div className="relative z-10 mx-auto max-w-[1240px] border-y border-white/[0.06] px-6 py-5 md:px-12">
+      <ul className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
+        {items.map((t) => (
+          <li
+            key={t}
+            className="flex items-center gap-2.5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45"
+          >
+            <span
+              className="inline-block h-1 w-1 flex-shrink-0 rounded-full"
+              style={{ background: "var(--green)" }}
+            />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/* ───────────────────────── HOME ROI CALCULATOR ───────────────────────── */
+const TOP_TOOL_OPTIONS = [
+  { label: "Microsoft 365", multiplier: 1.2 },
+  { label: "Google Workspace", multiplier: 1.05 },
+  { label: "Salesforce", multiplier: 1.4 },
+  { label: "HubSpot", multiplier: 1.1 },
+  { label: "Slack", multiplier: 0.9 },
+  { label: "Notion", multiplier: 0.95 },
+  { label: "Adobe Creative Cloud", multiplier: 1.3 },
+  { label: "Other / mixed", multiplier: 1.0 },
+]
+
+function HomeROICalculator() {
+  const [employees, setEmployees] = useState(25)
+  const [monthlySpend, setMonthlySpend] = useState(4500)
+  const [topTool, setTopTool] = useState(TOP_TOOL_OPTIONS[0])
+
+  // Honest math: modeled, not measured. 18% base waste rate aligns with
+  // the kind of leak we typically surface; tool multiplier reflects
+  // industry seat-utilization norms; employee factor adds a small
+  // sliding multiplier for scale-related drift.
+  const annualSpend = monthlySpend * 12
+  const baseWasteRate = 0.18
+  const employeeFactor = 1 + Math.min(employees, 500) / 500 * 0.3
+  const modeledLeak = Math.round(
+    annualSpend * baseWasteRate * topTool.multiplier * employeeFactor
+  )
+  const monthlySaved = Math.round(modeledLeak / 12)
+
+  return (
+    <section
+      id="calculator"
+      className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-32 md:px-12"
+    >
+      <div className="mb-16 grid gap-12 md:grid-cols-2 md:items-end">
+        <div>
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ Quick estimate
+          </p>
+          <h2 className="text-[clamp(36px,4.2vw,60px)] font-medium leading-[1.02] tracking-[-0.035em]">
+            What&apos;s leaking{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              in your stack?
+            </span>
+          </h2>
+        </div>
+        <p className="max-w-[460px] text-[16px] leading-[1.7] text-white/55 md:justify-self-end">
+          Three inputs, one modeled number. The real scan finds different things — but
+          this is a defensible starting estimate based on industry-typical waste rates.
+        </p>
+      </div>
+
+      <div className="grid gap-12 border-t border-white/[0.08] pt-12 md:grid-cols-[1fr_1fr] md:gap-20">
+        {/* Inputs */}
+        <div className="space-y-10">
+          <CalcField
+            label="Employees"
+            sub={`${employees} people`}
+          >
+            <input
+              type="range"
+              min={5}
+              max={500}
+              step={5}
+              value={employees}
+              onChange={(e) => setEmployees(Number(e.target.value))}
+              className="w-full appearance-none bg-transparent"
+              style={{
+                accentColor: "var(--green)",
+              }}
+              aria-label="Number of employees"
+            />
+            <div className="mt-2 flex justify-between font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.16em] text-white/30">
+              <span>5</span>
+              <span>500</span>
+            </div>
+          </CalcField>
+
+          <CalcField
+            label="Monthly SaaS spend"
+            sub={`$${monthlySpend.toLocaleString("en-US")} / month`}
+          >
+            <input
+              type="range"
+              min={500}
+              max={50000}
+              step={500}
+              value={monthlySpend}
+              onChange={(e) => setMonthlySpend(Number(e.target.value))}
+              className="w-full appearance-none bg-transparent"
+              style={{ accentColor: "var(--green)" }}
+              aria-label="Monthly SaaS spend in USD"
+            />
+            <div className="mt-2 flex justify-between font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.16em] text-white/30">
+              <span>$500</span>
+              <span>$50,000</span>
+            </div>
+          </CalcField>
+
+          <CalcField label="Biggest line item" sub={topTool.label}>
+            <div className="flex flex-wrap gap-2">
+              {TOP_TOOL_OPTIONS.map((tool) => {
+                const active = topTool.label === tool.label
+                return (
+                  <button
+                    key={tool.label}
+                    type="button"
+                    onClick={() => setTopTool(tool)}
+                    className={`border px-3 py-1.5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.14em] transition-colors ${
+                      active
+                        ? "text-black"
+                        : "border-white/15 text-white/55 hover:border-white/40 hover:text-white"
+                    }`}
+                    style={
+                      active
+                        ? { background: "var(--green)", borderColor: "var(--green)" }
+                        : undefined
+                    }
+                  >
+                    {tool.label}
+                  </button>
+                )
+              })}
+            </div>
+          </CalcField>
+        </div>
+
+        {/* Result */}
+        <div className="border border-white/[0.09] p-10">
+          <p className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45">
+            ✦ Modeled annual leak
+          </p>
+          <div className="mt-6 flex items-baseline gap-3">
+            <span
+              className="text-[clamp(56px,7vw,100px)] font-medium leading-none tracking-[-0.045em]"
+              style={{ color: "var(--green)", fontVariantNumeric: "tabular-nums" }}
+            >
+              ${modeledLeak.toLocaleString("en-US")}
+            </span>
+            <span className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/55">
+              /yr
+            </span>
+          </div>
+          <p className="mt-4 max-w-[36ch] text-[14px] leading-[1.6] text-white/55">
+            Roughly{" "}
+            <span className="text-white/85">
+              ${monthlySaved.toLocaleString("en-US")}/mo
+            </span>{" "}
+            recoverable. The actual scan typically surfaces this within{" "}
+            <span style={{ color: "var(--green)" }}>10 minutes</span> of connecting
+            your accounting feed.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link
+              href="/register"
+              className="group inline-flex items-center gap-2 rounded-full px-5 py-3 text-[13.5px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(0,209,122,0.3)]"
+              style={{ background: "var(--green)" }}
+            >
+              Run the real scan
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/calculator/roi"
+              className="text-[13.5px] text-white/55 transition-colors hover:text-white"
+            >
+              Detailed calculator →
+            </Link>
+          </div>
+
+          <p className="mt-8 border-t border-white/[0.06] pt-5 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.18em] text-white/30">
+            Modeled · not measured · {Math.round(baseWasteRate * 100)}% base waste rate ·
+            tool-specific multiplier
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function CalcField({
+  label,
+  sub,
+  children,
+}: {
+  label: string
+  sub: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline justify-between">
+        <span className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55">
+          {label}
+        </span>
+        <span className="font-[family-name:var(--font-instrument-serif)] text-[18px] italic text-white">
+          {sub}
+        </span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/* ───────────────────────── HOME FAQ ───────────────────────── */
+const HOME_FAQ = [
+  {
+    q: "How long does setup take?",
+    a: "Around 10 minutes. You sign up, OAuth one accounting system (Fortnox, QuickBooks, Stripe, Xero, Visma) plus optionally an identity provider, and the first scan starts in the background. Findings surface in 5–15 minutes for a typical SMB.",
+  },
+  {
+    q: "Is my data actually safe?",
+    a: "Every connector we ship is OAuth-scoped to GET requests only. We can't write, modify, or delete anything in your accounts — that's not a policy choice, it's encoded in the OAuth grant your account approves. Verifiable in your provider's app management screen.",
+  },
+  {
+    q: "What if you don't find any leaks?",
+    a: "Then you don't pay. We refund our fee in full if we don't surface at least 5× the cost of your subscription within 30 days. It's contractual, not marketing copy. Most stacks have leaks — but we'd rather refund than overpromise.",
+  },
+  {
+    q: "Do I need to be technical?",
+    a: "No. The setup is OAuth click-throughs, the dashboard is read-only, and the monthly report is plain English. If you can use QuickBooks or Fortnox, you can use Efficyon.",
+  },
+  {
+    q: "How is this different from a spreadsheet?",
+    a: "A spreadsheet shows what you pay. Efficyon shows what you pay AND what your team actually uses, and surfaces the gap automatically every month. The spreadsheet is fine until forty subscriptions; by a hundred it's wrong more often than right — and it still can't see usage.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "Yes. Cancel from inside the dashboard in under a minute. Your data is purged within 30 days of cancellation. No exit interview, no retention call.",
+  },
+  {
+    q: "What if my accounting platform isn't supported yet?",
+    a: "Tell us — we add at least one new integration every month, and the queue is shaped by what current and trial users actually need. If three people ask for the same one, it jumps the queue. info@efficyon.com.",
+  },
+  {
+    q: "How is your pricing structured?",
+    a: "Three plans: Startup ($39/mo, 1–10 employees), Growth ($119/mo, 11–50 employees, most common), Enterprise (custom for 50+). All plans include the 30-day fee-refund guarantee. No per-finding fees, no setup fees.",
+  },
+]
+
+function HomeFAQ() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: HOME_FAQ.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  }
+
+  return (
+    <section
+      id="faq"
+      className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-32 md:px-12"
+    >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
+      <div className="mb-16 grid gap-12 md:grid-cols-2 md:items-end">
+        <div>
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ FAQ
+          </p>
+          <h2 className="text-[clamp(36px,4.2vw,60px)] font-medium leading-[1.02] tracking-[-0.035em]">
+            What people ask{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              before they connect.
+            </span>
+          </h2>
+        </div>
+        <p className="max-w-[460px] text-[16px] leading-[1.7] text-white/55 md:justify-self-end">
+          Eight honest questions, including the ones we&apos;d rather not be asked. If you
+          land on something we haven&apos;t answered, write us — info@efficyon.com.
+        </p>
+      </div>
+
+      <div className="border-t border-white/[0.08]">
+        {HOME_FAQ.map((f) => (
+          <details key={f.q} className="group border-b border-white/[0.08] py-7">
+            <summary className="flex cursor-pointer items-baseline justify-between gap-6 text-[18px] font-medium tracking-[-0.01em] text-white/85 marker:hidden">
+              <span className="md:max-w-[80ch]">{f.q}</span>
+              <span
+                className="font-[family-name:var(--font-instrument-serif)] text-[26px] italic transition-transform group-open:rotate-45"
+                style={{ color: "var(--green)" }}
+                aria-hidden
+              >
+                +
+              </span>
+            </summary>
+            <p className="mt-4 max-w-[80ch] text-[15px] leading-[1.75] text-white/65">{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
   )
 }
 
