@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -222,8 +223,11 @@ export default function ForITManagersPage() {
               Access scope
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              OAuth or scoped API keys. No agents on endpoints. No writes to identity providers,
-              accounting systems, or vendor portals.
+              OAuth or scoped API keys. No agents on endpoints. No writes to identity providers, accounting systems, or vendor portals. Identity data drives{" "}
+              <Link href="/features/unused-license-detection" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                unused license detection
+              </Link>
+              {" "}across the platform.
             </p>
           </div>
           <div className="bg-[#080809] p-10">
@@ -255,8 +259,11 @@ export default function ForITManagersPage() {
               Built in Gothenburg, Sweden
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              EU hosting and data residency by default. Useful when the security review starts
-              with the geography of the processor.
+              EU hosting and data residency by default. Useful when the security review starts with the geography of the processor. The{" "}
+              <Link href="/features/software-audit" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                software audit
+              </Link>
+              {" "}feature gives you the inventory that supports that review.
             </p>
           </div>
         </div>

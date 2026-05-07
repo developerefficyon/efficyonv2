@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -222,8 +223,11 @@ export default function ForStartupsPage() {
               Modeled annual leak · 18-person stack
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              The midpoint we model when accounting + usage data flow in for an early-stage stack.
-              Yours will differ — running the scan is how you replace the model with your number.
+              The midpoint we model when accounting + usage data flow in for an early-stage stack. Use the{" "}
+              <Link href="/calculator/roi" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                ROI calculator
+              </Link>
+              {" "}to model yours before the scan.
             </p>
           </div>
           <div className="bg-[#080809] p-10">
@@ -255,8 +259,11 @@ export default function ForStartupsPage() {
               To first scan
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              Read-only OAuth, no agent install, no IT ticket. Built in Gothenburg, Sweden, EU-hosted —
-              cancel anytime.
+              Read-only OAuth, no agent install, no IT ticket. Built in Gothenburg, Sweden, EU-hosted — cancel anytime. Check{" "}
+              <Link href="/benchmarks" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                benchmarks
+              </Link>
+              {" "}to see how your stack compares before you start.
             </p>
           </div>
         </div>

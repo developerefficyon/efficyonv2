@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -232,8 +233,11 @@ export default function ForFinanceTeamsPage() {
               Connect &amp; first scan
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              Read-only OAuth, no agent install, no IT ticket. Connect Fortnox or QuickBooks and
-              the first analysis runs.
+              Read-only OAuth, no agent install, no IT ticket. Connect Fortnox or QuickBooks and the first analysis runs. See{" "}
+              <Link href="/compare/efficyon-vs-spreadsheets" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                how this compares to the spreadsheet workflow
+              </Link>
+              .
             </p>
           </div>
           <div className="bg-[#080809] p-10">
@@ -262,8 +266,11 @@ export default function ForFinanceTeamsPage() {
               Access scope
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              We read the ledger. We don't write to it, can't modify invoices, can't initiate
-              payments. EU-hosted, built in Gothenburg, Sweden.
+              We read the ledger. We don't write to it, can't modify invoices, can't initiate payments. EU-hosted, built in Gothenburg, Sweden. The{" "}
+              <Link href="/features/software-audit" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                software audit
+              </Link>
+              {" "}feature turns the same feed into audit-ready reports.
             </p>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -224,7 +225,11 @@ export default function ForCFOPage() {
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
               The midpoint of what we model when accounting + usage data flow in for a typical
-              early-stage stack. Yours will differ — that's the point of running the scan.
+              early-stage stack. Yours will differ — use the{" "}
+              <Link href="/calculator/roi" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                ROI calculator
+              </Link>
+              {" "}to model your own stack.
             </p>
           </div>
           <div className="bg-[#080809] p-10">
@@ -239,7 +244,11 @@ export default function ForCFOPage() {
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
               If the surfaced savings don't exceed five times what you paid us in the first
-              engagement window, we refund the difference. The contract sits in the agreement.
+              engagement window, we refund the difference. The contract sits in the agreement. The{" "}
+              <Link href="/features/saas-spend-management" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                spend management
+              </Link>
+              {" "}surface is where the gap becomes visible.
             </p>
           </div>
           <div className="bg-[#080809] p-10">

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -217,7 +218,11 @@ export default function ForEnterprisePage() {
               <li>— No customer testimonials. We have no customers yet.</li>
               <li>— No &ldquo;trusted by 500+ enterprises.&rdquo; Trusted by zero, currently.</li>
               <li>— No SOC 2 Type II badge in the header. We're working toward it; we're not there.</li>
-              <li>— No fabricated benchmarks. Modeled numbers are labelled modeled.</li>
+              <li>— No fabricated benchmarks. Modeled numbers are labelled modeled. See{" "}
+                <Link href="/benchmarks/saas-spend-by-company-size" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                  SaaS spend by company size
+                </Link>
+                {" "}for the reference data we do publish.</li>
             </ul>
           </div>
           <div className="bg-[#080809] p-10">
@@ -226,7 +231,11 @@ export default function ForEnterprisePage() {
               <li>— Read-only data access, scoped to integrations you grant.</li>
               <li>— EU-hosted, built in Gothenburg, Sweden.</li>
               <li>— 5× fee refund guarantee, in the contract.</li>
-              <li>— A roadmap shaped by the enterprise teams who sign first.</li>
+              <li>— A{" "}
+                <Link href="/features/software-audit" className="text-white/85 underline decoration-white/25 underline-offset-4 hover:decoration-white/60">
+                  software audit
+                </Link>
+                {" "}feature that keeps the compliance inventory current without a quarterly project.</li>
             </ul>
           </div>
         </div>
