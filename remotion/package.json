@@ -17,6 +17,7 @@
     "render:compare-spreadsheets": "remotion render src/index.ts CompareSpreadsheets ../frontend/public/videos/compare-spreadsheets.mp4",
     "render:compare-zylo": "remotion render src/index.ts CompareZylo ../frontend/public/videos/compare-zylo.mp4",
     "render:all-compares": "npm run render:compare-spreadsheets && npm run render:compare-zylo",
+    "render:how-it-works": "remotion render src/index.ts HowItWorksLoop ../frontend/public/videos/how-it-works.mp4",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

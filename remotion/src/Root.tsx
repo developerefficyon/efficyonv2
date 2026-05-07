@@ -11,6 +11,7 @@ import {
   defaultCompareSpreadsheetsProps,
   defaultCompareZyloProps,
 } from "./CompareLoop/CompareLoop";
+import { HowItWorksLoop } from "./HowItWorksLoop/HowItWorksLoop";
 
 const FPS = 30;
 // Intro 0.6s + (4 vendors × 1.4s) + total summary 1.4s + outro fade 0.6s ≈ 8.2s.
@@ -165,6 +166,16 @@ export const Root: React.FC = () => {
         schema={CompareLoopSchema}
         defaultProps={defaultCompareZyloProps}
         durationInFrames={FPS * 12}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+
+      {/* ─── HowItWorks animation — 9.5s, lives inside the homepage section ─── */}
+      <Composition
+        id="HowItWorksLoop"
+        component={HowItWorksLoop}
+        durationInFrames={Math.round(FPS * 9.5)}
         fps={FPS}
         width={1920}
         height={1080}
