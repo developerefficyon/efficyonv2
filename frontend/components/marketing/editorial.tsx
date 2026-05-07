@@ -9,6 +9,7 @@
    ────────────────────────────────────────────────────────────── */
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { ArrowUpRight, ArrowRight } from "lucide-react"
@@ -91,10 +92,14 @@ export function EditorialNav() {
       style={{ background: "rgba(8,8,9,0.78)" }}
     >
       <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-6 md:px-12">
-        <Link href="/" className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.01em]">
-          <span
-            className="inline-block h-1.5 w-1.5 rounded-full"
-            style={{ background: GREEN, boxShadow: `0 0 12px ${GREEN}` }}
+        <Link href="/" className="group flex items-center gap-2.5 text-[15px] font-medium tracking-[-0.01em]">
+          <Image
+            src="/logo.png"
+            alt="Efficyon"
+            width={32}
+            height={32}
+            priority
+            className="h-7 w-auto object-contain"
           />
           <span>Efficyon</span>
           <span
@@ -164,10 +169,13 @@ export function EditorialFooter() {
     <footer className="relative z-10 border-t border-white/[0.08]">
       <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-12">
         <div>
-          <Link href="/" className="flex items-center gap-2 text-[16px] font-medium tracking-[-0.01em]">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: GREEN, boxShadow: `0 0 12px ${GREEN}` }}
+          <Link href="/" className="flex items-center gap-2.5 text-[16px] font-medium tracking-[-0.01em]">
+            <Image
+              src="/logo.png"
+              alt="Efficyon"
+              width={32}
+              height={32}
+              className="h-7 w-auto object-contain"
             />
             Efficyon
           </Link>

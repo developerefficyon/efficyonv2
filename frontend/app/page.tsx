@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { ArrowUpRight, ArrowRight } from "lucide-react"
 
@@ -95,10 +96,14 @@ function NavBar() {
       style={{ background: "rgba(8,8,9,0.78)" }}
     >
       <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between px-6 md:px-12">
-        <Link href="/" className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.01em]">
-          <span
-            className="inline-block h-1.5 w-1.5 rounded-full"
-            style={{ background: "var(--green)", boxShadow: "0 0 12px var(--green)" }}
+        <Link href="/" className="flex items-center gap-2.5 text-[15px] font-medium tracking-[-0.01em]">
+          <Image
+            src="/logo.png"
+            alt="Efficyon"
+            width={32}
+            height={32}
+            priority
+            className="h-7 w-auto object-contain"
           />
           <span>Efficyon</span>
           <span
@@ -487,25 +492,31 @@ function Findings() {
           </div>
         </div>
 
-        {/* Right column — founder's note + security */}
+        {/* Right column — methodology + security */}
         <aside className="space-y-12 md:pt-20">
           <figure>
             <p
               className="mb-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45"
             >
-              ✦ Founder&apos;s note
+              ✦ The approach
             </p>
             <p className="font-[family-name:var(--font-instrument-serif)] text-[26px] leading-[1.45] tracking-[-0.005em] text-white/85">
-              We&apos;re early — no wall of customer logos yet. We&apos;re shipping the
-              opposite: <em className="not-italic" style={{ color: "var(--green)" }}>read-only access</em>,
-              a clear contract, and a refund if we don&apos;t find at least
-              <em className="not-italic" style={{ color: "var(--green)" }}> 5× our fee</em> in
-              the first 30 days. The math doesn&apos;t care how many customers we have.
-              The leak is sitting in your stack right now.
+              Discovery tools tell you what you bought. Usage tools tell you who
+              logged in.{" "}
+              <em className="not-italic" style={{ color: "var(--green)" }}>
+                Neither tells you what&apos;s leaking
+              </em>{" "}
+              — because the leak only shows up when you compare both sides. We
+              connect your accounting feed to your real usage data and run that
+              comparison every month. The output is{" "}
+              <em className="not-italic" style={{ color: "var(--green)" }}>
+                dollars, not dashboards
+              </em>
+              .
             </p>
             <figcaption className="mt-6 flex items-center gap-3 text-[12px] uppercase tracking-[0.16em] text-white/45 font-[family-name:var(--font-geist-mono)]">
               <span className="h-px w-8" style={{ background: "var(--green)" }} />
-              The Efficyon team · Gothenburg
+              Efficyon · Cost intelligence · Gothenburg
             </figcaption>
           </figure>
 
@@ -904,10 +915,13 @@ function Footer() {
     <footer className="relative z-10 border-t border-white/[0.08]">
       <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-12">
         <div>
-          <Link href="/" className="flex items-center gap-2 text-[16px] font-medium tracking-[-0.01em]">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: "var(--green)", boxShadow: "0 0 12px var(--green)" }}
+          <Link href="/" className="flex items-center gap-2.5 text-[16px] font-medium tracking-[-0.01em]">
+            <Image
+              src="/logo.png"
+              alt="Efficyon"
+              width={32}
+              height={32}
+              className="h-7 w-auto object-contain"
             />
             Efficyon
           </Link>
