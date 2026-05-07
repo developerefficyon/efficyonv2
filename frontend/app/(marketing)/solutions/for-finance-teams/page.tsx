@@ -7,6 +7,7 @@ import {
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export function generateMetadata(): Metadata {
   return {
@@ -89,6 +90,10 @@ export default function ForFinanceTeamsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Solutions", path: "/solutions" }, { name: "For Finance Teams", path: "/solutions/for-finance-teams" }])]) }}
       />
 
       <EditorialPageHero

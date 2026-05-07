@@ -8,6 +8,7 @@ import {
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Solutions - SaaS Cost Optimization by Role",
@@ -64,19 +65,25 @@ const SOLUTIONS = [
 ]
 
 export default function SolutionsHubPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: "Solutions - SaaS Cost Optimization by Role | Efficyon",
-    description:
-      "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises.",
-    url: absoluteUrl("/solutions"),
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: "Solutions - SaaS Cost Optimization by Role | Efficyon",
+      description:
+        "Efficyon provides tailored SaaS cost optimization solutions for startups, finance teams, IT managers, CFOs, and enterprises.",
+      url: absoluteUrl("/solutions"),
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Solutions", path: "/solutions" },
+    ]),
+  ]
 
   const PILLARS = [
     { val: "$18.5k", label: "Modeled annual leak in a typical 18-person stack" },
@@ -88,7 +95,7 @@ export default function SolutionsHubPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero
