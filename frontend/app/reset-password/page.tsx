@@ -3,14 +3,11 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Navbar } from "@/components/ui/navbar"
+import Image from "next/image"
 import { supabase } from "@/lib/supabaseClient"
-import { ArrowLeft, Lock, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react"
+import { ArrowLeft, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
+import { MarketingShell } from "@/components/marketing/editorial"
 
 function ResetPasswordContent() {
   const [password, setPassword] = useState("")
@@ -32,7 +29,7 @@ function ResetPasswordContent() {
         const accessToken = hashParams.get("access_token")
         const refreshToken = hashParams.get("refresh_token")
         const type = hashParams.get("type")
-        
+
         // If we have recovery tokens in the hash, set the session immediately
         if (accessToken && refreshToken && type === "recovery") {
           try {
@@ -48,7 +45,7 @@ function ResetPasswordContent() {
               // Clear the hash from URL after setting session
               window.history.replaceState(null, "", window.location.pathname)
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             console.error("Error setting session:", err)
             setError("Failed to verify reset link. Please request a new password reset.")
           }
@@ -78,7 +75,7 @@ function ResetPasswordContent() {
     try {
       // Check if we already have a session (set from useEffect)
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!session) {
         // Try to get tokens from URL hash or query params
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -119,150 +116,203 @@ function ResetPasswordContent() {
       setTimeout(() => {
         router.push("/login")
       }, 2000)
-    } catch (err: any) {
-      setError(err.message || "Failed to reset password. Please try again.")
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      setError(e?.message || "Failed to reset password. Please try again.")
       toast.error("Failed to reset password", {
-        description: err.message || "An error occurred while resetting your password.",
+        description: e?.message || "An error occurred while resetting your password.",
       })
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
-          <div className="w-full max-w-md">
-            <Card className="bg-black/80 backdrop-blur-xl border-green-500/40 shadow-[0_0_40px_rgba(34,197,94,0.25)]">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
-                  <CheckCircle className="w-6 h-6 text-green-400" />
-                  Password Reset Successful
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Your password has been updated successfully
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                  <p className="text-sm text-gray-300 text-center">
-                    You can now sign in with your new password. Redirecting to login...
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
-        <div className="w-full max-w-md">
+    <div className="relative z-10 mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-6 py-20 md:px-12">
+      <div className="grid w-full gap-16 md:grid-cols-[1fr_1fr] md:items-center">
+        {/* Left — editorial intro */}
+        <div className="hidden md:block">
           <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 group"
+            href="/"
+            className="group mb-10 inline-flex items-center gap-2.5 text-[15px] font-medium tracking-[-0.01em]"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span>Back to login</span>
+            <Image src="/logo.png" alt="Efficyon" width={32} height={32} priority className="h-7 w-auto object-contain" />
+            <span>Efficyon</span>
+            <span className="translate-y-[1px] font-[family-name:var(--font-instrument-serif)] text-[14px] italic text-white/40">
+              / cost intelligence
+            </span>
           </Link>
 
-          <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-white">Reset your password</CardTitle>
-              <CardDescription className="text-gray-400">
-                Enter your new password below
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-300">
-                    New Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
+          <p
+            className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: "var(--green)" }}
+          >
+            ✦ Almost there
+          </p>
+          <h1 className="text-[clamp(40px,4.5vw,64px)] font-medium leading-[1.0] tracking-[-0.04em]">
+            Set a new{" "}
+            <span
+              className="font-[family-name:var(--font-instrument-serif)] font-normal italic"
+              style={{ color: "var(--green)" }}
+            >
+              password.
+            </span>
+          </h1>
+          <p className="mt-8 max-w-[420px] text-[16px] leading-[1.7] text-white/55">
+            Pick something you can remember. Six characters minimum. We&apos;ll sign you in straight after.
+          </p>
+
+          <ul className="mt-12 space-y-3 font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.16em] text-white/45">
+            {["Stored as a one-way hash", "Active sessions stay signed in", "EU-hosted · Gothenburg"].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <span className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--green)" }} />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Right — form / success card */}
+        <div className="w-full max-w-[460px] md:justify-self-end">
+          <Link
+            href="/login"
+            className="mb-8 inline-flex items-center gap-2 text-[13px] text-white/55 transition-colors hover:text-white md:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to login
+          </Link>
+
+          <div className="border border-white/[0.09] bg-white/[0.012] p-8 md:p-10">
+            {isSuccess ? (
+              <>
+                <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "rgba(0, 209, 122, 0.14)" }}>
+                  <CheckCircle className="h-5 w-5" style={{ color: "var(--green)" }} />
+                </div>
+                <p className="mb-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45">
+                  ✦ Password updated
+                </p>
+                <h2 className="text-[28px] font-medium tracking-[-0.02em]">
+                  All{" "}
+                  <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+                    set.
+                  </span>
+                </h2>
+                <p className="mt-3 text-[14px] leading-[1.7] text-white/55">
+                  Your password has been updated. Redirecting you to login…
+                </p>
+
+                <div className="mt-8 flex items-center gap-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Redirecting
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mb-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/45">
+                  ✦ New password
+                </p>
+                <h2 className="text-[28px] font-medium tracking-[-0.02em]">
+                  Pick a fresh{" "}
+                  <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+                    one.
+                  </span>
+                </h2>
+                <p className="mt-2 text-[14px] text-white/50">
+                  Minimum six characters.
+                </p>
+
+                <form
+                  onSubmit={handleSubmit}
+                  className="mt-8 space-y-5"
+                  aria-busy={isLoading}
+                  aria-live="polite"
+                >
+                  <Field label="New password" htmlFor="password">
+                    <Lock className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your new password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500"
+                      className="w-full bg-transparent pb-2 pl-7 pr-9 pt-2 text-[15px] text-white placeholder:text-white/25 focus:outline-none"
                       disabled={isLoading}
                       required
                       minLength={6}
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 text-white/35 transition-colors hover:text-white/70"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-300">
-                    Confirm New Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
+                  </Field>
+
+                  <Field label="Confirm new password" htmlFor="confirmPassword">
+                    <Lock className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm your new password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-black/50 border-white/10 text-white placeholder:text-gray-500 focus:border-cyan-500"
+                      className="w-full bg-transparent pb-2 pl-7 pr-9 pt-2 text-[15px] text-white placeholder:text-white/25 focus:outline-none"
                       disabled={isLoading}
                       required
                       minLength={6}
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                      onClick={() => setShowConfirmPassword((p) => !p)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 text-white/35 transition-colors hover:text-white/70"
                       aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
-                  </div>
-                </div>
-                {error && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                    {error}
-                  </div>
-                )}
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/25 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <span className="inline-flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Resetting password...</span>
-                    </span>
-                  ) : (
-                    "Reset Password"
+                  </Field>
+
+                  {error && (
+                    <div className="flex items-start gap-3 border border-red-500/30 bg-red-500/[0.06] p-3 text-[13px] text-red-300/95">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{error}</span>
+                    </div>
                   )}
-                </Button>
-              </form>
-              <div className="mt-6 text-center text-sm text-gray-400">
-                Remember your password?{" "}
-                <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
-                  Sign in
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-[14px] text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(0,209,122,0.35)] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                    style={{ background: "var(--green)" }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Resetting password…
+                      </>
+                    ) : (
+                      <>
+                        Reset password
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="mt-8 border-t border-white/[0.08] pt-6 text-center text-[13.5px] text-white/55">
+                  Remember your password?{" "}
+                  <Link
+                    href="/login"
+                    className="font-medium transition-colors hover:text-white"
+                    style={{ color: "var(--green)" }}
+                  >
+                    Sign in →
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -271,27 +321,45 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-black">
-          <Navbar />
-          <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
-            <div className="w-full max-w-md">
-              <Card className="bg-black/80 backdrop-blur-xl border-white/10 shadow-2xl">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-2xl font-bold text-white">Loading...</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Please wait...
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
+    <MarketingShell>
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--green)" }} />
           </div>
-        </div>
-      }
-    >
-      <ResetPasswordContent />
-    </Suspense>
+        }
+      >
+        <ResetPasswordContent />
+      </Suspense>
+    </MarketingShell>
   )
 }
 
+function Field({
+  label,
+  htmlFor,
+  aside,
+  children,
+}: {
+  label: string
+  htmlFor: string
+  aside?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label
+          htmlFor={htmlFor}
+          className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55"
+        >
+          {label}
+        </label>
+        {aside}
+      </div>
+      <div className="relative border-b border-white/15 transition-colors focus-within:border-[color:var(--green)]">
+        {children}
+      </div>
+    </div>
+  )
+}
