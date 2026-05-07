@@ -5,6 +5,7 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
@@ -199,6 +200,8 @@ export default function DuplicatePaymentDetectionPage() {
           ]}
         />
       </EditorialSection>
+
+      <RelatedLinks variant="features" />
 
       <EditorialFinalCTA
         title="Find what you're paying"
