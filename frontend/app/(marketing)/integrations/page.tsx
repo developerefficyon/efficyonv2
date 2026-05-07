@@ -21,92 +21,104 @@ export const metadata: Metadata = {
   },
 }
 
-const INTEGRATIONS = [
+type IntegrationStatus = "live" | "coming-soon"
+type IntegrationCard = {
+  name: string
+  slug: string
+  status: IntegrationStatus
+  body: string
+  meta: string
+}
+
+const INTEGRATIONS: IntegrationCard[] = [
   {
     name: "Fortnox",
     slug: "fortnox",
-    status: "Live",
+    status: "live",
     body: "Auto-import Fortnox invoices, categorize SaaS expenses, and surface optimization opportunities. Built for Swedish SMBs first — multi-currency, VAT-aware.",
     meta: "Accounting · Sweden · OAuth read-only",
   },
   {
     name: "Stripe",
     slug: "stripe",
-    status: "Live",
+    status: "live",
     body: "Analyze every Stripe-billed subscription, track payment trends, and catch billing anomalies before they hit your books.",
     meta: "Billing · Global · OAuth read-only",
   },
   {
-    name: "Visma eEkonomi",
-    slug: "visma",
-    status: "Live",
-    body: "Visma at Fortnox parity — invoices, suppliers, customers. Multi-currency. The other half of the Swedish SMB market.",
-    meta: "Accounting · Sweden · OAuth read-only",
-  },
-  {
     name: "QuickBooks",
     slug: "quickbooks",
-    status: "Live",
+    status: "live",
     body: "Auto-categorize and analyze your SaaS subscriptions alongside your full QuickBooks ledger. Real-time sync, no exports.",
     meta: "Accounting · US/CA · OAuth read-only",
   },
   {
     name: "Xero",
     slug: "xero",
-    status: "Live",
+    status: "live",
     body: "Complete visibility into SaaS spend through Xero. Multi-currency, multi-org, with department-level analysis.",
     meta: "Accounting · UK/AU/NZ · OAuth read-only",
   },
   {
+    name: "Visma eEkonomi",
+    slug: "visma",
+    status: "coming-soon",
+    body: "Visma at Fortnox parity — invoices, suppliers, customers. Multi-currency. The other half of the Swedish SMB market.",
+    meta: "Accounting · Sweden · OAuth read-only",
+  },
+  {
     name: "Microsoft 365",
     slug: "microsoft-365",
-    status: "Live",
+    status: "coming-soon",
     body: "Per-license activity for Business Basic, Standard, Premium, E3, E5. Surfaces dormant seats and overprovisioned tiers.",
     meta: "Productivity · Identity · Graph API",
   },
   {
     name: "Google Workspace",
     slug: "google-workspace",
-    status: "Live",
+    status: "coming-soon",
     body: "User activity, license assignments, and storage usage across Workspace tiers. Pinpoint who's actually using what.",
     meta: "Productivity · Identity · OAuth",
   },
   {
     name: "HubSpot",
     slug: "hubspot",
-    status: "Live",
+    status: "coming-soon",
     body: "Seat usage, last-active dates, paid feature utilization. Spot Enterprise-tier features being used at Starter intensity.",
     meta: "Sales · Marketing · OAuth",
   },
   {
     name: "Shopify",
     slug: "shopify",
-    status: "Live",
+    status: "coming-soon",
     body: "App-by-app spend audit on your Shopify install. Catch the 14 apps from 2023 that nobody uses but everybody pays for.",
     meta: "E-commerce · OAuth",
   },
   {
     name: "Asana",
     slug: "asana",
-    status: "Live",
+    status: "coming-soon",
     body: "Per-seat activity, project counts, paid feature usage. Identify Business-tier seats living a Premium-tier life.",
     meta: "Project mgmt · OAuth",
   },
   {
     name: "Airtable",
     slug: "airtable",
-    status: "Live",
+    status: "coming-soon",
     body: "Workspace utilization, base activity, and seat-level usage. Common waste pattern: Pro seats for read-only viewers.",
     meta: "Database · OAuth + PKCE",
   },
   {
     name: "OpenAI / Anthropic / Gemini",
     slug: "ai-providers",
-    status: "Live",
+    status: "coming-soon",
     body: "API consumption analysis across all three frontier AI labs. Token spend per project, model choice efficiency, and burn-rate forecasting.",
     meta: "AI APIs · admin keys",
   },
 ]
+
+const live = INTEGRATIONS.filter((i) => i.status === "live")
+const upcoming = INTEGRATIONS.filter((i) => i.status === "coming-soon")
 
 export default function IntegrationsIndexPage() {
   const jsonLd = {
@@ -118,7 +130,7 @@ export default function IntegrationsIndexPage() {
     url: absoluteUrl("/integrations"),
     mainEntity: {
       "@type": "ItemList",
-      itemListElement: INTEGRATIONS.map((integration, index) => ({
+      itemListElement: live.map((integration, index) => ({
         "@type": "ListItem",
         position: index + 1,
         name: `${integration.name} Integration`,
@@ -146,24 +158,59 @@ export default function IntegrationsIndexPage() {
       <EditorialSection>
         <EditorialSectionIntro
           eyebrow="Live connectors"
-          title="12 integrations,"
+          title="4 integrations,"
           italic="growing every month."
           body="Each connection is OAuth-only and scoped to GET requests. We can't write, modify, or delete anything in your accounts — that's contractual."
         />
         <div className="border-t border-white/[0.08]">
-          {INTEGRATIONS.map((it, i) => (
+          {live.map((it, i) => (
             <EditorialCard
               key={it.slug}
               href={`/integrations/${it.slug}`}
               index={i}
               title={it.name}
-              italic={it.status.toLowerCase() === "live" ? "✦ live" : `${it.status.toLowerCase()}`}
+              italic="✦ live"
               body={it.body}
               meta={it.meta}
             />
           ))}
         </div>
       </EditorialSection>
+
+      {upcoming.length > 0 && (
+        <section className="relative z-10 border-t border-white/[0.06]">
+          <div className="mx-auto max-w-[1240px] px-6 py-20 md:px-12">
+            <p className="mb-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/35">
+              ✦ Shipping next
+            </p>
+            <h2 className="text-[clamp(28px,3vw,40px)] font-medium leading-[1.05] tracking-[-0.02em]">
+              Already on the path.
+            </h2>
+            <p className="mt-3 max-w-[520px] text-[14px] leading-[1.6] text-white/55">
+              Backend support exists or is in active rollout. Landing pages and setup docs ship as each integration goes generally available.
+            </p>
+            <div className="mt-10 grid gap-3 md:grid-cols-3">
+              {upcoming.map((i) => (
+                <div
+                  key={i.slug}
+                  className="group rounded-md border border-white/[0.06] bg-white/[0.012] p-5"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-[15px] font-medium text-white/65">{i.name}</p>
+                    <span className="rounded-full bg-white/[0.05] px-2 py-0.5 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.16em] text-white/55">
+                      Soon
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[12.5px] leading-[1.6] text-white/40">{i.body}</p>
+                  <p className="mt-3 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.16em] text-white/30">
+                    {i.meta}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <EditorialFinalCTA
         title="Don't see your stack?"
