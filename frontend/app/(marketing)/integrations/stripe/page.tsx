@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,29 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "Stripe Integration - Subscription Billing Analysis",
     description:
       "Connect Stripe to Efficyon to track recurring SaaS payments, surface billing anomalies, and analyze subscription cost trends with AI-powered analytics.",
-    alternates: {
-      canonical: "/integrations/stripe",
-    },
-    openGraph: {
-      title: "Stripe + Efficyon: Subscription Billing Analysis",
-      description:
-        "Connect Stripe to Efficyon to track recurring SaaS payments, surface billing anomalies, and analyze subscription cost trends with AI-powered analytics.",
-      url: absoluteUrl("/integrations/stripe"),
-    },
-    keywords: [
-      "stripe subscription analytics",
-      "stripe billing analysis",
-      "stripe payment tracking",
-      "stripe saas optimization",
-      "subscription cost analysis",
-    ],
-  }
+    path: "/integrations/stripe",
+  })
 }
 
 const CAPABILITIES = [

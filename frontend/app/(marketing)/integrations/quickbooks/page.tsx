@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,29 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "QuickBooks Integration - Smart SaaS Spend Tracking",
     description:
       "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization. Built for US and Canadian SMBs.",
-    alternates: {
-      canonical: "/integrations/quickbooks",
-    },
-    openGraph: {
-      title: "QuickBooks + Efficyon: Smart SaaS Spend Tracking",
-      description:
-        "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization. Built for US and Canadian SMBs.",
-      url: absoluteUrl("/integrations/quickbooks"),
-    },
-    keywords: [
-      "quickbooks saas cost tracking",
-      "quickbooks integration cost management",
-      "quickbooks expense categorization",
-      "quickbooks saas optimization",
-      "quickbooks software spend analysis",
-    ],
-  }
+    path: "/integrations/quickbooks",
+  })
 }
 
 const CAPABILITIES = [

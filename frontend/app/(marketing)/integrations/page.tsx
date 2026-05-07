@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -8,19 +7,14 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Integrations - Connect Your Tools",
   description:
     "Integrate Efficyon with your accounting and billing platforms for automated SaaS cost analysis. Connect Fortnox, Stripe, QuickBooks, Xero, and more.",
-  alternates: { canonical: "/integrations" },
-  openGraph: {
-    title: "Integrations - Connect Your Tools | Efficyon",
-    description:
-      "Integrate Efficyon with your accounting and billing platforms for automated SaaS cost analysis. Connect Fortnox, Stripe, QuickBooks, Xero, and more.",
-    url: absoluteUrl("/integrations"),
-  },
-}
+  path: "/integrations",
+})
 
 type IntegrationStatus = "live" | "coming-soon"
 type IntegrationCard = {

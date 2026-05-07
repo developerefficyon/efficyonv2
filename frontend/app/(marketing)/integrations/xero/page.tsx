@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,29 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "Xero Integration - Automated Software Spend Management",
     description:
       "Connect Xero to Efficyon for automated SaaS cost analysis with multi-currency, multi-org, and tracking-category-aware breakdowns. Built for UK, AU, and NZ teams.",
-    alternates: {
-      canonical: "/integrations/xero",
-    },
-    openGraph: {
-      title: "Xero + Efficyon: Automated Software Spend Management",
-      description:
-        "Connect Xero to Efficyon for automated SaaS cost analysis with multi-currency, multi-org, and tracking-category-aware breakdowns. Built for UK, AU, and NZ teams.",
-      url: absoluteUrl("/integrations/xero"),
-    },
-    keywords: [
-      "xero software spend management",
-      "xero integration cost analysis",
-      "xero saas tracking",
-      "xero expense optimization",
-      "xero multi-currency saas costs",
-    ],
-  }
+    path: "/integrations/xero",
+  })
 }
 
 const CAPABILITIES = [

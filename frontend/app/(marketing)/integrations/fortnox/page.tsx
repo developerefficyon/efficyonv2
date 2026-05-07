@@ -1,4 +1,3 @@
-import type { Metadata } from "next"
 import {
   EditorialPageHero,
   EditorialSection,
@@ -9,29 +8,15 @@ import {
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
+import { pageMetadata } from "@/lib/seo/metadata"
 
-export function generateMetadata(): Metadata {
-  return {
+export function generateMetadata() {
+  return pageMetadata({
     title: "Fortnox Integration - Automated SaaS Cost Analysis",
     description:
       "Connect Fortnox to Efficyon for automated invoice import, SaaS expense categorization, and AI-powered cost optimization. Built for Swedish SMBs and finance teams.",
-    alternates: {
-      canonical: "/integrations/fortnox",
-    },
-    openGraph: {
-      title: "Fortnox + Efficyon: Automated SaaS Cost Analysis",
-      description:
-        "Connect Fortnox to Efficyon for automated invoice import, SaaS expense categorization, and AI-powered cost optimization. Built for Swedish SMBs and finance teams.",
-      url: absoluteUrl("/integrations/fortnox"),
-    },
-    keywords: [
-      "fortnox cost analysis",
-      "fortnox integration saas management",
-      "fortnox invoice import",
-      "fortnox saas expenses",
-      "swedish accounting saas optimization",
-    ],
-  }
+    path: "/integrations/fortnox",
+  })
 }
 
 const CAPABILITIES = [
