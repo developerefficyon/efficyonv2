@@ -9,6 +9,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getBlogPost, getRelatedPosts } from "@/lib/blog-data"
 
 interface BlogPostPageProps {
@@ -44,7 +45,7 @@ export async function generateMetadata({
       modifiedTime: post.updatedDate,
       authors: [post.author],
       tags: post.tags,
-      url: `https://www.efficyon.com/blog/${post.slug}`,
+      url: absoluteUrl(`/blog/${post.slug}`),
     },
     alternates: {
       canonical: `/blog/${post.slug}`,
@@ -82,17 +83,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
       logo: {
         "@type": "ImageObject",
-        url: "https://www.efficyon.com/logo.png",
+        url: absoluteUrl("/logo.png"),
       },
     },
     datePublished: post.publishDate,
     dateModified: post.updatedDate,
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://www.efficyon.com/blog/${post.slug}`,
+      "@id": absoluteUrl(`/blog/${post.slug}`),
     },
   }
 

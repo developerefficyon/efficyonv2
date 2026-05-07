@@ -6,6 +6,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getFeaturedPost } from "@/lib/blog-data"
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     description:
       "Expert insights on reducing software spend, eliminating SaaS waste, and maximizing ROI.",
     type: "website",
-    url: "https://www.efficyon.com/blog",
+    url: absoluteUrl("/blog"),
   },
   alternates: {
     canonical: "/blog",
@@ -42,11 +43,11 @@ export default function BlogPage() {
     name: "Efficyon Blog",
     description:
       "Expert insights on SaaS cost optimization, software spend management, and maximizing ROI.",
-    url: "https://www.efficyon.com/blog",
+    url: absoluteUrl("/blog"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 
