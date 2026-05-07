@@ -12,6 +12,9 @@ export interface SaasToolData {
   optimizationTips: string[]
   alternatives: string[]
   idealFor: string
+  marketPosition: string
+  commonPriceRange: string
+  signatureWastePattern: string
 }
 
 export const saasToolCategories = [
@@ -58,6 +61,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Microsoft Teams", "Google Chat", "Discord"],
     idealFor: "Teams of 10-500 that need real-time messaging and integrations",
+    marketPosition: "Dominant team-messaging platform; primary alternative is Microsoft Teams in Microsoft 365 shops.",
+    commonPriceRange: "$8.75-15 per active user per month for Pro and Business+ tiers.",
+    signatureWastePattern: "Inactive accounts billed for 30+ days because no one ran the deactivation cycle after layoffs or contractor rolloff.",
   },
   {
     slug: "salesforce",
@@ -84,6 +90,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["HubSpot CRM", "Pipedrive", "Zoho CRM"],
     idealFor: "Sales teams of 20-10,000+ requiring enterprise-grade CRM",
+    marketPosition: "Global market-leading CRM with the largest enterprise install base; the default choice for Fortune 500 sales orgs.",
+    commonPriceRange: "$25-330 per user per month across Starter, Professional, Enterprise, and Unlimited editions.",
+    signatureWastePattern: "Enterprise or Unlimited edition seats assigned to occasional dashboard viewers who would be fully served by Professional.",
   },
   {
     slug: "hubspot",
@@ -110,6 +119,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Salesforce", "Pipedrive", "ActiveCampaign"],
     idealFor: "Growing companies of 5-500 employees wanting an all-in-one platform",
+    marketPosition: "Mid-market all-in-one CRM and marketing platform; primary challenger to Salesforce in the SMB and growth segments.",
+    commonPriceRange: "$20-1,200+ per month per Hub, scaling by contact tier and seat count.",
+    signatureWastePattern: "Marketing Hub Professional retained at a contact tier well above current list size after a list-cleanup is overdue.",
   },
   {
     slug: "zoom",
@@ -136,6 +148,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Microsoft Teams", "Google Meet", "Webex"],
     idealFor: "Organizations of any size needing reliable video conferencing",
+    marketPosition: "Default standalone video-conferencing platform; faces sustained pressure from Microsoft Teams and Google Meet bundled in productivity suites.",
+    commonPriceRange: "$13.33-22.49 per user per month for Pro and Business tiers.",
+    signatureWastePattern: "Pro host licenses paid for employees who only ever join meetings hosted by others and never schedule their own.",
   },
   {
     slug: "jira",
@@ -162,6 +177,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Linear", "Asana", "ClickUp"],
     idealFor: "Software development teams of 10-5,000",
+    marketPosition: "Dominant agile issue tracker for engineering organizations; the de facto standard at companies running Scrum or Kanban at scale.",
+    commonPriceRange: "$7.75-15.25 per user per month for Standard and Premium Cloud tiers.",
+    signatureWastePattern: "Full Jira seats handed to non-technical stakeholders who only need read-only access to view a sprint board once a week.",
   },
   {
     slug: "asana",
@@ -188,6 +206,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Monday.com", "ClickUp", "Trello"],
     idealFor: "Cross-functional teams of 10-1,000 managing diverse project types",
+    marketPosition: "Mid-market work-management leader; competes head-to-head with monday.com and ClickUp for non-engineering project workflows.",
+    commonPriceRange: "$10.99-24.99 per user per month for Starter and Advanced tiers.",
+    signatureWastePattern: "Advanced-tier seats assigned to project members who never use the workload, portfolio, or goals features that justify the upgrade.",
   },
   {
     slug: "notion",
@@ -214,6 +235,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Confluence", "Coda", "Slite"],
     idealFor: "Teams of 5-500 wanting a flexible all-in-one workspace",
+    marketPosition: "Leading flexible workspace tool, especially among startups; squeezes Confluence on docs and Asana on lightweight project tracking.",
+    commonPriceRange: "$10-15 per user per month for Plus and Business tiers, plus $8-10 per user for the AI add-on.",
+    signatureWastePattern: "Notion AI add-on enabled company-wide while only a fraction of the team actually uses it on a recurring basis.",
   },
   {
     slug: "microsoft-365",
@@ -240,6 +264,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Google Workspace", "Zoho Workplace", "LibreOffice (self-hosted)"],
     idealFor: "Organizations of all sizes, especially enterprises with 50+ employees",
+    marketPosition: "Dominant enterprise productivity suite; the default choice for organizations standardized on Windows and Active Directory.",
+    commonPriceRange: "$6-57 per user per month across Business Basic, Business Standard, E3, and E5 tiers.",
+    signatureWastePattern: "E5 licenses provisioned organization-wide for security features that only the IT and compliance teams actually consume.",
   },
   {
     slug: "google-workspace",
@@ -266,6 +293,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Microsoft 365", "Zoho Workplace", "Fastmail + Nextcloud"],
     idealFor: "Teams of 5-5,000 that prefer cloud-native collaboration",
+    marketPosition: "The cloud-native productivity standard for tech-forward and startup-heavy organizations; primary alternative is Microsoft 365.",
+    commonPriceRange: "$7-23 per user per month across Business Starter, Standard, and Plus tiers.",
+    signatureWastePattern: "Business Plus or Enterprise seats assigned to users who only ever touch Gmail and a few shared Drive folders.",
   },
   {
     slug: "dropbox",
@@ -292,6 +322,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Google Drive", "OneDrive", "Box"],
     idealFor: "Teams of 5-200 needing reliable file sync and sharing",
+    marketPosition: "Standalone cloud-storage incumbent; increasingly displaced by storage included in Google Workspace or Microsoft 365 bundles.",
+    commonPriceRange: "$15-26 per user per month for Business and Advanced tiers, with a 3-seat minimum.",
+    signatureWastePattern: "Standalone Dropbox kept on alongside the Drive or OneDrive storage already paid for inside the company productivity suite.",
   },
   {
     slug: "monday-com",
@@ -318,6 +351,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Asana", "ClickUp", "Smartsheet"],
     idealFor: "Teams of 10-500 wanting visual, customizable project management",
+    marketPosition: "Visual work-OS leader for non-technical teams; primary alternatives are Asana and ClickUp on the upmarket side and Trello on the lightweight side.",
+    commonPriceRange: "$9-19 per seat per month for Basic, Standard, and Pro tiers, sold in 3-seat minimums.",
+    signatureWastePattern: "3-seat minimum bracket purchased on a higher tier than the team currently uses, locking in unused capacity each renewal.",
   },
   {
     slug: "trello",
@@ -344,6 +380,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Asana", "Notion", "ClickUp"],
     idealFor: "Small teams of 3-50 wanting simple, visual task management",
+    marketPosition: "The original Kanban board tool, now part of Atlassian; sits at the lightweight end of the project-management category.",
+    commonPriceRange: "$5-17.50 per user per month for Standard and Premium tiers.",
+    signatureWastePattern: "Premium licenses kept on for users who never touch calendar view, timeline, or Butler automation features that justify the upgrade.",
   },
   {
     slug: "zendesk",
@@ -370,6 +409,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Freshdesk", "Intercom", "Help Scout"],
     idealFor: "Support teams of 5-500 agents handling multi-channel customer inquiries",
+    marketPosition: "Enterprise-grade customer-support platform; the leading omnichannel ticketing system for scale support operations.",
+    commonPriceRange: "$19-115 per agent per month across Suite Team, Growth, Professional, and Enterprise tiers.",
+    signatureWastePattern: "Suite Professional or Enterprise seats provisioned for agents who only handle plain email tickets and never use SLAs or routing.",
   },
   {
     slug: "intercom",
@@ -396,6 +438,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Zendesk", "Freshdesk", "Drift"],
     idealFor: "SaaS companies and startups with 5-200 support and success team members",
+    marketPosition: "Leading conversational support platform for SaaS companies; pioneered the in-app messenger and now competes on AI bot resolutions.",
+    commonPriceRange: "$39-139 per seat per month plus usage-based AI resolution fees.",
+    signatureWastePattern: "Chatbot-resolution overage charges piling up because flow logic was never tuned after the original launch configuration.",
   },
   {
     slug: "datadog",
@@ -422,6 +467,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["New Relic", "Grafana Cloud", "Prometheus + Grafana (self-hosted)"],
     idealFor: "Engineering teams running 10-10,000+ hosts in cloud infrastructure",
+    marketPosition: "Premium cloud monitoring and observability platform; the default choice at growth-stage and enterprise engineering orgs.",
+    commonPriceRange: "$15-34 per host per month for Infrastructure plus usage charges for logs, APM, and custom metrics.",
+    signatureWastePattern: "Custom-metric and log-ingest overage charges driven by services no one actively monitors or alerts on.",
   },
   {
     slug: "snowflake",
@@ -448,6 +496,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["BigQuery", "Databricks", "Amazon Redshift"],
     idealFor: "Data teams at companies processing medium to massive data volumes",
+    marketPosition: "Leading independent cloud data warehouse; competes with BigQuery, Redshift, and Databricks across analytics-native workloads.",
+    commonPriceRange: "Usage-based; ~$2-4 per compute credit plus storage, varies by warehouse size and edition.",
+    signatureWastePattern: "Warehouses left running through nights and weekends because auto-suspend was never set on a low timeout.",
   },
   {
     slug: "twilio",
@@ -474,6 +525,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["MessageBird", "Vonage", "Amazon SNS"],
     idealFor: "Developers and companies embedding communications into their products",
+    marketPosition: "Market-leading CPaaS for developer-built SMS, voice, and email; competes with MessageBird and the cloud providers' native messaging APIs.",
+    commonPriceRange: "Usage-based; SMS from $0.0079 per message, voice from $0.013 per minute, plus monthly phone-number fees.",
+    signatureWastePattern: "Phone numbers from old features or test environments still billed every month long after the use case was retired.",
   },
   {
     slug: "stripe",
@@ -500,6 +554,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Braintree", "Adyen", "Square"],
     idealFor: "Online businesses and SaaS companies processing recurring payments",
+    marketPosition: "Default payment-processing API for internet businesses; primary alternatives are Adyen at the enterprise tier and Braintree for legacy stacks.",
+    commonPriceRange: "Transaction-based; 2.9% + $0.30 per online card transaction, with negotiated rates above $100K monthly volume.",
+    signatureWastePattern: "Standard 2.9% + 30c card rate paid on every transaction despite monthly volume well above the threshold for negotiated custom pricing.",
   },
   {
     slug: "shopify",
@@ -526,6 +583,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["WooCommerce", "BigCommerce", "Squarespace Commerce"],
     idealFor: "E-commerce businesses of all sizes, from solo entrepreneurs to mid-market brands",
+    marketPosition: "Dominant hosted e-commerce platform for SMB and mid-market brands; primary alternatives are WooCommerce on WordPress and BigCommerce upmarket.",
+    commonPriceRange: "$39-2,300 per month across Basic, Shopify, Advanced, and Plus plans, plus per-transaction fees.",
+    signatureWastePattern: "Third-party Shopify apps stacked into the monthly bill that duplicate functionality already covered by built-in store features.",
   },
   {
     slug: "figma",
@@ -552,6 +612,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Sketch", "Adobe XD", "Penpot"],
     idealFor: "Design teams of 3-100 editors collaborating on product design",
+    marketPosition: "Dominant collaborative interface-design tool; effectively displaced Sketch and Adobe XD as the standard for product design teams.",
+    commonPriceRange: "$15-45 per editor per month for Professional and Organization tiers; viewers free.",
+    signatureWastePattern: "Full editor seats provisioned for developers, PMs, and stakeholders who only ever inspect or comment on files.",
   },
   {
     slug: "github",
@@ -578,6 +641,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["GitLab", "Bitbucket", "Azure DevOps"],
     idealFor: "Development teams of 5-5,000 using Git-based workflows",
+    marketPosition: "World's largest code-hosting platform; default repository, code-review, and CI/CD home for most engineering teams outside Microsoft and GitLab shops.",
+    commonPriceRange: "$4-21 per user per month for Team and Enterprise Cloud, plus $19-39 per user for Copilot Business or Enterprise.",
+    signatureWastePattern: "Copilot Business seats kept on for developers whose acceptance rate sits in the single digits month after month.",
   },
   {
     slug: "gitlab",
@@ -604,6 +670,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["GitHub", "Bitbucket", "Azure DevOps"],
     idealFor: "Engineering organizations of 20-2,000 wanting an integrated DevOps platform",
+    marketPosition: "Primary GitHub competitor with a built-in DevOps stack; favored by orgs that want SCM, CI/CD, and security scanning under one vendor.",
+    commonPriceRange: "$29-99 per user per month for Premium and Ultimate self-managed and SaaS tiers.",
+    signatureWastePattern: "Ultimate-tier seats kept across the engineering org while the security and compliance scanners that justify the upgrade go unconfigured.",
   },
   {
     slug: "atlassian",
@@ -630,6 +699,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["GitHub + Notion", "Linear + Notion", "Azure DevOps"],
     idealFor: "Software teams of 10-5,000 needing integrated project and code management",
+    marketPosition: "Suite vendor behind Jira, Confluence, and Bitbucket; the standard collaboration stack for traditional enterprise engineering organizations.",
+    commonPriceRange: "$7.75-15.25 per user per month per product, with bundle discounts for multi-product Cloud subscriptions.",
+    signatureWastePattern: "Bitbucket seats still being billed across the engineering team long after the org migrated its repos to GitHub or GitLab.",
   },
   {
     slug: "adobe-creative-cloud",
@@ -656,6 +728,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Canva", "Affinity Suite", "Figma"],
     idealFor: "Creative teams of 5-200 producing professional visual content",
+    marketPosition: "The industry-standard professional creative suite; Photoshop, Illustrator, and Premiere remain the defaults across agencies and brand teams.",
+    commonPriceRange: "$22.99 per app per month or $59.99 per user per month for All Apps; volume licensing reduces enterprise rates.",
+    signatureWastePattern: "All Apps subscriptions retained for users who only open Photoshop or Illustrator and could move to a single-app plan at a third the price.",
   },
   {
     slug: "canva",
@@ -682,6 +757,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Adobe Express", "Visme", "Piktochart"],
     idealFor: "Marketing teams and non-designers of 5-500 creating visual content",
+    marketPosition: "The dominant template-driven design tool for non-designers; complementary to Adobe Creative Cloud rather than a direct replacement.",
+    commonPriceRange: "$13-30 per user per month for Pro and Teams tiers, with a generous free tier for individuals.",
+    signatureWastePattern: "Pro or Teams seats paid for marketing colleagues who use Canva less than once a month and could comfortably stay on the free tier.",
   },
   {
     slug: "mailchimp",
@@ -708,6 +786,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["ConvertKit", "Brevo (Sendinblue)", "ActiveCampaign"],
     idealFor: "Small businesses and marketing teams managing 500-100,000 contacts",
+    marketPosition: "Long-running SMB email-marketing platform owned by Intuit; competes with ConvertKit, Brevo, and ActiveCampaign for growth-stage senders.",
+    commonPriceRange: "$13-350 per month based on contact tier and feature set across Essentials, Standard, and Premium plans.",
+    signatureWastePattern: "Contact tier inflated by unsubscribed and bounced addresses that should have been pruned at the last quarterly hygiene cycle.",
   },
   {
     slug: "sendgrid",
@@ -734,6 +815,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Amazon SES", "Postmark", "Mailgun"],
     idealFor: "Developers and companies sending 10K-10M transactional or marketing emails monthly",
+    marketPosition: "Leading developer-first transactional email API, owned by Twilio; competes with Postmark, Mailgun, and Amazon SES.",
+    commonPriceRange: "$19.95-89.95 per month for Essentials and Pro plans, scaled by monthly send volume.",
+    signatureWastePattern: "Email-volume tier paid for at projected peak while actual monthly sends sit at a fraction of the included allotment.",
   },
   {
     slug: "aws",
@@ -760,6 +844,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Google Cloud Platform", "Microsoft Azure", "DigitalOcean"],
     idealFor: "Organizations of all sizes running cloud workloads, from startups to enterprises",
+    marketPosition: "Market-leading cloud infrastructure provider; the default for most engineering organizations across startup and enterprise tiers.",
+    commonPriceRange: "Usage-based; spend varies dramatically by service, region, instance family, and reservation strategy.",
+    signatureWastePattern: "Idle EC2 and RDS instances and unattached EBS volumes left running long after the development sprint that spun them up concluded.",
   },
   {
     slug: "azure",
@@ -786,6 +873,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["AWS", "Google Cloud Platform", "DigitalOcean"],
     idealFor: "Enterprises with existing Microsoft investments and hybrid cloud strategies",
+    marketPosition: "Number-two hyperscaler globally; the default cloud for enterprises already standardized on Microsoft 365 and Active Directory.",
+    commonPriceRange: "Usage-based; pricing varies by service, region, and reservation, with significant Hybrid Benefit discounts on Windows workloads.",
+    signatureWastePattern: "Windows Server and SQL Server VMs billed at full retail because Azure Hybrid Benefit was never applied to existing on-prem licenses.",
   },
   {
     slug: "google-cloud",
@@ -812,6 +902,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["AWS", "Microsoft Azure", "DigitalOcean"],
     idealFor: "Data-driven organizations and teams heavily using analytics and machine learning",
+    marketPosition: "Number-three hyperscaler; the cloud of choice for data-heavy and ML-first organizations thanks to BigQuery and Vertex AI.",
+    commonPriceRange: "Usage-based; pricing varies by service, region, and Committed Use Discount commitments.",
+    signatureWastePattern: "BigQuery query costs running on full-table scans because partitioning and clustering were never configured on the largest tables.",
   },
   {
     slug: "heroku",
@@ -838,6 +931,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Railway", "Render", "Fly.io"],
     idealFor: "Small development teams of 2-30 wanting managed deployment simplicity",
+    marketPosition: "Original PaaS for web apps, now part of Salesforce; squeezed by Render, Railway, and Fly.io on the low end and direct cloud on the high end.",
+    commonPriceRange: "$5-500 per dyno per month across Eco, Basic, Standard, and Performance tiers, plus add-on usage.",
+    signatureWastePattern: "Performance-L dynos at $500 each kept on for apps whose memory and CPU profile would run comfortably on Standard-2X.",
   },
   {
     slug: "vercel",
@@ -864,6 +960,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Netlify", "Cloudflare Pages", "AWS Amplify"],
     idealFor: "Frontend teams of 3-50 deploying Next.js and Jamstack applications",
+    marketPosition: "Premier Next.js hosting platform; the default deployment target for React and Jamstack teams, with Netlify and Cloudflare Pages as competitors.",
+    commonPriceRange: "$20-50 per member per month for Pro plus usage-based bandwidth and serverless function execution.",
+    signatureWastePattern: "Bandwidth and serverless function overages caused by unoptimized images and uncached API routes that quietly compound month over month.",
   },
   {
     slug: "netlify",
@@ -890,6 +989,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Vercel", "Cloudflare Pages", "AWS Amplify"],
     idealFor: "Frontend teams of 2-30 building Jamstack and static sites",
+    marketPosition: "The Jamstack pioneer; primary alternative to Vercel for framework-agnostic frontend hosting and edge functions.",
+    commonPriceRange: "$19-99 per member per month for Pro and Enterprise, plus usage charges for build minutes and bandwidth.",
+    signatureWastePattern: "Build-minute overages from frequent CI deploys that never had build caching or incremental builds turned on.",
   },
   {
     slug: "cloudflare",
@@ -916,6 +1018,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["AWS CloudFront", "Fastly", "Akamai"],
     idealFor: "Websites and web applications of any scale needing CDN and security",
+    marketPosition: "The dominant standalone CDN and DDoS-mitigation provider; competes with AWS CloudFront, Fastly, and Akamai for edge security and performance.",
+    commonPriceRange: "$20-200 per domain per month for Pro and Business plans, plus usage-based fees for Workers, R2, and load balancing.",
+    signatureWastePattern: "Business plans at $200 per domain locked in across many sites that would be perfectly served on the Free or Pro plan.",
   },
   {
     slug: "okta",
@@ -942,6 +1047,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Microsoft Entra ID", "Auth0", "OneLogin"],
     idealFor: "Enterprises with 100-10,000+ employees needing centralized identity management",
+    marketPosition: "Independent enterprise identity leader; primary competitor is Microsoft Entra ID, which is bundled with Microsoft 365 Business and E-tier plans.",
+    commonPriceRange: "$2-15 per user per month per product, with bundled Workforce Identity packages at the higher end.",
+    signatureWastePattern: "Okta SSO and Lifecycle Management billed across the workforce while Microsoft Entra ID is already paid for inside an existing M365 subscription.",
   },
   {
     slug: "auth0",
@@ -968,6 +1076,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Firebase Auth", "Clerk", "Supabase Auth"],
     idealFor: "SaaS developers building customer-facing applications with 1K-1M+ users",
+    marketPosition: "Leading customer-identity (CIAM) developer platform owned by Okta; primary alternatives are Clerk, Firebase Auth, and Supabase Auth.",
+    commonPriceRange: "$35-1,500+ per month based on monthly active users across Essentials, Professional, and Enterprise tiers.",
+    signatureWastePattern: "Per-MAU charges inflated by development and staging environments running on the same paid tenant as production.",
   },
   {
     slug: "1password",
@@ -994,6 +1105,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Bitwarden", "LastPass", "Dashlane"],
     idealFor: "Teams of 10-500 needing secure credential management",
+    marketPosition: "The premium business password manager; widely regarded as the most polished option for tech-savvy teams over LastPass and Dashlane.",
+    commonPriceRange: "$7.99-19.95 per user per month for Teams Starter, Business, and Enterprise tiers.",
+    signatureWastePattern: "Vault licenses billed for employees who never activated their account or stopped opening 1Password months ago.",
   },
   {
     slug: "lastpass",
@@ -1020,6 +1134,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["1Password", "Bitwarden", "Dashlane"],
     idealFor: "Teams of 5-500 needing affordable password management",
+    marketPosition: "Long-running enterprise password manager that has lost share to 1Password and Bitwarden following well-publicized security incidents.",
+    commonPriceRange: "$4-9 per user per month across Teams and Business plans.",
+    signatureWastePattern: "LastPass seats billed alongside 1Password or Bitwarden because a planned migration was abandoned partway through and never closed out.",
   },
   {
     slug: "docusign",
@@ -1046,6 +1163,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["PandaDoc", "HelloSign (Dropbox Sign)", "Adobe Acrobat Sign"],
     idealFor: "Companies with 10-500 employees processing regular document signing workflows",
+    marketPosition: "Dominant e-signature platform with the largest enterprise install base; competes with PandaDoc, Dropbox Sign, and Adobe Acrobat Sign.",
+    commonPriceRange: "$10-65 per user per month across Personal, Standard, and Business Pro tiers, plus envelope pricing on enterprise plans.",
+    signatureWastePattern: "Envelope-overage charges paid each month because the plan tier was sized to last year's signing volume rather than this quarter's.",
   },
   {
     slug: "pandadoc",
@@ -1072,6 +1192,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["DocuSign", "Proposify", "Better Proposals"],
     idealFor: "Sales teams of 5-100 creating proposals, quotes, and contracts",
+    marketPosition: "Leading sales-document automation platform; primary alternative to DocuSign for teams that build proposals as well as send them out for signature.",
+    commonPriceRange: "$19-49 per user per month for Essentials and Business tiers, plus enterprise quotes for larger teams.",
+    signatureWastePattern: "Business-tier seats handed to internal users who only need basic e-signature and could sit on the free e-sign plan instead.",
   },
   {
     slug: "calendly",
@@ -1098,6 +1221,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Cal.com", "SavvyCal", "Microsoft Bookings"],
     idealFor: "Sales and customer-facing teams of 5-200 scheduling external meetings",
+    marketPosition: "Market-leading scheduling-link tool; primary alternatives are Cal.com, SavvyCal, and the Bookings tools bundled into Google and Microsoft suites.",
+    commonPriceRange: "$10-20 per user per month for Standard and Teams tiers, with a free single-link plan available.",
+    signatureWastePattern: "Teams-tier seats provisioned for employees who book fewer than five external meetings per month and do not need round-robin routing.",
   },
   {
     slug: "loom",
@@ -1124,6 +1250,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Vidyard", "CloudApp", "Screencastify"],
     idealFor: "Remote teams of 10-500 using async video for communication and documentation",
+    marketPosition: "Market leader in async video messaging, now part of Atlassian; primary alternatives are Vidyard and the recording tools built into Slack or Zoom.",
+    commonPriceRange: "$15-22.50 per creator per month for Business and Enterprise tiers; viewers free.",
+    signatureWastePattern: "Creator seats assigned to teammates who only ever watch videos and would do everything they need with free viewer access.",
   },
   {
     slug: "miro",
@@ -1150,6 +1279,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["FigJam", "Lucidchart", "Whimsical"],
     idealFor: "Teams of 10-300 running workshops, brainstorming, and visual collaboration",
+    marketPosition: "Dominant standalone collaborative whiteboard; competes mostly with FigJam, which is increasingly bundled inside existing Figma seats.",
+    commonPriceRange: "$8-16 per member per month for Starter and Business tiers.",
+    signatureWastePattern: "Full Miro member seats kept on for stakeholders who attend a board once a quarter and could participate as free guests.",
   },
   {
     slug: "clickup",
@@ -1176,6 +1308,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Asana", "Monday.com", "Notion"],
     idealFor: "Teams of 5-500 wanting an affordable all-in-one project management solution",
+    marketPosition: "Aggressive all-in-one project-management challenger to Asana and monday.com; positions on price and feature breadth.",
+    commonPriceRange: "$7-19 per member per month for Unlimited, Business, and Business Plus tiers.",
+    signatureWastePattern: "ClickUp seats running in parallel with Asana, Jira, or monday.com because the previous-tool migration was paused and never resumed.",
   },
   {
     slug: "basecamp",
@@ -1202,6 +1337,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Asana", "Monday.com", "Notion"],
     idealFor: "Teams of 10-100 wanting simple, straightforward project management",
+    marketPosition: "Long-running flat-fee project-management tool from 37signals; deliberately simple compared to Asana, Jira, and monday.com.",
+    commonPriceRange: "$15 per user per month or $349 per month flat for Pro Unlimited.",
+    signatureWastePattern: "Pro Unlimited's $349 flat fee paid by a sub-25-person team where the per-user plan would land at less than half the cost.",
   },
   {
     slug: "freshdesk",
@@ -1228,6 +1366,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Zendesk", "Help Scout", "Zoho Desk"],
     idealFor: "Support teams of 5-200 agents handling multi-channel customer support",
+    marketPosition: "Mid-market customer-support platform from Freshworks; primary alternative to Zendesk for cost-sensitive teams that still want omnichannel.",
+    commonPriceRange: "$15-79 per agent per month across Growth, Pro, and Enterprise tiers.",
+    signatureWastePattern: "Pro or Enterprise agent licenses kept on after a Zendesk migration was abandoned, so both products are now billed in parallel.",
   },
   {
     slug: "pipedrive",
@@ -1254,6 +1395,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["HubSpot CRM", "Salesforce", "Close"],
     idealFor: "Sales teams of 5-200 wanting a simple, pipeline-focused CRM",
+    marketPosition: "Sales-focused CRM popular with SMB outbound teams; sits between simple tools like Close and full platforms like Salesforce or HubSpot.",
+    commonPriceRange: "$14-99 per user per month across Essential, Advanced, Professional, and Power plans.",
+    signatureWastePattern: "Lead Booster, Web Visitors, and Smart Docs add-ons billed monthly with adoption metrics that haven't moved since the trial ended.",
   },
   {
     slug: "airtable",
@@ -1280,6 +1424,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Notion", "Smartsheet", "Google Sheets"],
     idealFor: "Teams of 5-200 managing structured data, workflows, and lightweight applications",
+    marketPosition: "Leading low-code spreadsheet-database hybrid; competes with Notion databases on the lightweight end and Smartsheet upmarket.",
+    commonPriceRange: "$20-45 per seat per month for Team and Business tiers, with record and automation overage fees beyond that.",
+    signatureWastePattern: "Record-count and automation-run overages racked up because a couple of bases grew unchecked past the plan tier limits.",
   },
   {
     slug: "webflow",
@@ -1306,6 +1453,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["WordPress", "Framer", "Squarespace"],
     idealFor: "Design teams and agencies of 2-50 building marketing websites without code",
+    marketPosition: "Visual-first website builder favored by design-led teams; primary alternatives are WordPress and the newer challenger Framer.",
+    commonPriceRange: "$14-49 per site per month across Basic, CMS, and Business site plans, plus workspace seat fees.",
+    signatureWastePattern: "CMS or Business site plans paid for static marketing pages whose feature usage matches what the cheaper Basic site plan covers.",
   },
   {
     slug: "semrush",
@@ -1332,6 +1482,9 @@ export const saasTools: SaasToolData[] = [
     ],
     alternatives: ["Ahrefs", "Moz Pro", "SE Ranking"],
     idealFor: "Marketing teams of 1-50 managing SEO, content, and competitive analysis",
+    marketPosition: "Leading all-in-one digital marketing platform; primary alternative to Ahrefs for SEO research and competitive analysis at scale.",
+    commonPriceRange: "$139.95-499.95 per month for Pro, Guru, and Business plans, plus per-user add-on fees for additional seats.",
+    signatureWastePattern: "Two SEO platforms billed in parallel because Semrush and Ahrefs (or Moz) overlap and the redundancy was never resolved.",
   },
 ]
 
