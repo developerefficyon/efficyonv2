@@ -7,6 +7,8 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: [
           "/",
+          "/about",
+          "/changelog",
           "/features/",
           "/solutions/",
           "/compare/",
@@ -15,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
           "/calculator/",
           "/tools/",
           "/benchmarks/",
+          "/docs/",
         ],
         disallow: [
           "/dashboard/",

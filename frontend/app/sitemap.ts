@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 import { blogPosts as blogPostData } from "@/lib/blog-data"
 import { saasTools } from "@/lib/saas-tools-data"
 import { benchmarkPages } from "@/lib/benchmark-data"
+import { INTEGRATION_DOCS } from "@/lib/integration-docs"
 
 const baseUrl = "https://www.efficyon.com"
 
@@ -41,105 +42,125 @@ const integrations = ["fortnox", "stripe", "quickbooks", "xero"]
 // Calculator pages
 const calculators = ["saas-cost", "roi", "waste-estimator"]
 
-// Blog posts (pillar + supporting)
-const blogPosts = [
-  "complete-guide-saas-cost-optimization",
-  "how-to-audit-software-subscriptions",
-  "saas-sprawl-hidden-cost",
-  "cfo-guide-software-spend-management",
-  "find-cancel-unused-saas-subscriptions",
-  "average-saas-spend-per-employee-2026",
-  "signs-company-has-saas-sprawl",
-  "how-to-calculate-saas-roi",
-  "subscription-fatigue-why-companies-overspend",
-  "build-software-procurement-policy",
-  "saas-vs-on-premise-cost-comparison",
-  "negotiate-better-saas-contracts",
-  "real-cost-duplicate-software-tools",
-  "create-saas-inventory-business",
-]
-
 export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date()
+
   const pages: MetadataRoute.Sitemap = [
+    // ─── Top-level pages ──────────────────────────────────────────
     {
       url: baseUrl,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
+      url: `${baseUrl}/about`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/changelog`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
   ]
 
-  // Add feature pages
+  // ─── Section hub pages ─────────────────────────────────────────
+  const hubs: { path: string; priority: number }[] = [
+    { path: "/features", priority: 0.9 },
+    { path: "/integrations", priority: 0.9 },
+    { path: "/solutions", priority: 0.8 },
+    { path: "/compare", priority: 0.8 },
+    { path: "/calculator", priority: 0.8 },
+    { path: "/benchmarks", priority: 0.7 },
+    { path: "/blog", priority: 0.8 },
+    { path: "/tools", priority: 0.7 },
+    { path: "/docs/integrations", priority: 0.7 },
+  ]
+  hubs.forEach(({ path, priority }) =>
+    pages.push({
+      url: `${baseUrl}${path}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority,
+    })
+  )
+
+  // ─── Feature pages ─────────────────────────────────────────────
   features.forEach((slug) =>
     pages.push({
       url: `${baseUrl}/features/${slug}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.9,
     })
   )
 
-  // Add solution pages
+  // ─── Solution pages ────────────────────────────────────────────
   solutions.forEach((slug) =>
     pages.push({
       url: `${baseUrl}/solutions/${slug}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     })
   )
 
-  // Add comparison pages
+  // ─── Comparison pages ──────────────────────────────────────────
   comparisons.forEach((slug) =>
     pages.push({
       url: `${baseUrl}/compare/${slug}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     })
   )
 
-  // Add integration pages
+  // ─── Integration pages ─────────────────────────────────────────
   integrations.forEach((slug) =>
     pages.push({
       url: `${baseUrl}/integrations/${slug}`,
-      lastModified: new Date(),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    })
+  )
+
+  // ─── Integration setup docs ────────────────────────────────────
+  INTEGRATION_DOCS.forEach((doc) =>
+    pages.push({
+      url: `${baseUrl}/docs/integrations/${doc.slug}`,
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     })
   )
 
-  // Add calculator pages
+  // ─── Calculator pages ──────────────────────────────────────────
   calculators.forEach((slug) =>
     pages.push({
       url: `${baseUrl}/calculator/${slug}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     })
   )
 
-  // Add blog index
-  pages.push({
-    url: `${baseUrl}/blog`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.8,
-  })
-
-  // Add blog posts (from blog-data.ts for accurate dates)
+  // ─── Blog posts ────────────────────────────────────────────────
   blogPostData.forEach((post) =>
     pages.push({
       url: `${baseUrl}/blog/${post.slug}`,
@@ -149,37 +170,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   )
 
-  // Add benchmark index
-  pages.push({
-    url: `${baseUrl}/benchmarks`,
-    lastModified: new Date(),
-    changeFrequency: "quarterly",
-    priority: 0.7,
-  })
-
-  // Add benchmark pages
+  // ─── Benchmark pages ───────────────────────────────────────────
+  // Note: Next.js sitemap changeFrequency only supports
+  // always|hourly|daily|weekly|monthly|yearly|never — using "monthly"
+  // for benchmarks (refreshed on industry-data revisions).
   benchmarkPages.forEach((benchmark) =>
     pages.push({
       url: `${baseUrl}/benchmarks/${benchmark.slug}`,
       lastModified: new Date(benchmark.lastUpdated),
-      changeFrequency: "quarterly",
+      changeFrequency: "monthly",
       priority: 0.6,
     })
   )
 
-  // Add tools index
-  pages.push({
-    url: `${baseUrl}/tools`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.7,
-  })
-
-  // Add tool analysis pages
+  // ─── Tool analysis pages ───────────────────────────────────────
   saasTools.forEach((tool) =>
     pages.push({
       url: `${baseUrl}/tools/${tool.slug}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
     })
