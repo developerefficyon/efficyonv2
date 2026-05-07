@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
             </p>
 
             <ul className="mt-12 space-y-3 font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.16em] text-white/45">
-              {["Single-use reset link", "Expires after one hour", "EU-hosted · Gothenburg"].map((t) => (
+              {["Single-use reset link", "Expires after one hour", "EU-hosted · Gothenburg, Sweden"].map((t) => (
                 <li key={t} className="flex items-center gap-3">
                   <span className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--green)" }} />
                   {t}

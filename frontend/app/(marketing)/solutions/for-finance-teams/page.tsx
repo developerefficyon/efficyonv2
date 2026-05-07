@@ -265,7 +265,7 @@ export default function ForFinanceTeamsPage() {
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
               We read the ledger. We don't write to it, can't modify invoices, can't initiate
-              payments. EU-hosted, built in Gothenburg.
+              payments. EU-hosted, built in Gothenburg, Sweden.
             </p>
           </div>
         </div>

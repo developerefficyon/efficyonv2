@@ -136,7 +136,7 @@ function RegisterContent() {
           </p>
 
           <ul className="mt-12 space-y-3 font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.16em] text-white/45">
-            {["Read-only on every system", "No card · free first scan", "EU-hosted · Gothenburg"].map((t) => (
+            {["Read-only on every system", "No card · free first scan", "EU-hosted · Gothenburg, Sweden"].map((t) => (
               <li key={t} className="flex items-center gap-3">
                 <span className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--green)" }} />
                 {t}

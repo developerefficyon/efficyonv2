@@ -163,7 +163,7 @@ function ResetPasswordContent() {
           </p>
 
           <ul className="mt-12 space-y-3 font-[family-name:var(--font-geist-mono)] text-[12px] uppercase tracking-[0.16em] text-white/45">
-            {["Stored as a one-way hash", "Active sessions stay signed in", "EU-hosted · Gothenburg"].map((t) => (
+            {["Stored as a one-way hash", "Active sessions stay signed in", "EU-hosted · Gothenburg, Sweden"].map((t) => (
               <li key={t} className="flex items-center gap-3">
                 <span className="inline-block h-1 w-1 rounded-full" style={{ background: "var(--green)" }} />
                 {t}

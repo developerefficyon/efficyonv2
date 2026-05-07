@@ -256,7 +256,7 @@ export default function ForCFOPage() {
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
               OAuth or scoped API keys. We can read your ledger; we cannot write to it. Built in
-              Gothenburg, hosted in the EU, scope your security team can audit before you sign.
+              Gothenburg, Sweden, hosted in the EU, scope your security team can audit before you sign.
             </p>
           </div>
         </div>

@@ -257,7 +257,7 @@ export default function ForStartupsPage() {
               To first scan
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
-              Read-only OAuth, no agent install, no IT ticket. Built in Gothenburg, EU-hosted —
+              Read-only OAuth, no agent install, no IT ticket. Built in Gothenburg, Sweden, EU-hosted —
               cancel anytime.
             </p>
           </div>

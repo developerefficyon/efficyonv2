@@ -8,14 +8,14 @@ import {
 } from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
-  title: "About — Built in Gothenburg, for teams who like their numbers honest",
+  title: "About — Built in Gothenburg, Sweden, for teams who like their numbers honest",
   description:
     "Why we built Efficyon, what we believe, and how we work. Cost intelligence for SaaS-heavy teams, made by a small team in Gothenburg, Sweden.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About Efficyon — Cost intelligence for SaaS-heavy teams",
     description:
-      "Why we built Efficyon, what we believe, and how we work. Made by a small team in Gothenburg.",
+      "Why we built Efficyon, what we believe, and how we work. Made by a small team in Gothenburg, Sweden.",
     url: "https://www.efficyon.com/about",
   },
 }
@@ -89,7 +89,7 @@ export default function AboutPage() {
 
       <EditorialPageHero
         eyebrow="About · Efficyon"
-        title="Built in Gothenburg, for teams who like"
+        title="Built in Gothenburg, Sweden — for teams who like"
         italic="their numbers honest."
         body="Efficyon is a small team building cost-intelligence software in the open. This page is what we believe, why we believe it, and how we ship — written before we have a wall of logos to hide behind."
         primaryCta={{ label: "Start free analysis", href: "/register" }}

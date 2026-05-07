@@ -584,7 +584,7 @@ function Findings() {
             </p>
             <figcaption className="mt-6 flex items-center gap-3 text-[12px] uppercase tracking-[0.16em] text-white/45 font-[family-name:var(--font-geist-mono)]">
               <span className="h-px w-8" style={{ background: "var(--green)" }} />
-              Efficyon · Cost intelligence · Gothenburg
+              Efficyon · Cost intelligence · Gothenburg, Sweden
             </figcaption>
           </figure>
 

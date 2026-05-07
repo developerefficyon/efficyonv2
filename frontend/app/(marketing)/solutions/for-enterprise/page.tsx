@@ -49,7 +49,7 @@ export default function ForEnterprisePage() {
         name: "Where is Efficyon hosted, and who can read our data?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Efficyon is built in Gothenburg and EU-hosted. Access to your data is limited to the integrations you grant — read-only by design — and to a small operating team for support. We do not write to your accounting ledger, identity provider, or vendor portals. Security documentation is available under NDA for procurement reviews.",
+          text: "Efficyon is built in Gothenburg, Sweden, and EU-hosted. Access to your data is limited to the integrations you grant — read-only by design — and to a small operating team for support. We do not write to your accounting ledger, identity provider, or vendor portals. Security documentation is available under NDA for procurement reviews.",
         },
       },
       {
@@ -164,7 +164,7 @@ export default function ForEnterprisePage() {
             },
             {
               n: "02",
-              title: "EU-hosted, built in Gothenburg.",
+              title: "EU-hosted, built in Gothenburg, Sweden.",
               italic: "Data residency that holds.",
               body:
                 "Efficyon is a Swedish company with EU hosting. Data residency is a default, not an enterprise upcharge. For organisations under GDPR scrutiny, the geography of the processor matters; we're set up for it.",
@@ -226,7 +226,7 @@ export default function ForEnterprisePage() {
             <EditorialMonoLabel green>Will claim</EditorialMonoLabel>
             <ul className="mt-6 space-y-4 text-[15px] leading-[1.7] text-white/70">
               <li>— Read-only data access, scoped to integrations you grant.</li>
-              <li>— EU-hosted, built in Gothenburg.</li>
+              <li>— EU-hosted, built in Gothenburg, Sweden.</li>
               <li>— 5× fee refund guarantee, in the contract.</li>
               <li>— A roadmap shaped by the enterprise teams who sign first.</li>
             </ul>

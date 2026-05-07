@@ -61,7 +61,7 @@ export default function BlogPage() {
         eyebrow="Field notes · Cost intelligence"
         title="Where the money"
         italic="quietly leaks."
-        body="Long-form pieces, short reads, and working notes on SaaS waste, AI burn, renewal economics, and the boring middle of finance ops. Written from Gothenburg, for teams who like their numbers honest."
+        body="Long-form pieces, short reads, and working notes on SaaS waste, AI burn, renewal economics, and the boring middle of finance ops. Written from Gothenburg, Sweden — for teams who like their numbers honest."
         primaryCta={{ label: "Start free analysis", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
       />

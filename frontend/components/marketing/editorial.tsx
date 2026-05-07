@@ -211,7 +211,7 @@ export function EditorialFooter() {
             you pay and what you actually use.
           </p>
           <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
-            Built in Gothenburg · EU-hosted
+            Built in Gothenburg, Sweden · EU-hosted
           </p>
         </div>
 

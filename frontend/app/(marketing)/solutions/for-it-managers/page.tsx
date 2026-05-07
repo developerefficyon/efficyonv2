@@ -254,7 +254,7 @@ export default function ForITManagersPage() {
               EU
             </span>
             <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55">
-              Built in Gothenburg
+              Built in Gothenburg, Sweden
             </p>
             <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
               EU hosting and data residency by default. Useful when the security review starts
