@@ -7,6 +7,7 @@ import {
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Compare SaaS Management Tools",
@@ -69,29 +70,35 @@ const COMPARISONS = [
 ] as const
 
 export default function ComparePage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Compare SaaS Management Tools | Efficyon",
-    description:
-      "Honest comparisons of Efficyon against other SaaS management and cost optimization tools.",
-    url: absoluteUrl("/compare"),
-    mainEntity: {
-      "@type": "ItemList",
-      itemListElement: COMPARISONS.map((c, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: c.name,
-        url: absoluteUrl(`/compare/${c.slug}`),
-      })),
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Compare SaaS Management Tools | Efficyon",
+      description:
+        "Honest comparisons of Efficyon against other SaaS management and cost optimization tools.",
+      url: absoluteUrl("/compare"),
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: COMPARISONS.map((c, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: c.name,
+          url: absoluteUrl(`/compare/${c.slug}`),
+        })),
+      },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Compare", path: "/compare" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

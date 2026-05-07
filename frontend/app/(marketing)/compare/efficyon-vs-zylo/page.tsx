@@ -8,6 +8,7 @@ import {
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -94,6 +95,10 @@ export default function EfficyonVsZyloPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([breadcrumbListLd([{ name: "Home", path: "/" }, { name: "Compare", path: "/compare" }, { name: "Efficyon vs Zylo", path: "/compare/efficyon-vs-zylo" }])]) }}
       />
 
       <EditorialPageHero
