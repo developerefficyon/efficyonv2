@@ -1,43 +1,24 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Navbar } from "@/components/ui/navbar"
-import { Button } from "@/components/ui/button"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle,
-  CreditCard,
-  TrendingUp,
-  AlertTriangle,
-  BarChart3,
-  Users,
-  Shield,
-  Lock,
-  Eye,
-  Zap,
-  RefreshCw,
-  DollarSign,
-  Activity,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialFinalCTA,
+  EditorialEyebrow,
+} from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
   return {
-    title: "Stripe Integration - Deep Subscription Billing Analytics",
+    title: "Stripe Integration - Subscription Billing Analysis",
     description:
-      "Connect Stripe to Efficyon for deep subscription billing analytics. Track payment trends, identify billing anomalies, and optimize your SaaS spending.",
+      "Connect Stripe to Efficyon to track recurring SaaS payments, surface billing anomalies, and analyze subscription cost trends with AI-powered analytics.",
     alternates: {
       canonical: "/integrations/stripe",
     },
     openGraph: {
-      title: "Stripe + Efficyon: Deep Subscription Billing Analytics",
+      title: "Stripe + Efficyon: Subscription Billing Analysis",
       description:
-        "Connect Stripe to Efficyon for deep subscription billing analytics. Track payment trends, identify billing anomalies, and optimize your SaaS spending.",
+        "Connect Stripe to Efficyon to track recurring SaaS payments, surface billing anomalies, and analyze subscription cost trends with AI-powered analytics.",
       url: "https://www.efficyon.com/integrations/stripe",
     },
     keywords: [
@@ -50,6 +31,79 @@ export function generateMetadata(): Metadata {
   }
 }
 
+const CAPABILITIES = [
+  {
+    title: "Track every Stripe-billed subscription",
+    body: "Active subscriptions, plan tiers, billing cycles, per-seat amounts — consolidated into one view that updates automatically as Stripe data changes.",
+  },
+  {
+    title: "Recurring payment trend analysis",
+    body: "See how monthly recurring spend evolves over time. Surface price increases, tier upgrades, and seat-count creep before they hit the next invoice.",
+  },
+  {
+    title: "Billing anomaly detection",
+    body: "Catch failed payments, expired cards, retried charges, and unexpected line items that wouldn't show up in a normal accounting export.",
+  },
+  {
+    title: "Cost-to-revenue lens",
+    body: "If you also bill through Stripe, compare incoming subscription revenue against outgoing SaaS spend in the same dashboard. Watch your cost-of-software ratio.",
+  },
+  {
+    title: "Renewal and churn-risk indicators",
+    body: "Subscriptions with declining usage, frequent downgrades, or irregular billing get flagged ahead of renewal — time to renegotiate or cancel.",
+  },
+  {
+    title: "Up to 24 months of history on first sync",
+    body: "Initial connection backfills past subscriptions and invoices so trend analysis works on day one, not after a quarter of waiting.",
+  },
+]
+
+const FINDINGS = [
+  {
+    title: "Vendor X — silent annual price bump",
+    body: "MRR rose 18% YoY without a tier change or seat increase. Renewal in 47 days — flag for renegotiation.",
+  },
+  {
+    title: "Two Notion subscriptions on the same Stripe customer",
+    body: "Trial converted, then a separate workspace started a paid plan against the same card. Modeled overlap: $1,920/yr.",
+  },
+  {
+    title: "Stripe-billed Loom seats — 11 inactive",
+    body: "Seats added during a 2024 push, last login ≥ 120 days for 11 of 27. Drop or downgrade for those users.",
+  },
+  {
+    title: "Failed payment retry loops on a forgotten tool",
+    body: "Card expired in 2025; Stripe has retried 7 times. Either reactivate intentionally or cancel — the silent retries are a tell.",
+  },
+  {
+    title: "Cost-to-revenue drift",
+    body: "Outgoing SaaS spend is growing 1.4× faster than your own MRR over the last 6 months. Worth a margin conversation.",
+  },
+]
+
+const FAQS = [
+  {
+    q: "What can Efficyon analyze from my Stripe account?",
+    a: "Subscriptions, invoices, payment events, refunds, and billing-cycle metadata. We use that to detect cost creep, billing anomalies, and underused seats — and (if you also use Stripe to bill your own customers) to track outgoing SaaS spend against incoming subscription revenue.",
+  },
+  {
+    q: "Does Efficyon process payments through Stripe?",
+    a: "We use Stripe to bill our own customers, but that's separate. The Stripe integration on this page is read-only — it analyzes your outgoing subscriptions and the SaaS vendors that bill you through Stripe. No payments are initiated by Efficyon on your behalf.",
+  },
+  {
+    q: "How is this different from connecting an accounting platform?",
+    a: "Accounting platforms (Fortnox, QuickBooks, Xero) tell you what hit your books. Stripe tells you the exact subscription state — billing cycles, failed retries, prorations, plan changes. Connect both for the full picture: what you paid plus why and what changed.",
+  },
+  {
+    q: "Can it detect price changes on my SaaS subscriptions?",
+    a: "Yes. We watch for plan changes, unit-price changes, and silent annual escalators on subscriptions you pay through Stripe. You'll see the change in the dashboard with the date and amount delta.",
+  },
+  {
+    q: "What scopes does the Stripe connection use?",
+    a: "Read-only access to subscriptions, invoices, customers, and events. We don't request charge or transfer scopes, and we don't store card numbers — Stripe never exposes them and we never need them.",
+  },
+]
+
 export default function StripeIntegrationPage() {
   const jsonLd = {
     "@context": "https://schema.org",
@@ -58,13 +112,14 @@ export default function StripeIntegrationPage() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
-      "Connect Stripe to Efficyon for deep subscription billing analytics, payment trend tracking, and AI-powered SaaS cost optimization.",
+      "Connect Stripe to Efficyon for subscription billing analysis, recurring payment tracking, and AI-powered SaaS cost optimization.",
     url: "https://www.efficyon.com/integrations/stripe",
     offers: {
-      "@type": "Offer",
-      price: "39",
+      "@type": "AggregateOffer",
+      lowPrice: "39",
+      highPrice: "119",
       priceCurrency: "USD",
-      description: "Starting from $39/month with the Startup plan",
+      offerCount: "2",
     },
     publisher: {
       "@type": "Organization",
@@ -76,44 +131,15 @@ export default function StripeIntegrationPage() {
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "What can Efficyon analyze from my Stripe account?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Efficyon analyzes your Stripe subscriptions, payment history, invoice data, and billing events. This includes subscription amounts, billing cycles, failed payment patterns, refunds, and churn indicators. We provide a comprehensive view of all your Stripe-billed SaaS expenses in one dashboard.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Does Efficyon process payments through Stripe?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Efficyon uses Stripe for its own billing infrastructure, but the Stripe integration for analytics is separate. The analytics integration connects to your Stripe account with read-only access to analyze your outgoing subscriptions and payments to SaaS vendors that bill through Stripe.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How does Stripe integration differ from connecting an accounting platform?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Accounting platforms like Fortnox provide invoice and categorization data, while the Stripe integration gives you real-time subscription-level detail including billing cycles, failed payments, and usage patterns. For the most complete picture, we recommend connecting both your accounting platform and Stripe.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Can Efficyon detect subscription price changes in Stripe?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Yes. Efficyon monitors your Stripe subscription data continuously and alerts you when a vendor changes their pricing, when you move between pricing tiers, or when unexpected charges appear. This helps you stay on top of cost creep across all your SaaS subscriptions.",
-        },
-      },
-    ],
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -122,449 +148,125 @@ export default function StripeIntegrationPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 via-transparent to-transparent" />
-        <div className="container mx-auto px-4 relative z-10">
-          <Link
-            href="/integrations"
-            className="inline-flex items-center text-gray-400 hover:text-white transition-colors mb-8"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            All Integrations
-          </Link>
+      <EditorialPageHero
+        eyebrow="Integration · Stripe"
+        title="Efficyon × Stripe,"
+        italic="every recurring charge, watched."
+        body="A lot of SaaS bills you through Stripe. Connect your Stripe account to Efficyon and every subscription, invoice, and billing event becomes the input for cost-leak analysis — anomalies, price drift, dead retries, all surfaced before the next renewal."
+        primaryCta={{ label: "Connect Stripe", href: "/register" }}
+        secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
 
-          <div className="max-w-4xl space-y-6">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="h-16 w-16 rounded-xl bg-purple-900/30 border border-purple-500/20 flex items-center justify-center">
-                <CreditCard className="h-8 w-8 text-purple-400" />
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What it does"
+          title="Six things,"
+          italic="all out of your billing event stream."
+          body="Stripe already knows the truth of your recurring SaaS charges. Efficyon turns that into a finance-grade view of what's working and what's leaking."
+        />
+        <ul className="space-y-7 border-t border-white/[0.08] pt-10">
+          {CAPABILITIES.map((c) => (
+            <li key={c.title} className="grid grid-cols-[12px_1fr] gap-5 md:grid-cols-[16px_1fr] md:gap-8">
+              <span
+                aria-hidden
+                className="mt-[10px] inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--green)" }}
+              />
+              <div>
+                <h3 className="text-[20px] font-medium tracking-[-0.015em] md:text-[22px]">{c.title}</h3>
+                <p className="mt-2 max-w-[68ch] text-[15px] leading-[1.65] text-white/55">{c.body}</p>
               </div>
-              <div className="text-2xl text-gray-500 font-light">+</div>
-              <div className="h-16 w-16 rounded-xl bg-cyan-900/30 border border-cyan-500/20 flex items-center justify-center">
-                <Zap className="h-8 w-8 text-cyan-400" />
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium ml-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                Live Integration
-              </span>
-            </div>
+            </li>
+          ))}
+        </ul>
+      </EditorialSection>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent text-balance">
-              Stripe + Efficyon: Deep Subscription Billing Analytics
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-3xl">
-              Analyze all your Stripe-billed subscriptions, track payment trends, and identify
-              billing anomalies. Get deep visibility into your recurring SaaS costs with
-              AI-powered analytics that go beyond basic Stripe reporting.
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What we find · Sample · illustrative"
+          title="The kind of leaks"
+          italic="hiding in a Stripe-billed stack."
+          body="Sketches of the patterns a typical billing-platform-heavy stack tends to surface. Modeled, not customer data."
+        />
+        <ul className="space-y-7 border-t border-white/[0.08] pt-10">
+          {FINDINGS.map((f) => (
+            <li key={f.title} className="grid grid-cols-[12px_1fr] gap-5 md:grid-cols-[16px_1fr] md:gap-8">
+              <span
+                aria-hidden
+                className="mt-[10px] inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--green)" }}
+              />
+              <div>
+                <h3 className="text-[20px] font-medium tracking-[-0.015em] md:text-[22px]">{f.title}</h3>
+                <p className="mt-2 max-w-[68ch] text-[15px] leading-[1.65] text-white/55">{f.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-10 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
+          Sample · illustrative · not from a real customer account
+        </p>
+      </EditorialSection>
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Security & access"
+          title="Read-only,"
+          italic="and contractual."
+        />
+        <div className="grid gap-12 border-t border-white/[0.08] pt-10 md:grid-cols-2">
+          <div>
+            <EditorialEyebrow>Scopes</EditorialEyebrow>
+            <p className="text-[16px] leading-[1.7] text-white/65">
+              Stripe OAuth with read-only restricted-key permissions. We request access to subscriptions, invoices, customers, and events — nothing else. No charge, refund, transfer, or payout endpoints in our allowlist.
             </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Connect Stripe Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Talk to Sales</Link>
-              </Button>
-            </div>
+          </div>
+          <div>
+            <EditorialEyebrow>Guarantee</EditorialEyebrow>
+            <p className="text-[16px] leading-[1.7] text-white/65">
+              GET-only requests, contractually. Encrypted at rest (AES-256) and in transit (TLS 1.3). No card numbers stored or exposed. Disconnect from Efficyon or revoke from inside Stripe — both stop sync immediately.
+            </p>
           </div>
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Integration Overview */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              What This Integration Does
-            </h2>
-            <div className="prose prose-invert max-w-none">
-              <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                Stripe powers billing for thousands of SaaS companies. If your business pays
-                for software tools that bill through Stripe, this integration gives you a
-                consolidated, intelligent view of all those subscriptions -- their costs,
-                billing cycles, payment history, and trends over time.
-              </p>
-              <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                Unlike Stripe&apos;s built-in dashboard, which focuses on your own revenue and
-                customer payments, Efficyon&apos;s integration analyzes your outgoing SaaS
-                spend. We connect to your Stripe account, pull in subscription and payment data,
-                and apply AI analysis to detect billing anomalies, predict upcoming charges,
-                and flag subscriptions that may no longer be delivering value.
-              </p>
-              <p className="text-lg text-gray-300 leading-relaxed">
-                For companies that both bill through Stripe and pay for SaaS tools via Stripe,
-                this integration creates a unique revenue-vs-cost perspective. You can see
-                exactly how your SaaS costs scale relative to your own subscription revenue,
-                giving finance teams the data they need to maintain healthy margins.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Key Capabilities */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Key Capabilities
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              Powerful analytics built on your Stripe subscription data.
-            </p>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: RefreshCw,
-                  title: "Subscription Tracking",
-                  description:
-                    "Monitor every active subscription billed through Stripe. See billing amounts, renewal dates, plan tiers, and per-seat costs in a unified dashboard that updates automatically.",
-                },
-                {
-                  icon: TrendingUp,
-                  title: "Payment Trend Analysis",
-                  description:
-                    "Visualize how your Stripe-billed SaaS costs change over time. Identify cost creep from price increases, tier upgrades, and growing seat counts before they impact your budget.",
-                },
-                {
-                  icon: AlertTriangle,
-                  title: "Failed Payment Alerts",
-                  description:
-                    "Get notified about failed payment attempts, expired cards, and billing errors that could disrupt your SaaS tools. Prevent unexpected service interruptions and late fees.",
-                },
-                {
-                  icon: DollarSign,
-                  title: "Revenue vs Cost Comparison",
-                  description:
-                    "For SaaS companies using Stripe for their own billing, compare your incoming subscription revenue against your outgoing SaaS costs. Track your cost-to-revenue ratio over time.",
-                },
-                {
-                  icon: Activity,
-                  title: "Churn Risk Indicators",
-                  description:
-                    "Identify subscriptions with declining usage patterns, frequent downgrades, or irregular payment behaviors. Spot opportunities to renegotiate or consolidate before renewal dates.",
-                },
-              ].map((capability) => (
-                <div
-                  key={capability.title}
-                  className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3"
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="FAQ"
+          title="Honest answers,"
+          italic="not marketing copy."
+        />
+        <div className="border-t border-white/[0.08]">
+          {FAQS.map((f, i) => (
+            <details
+              key={i}
+              className="group border-b border-white/[0.08] py-7 [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex cursor-pointer items-baseline justify-between gap-8 list-none">
+                <span className="text-[18px] font-medium tracking-[-0.015em] md:text-[20px]">{f.q}</span>
+                <span
+                  aria-hidden
+                  className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic leading-none transition-transform group-open:rotate-45"
+                  style={{ color: "var(--green)" }}
                 >
-                  <div className="h-10 w-10 rounded-lg bg-purple-900/30 border border-purple-500/20 flex items-center justify-center">
-                    <capability.icon className="h-5 w-5 text-purple-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">{capability.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    {capability.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  +
+                </span>
+              </summary>
+              <p className="mt-4 max-w-[72ch] text-[15.5px] leading-[1.7] text-white/60">{f.a}</p>
+            </details>
+          ))}
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* How to Connect */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How to Connect Stripe
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              Three steps to unlock deep subscription analytics from your Stripe data.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  step: "01",
-                  title: "Connect Your Stripe Account",
-                  description:
-                    "From your Efficyon dashboard, navigate to Integrations and select Stripe. You will be redirected to Stripe's secure OAuth flow to authorize read-only access. The connection is established in seconds.",
-                },
-                {
-                  step: "02",
-                  title: "Historical Data Syncs Automatically",
-                  description:
-                    "Efficyon immediately begins syncing your historical Stripe data -- subscriptions, invoices, payments, and billing events. Up to 24 months of history is imported during the initial sync.",
-                },
-                {
-                  step: "03",
-                  title: "View Your Analytics Dashboard",
-                  description:
-                    "Once synced, your Stripe analytics dashboard populates with subscription insights, payment trends, cost breakdowns, and AI-generated optimization recommendations tailored to your spending patterns.",
-                },
-              ].map((step) => (
-                <div key={step.step} className="relative space-y-4">
-                  <div className="text-5xl font-bold text-white/5">{step.step}</div>
-                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Who Benefits from This Integration
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              The Stripe integration delivers value for teams managing subscription-heavy
-              SaaS environments.
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  title: "SaaS Companies Monitoring Their Own Costs",
-                  description:
-                    "SaaS businesses that both charge through Stripe and pay for tools via Stripe can compare revenue against SaaS costs in real time. Understand your cost structure and protect margins as you scale.",
-                },
-                {
-                  title: "Finance Teams Tracking Recurring Charges",
-                  description:
-                    "Finance professionals juggling dozens of Stripe-billed subscriptions get a single source of truth. See every recurring charge, its trend, and whether it aligns with actual tool usage across your organization.",
-                },
-                {
-                  title: "Operations Managers Preventing Billing Surprises",
-                  description:
-                    "Operations teams responsible for tool management can set up alerts for unexpected price changes, failed payments, and subscription renewals. Never be caught off guard by a surprise invoice again.",
-                },
-                {
-                  title: "Startup Founders Watching Burn Rate",
-                  description:
-                    "Early-stage founders who need to manage burn carefully can track exactly how their SaaS costs grow month over month. Identify which tools drive the most cost and which deliver the least value relative to spend.",
-                },
-              ].map((useCase) => (
-                <div
-                  key={useCase.title}
-                  className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-purple-400 shrink-0" />
-                    <h3 className="text-lg font-semibold text-white">{useCase.title}</h3>
-                  </div>
-                  <p className="text-gray-400 leading-relaxed">{useCase.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Data & Security */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Data Access & Security
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              Your Stripe data is handled with the highest security standards.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-blue-900/30 border border-blue-500/20 flex items-center justify-center">
-                  <Eye className="h-5 w-5 text-blue-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">What We Access</h3>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Active subscriptions and plans
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Invoice and payment history
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Billing event timestamps
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Subscription amounts and cycles
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-green-900/30 border border-green-500/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-green-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Security Measures</h3>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Stripe OAuth secure authorization
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    End-to-end encryption
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    No credit card numbers stored
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    SOC 2 compliant infrastructure
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-cyan-900/30 border border-cyan-500/20 flex items-center justify-center">
-                  <Lock className="h-5 w-5 text-cyan-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Read-Only Access</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">
-                  Efficyon requests only read-level permissions from Stripe. We cannot
-                  create charges, modify subscriptions, or access sensitive payment
-                  credentials. Your billing operations remain completely untouched.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 text-center">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-lg text-gray-300 text-center mb-12">
-              Common questions about the Stripe integration.
-            </p>
-
-            <Accordion type="single" collapsible className="space-y-4">
-              <AccordionItem
-                value="item-1"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  What can Efficyon analyze from my Stripe account?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Efficyon analyzes your Stripe subscriptions, payment history, invoice data,
-                  and billing events. This includes subscription amounts, billing cycles, failed
-                  payment patterns, refunds, and churn indicators. We provide a comprehensive
-                  view of all your Stripe-billed SaaS expenses in one dashboard.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-2"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  Does Efficyon process payments through Stripe?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Efficyon uses Stripe for its own billing infrastructure, but the Stripe
-                  integration for analytics is separate. The analytics integration connects to
-                  your Stripe account with read-only access to analyze your outgoing
-                  subscriptions and payments to SaaS vendors that bill through Stripe.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-3"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  How does Stripe integration differ from connecting an accounting platform?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Accounting platforms like Fortnox provide invoice and categorization data,
-                  while the Stripe integration gives you real-time subscription-level detail
-                  including billing cycles, failed payments, and usage patterns. For the most
-                  complete picture, we recommend connecting both your accounting platform and
-                  Stripe.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-4"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  Can Efficyon detect subscription price changes in Stripe?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Yes. Efficyon monitors your Stripe subscription data continuously and alerts
-                  you when a vendor changes their pricing, when you move between pricing tiers,
-                  or when unexpected charges appear. This helps you stay on top of cost creep
-                  across all your SaaS subscriptions.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Connect Stripe to Efficyon Today
-            </h2>
-            <p className="text-lg text-gray-300">
-              Unlock deep subscription analytics and start optimizing your SaaS costs.
-              No credit card required for the free trial. 90-day ROI guarantee on all
-              paid plans.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-black hover:bg-gray-100"
-                asChild
-              >
-                <Link href="/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Schedule a Demo</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400">
-              <span>Instant sync</span>
-              <span>•</span>
-              <span>Read-only access</span>
-              <span>•</span>
-              <span>24 months of history</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      <EditorialFinalCTA
+        eyebrow="Connect Stripe"
+        title="Five minutes from"
+        italic="OAuth to first finding."
+        body="Read-only Stripe OAuth, no card to start. Run your first scan and watch every recurring charge fall into one view. Disconnect from either side at any time."
+        primaryCta={{ label: "Connect Stripe", href: "/register" }}
+        secondaryCta={{ label: "See all integrations →", href: "/integrations" }}
+      />
+    </>
   )
 }

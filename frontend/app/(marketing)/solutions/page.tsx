@@ -1,17 +1,12 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/ui/navbar"
 import {
-  ArrowRight,
-  Rocket,
-  Calculator,
-  Monitor,
-  TrendingUp,
-  Building2,
-  CheckCircle,
-  Shield,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialCard,
+  EditorialFinalCTA,
+  EditorialEyebrow,
+} from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
   title: "Solutions - SaaS Cost Optimization by Role",
@@ -29,55 +24,45 @@ export const metadata: Metadata = {
   },
 }
 
-const solutions = [
+const SOLUTIONS = [
   {
-    icon: Rocket,
-    title: "For Startups",
-    description:
-      "Preserve runway and scale without waste. Identify the SaaS tools draining your budget before they drain your funding.",
-    href: "/solutions/for-startups",
-    bgClass: "bg-cyan-900/40",
-    textClass: "text-cyan-400",
+    slug: "for-startups",
+    title: "For startups",
+    italic: "preserve the runway.",
+    body: "Every dollar matters at 18 months of runway. Efficyon surfaces the trial that auto-converted, the duplicate stack two co-founders set up, and the seat counts that haven't kept up with the team. Built for the lean stage.",
+    meta: "Pre-Series B · 5–40 people",
   },
   {
-    icon: Calculator,
-    title: "For Finance Teams",
-    description:
-      "Gain complete SaaS spend visibility. Automate categorization, eliminate surprise renewals, and stay audit-ready at all times.",
-    href: "/solutions/for-finance-teams",
-    bgClass: "bg-blue-900/40",
-    textClass: "text-blue-400",
+    slug: "for-finance-teams",
+    title: "For finance teams",
+    italic: "the spreadsheet, retired.",
+    body: "Centralize SaaS spend across every accounting feed and corporate card. Auto-categorize subscriptions, allocate to departments, and stop manually reconciling renewals against the budget every month.",
+    meta: "Categorization · allocation · audit-ready",
   },
   {
-    icon: Monitor,
-    title: "For IT Managers",
-    description:
-      "Take control of your software inventory. Detect shadow IT, ensure license compliance, and close security gaps across teams.",
-    href: "/solutions/for-it-managers",
-    bgClass: "bg-green-900/40",
-    textClass: "text-green-400",
+    slug: "for-it-managers",
+    title: "For IT managers",
+    italic: "shadow IT, surfaced.",
+    body: "Find the SaaS subscriptions that bypassed procurement, departed employees with active seats, and tools your security review never saw. License usage tied to identity data — not just inventory.",
+    meta: "Discovery · compliance · access",
   },
   {
-    icon: TrendingUp,
+    slug: "for-cfo",
     title: "For CFOs",
-    description:
-      "Get strategic SaaS spend intelligence. Board-ready dashboards, accurate forecasting, and actionable benchmarking data.",
-    href: "/solutions/for-cfo",
-    bgClass: "bg-purple-900/40",
-    textClass: "text-purple-400",
+    italic: "the second-largest line, explained.",
+    body: "SaaS is the line item nobody can answer for in the boardroom. Efficyon gives you the modeled forecast, the department-level breakdown, and the narrative for why software spend moves the way it does.",
+    meta: "Forecast · benchmark · board-ready",
   },
   {
-    icon: Building2,
-    title: "For Enterprise",
-    description:
-      "Enterprise-grade SaaS management at scale. SSO, custom integrations, dedicated support, and compliance-ready from day one.",
-    href: "/solutions/for-enterprise",
-    bgClass: "bg-orange-900/40",
-    textClass: "text-orange-400",
+    slug: "for-enterprise",
+    title: "For enterprise",
+    italic: "scale without sprawl.",
+    body: "Hundreds of vendors, dozens of departments, governance that has to actually hold. Read-only access, EU hosting, SSO/SAML on the roadmap, and an integration surface that fits next to your ERP and identity provider.",
+    meta: "500+ employees · EU-hosted",
   },
 ]
 
-export default function SolutionsPage() {
+export default function SolutionsHubPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -92,105 +77,86 @@ export default function SolutionsPage() {
     },
   }
 
+  const PILLARS = [
+    { val: "$18.5k", label: "Modeled annual leak in a typical 18-person stack" },
+    { val: "10", unit: "min", label: "To connect your first system and run a scan" },
+    { val: "5×", label: "Fee refund guarantee — or you don't pay" },
+  ] as const
+
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 bg-black">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent text-balance">
-              SaaS Cost Optimization for Every Team
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Whether you are a startup founder watching every dollar or an enterprise CTO managing
-              thousands of subscriptions, Efficyon adapts to your role, your scale, and your
-              priorities.
-            </p>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 pt-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>90-Day ROI Guarantee</span>
+      <EditorialPageHero
+        eyebrow="Platform · Solutions"
+        title="One engine."
+        italic="Five vantage points."
+        body="Efficyon ingests the same accounting and usage data for every team — but the questions a CFO asks are not the questions an IT lead asks. Pick the angle closest to how you think about cost."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="By role"
+          title="Same data."
+          italic="Different lens."
+          body="Each path frames the same cost-intelligence engine for the team that has to act on it. Startup founders, finance leads, IT managers, CFOs, enterprise procurement — five readings of one number."
+        />
+        <div className="border-t border-white/[0.08]">
+          {SOLUTIONS.map((s, i) => (
+            <EditorialCard
+              key={s.slug}
+              href={`/solutions/${s.slug}`}
+              index={i}
+              title={s.title}
+              italic={s.italic}
+              body={s.body}
+              meta={s.meta}
+            />
+          ))}
+        </div>
+      </EditorialSection>
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The honest math"
+          title="No customer logos yet,"
+          italic="just guarantees you can read."
+          body="Efficyon is pre-launch. We don't have a wall of testimonials. We have read-only access, contractual refunds, and numbers we can show our work on."
+        />
+        <div className="grid grid-cols-1 divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
+          {PILLARS.map((p, i) => (
+            <div key={i} className="px-0 py-12 md:px-12">
+              <div className="mb-3 flex items-baseline gap-2">
+                <span
+                  className="text-[clamp(48px,5.5vw,72px)] font-medium leading-none tracking-[-0.04em]"
+                  style={{ color: "var(--green)" }}
+                >
+                  {p.val}
+                </span>
+                {"unit" in p && p.unit && (
+                  <span className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/55">
+                    {p.unit}
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-green-400" />
-                <span>SOC 2 Compliant</span>
-              </div>
+              <EditorialEyebrow>{p.label}</EditorialEyebrow>
             </div>
-          </div>
+          ))}
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Solution Cards */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {solutions.map((solution) => (
-              <Link
-                key={solution.href}
-                href={solution.href}
-                className="group relative rounded-xl border border-white/10 bg-black/50 p-8 hover:border-white/20 hover:bg-white/5 transition-all duration-300"
-              >
-                <div className="space-y-4">
-                  <div
-                    className={`h-14 w-14 ${solution.bgClass} rounded-xl flex items-center justify-center`}
-                  >
-                    <solution.icon className={`h-7 w-7 ${solution.textClass}`} />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white group-hover:text-white/90">
-                    {solution.title}
-                  </h2>
-                  <p className="text-gray-400 leading-relaxed">{solution.description}</p>
-                  <div className="flex items-center gap-2 text-sm font-medium text-cyan-400 group-hover:text-cyan-300 transition-colors">
-                    Learn more
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Bottom CTA */}
-      <section className="py-24 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Not Sure Which Solution Fits?
-            </h2>
-            <p className="text-lg text-gray-300">
-              Start with a free SaaS spend analysis. Our platform automatically identifies where
-              your money is going and recommends the fastest path to savings, regardless of your
-              role or company size.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Book a Demo</Link>
-              </Button>
-            </div>
-            <p className="text-sm text-gray-500">
-              No credit card required. Setup takes less than 5 minutes.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+      <EditorialFinalCTA
+        title="Not sure which path fits?"
+        italic="Start with the scan."
+        body="Connect one system, run an analysis in 10 minutes, see what we surface. The right framing tends to reveal itself the moment you see your own numbers."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "Talk to us →", href: "/#contact" }}
+      />
+    </>
   )
 }

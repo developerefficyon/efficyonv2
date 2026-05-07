@@ -1,25 +1,21 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import {
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialEyebrow,
+  EditorialMonoLabel,
+  EditorialCard,
+  EditorialFinalCTA,
+  GREEN,
+} from "@/components/marketing/editorial"
 import {
   saasTools,
   getToolBySlug,
   getRelatedTools,
 } from "@/lib/saas-tools-data"
-import {
-  ArrowRight,
-  ArrowLeft,
-  AlertTriangle,
-  CheckCircle,
-  DollarSign,
-  ExternalLink,
-  Lightbulb,
-  Shuffle,
-  Shield,
-  BarChart3,
-  Tag,
-} from "lucide-react"
 
 export async function generateStaticParams() {
   return saasTools.map((tool) => ({
@@ -57,19 +53,14 @@ export async function generateMetadata({
 }
 
 function generateSeoContent(tool: ReturnType<typeof getToolBySlug>) {
-  if (!tool) return ""
+  if (!tool) return [] as string[]
 
-  const templates = [
+  return [
     `Managing ${tool.name} costs effectively requires a strategic approach that goes beyond simply counting licenses. As one of the most widely used tools in the ${tool.category.toLowerCase()} space, ${tool.name} delivers significant value to teams that use it actively. The challenge arises when organizations scale their ${tool.name} deployment without regularly auditing whether every seat, feature, and tier is being fully utilized. Starting at ${tool.startingPrice}, individual costs appear manageable, but companies with ${tool.idealFor.toLowerCase()} frequently discover that their aggregate ${tool.name} spend has grown to ${tool.typicalCompanySpend} per month without corresponding increases in usage or value delivered.`,
-
     `The most effective ${tool.name} optimization strategy begins with a thorough usage audit. This means examining not just who has access, but how each user interacts with the platform. Many organizations find that 20-30% of their licensed users are low-activity or inactive, creating an immediate opportunity to reclaim costs by downgrading or removing those seats. Beyond license count, the tier each user is assigned to matters significantly. ${tool.name}'s ${tool.pricingModel.toLowerCase()} model means that placing users on a higher tier than they need compounds costs across every seat in the organization.`,
-
     `Organizations that take a proactive approach to ${tool.name} cost management typically achieve savings of 15-30% within the first quarter. This involves establishing a regular cadence of license reviews, setting up automated alerts for usage thresholds, and creating clear policies for when new seats or upgrades are justified. Rather than treating ${tool.name} as a fixed cost, the most cost-efficient organizations treat it as a variable expense that should be continuously optimized based on actual usage data and business needs.`,
-
-    `Efficyon helps companies automate this entire process for ${tool.name} and every other tool in their stack. By connecting your ${tool.name} account alongside your financial data, Efficyon provides a complete picture of cost versus value for each subscription. Our AI engine identifies the specific ${tool.name} waste patterns most relevant to your organization and delivers prioritized recommendations ranked by potential savings impact. With our 90-day ROI guarantee, you can be confident that the optimization effort will pay for itself many times over.`,
+    `Efficyon helps companies automate this entire process for ${tool.name} and every other tool in their stack. By connecting your ${tool.name} account alongside your financial data, Efficyon provides a complete picture of cost versus value for each subscription. Our AI engine identifies the specific ${tool.name} waste patterns most relevant to your organization and delivers prioritized recommendations ranked by potential savings impact.`,
   ]
-
-  return templates
 }
 
 export default async function ToolAnalysisPage({
@@ -119,367 +110,244 @@ export default async function ToolAnalysisPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-12 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link
-              href="/tools"
-              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+      <EditorialPageHero
+        eyebrow={`${tool.category} · Cost analysis`}
+        title={`${tool.name},`}
+        italic="line by line."
+        body={tool.description}
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "← All tools", href: "/tools" }}
+      />
+
+      {/* Quick facts row */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The numbers"
+          title="What it costs,"
+          italic="at a glance."
+        />
+        <dl className="grid grid-cols-1 divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-4 md:divide-x md:divide-y-0">
+          {[
+            { label: "Category", value: tool.category },
+            { label: "Pricing model", value: tool.pricingModel },
+            {
+              label: "Starting price",
+              value: tool.startingPrice.split(";")[0].trim(),
+            },
+            { label: "Typical spend", value: tool.typicalCompanySpend },
+          ].map((item) => (
+            <div key={item.label} className="px-0 py-10 md:px-10">
+              <EditorialMonoLabel>{item.label}</EditorialMonoLabel>
+              <dd className="mt-3 text-[22px] font-medium leading-[1.2] tracking-[-0.02em] text-white">
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </EditorialSection>
+
+      {/* Cost breakdown */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Cost breakdown"
+          title={`Where ${tool.name}`}
+          italic="actually shows up on the invoice."
+          body="Per-user math, monthly aggregates, annual projections — the figures we plug into models when sizing typical waste."
+        />
+        <div className="grid grid-cols-1 divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-2 md:divide-x md:divide-y-0">
+          <div className="px-0 py-12 md:px-12">
+            <EditorialMonoLabel>Avg cost per user</EditorialMonoLabel>
+            <p className="mt-4 text-[clamp(40px,4.4vw,60px)] font-medium leading-none tracking-[-0.035em]">
+              <span style={{ color: GREEN }}>${tool.averageCostPerUser}</span>{" "}
+              <span className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/55">
+                / month
+              </span>
+            </p>
+            <p className="mt-4 max-w-[40ch] text-[15px] leading-[1.7] text-white/55">
+              Based on the typical plan mix we see across organizations of this
+              size.
+            </p>
+          </div>
+          <div className="px-0 py-12 md:px-12">
+            <EditorialMonoLabel>Annual projection · 10–100 users</EditorialMonoLabel>
+            <p className="mt-4 text-[clamp(40px,4.4vw,60px)] font-medium leading-none tracking-[-0.035em]">
+              ${annualCostLow}{" "}
+              <span className="font-[family-name:var(--font-instrument-serif)] italic text-white/55">
+                –
+              </span>{" "}
+              ${annualCostHigh}
+            </p>
+            <p className="mt-4 max-w-[40ch] text-[15px] leading-[1.7] text-white/55">
+              Ideal for {tool.idealFor.toLowerCase()}. Tier choice swings the
+              total dramatically.
+            </p>
+          </div>
+        </div>
+      </EditorialSection>
+
+      {/* Waste patterns */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Waste patterns"
+          title={`Where companies overspend on`}
+          italic={`${tool.name}.`}
+          body="The same handful of leaks shows up in almost every audit. Check yours against this list before your next renewal."
+        />
+        <ol className="border-t border-white/[0.08]">
+          {tool.commonWastePatterns.map((pattern, index) => (
+            <li
+              key={index}
+              className="grid grid-cols-1 items-baseline gap-6 border-b border-white/[0.08] py-10 md:grid-cols-[60px_1fr] md:gap-12"
             >
-              <ArrowLeft className="h-4 w-4" />
-              All Tools
-            </Link>
-
-            <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium">
-                <Tag className="h-3.5 w-3.5" />
-                {tool.category}
+              <span className="font-[family-name:var(--font-geist-mono)] text-[12px] tabular-nums text-white/30">
+                {String(index + 1).padStart(2, "0")}
               </span>
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              {tool.name} Cost Analysis & Optimization Tips
-            </h1>
-            <p className="text-xl text-gray-300 max-w-3xl">
-              {tool.description}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Overview Card */}
-      <section className="py-12 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-1">Category</div>
-                <div className="text-white font-semibold">{tool.category}</div>
-              </div>
-              <div className="p-5 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-1">Pricing Model</div>
-                <div className="text-white font-semibold">
-                  {tool.pricingModel}
-                </div>
-              </div>
-              <div className="p-5 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-1">Starting Price</div>
-                <div className="text-white font-semibold">
-                  {tool.startingPrice.split(";")[0].trim()}
-                </div>
-              </div>
-              <div className="p-5 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-1">Typical Spend</div>
-                <div className="text-white font-semibold">
-                  {tool.typicalCompanySpend}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Cost Breakdown Section */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-10 w-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-blue-400" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">
-                What {tool.name} Typically Costs
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-2">
-                  Average Cost Per User
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  ${tool.averageCostPerUser}
-                  <span className="text-lg font-normal text-gray-400">
-                    /month
-                  </span>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Based on typical plan mix across organizations
-                </div>
-              </div>
-
-              <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-2">
-                  Typical Monthly Company Spend
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  {tool.typicalCompanySpend}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Varies by team size and plan tier
-                </div>
-              </div>
-
-              <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-2">
-                  Annual Cost Projection
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  ${annualCostLow} &ndash; ${annualCostHigh}
-                </div>
-                <div className="text-sm text-gray-500">
-                  For teams of 10-100 users per year
-                </div>
-              </div>
-
-              <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
-                <div className="text-sm text-gray-400 mb-2">Ideal For</div>
-                <div className="text-lg font-semibold text-white mb-1">
-                  {tool.idealFor}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Pricing starts at {tool.startingPrice.split(";")[0].trim()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Common Waste Patterns */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-10 w-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-amber-400" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">
-                Where Companies Waste Money on {tool.name}
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              {tool.commonWastePatterns.map((pattern, index) => (
-                <div
-                  key={index}
-                  className="p-5 rounded-xl border border-amber-500/20 bg-amber-500/[0.03]"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-amber-300/80 font-medium mb-1">
-                        Waste Pattern #{index + 1}
-                      </div>
-                      <p className="text-gray-300 text-sm">{pattern}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Optimization Tips */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <Lightbulb className="h-5 w-5 text-green-400" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">
-                How to Optimize Your {tool.name} Costs
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {tool.optimizationTips.map((tip, index) => (
-                <div
-                  key={index}
-                  className="p-5 rounded-xl border border-green-500/20 bg-green-500/[0.03] flex items-start gap-4"
-                >
-                  <div className="h-8 w-8 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-400 font-bold text-sm">
-                      {index + 1}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-gray-200">{tip}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Alternatives Section */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-10 w-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                <Shuffle className="h-5 w-5 text-purple-400" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">
-                Alternatives to {tool.name}
-              </h2>
-            </div>
-
-            <div className="grid sm:grid-cols-3 gap-4 mb-6">
-              {tool.alternatives.map((alt) => {
-                const altTool = saasTools.find(
-                  (t) =>
-                    t.name.toLowerCase() === alt.toLowerCase() ||
-                    t.name.toLowerCase().includes(alt.toLowerCase().split(" ")[0])
-                )
-                return (
-                  <div
-                    key={alt}
-                    className="p-5 rounded-xl border border-white/10 bg-white/[0.02]"
-                  >
-                    <div className="text-white font-semibold mb-1">{alt}</div>
-                    {altTool ? (
-                      <div className="text-sm text-gray-400">
-                        From {altTool.startingPrice.split(";")[0].split("(")[0].trim()}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-400">
-                        Popular alternative
-                      </div>
-                    )}
-                    {altTool && (
-                      <Link
-                        href={`/tools/${altTool.slug}`}
-                        className="inline-flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300 mt-2 transition-colors"
-                      >
-                        View analysis
-                        <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="p-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.03]">
-              <p className="text-sm text-gray-300">
-                <strong className="text-cyan-400">Before switching:</strong>{" "}
-                Analyze your actual {tool.name} usage with Efficyon before
-                migrating to an alternative. Often, optimizing your current
-                tool&apos;s configuration and license allocation delivers more
-                savings than a migration, with far less disruption to your team.
+              <p className="max-w-[68ch] text-[18px] leading-[1.65] text-white/75">
+                {pattern}
               </p>
-            </div>
-          </div>
-        </div>
-      </section>
+            </li>
+          ))}
+        </ol>
+      </EditorialSection>
 
-      {/* SEO Content Block */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
-              Optimizing {tool.name} Costs: A Complete Guide
-            </h2>
-            <div className="prose prose-invert max-w-none space-y-5 text-gray-300">
-              {seoContent.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="h-14 w-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <BarChart3 className="h-7 w-7 text-cyan-400" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Analyze Your {tool.name} Costs with Efficyon
-            </h2>
-            <p className="text-gray-300 mb-8">
-              Connect your {tool.name} account and get personalized optimization
-              recommendations in minutes. See exactly where you&apos;re overspending
-              and how much you can save.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-black hover:bg-gray-100"
-                asChild
+      {/* Optimization tips */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="How to fix it"
+          title={`Optimizing ${tool.name}`}
+          italic="without breaking workflow."
+          body="Practical, sequenced steps. Start at the top — most companies recover the bulk of their savings in the first two."
+        />
+        <ol className="border-t border-white/[0.08]">
+          {tool.optimizationTips.map((tip, index) => (
+            <li
+              key={index}
+              className="grid grid-cols-1 items-baseline gap-6 border-b border-white/[0.08] py-10 md:grid-cols-[60px_1fr] md:gap-12"
+            >
+              <span
+                className="font-[family-name:var(--font-geist-mono)] text-[12px] tabular-nums"
+                style={{ color: GREEN }}
               >
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-gray-300 hover:bg-white/5 bg-transparent"
-                asChild
-              >
-                <Link href={tool.website} target="_blank" rel="noopener noreferrer">
-                  Visit {tool.name}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 mt-6">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-green-400" />
-                No credit card required
+                {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-green-400" />
-                90-day ROI guarantee
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+              <p className="max-w-[68ch] text-[18px] leading-[1.65] text-white/80">
+                {tip}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </EditorialSection>
 
-      {/* Related Tools */}
-      {relatedTools.length > 0 && (
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-2xl font-bold text-white mb-6">
-                More {tool.category} Tools
-              </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {relatedTools.map((related) => (
+      {/* Alternatives */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Alternatives"
+          title={`If ${tool.name} isn't the right fit,`}
+          italic="here's what else to look at."
+          body="Switching costs are usually higher than people expect. Audit usage first — often the cheaper move is to right-size what you already run."
+        />
+        <div className="grid grid-cols-1 divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
+          {tool.alternatives.map((alt) => {
+            const altTool = saasTools.find(
+              (t) =>
+                t.name.toLowerCase() === alt.toLowerCase() ||
+                t.name
+                  .toLowerCase()
+                  .includes(alt.toLowerCase().split(" ")[0])
+            )
+            return (
+              <div key={alt} className="px-0 py-10 md:px-10">
+                <p className="text-[22px] font-medium tracking-[-0.02em]">
+                  {alt}
+                </p>
+                <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+                  {altTool
+                    ? `From ${altTool.startingPrice.split(";")[0].split("(")[0].trim()}`
+                    : "Popular alternative"}
+                </p>
+                {altTool && (
                   <Link
-                    key={related.slug}
-                    href={`/tools/${related.slug}`}
-                    className="group p-5 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all duration-300"
+                    href={`/tools/${altTool.slug}`}
+                    className="group mt-5 inline-flex items-center gap-1.5 text-[13px] text-white/65 transition-colors hover:text-white"
                   >
-                    <h3 className="text-white font-semibold group-hover:text-cyan-400 transition-colors mb-1">
-                      {related.name}
-                    </h3>
-                    <div className="text-sm text-gray-400 mb-3">
-                      From {related.startingPrice.split(";")[0].split("(")[0].trim()}
-                    </div>
-                    <span className="text-sm text-cyan-400 group-hover:underline inline-flex items-center gap-1">
-                      Analyze costs
-                      <ArrowRight className="h-3 w-3" />
-                    </span>
+                    View analysis
+                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
                   </Link>
-                ))}
+                )}
               </div>
-            </div>
+            )
+          })}
+        </div>
+      </EditorialSection>
+
+      {/* Long-form */}
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The complete guide"
+          title={`Optimizing ${tool.name}`}
+          italic="costs, in full."
+        />
+        <div className="mx-auto max-w-[68ch] space-y-7 font-[family-name:var(--font-dm-sans)] text-[17px] leading-[1.8] text-white/70">
+          {seoContent.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+      </EditorialSection>
+
+      {/* External link */}
+      <EditorialSection>
+        <div className="flex flex-col gap-6 border-y border-white/[0.08] py-10 md:flex-row md:items-center md:justify-between">
+          <div>
+            <EditorialEyebrow>Vendor site</EditorialEyebrow>
+            <p className="text-[20px] font-medium tracking-[-0.02em]">
+              Visit {tool.name}{" "}
+              <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/55">
+                directly.
+              </span>
+            </p>
           </div>
-        </section>
+          <Link
+            href={tool.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 px-5 py-3 text-[13px] font-medium text-white transition-all hover:border-white/40 md:self-auto"
+          >
+            {tool.website.replace(/^https?:\/\//, "")}
+            <span>↗</span>
+          </Link>
+        </div>
+      </EditorialSection>
+
+      {/* Related tools */}
+      {relatedTools.length > 0 && (
+        <EditorialSection>
+          <EditorialSectionIntro
+            eyebrow={`More in ${tool.category}`}
+            title="Adjacent tools"
+            italic="worth comparing."
+          />
+          <div className="border-t border-white/[0.08]">
+            {relatedTools.map((related, i) => (
+              <EditorialCard
+                key={related.slug}
+                href={`/tools/${related.slug}`}
+                index={i}
+                title={related.name}
+                body={related.description}
+                meta={`From ${related.startingPrice.split(";")[0].split("(")[0].trim()} · ${related.pricingModel}`}
+              />
+            ))}
+          </div>
+        </EditorialSection>
       )}
+
+      <EditorialFinalCTA
+        title={`Analyze your ${tool.name} spend.`}
+        italic="In ten minutes."
+        body={`Connect ${tool.name} alongside your accounting and we'll surface every overlap, idle seat, and tier mismatch. Read-only OAuth, no credit card.`}
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "Back to all tools →", href: "/tools" }}
+      />
     </>
   )
 }

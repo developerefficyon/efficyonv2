@@ -1,41 +1,24 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/ui/navbar"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  ArrowRight,
-  CheckCircle,
-  Calculator,
-  DollarSign,
-  FileText,
-  BarChart3,
-  Bell,
-  Clock,
-  AlertTriangle,
-  PieChart,
-  FolderOpen,
-  Shield,
-  Download,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialFinalCTA,
+  EditorialMonoLabel,
+} from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
   return {
-    title: "SaaS Spend Visibility for Finance Teams - Save 20+ Hours/Month",
+    title: "SaaS Spend Visibility for Finance Teams - Retire the Spreadsheet",
     description:
-      "Give your finance team complete SaaS spend visibility. Automate categorization, eliminate surprise renewals, and cut manual tracking by 20+ hours/month. 15% average cost reduction.",
+      "Centralized SaaS spend tracking for finance teams. Auto-categorize subscriptions, allocate to departments, generate audit-ready reports. Replace the manual reconciliation spreadsheet without losing its clarity.",
     alternates: {
       canonical: "/solutions/for-finance-teams",
     },
     openGraph: {
-      title: "Complete SaaS Spend Visibility for Finance Teams | Efficyon",
+      title: "SaaS Spend Visibility for Finance Teams | Efficyon",
       description:
-        "Automate SaaS spend tracking, categorization, and reporting. Finance teams save 20+ hours/month and reduce costs by 15% on average.",
+        "Auto-categorize SaaS spend, allocate by department, and generate audit-ready reports without the manual reconciliation spreadsheet.",
       url: "https://www.efficyon.com/solutions/for-finance-teams",
       type: "website",
     },
@@ -46,9 +29,9 @@ export default function ForFinanceTeamsPage() {
   const webPageJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Complete SaaS Spend Visibility for Finance Teams | Efficyon",
+    name: "SaaS Spend Visibility for Finance Teams | Efficyon",
     description:
-      "Give your finance team complete SaaS spend visibility. Automate categorization, eliminate surprise renewals, and reduce SaaS costs by 15%.",
+      "Centralized SaaS spend tracking, auto-categorization, department allocation, and audit-ready reports for finance teams.",
     url: "https://www.efficyon.com/solutions/for-finance-teams",
     publisher: {
       "@type": "Organization",
@@ -66,15 +49,15 @@ export default function ForFinanceTeamsPage() {
         name: "How does Efficyon integrate with our existing accounting systems?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Efficyon connects directly to popular accounting platforms including QuickBooks, Xero, Fortnox, NetSuite, and Sage. We also integrate with banking feeds and corporate card providers. Data syncs automatically, so your SaaS spend data is always current without manual imports or CSV uploads.",
+          text: "Efficyon connects directly to accounting platforms via OAuth or scoped read-only API keys. Today we support Fortnox and QuickBooks, with more on the roadmap. Data syncs automatically — no CSV exports, no manual imports, no monthly reconciliation against a spreadsheet that grew its own opinions.",
         },
       },
       {
         "@type": "Question",
-        name: "Can Efficyon replace our manual SaaS spend tracking spreadsheets?",
+        name: "Can Efficyon replace the manual SaaS spend tracking spreadsheet?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Absolutely. Efficyon eliminates the need for manual spend tracking by automatically discovering, categorizing, and tracking every SaaS subscription across your organization. Finance teams that switch from spreadsheets to Efficyon save an average of 20+ hours per month on manual data collection and reconciliation.",
+          text: "That's the point. Efficyon auto-discovers and categorizes every SaaS subscription that touches your accounting feed, ties each one to a renewal date and a department, and keeps the inventory current without anyone maintaining it by hand. The spreadsheet's clarity, without the spreadsheet's labour.",
         },
       },
       {
@@ -82,7 +65,7 @@ export default function ForFinanceTeamsPage() {
         name: "Does Efficyon support department-level cost allocation?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. Efficyon automatically allocates SaaS costs to departments, teams, and cost centers based on actual usage data. You can generate department-level reports, set budget thresholds per department, and track spending trends over time. This makes internal chargebacks and budget reviews significantly easier.",
+          text: "Yes. Subscriptions are allocated to departments and cost centers based on the data we can see — usage where the integration exposes it, payer / cost-center fields where it doesn't. You get department-level reports, budget thresholds, and trend lines that make internal chargebacks a routine task instead of a quarterly project.",
         },
       },
       {
@@ -90,14 +73,14 @@ export default function ForFinanceTeamsPage() {
         name: "How does Efficyon help with audit preparation?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Efficyon maintains a complete, timestamped record of every SaaS subscription, payment, and license change. During audit periods, you can generate compliance-ready reports showing all software expenditures with vendor details, approval history, and usage justification. What used to take weeks of preparation now takes minutes.",
+          text: "Efficyon maintains a timestamped record of every subscription, payment, and renewal change running through the connected accounting feeds. During audit periods, you can export a complete software expenditure report with vendor details and renewal history. Read-only access means we can pull the data; we cannot alter your ledger.",
         },
       },
     ],
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }}
@@ -106,506 +89,195 @@ export default function ForFinanceTeamsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium">
-              <Calculator className="h-4 w-4" />
-              For Finance Teams
+      <EditorialPageHero
+        eyebrow="Solutions · For finance teams"
+        title="The spreadsheet,"
+        italic="retired."
+        body="Every finance team running SaaS spend through a manually maintained sheet eventually hits the same wall: the data is fine, the labour to keep it fine is the problem. Efficyon takes the categorization, the renewal calendar, and the department allocation off your desk."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The problem"
+          title="The data isn't missing."
+          italic="The maintenance is."
+          body="Every line is in the accounting system somewhere. The work is reading them, categorizing them, attaching renewal dates, and reconciling against a budget — every month, by hand."
+        />
+
+        <div className="grid gap-px overflow-hidden border border-white/[0.08] md:grid-cols-2">
+          {[
+            {
+              label: "01 · Categorization labour",
+              title: "Vendor names that don't match anything.",
+              body:
+                "Stripe charges that resolve to four different products under one merchant. Annual prepayments that should amortize. SaaS purchases that look like consultancy fees. The spreadsheet runs on the controller's pattern recognition, and the controller is one trip away from chaos.",
+            },
+            {
+              label: "02 · Surprise renewals",
+              title: "The auto-renew that shows up in close.",
+              body:
+                "A vendor's annual cycle bumped 9% mid-year. Nobody flagged it. The first time finance sees the increase is during the month-end close, after it's already booked. The renewal calendar is the spreadsheet's weakest column because it's the one nobody can keep current.",
+            },
+            {
+              label: "03 · Department allocation",
+              title: "Every line says general & admin.",
+              body:
+                "Without a connection to who actually uses what, the cleanest categorization in the world still maps everything to G&A or 'Software'. Department-level conversations start from a fictional baseline. Efficyon ties each subscription to the department where the usage actually lives.",
+            },
+            {
+              label: "04 · Audit readiness",
+              title: "The week of preparation tax.",
+              body:
+                "When auditors ask for the SaaS list with vendor details, payment history, and renewal terms, finance loses a week. With the data already structured and timestamped, the same request becomes an export. The week becomes a Friday afternoon.",
+            },
+          ].map((b) => (
+            <div key={b.label} className="bg-[#080809] p-10">
+              <EditorialMonoLabel green>{b.label}</EditorialMonoLabel>
+              <h3 className="mt-4 text-[22px] font-medium leading-[1.15] tracking-[-0.02em] md:text-[26px]">
+                {b.title}
+              </h3>
+              <p className="mt-4 text-[15px] leading-[1.7] text-white/55">{b.body}</p>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent text-balance">
-              Give Your Finance Team Complete SaaS Spend Visibility
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              SaaS invoices are scattered across 40 vendors, 12 credit cards, and zero centralized
-              records. Efficyon brings it all into one dashboard -- automatically categorized,
-              department-allocated, and audit-ready.
+          ))}
+        </div>
+      </EditorialSection>
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What Efficyon does"
+          title="Auto-categorize."
+          italic="Auto-allocate. Auto-current."
+          body="The clarity of the spreadsheet, with the maintenance assigned to the engine instead of a person."
+        />
+
+        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+          {[
+            {
+              n: "01",
+              title: "Connect once.",
+              italic: "Sync runs forever.",
+              body:
+                "Read-only OAuth into Fortnox or QuickBooks (more on the roadmap). Every transaction is parsed, vendors are deduplicated, recurring patterns are detected. The inventory builds itself and stays current without manual imports.",
+            },
+            {
+              n: "02",
+              title: "Categorization that holds.",
+              italic: "Pattern matching, not guessing.",
+              body:
+                "We resolve merchant names, separate one-off purchases from subscriptions, attach annual contracts to their amortization schedule, and flag the things we're uncertain about so you can confirm once instead of re-classifying every month.",
+            },
+            {
+              n: "03",
+              title: "Renewal calendar that's actually maintained.",
+              italic: "Alerts, not surprises.",
+              body:
+                "Every subscription gets a renewal date inferred from the billing cadence and confirmed where the integration exposes it. Configurable lead-time alerts route to the owner — the auto-renew price bump becomes a conversation before the charge, not after.",
+            },
+            {
+              n: "04",
+              title: "Department allocation tied to usage.",
+              italic: "G&A becomes a real breakdown.",
+              body:
+                "Where we have usage data (Microsoft 365, Google Workspace, HubSpot), seats are mapped to departments. Where we don't, you can set allocation rules once. The general-and-admin line stops absorbing every SaaS dollar.",
+            },
+            {
+              n: "05",
+              title: "Audit-ready, by default.",
+              italic: "Export the report, not the prep.",
+              body:
+                "Vendor details, payment history, renewal terms, change log — all timestamped, all exportable. The week of audit prep becomes a Friday-afternoon export. Your finance team stops fearing quarter-end.",
+            },
+          ].map((row) => (
+            <div key={row.n} className="grid gap-6 py-12 md:grid-cols-[80px_1fr] md:gap-10">
+              <span className="font-[family-name:var(--font-geist-mono)] text-[12px] tabular-nums text-white/30">
+                {row.n}
+              </span>
+              <div>
+                <h3 className="text-[24px] font-medium tracking-[-0.02em] md:text-[28px]">
+                  {row.title}{" "}
+                  <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/65">
+                    {row.italic}
+                  </span>
+                </h3>
+                <p className="mt-3 max-w-[68ch] text-[15.5px] leading-[1.7] text-white/55">
+                  {row.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </EditorialSection>
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Why finance specifically"
+          title="The accounting feed is"
+          italic="the only complete source."
+          body="IT inventories miss what finance pays. Procurement systems miss the credit-card side door. The accounting ledger is the one feed every SaaS purchase eventually touches — which is why we anchor on it."
+        />
+
+        <div className="grid gap-px overflow-hidden border border-white/[0.08] md:grid-cols-3">
+          <div className="bg-[#080809] p-10">
+            <span
+              className="text-[clamp(40px,4vw,56px)] font-medium leading-none tracking-[-0.04em]"
+              style={{ color: "var(--green)" }}
+            >
+              10
+              <span className="ml-1 font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/55">
+                min
+              </span>
+            </span>
+            <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55">
+              Connect &amp; first scan
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Book a Finance Demo</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 pt-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>Connects to Your Accounting Software</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>Export-Ready Reports</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Challenge Section */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                The SaaS Spend Visibility Problem
-              </h2>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-                Software is now the second-largest line item after payroll, yet it is the hardest to
-                track, categorize, and control. Finance teams are drowning in fragmented data.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-red-900/40 rounded-lg flex items-center justify-center">
-                    <FolderOpen className="h-5 w-5 text-red-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Fragmented SaaS Invoices</h3>
-                </div>
-                <p className="text-gray-400">
-                  The average mid-size company has SaaS payments flowing through corporate cards,
-                  departmental expense accounts, direct invoices, and employee reimbursements. A
-                  2024 study found that 30% of SaaS spend happens outside of procurement channels.
-                  Your finance team is chasing invoices across a dozen systems every month.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-red-900/40 rounded-lg flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-red-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Manual Categorization</h3>
-                </div>
-                <p className="text-gray-400">
-                  Bank statements show cryptic vendor names. Credit card transactions lack context.
-                  Your team spends hours every month manually categorizing SaaS transactions,
-                  matching them to departments, and reconciling against budgets. One misclassified
-                  charge cascades into reporting errors.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-red-900/40 rounded-lg flex items-center justify-center">
-                    <Bell className="h-5 w-5 text-red-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Surprise Renewals</h3>
-                </div>
-                <p className="text-gray-400">
-                  Annual renewals hit the budget with no warning. A department head signed a
-                  $15,000/year contract that auto-renewed silently. By the time finance discovers
-                  the charge, the cancellation window is closed. This happens multiple times per
-                  quarter at most organizations, creating budget variances that are impossible to
-                  plan for.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-red-900/40 rounded-lg flex items-center justify-center">
-                    <AlertTriangle className="h-5 w-5 text-red-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Painful Audit Preparation
-                  </h3>
-                </div>
-                <p className="text-gray-400">
-                  When auditors ask for a complete accounting of software expenditures, your team
-                  scrambles for weeks. Pulling vendor agreements, matching purchase orders to
-                  invoices, and justifying every subscription is tedious, error-prone work. And it
-                  happens every single audit cycle, consuming resources you do not have.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3 md:col-span-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-red-900/40 rounded-lg flex items-center justify-center">
-                    <PieChart className="h-5 w-5 text-red-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">No Single Source of Truth</h3>
-                </div>
-                <p className="text-gray-400">
-                  Ask three people how much the company spends on SaaS and you get three different
-                  numbers. The ERP shows one total, the expense system shows another, and the
-                  departmental spreadsheets show yet another. Without a centralized platform, every
-                  budget review starts with an argument about which numbers are correct.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Solution Section */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                How Efficyon Transforms SaaS Financial Management
-              </h2>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-                Replace hours of manual work with automated, real-time SaaS spend intelligence that
-                your entire finance team can trust.
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              <div className="flex items-start gap-6">
-                <div className="h-12 w-12 bg-blue-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <PieChart className="h-6 w-6 text-blue-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-white">
-                    Automated Spend Discovery and Categorization
-                  </h3>
-                  <p className="text-gray-400">
-                    Efficyon connects to your accounting software, bank feeds, and corporate card
-                    providers to automatically identify and categorize every SaaS transaction. Our
-                    AI recognizes vendor names even when they appear differently across payment
-                    channels -- no more manual lookups, no more misclassifications. Every
-                    subscription is tagged with the correct vendor, category, department, and cost
-                    center.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-6">
-                <div className="h-12 w-12 bg-blue-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Bell className="h-6 w-6 text-blue-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-white">
-                    Proactive Budget Alerts and Renewal Tracking
-                  </h3>
-                  <p className="text-gray-400">
-                    Set budget thresholds by department, category, or vendor. Efficyon sends
-                    real-time alerts when spending approaches limits, when new subscriptions are
-                    detected, and when renewals are approaching. Finance is never surprised by a
-                    charge again. Every renewal gets a 30-day, 14-day, and 7-day advance
-                    notification so you have time to review, negotiate, or cancel.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-6">
-                <div className="h-12 w-12 bg-blue-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="h-6 w-6 text-blue-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-white">
-                    Department-Level Allocation and Reporting
-                  </h3>
-                  <p className="text-gray-400">
-                    Automatically allocate SaaS costs to departments and cost centers based on
-                    actual usage. Generate month-over-month comparisons, variance reports, and
-                    trend analysis without touching a spreadsheet. When a department head asks why
-                    their software budget increased by 12% this quarter, you have the answer in
-                    two clicks.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-6">
-                <div className="h-12 w-12 bg-blue-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Download className="h-6 w-6 text-blue-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-white">
-                    Export-Ready, Audit-Ready Reports
-                  </h3>
-                  <p className="text-gray-400">
-                    Every data point in Efficyon can be exported to CSV, Excel, or PDF with a
-                    single click. Audit preparation that used to take weeks now takes minutes.
-                    Generate complete software expenditure reports with vendor details, contract
-                    dates, approval history, and usage justification -- all timestamped and
-                    formatted for compliance.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Highlights */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Features Finance Teams Rely On
-              </h2>
-              <p className="text-lg text-gray-300">
-                Purpose-built for the way modern finance teams manage software spend.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-white/10 bg-black/50 p-8 space-y-4">
-                <div className="h-12 w-12 bg-blue-900/40 rounded-xl flex items-center justify-center">
-                  <PieChart className="h-6 w-6 text-blue-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Automated Categorization</h3>
-                <p className="text-gray-400">
-                  AI-powered vendor recognition and transaction categorization. Efficyon correctly
-                  maps cryptic merchant names to SaaS vendors, assigns GL codes, and tags each
-                  subscription to its department and cost center automatically.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-8 space-y-4">
-                <div className="h-12 w-12 bg-cyan-900/40 rounded-xl flex items-center justify-center">
-                  <Bell className="h-6 w-6 text-cyan-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Budget Alerts</h3>
-                <p className="text-gray-400">
-                  Set thresholds at the department, category, or vendor level. Receive real-time
-                  notifications when spending approaches limits. Get advance warnings on upcoming
-                  renewals so you always have time to review and approve.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-8 space-y-4">
-                <div className="h-12 w-12 bg-green-900/40 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-green-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Department Allocation</h3>
-                <p className="text-gray-400">
-                  Automatically split SaaS costs across departments based on usage data.
-                  Simplify internal chargebacks and give every budget owner visibility into their
-                  team&apos;s actual software spend without manual tracking.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-black/50 p-8 space-y-4">
-                <div className="h-12 w-12 bg-orange-900/40 rounded-xl flex items-center justify-center">
-                  <Download className="h-6 w-6 text-orange-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Export-Ready Reports</h3>
-                <p className="text-gray-400">
-                  One-click export to CSV, Excel, or PDF. Pre-built report templates for budget
-                  reviews, audit preparation, and board presentations. Every report includes the
-                  complete data trail auditors require.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ROI Section */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center space-y-4 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Measurable Impact for Finance
-              </h2>
-              <p className="text-lg text-gray-300">
-                Results reported by finance teams after implementing Efficyon.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center space-y-2 rounded-xl border border-white/10 bg-black/50 p-8">
-                <p className="text-4xl font-bold text-blue-400">20+ hrs</p>
-                <p className="text-lg text-white font-medium">Saved Per Month</p>
-                <p className="text-sm text-gray-400">
-                  Eliminated manual SaaS spend tracking, categorization, reconciliation, and
-                  report generation. Time your team gets back for strategic work.
-                </p>
-              </div>
-
-              <div className="text-center space-y-2 rounded-xl border border-white/10 bg-black/50 p-8">
-                <p className="text-4xl font-bold text-blue-400">15%</p>
-                <p className="text-lg text-white font-medium">Average Cost Reduction</p>
-                <p className="text-sm text-gray-400">
-                  Through identifying unused licenses, consolidating duplicate tools, right-sizing
-                  plans, and catching renewals before auto-charge deadlines.
-                </p>
-              </div>
-
-              <div className="text-center space-y-2 rounded-xl border border-white/10 bg-black/50 p-8">
-                <p className="text-4xl font-bold text-blue-400">100%</p>
-                <p className="text-lg text-white font-medium">Spend Visibility</p>
-                <p className="text-sm text-gray-400">
-                  Complete view of every SaaS subscription across all payment channels. One
-                  number, one source of truth, zero arguments in budget meetings.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonial Section */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="rounded-xl border border-white/10 bg-black/50 p-10">
-              <div className="space-y-6">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <svg
-                      key={i}
-                      className="h-5 w-5 text-blue-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <blockquote className="text-xl text-gray-300 leading-relaxed">
-                  &ldquo;Before Efficyon, our month-end close included two full days just for SaaS
-                  reconciliation. We had subscriptions coming through five different payment
-                  channels and nobody could agree on our total software spend. Now everything is
-                  in one place, auto-categorized, and export-ready. Our last audit took 80% less
-                  preparation time. I genuinely do not know how we managed without it.&rdquo;
-                </blockquote>
-                <div>
-                  <p className="text-white font-semibold">Sarah Lindqvist</p>
-                  <p className="text-gray-400 text-sm">
-                    Financial Controller, Mid-Market SaaS Company (180 employees)
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-lg text-gray-300">
-              Common questions from finance teams evaluating Efficyon.
+            <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
+              Read-only OAuth, no agent install, no IT ticket. Connect Fortnox or QuickBooks and
+              the first analysis runs.
             </p>
           </div>
-
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem
-              value="item-1"
-              className="border border-white/10 rounded-lg px-6 bg-black/50"
+          <div className="bg-[#080809] p-10">
+            <span
+              className="text-[clamp(40px,4vw,56px)] font-medium leading-none tracking-[-0.04em]"
+              style={{ color: "var(--green)" }}
             >
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does Efficyon integrate with our existing accounting systems?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Efficyon connects directly to popular accounting platforms including QuickBooks,
-                Xero, Fortnox, NetSuite, and Sage. We also integrate with banking feeds and
-                corporate card providers. Data syncs automatically, so your SaaS spend data is
-                always current without manual imports or CSV uploads. Setup takes minutes, not days.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="item-2"
-              className="border border-white/10 rounded-lg px-6 bg-black/50"
-            >
-              <AccordionTrigger className="text-white hover:no-underline">
-                Can Efficyon replace our manual SaaS spend tracking spreadsheets?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Absolutely. Efficyon eliminates the need for manual spend tracking by automatically
-                discovering, categorizing, and tracking every SaaS subscription across your
-                organization. Finance teams that switch from spreadsheets to Efficyon save an
-                average of 20+ hours per month on manual data collection and reconciliation. And
-                unlike spreadsheets, Efficyon updates in real time and never has formula errors.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="item-3"
-              className="border border-white/10 rounded-lg px-6 bg-black/50"
-            >
-              <AccordionTrigger className="text-white hover:no-underline">
-                Does Efficyon support department-level cost allocation?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Yes. Efficyon automatically allocates SaaS costs to departments, teams, and cost
-                centers based on actual usage data. You can generate department-level reports, set
-                budget thresholds per department, and track spending trends over time. This makes
-                internal chargebacks and budget reviews significantly easier and more accurate than
-                manual allocation.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="item-4"
-              className="border border-white/10 rounded-lg px-6 bg-black/50"
-            >
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does Efficyon help with audit preparation?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Efficyon maintains a complete, timestamped record of every SaaS subscription,
-                payment, and license change. During audit periods, you can generate compliance-ready
-                reports showing all software expenditures with vendor details, approval history, and
-                usage justification. What used to take weeks of preparation now takes minutes.
-                Reports export directly to the formats auditors expect.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Stop Chasing SaaS Invoices. Start Controlling Them.
-            </h2>
-            <p className="text-lg text-gray-300">
-              Give your finance team the visibility, automation, and control they need to manage
-              SaaS spend with confidence. Your free analysis reveals exactly where the money is
-              going.
+              5×
+            </span>
+            <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55">
+              Fee refund guarantee
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Schedule a Finance Demo</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-              <span>Connects to your accounting software</span>
-              <span>|</span>
-              <span>90-day ROI guarantee</span>
-            </div>
+            <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
+              Surfaced savings clear five times your fee or we refund. The contract carries the
+              risk, not your judgement on a tool you've never used.
+            </p>
+          </div>
+          <div className="bg-[#080809] p-10">
+            <span
+              className="text-[clamp(40px,4vw,56px)] font-medium leading-none tracking-[-0.04em]"
+              style={{ color: "var(--green)" }}
+            >
+              read-only
+            </span>
+            <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/55">
+              Access scope
+            </p>
+            <p className="mt-3 text-[14px] leading-[1.7] text-white/50">
+              We read the ledger. We don't write to it, can't modify invoices, can't initiate
+              payments. EU-hosted, built in Gothenburg.
+            </p>
           </div>
         </div>
-      </section>
-    </div>
+      </EditorialSection>
+
+      <EditorialFinalCTA
+        title="Run the scan."
+        italic="Retire the sheet."
+        body="Connect one accounting system, see what we surface in 10 minutes. The spreadsheet keeps working until you trust the replacement — but most finance leads stop opening it inside the first month."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "Talk to us →", href: "/#contact" }}
+      />
+    </>
   )
 }

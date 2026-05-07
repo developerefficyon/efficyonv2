@@ -1,45 +1,24 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Navbar } from "@/components/ui/navbar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle,
-  BookOpen,
-  Receipt,
-  FolderOpen,
-  TrendingUp,
-  Users,
-  Shield,
-  Lock,
-  Eye,
-  Zap,
-  BarChart3,
-  Clock,
-  Bell,
-  FileCheck,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialFinalCTA,
+  EditorialEyebrow,
+} from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
   return {
     title: "QuickBooks Integration - Smart SaaS Spend Tracking",
     description:
-      "Connect QuickBooks to Efficyon for automated SaaS expense categorization, budget tracking, and AI-powered cost optimization. Coming soon.",
+      "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization. Built for US and Canadian SMBs.",
     alternates: {
       canonical: "/integrations/quickbooks",
     },
     openGraph: {
       title: "QuickBooks + Efficyon: Smart SaaS Spend Tracking",
       description:
-        "Connect QuickBooks to Efficyon for automated SaaS expense categorization, budget tracking, and AI-powered cost optimization. Coming soon.",
+        "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization. Built for US and Canadian SMBs.",
       url: "https://www.efficyon.com/integrations/quickbooks",
     },
     keywords: [
@@ -52,6 +31,79 @@ export function generateMetadata(): Metadata {
   }
 }
 
+const CAPABILITIES = [
+  {
+    title: "Auto-import expenses, bills, and vendor payments",
+    body: "Real-time sync from QuickBooks Online. New transactions land in Efficyon on a recurring schedule — no exports, no spreadsheets, no copy-paste.",
+  },
+  {
+    title: "Categorize SaaS across messy charts of accounts",
+    body: "AI finds software spend whether it's booked under Software Subscriptions, Office Expenses, Professional Services, or a one-off vendor name.",
+  },
+  {
+    title: "Department and class-level allocation",
+    body: "We respect your existing class and location tracking. Department-level SaaS cost breakdowns appear without changing your QuickBooks setup.",
+  },
+  {
+    title: "Catch duplicates and overlap",
+    body: "Same vendor billed under two slightly different names. Two project tools both running. The card change in 2024 that quietly created a parallel subscription.",
+  },
+  {
+    title: "Track cost trends and price drift",
+    body: "Watch monthly software spend evolve. Surface price increases, tier upgrades, and seat-count creep before the renewal email lands.",
+  },
+  {
+    title: "Audit-ready exports",
+    body: "Clean, categorized SaaS expense reports that align with your QuickBooks chart of accounts — useful at quarter-end and tax season.",
+  },
+]
+
+const FINDINGS = [
+  {
+    title: "Microsoft 365 Business Premium — 9 dormant seats",
+    body: "Booked under Office Expenses for a 32-person org. 23 active in the last 90 days. Modeled annual leak: $2,484.",
+  },
+  {
+    title: "Asana Business + Notion Plus — overlapping use",
+    body: "Both running across Engineering and Ops. Usage data shows one of the two could go. Modeled saving: $5,400/yr.",
+  },
+  {
+    title: "Zoom One Business → Pro downshift candidate",
+    body: "Large-meeting and recording features used twice in 6 months. Pro tier covers actual usage. Modeled saving: $1,920/yr.",
+  },
+  {
+    title: "Duplicate Adobe CC line items",
+    body: "Two vendor records in QuickBooks for the same Creative Cloud account after a payment-method change. $1,440 overpaid before catch.",
+  },
+  {
+    title: "Salesforce Sales Cloud — 6 inactive seats",
+    body: "Last login ≥ 120 days for 6 of 28 paid seats. Reclaim or convert to Platform licenses for those users.",
+  },
+]
+
+const FAQS = [
+  {
+    q: "Which QuickBooks versions are supported?",
+    a: "QuickBooks Online — Simple Start, Essentials, Plus, and Advanced. The integration uses Intuit's official OAuth and the QuickBooks Online API for real-time, read-only access. QuickBooks Desktop isn't supported today.",
+  },
+  {
+    q: "How does Efficyon categorize SaaS when our chart of accounts is inconsistent?",
+    a: "It looks at vendor names, recurring patterns, and billing signatures rather than just the GL account. So even if Stripe-billed tools are filed under three different categories across two years, Efficyon stitches them back together. You can review categorizations and the model adjusts to your corrections.",
+  },
+  {
+    q: "Will it respect our class and location tracking?",
+    a: "Yes. We map to your existing QuickBooks classes and locations to provide department- or cost-center-level SaaS breakdowns. No need to restructure your books — Efficyon adapts to what's already there.",
+  },
+  {
+    q: "Can I run QuickBooks alongside another integration like Stripe or Microsoft 365?",
+    a: "Yes — and we recommend it. Accounting data tells you what you paid; identity and usage tools tell you whether anyone's using it. The pair is where most leaks become obvious.",
+  },
+  {
+    q: "What does it cost?",
+    a: "The Efficyon plan starts at $39/mo (Startup) or $119/mo (Growth) — see the homepage for details. The QuickBooks integration is included on every plan; we don't gate connectors by tier.",
+  },
+]
+
 export default function QuickBooksIntegrationPage() {
   const jsonLd = {
     "@context": "https://schema.org",
@@ -60,14 +112,14 @@ export default function QuickBooksIntegrationPage() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
-      "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, budget tracking, and AI-powered cost optimization.",
+      "Connect QuickBooks Online to Efficyon for automated SaaS expense categorization, real-time spend tracking, and AI-powered cost optimization.",
     url: "https://www.efficyon.com/integrations/quickbooks",
     offers: {
-      "@type": "Offer",
-      price: "39",
+      "@type": "AggregateOffer",
+      lowPrice: "39",
+      highPrice: "119",
       priceCurrency: "USD",
-      description: "Starting from $39/month with the Startup plan",
-      availability: "https://schema.org/PreOrder",
+      offerCount: "2",
     },
     publisher: {
       "@type": "Organization",
@@ -79,44 +131,15 @@ export default function QuickBooksIntegrationPage() {
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "When will the QuickBooks integration be available?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "The QuickBooks integration is currently in development and expected to launch in Q2 2026. Join our waitlist to be notified as soon as it becomes available and get priority early access.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Which QuickBooks versions will be supported?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "At launch, we will support QuickBooks Online (all plans: Simple Start, Essentials, Plus, and Advanced). QuickBooks Desktop support is planned for a later release. The integration uses the QuickBooks Online API for secure, real-time data sync.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How will the QuickBooks integration handle expense categorization?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Efficyon's AI will analyze your QuickBooks expenses and automatically identify which transactions are SaaS subscriptions. It categorizes them by vendor, department, and type, even when descriptions are inconsistent. You can review and adjust categories, and the AI learns from your corrections over time.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Can I use the QuickBooks integration alongside other Efficyon integrations?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Absolutely. Efficyon is designed to work with multiple data sources simultaneously. Connecting QuickBooks alongside Stripe or other integrations gives you the most complete view of your SaaS spending, combining accounting data with real-time subscription analytics.",
-        },
-      },
-    ],
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -125,459 +148,125 @@ export default function QuickBooksIntegrationPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent" />
-        <div className="container mx-auto px-4 relative z-10">
-          <Link
-            href="/integrations"
-            className="inline-flex items-center text-gray-400 hover:text-white transition-colors mb-8"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            All Integrations
-          </Link>
+      <EditorialPageHero
+        eyebrow="Integration · QuickBooks"
+        title="Efficyon × QuickBooks,"
+        italic="every SaaS line, every class."
+        body="QuickBooks Online runs the books for millions of US and Canadian SMBs. Connect it to Efficyon and your bills, vendor payments, and expense categories become the substrate for SaaS-cost analysis — real-time sync, read-only, no chart-of-accounts surgery required."
+        primaryCta={{ label: "Connect QuickBooks", href: "/register" }}
+        secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
 
-          <div className="max-w-4xl space-y-6">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="h-16 w-16 rounded-xl bg-blue-900/30 border border-blue-500/20 flex items-center justify-center">
-                <BookOpen className="h-8 w-8 text-blue-400" />
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What it does"
+          title="Six things,"
+          italic="all from data already in QBO."
+          body="No new tools to roll out, no exports to schedule. Connect once and the analysis runs on the books you already keep."
+        />
+        <ul className="space-y-7 border-t border-white/[0.08] pt-10">
+          {CAPABILITIES.map((c) => (
+            <li key={c.title} className="grid grid-cols-[12px_1fr] gap-5 md:grid-cols-[16px_1fr] md:gap-8">
+              <span
+                aria-hidden
+                className="mt-[10px] inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--green)" }}
+              />
+              <div>
+                <h3 className="text-[20px] font-medium tracking-[-0.015em] md:text-[22px]">{c.title}</h3>
+                <p className="mt-2 max-w-[68ch] text-[15px] leading-[1.65] text-white/55">{c.body}</p>
               </div>
-              <div className="text-2xl text-gray-500 font-light">+</div>
-              <div className="h-16 w-16 rounded-xl bg-cyan-900/30 border border-cyan-500/20 flex items-center justify-center">
-                <Zap className="h-8 w-8 text-cyan-400" />
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium ml-2">
-                <Clock className="h-3 w-3" />
-                Coming Soon
-              </span>
-            </div>
+            </li>
+          ))}
+        </ul>
+      </EditorialSection>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent text-balance">
-              QuickBooks + Efficyon: Smart SaaS Spend Tracking
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-3xl">
-              Connect QuickBooks to automatically categorize and analyze your SaaS
-              subscriptions alongside your financial data. Get AI-powered insights into
-              software spend, budget tracking, and department-level cost allocation -- all
-              from the accounting platform you already use.
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What we find · Sample · illustrative"
+          title="The kind of leaks"
+          italic="hiding in a US SMB stack."
+          body="Sketches of what a QuickBooks-driven scan tends to surface for a typical 30-person org. Modeled, not customer data."
+        />
+        <ul className="space-y-7 border-t border-white/[0.08] pt-10">
+          {FINDINGS.map((f) => (
+            <li key={f.title} className="grid grid-cols-[12px_1fr] gap-5 md:grid-cols-[16px_1fr] md:gap-8">
+              <span
+                aria-hidden
+                className="mt-[10px] inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--green)" }}
+              />
+              <div>
+                <h3 className="text-[20px] font-medium tracking-[-0.015em] md:text-[22px]">{f.title}</h3>
+                <p className="mt-2 max-w-[68ch] text-[15px] leading-[1.65] text-white/55">{f.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-10 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
+          Sample · illustrative · not from a real customer account
+        </p>
+      </EditorialSection>
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="Security & access"
+          title="Read-only,"
+          italic="and contractual."
+        />
+        <div className="grid gap-12 border-t border-white/[0.08] pt-10 md:grid-cols-2">
+          <div>
+            <EditorialEyebrow>Scopes</EditorialEyebrow>
+            <p className="text-[16px] leading-[1.7] text-white/65">
+              Intuit OAuth 2.0. We request the minimum read scopes needed to access bills, expenses, vendor records, accounts, and class/location tracking. No write, modify, or delete endpoints are in our allowlist.
             </p>
-
-            {/* Waitlist CTA */}
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 max-w-lg">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Join the Waitlist
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Be the first to know when the QuickBooks integration launches. Get priority
-                early access.
-              </p>
-              <div className="flex gap-3">
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  className="bg-black/50 border-white/20 text-white placeholder:text-gray-500 flex-1"
-                />
-                <Button className="bg-white text-black hover:bg-gray-100 shrink-0">
-                  <Bell className="mr-2 h-4 w-4" />
-                  Notify Me
-                </Button>
-              </div>
-            </div>
+          </div>
+          <div>
+            <EditorialEyebrow>Guarantee</EditorialEyebrow>
+            <p className="text-[16px] leading-[1.7] text-white/65">
+              GET-only requests, contractually. Encrypted at rest (AES-256) and in transit (TLS 1.3). Disconnect from Efficyon or revoke from inside Intuit — both stop sync immediately. Data deletion available on request.
+            </p>
           </div>
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Integration Overview */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              What This Integration Will Do
-            </h2>
-            <div className="prose prose-invert max-w-none">
-              <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                QuickBooks Online is one of the most widely used accounting platforms in the
-                world, trusted by millions of small and mid-sized businesses. The Efficyon
-                integration will connect directly to your QuickBooks Online account to import
-                expenses, bills, and vendor payments, then use AI to identify and analyze your
-                SaaS subscriptions automatically.
-              </p>
-              <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                For many growing companies, SaaS expenses are scattered across different chart
-                of accounts categories in QuickBooks. Some are booked under &quot;Software
-                Subscriptions,&quot; others under &quot;Office Expenses&quot; or &quot;Professional
-                Services.&quot; This makes it nearly impossible to get a clear picture of total
-                software spend. Efficyon solves this by using AI to identify SaaS transactions
-                regardless of how they are categorized in QuickBooks.
-              </p>
-              <p className="text-lg text-gray-300 leading-relaxed">
-                The integration will also support department-level cost allocation, allowing
-                you to see exactly which teams are driving software costs. Combined with
-                Efficyon&apos;s usage analysis, you will be able to compare what each
-                department spends on SaaS tools against how much those tools are actually used
-                -- revealing optimization opportunities that are invisible from accounting data
-                alone.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Key Capabilities */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Planned Capabilities
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              Features that will be available when the QuickBooks integration launches.
-            </p>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: Receipt,
-                  title: "Auto-Import Expenses",
-                  description:
-                    "Automatically import bills, expenses, and vendor payments from QuickBooks Online. New transactions sync on a recurring schedule without any manual intervention required.",
-                },
-                {
-                  icon: FolderOpen,
-                  title: "SaaS Categorization",
-                  description:
-                    "AI identifies SaaS subscriptions across all your QuickBooks expense categories. Even if software costs are booked inconsistently, Efficyon will find and categorize them correctly.",
-                },
-                {
-                  icon: BarChart3,
-                  title: "Budget Tracking",
-                  description:
-                    "Set SaaS spending budgets by department or category and track actual expenses in real time. Get proactive alerts when teams approach or exceed their software budget limits.",
-                },
-                {
-                  icon: Users,
-                  title: "Department Cost Allocation",
-                  description:
-                    "Break down SaaS costs by department, team, or cost center using your QuickBooks class and location tracking. See which parts of your organization drive the most software spend.",
-                },
-                {
-                  icon: FileCheck,
-                  title: "Tax-Ready Reporting",
-                  description:
-                    "Generate clean, categorized reports of all your SaaS expenses that are ready for tax preparation. Exportable formats that align with standard accounting practices and QuickBooks categories.",
-                },
-              ].map((capability) => (
-                <div
-                  key={capability.title}
-                  className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3"
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="FAQ"
+          title="Honest answers,"
+          italic="not marketing copy."
+        />
+        <div className="border-t border-white/[0.08]">
+          {FAQS.map((f, i) => (
+            <details
+              key={i}
+              className="group border-b border-white/[0.08] py-7 [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex cursor-pointer items-baseline justify-between gap-8 list-none">
+                <span className="text-[18px] font-medium tracking-[-0.015em] md:text-[20px]">{f.q}</span>
+                <span
+                  aria-hidden
+                  className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic leading-none transition-transform group-open:rotate-45"
+                  style={{ color: "var(--green)" }}
                 >
-                  <div className="h-10 w-10 rounded-lg bg-blue-900/30 border border-blue-500/20 flex items-center justify-center">
-                    <capability.icon className="h-5 w-5 text-blue-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">{capability.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    {capability.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  +
+                </span>
+              </summary>
+              <p className="mt-4 max-w-[72ch] text-[15.5px] leading-[1.7] text-white/60">{f.a}</p>
+            </details>
+          ))}
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* How to Connect */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How It Will Work
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              Connecting QuickBooks to Efficyon will be simple and fast.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  step: "01",
-                  title: "Connect QuickBooks Online",
-                  description:
-                    "From the Efficyon integrations page, select QuickBooks and authorize access through Intuit's secure OAuth flow. The connection uses QuickBooks' official API with read-only permissions.",
-                },
-                {
-                  step: "02",
-                  title: "Automatic Expense Import",
-                  description:
-                    "Your QuickBooks expenses, bills, and vendor payments begin importing immediately. Historical data from the past 12-24 months is synced during the initial setup for comprehensive analysis.",
-                },
-                {
-                  step: "03",
-                  title: "AI Categorizes SaaS Spend",
-                  description:
-                    "Efficyon's AI engine scans your imported data and identifies SaaS subscriptions, categorizes them by vendor and department, and generates your first optimization report with actionable recommendations.",
-                },
-              ].map((step) => (
-                <div key={step.step} className="relative space-y-4">
-                  <div className="text-5xl font-bold text-white/5">{step.step}</div>
-                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Who This Integration Is For
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              The QuickBooks integration is built for businesses that rely on QuickBooks
-              Online for their accounting and want automated SaaS cost visibility.
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  title: "Growing Companies with Expanding SaaS Stacks",
-                  description:
-                    "As your team grows, so does your software stack. Companies adding new tools every quarter need automated tracking to prevent cost sprawl. The QuickBooks integration ensures every new subscription is captured and analyzed.",
-                },
-                {
-                  title: "Finance Teams Managing Multi-Category Software Costs",
-                  description:
-                    "When SaaS expenses are spread across multiple QuickBooks categories, getting a unified view requires manual work. Efficyon's AI consolidates software costs regardless of their chart of accounts placement.",
-                },
-                {
-                  title: "Controllers Needing Department-Level Visibility",
-                  description:
-                    "Financial controllers who need to allocate software costs to specific departments or cost centers benefit from Efficyon's automated department-level SaaS cost breakdowns, powered by QuickBooks class tracking.",
-                },
-                {
-                  title: "Accountants Preparing Year-End Reports",
-                  description:
-                    "CPAs and bookkeepers preparing annual financial statements can generate clean, categorized SaaS expense reports that are ready for tax preparation, saving hours of manual categorization work.",
-                },
-              ].map((useCase) => (
-                <div
-                  key={useCase.title}
-                  className="rounded-xl border border-white/10 bg-black/50 p-6 space-y-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" />
-                    <h3 className="text-lg font-semibold text-white">{useCase.title}</h3>
-                  </div>
-                  <p className="text-gray-400 leading-relaxed">{useCase.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Data & Security */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Data Access & Security
-            </h2>
-            <p className="text-lg text-gray-300 mb-12">
-              The same security standards we apply to all our integrations will protect your
-              QuickBooks data.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-blue-900/30 border border-blue-500/20 flex items-center justify-center">
-                  <Eye className="h-5 w-5 text-blue-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">What We Will Access</h3>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Expense transactions and bills
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Vendor and supplier records
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Chart of accounts categories
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Class and location tracking data
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-green-900/30 border border-green-500/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-green-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Security Measures</h3>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    Intuit OAuth 2.0 authorization
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    AES-256 encryption at rest
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    TLS 1.3 encryption in transit
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
-                    SOC 2 compliant data handling
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                <div className="h-10 w-10 rounded-lg bg-cyan-900/30 border border-cyan-500/20 flex items-center justify-center">
-                  <Lock className="h-5 w-5 text-cyan-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white">Read-Only Access</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">
-                  Efficyon will use read-only access to your QuickBooks Online account. We
-                  will never create, modify, or delete transactions, invoices, or any other
-                  data in your accounting system. Full disconnect at any time.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 text-center">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-lg text-gray-300 text-center mb-12">
-              Common questions about the upcoming QuickBooks integration.
-            </p>
-
-            <Accordion type="single" collapsible className="space-y-4">
-              <AccordionItem
-                value="item-1"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  When will the QuickBooks integration be available?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  The QuickBooks integration is currently in development and expected to
-                  launch in Q2 2026. Join our waitlist to be notified as soon as it becomes
-                  available and get priority early access.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-2"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  Which QuickBooks versions will be supported?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  At launch, we will support QuickBooks Online (all plans: Simple Start,
-                  Essentials, Plus, and Advanced). QuickBooks Desktop support is planned for
-                  a later release. The integration uses the QuickBooks Online API for secure,
-                  real-time data sync.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-3"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  How will the QuickBooks integration handle expense categorization?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Efficyon&apos;s AI will analyze your QuickBooks expenses and automatically
-                  identify which transactions are SaaS subscriptions. It categorizes them by
-                  vendor, department, and type, even when descriptions are inconsistent. You
-                  can review and adjust categories, and the AI learns from your corrections
-                  over time.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="item-4"
-                className="border border-white/10 rounded-lg px-6 bg-black/50"
-              >
-                <AccordionTrigger className="text-white hover:no-underline">
-                  Can I use the QuickBooks integration alongside other Efficyon integrations?
-                </AccordionTrigger>
-                <AccordionContent className="text-gray-300">
-                  Absolutely. Efficyon is designed to work with multiple data sources
-                  simultaneously. Connecting QuickBooks alongside Stripe or other integrations
-                  gives you the most complete view of your SaaS spending, combining accounting
-                  data with real-time subscription analytics.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Get Notified When QuickBooks Launches
-            </h2>
-            <p className="text-lg text-gray-300">
-              The QuickBooks integration is coming soon. Join the waitlist for priority
-              access, or start with our live integrations today -- Fortnox and Stripe are
-              ready to connect right now.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-black hover:bg-gray-100"
-                asChild
-              >
-                <Link href="/register">
-                  Start with Live Integrations
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                asChild
-              >
-                <Link href="/integrations">View All Integrations</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400">
-              <span>No credit card required</span>
-              <span>•</span>
-              <span>90-day ROI guarantee</span>
-              <span>•</span>
-              <span>Cancel anytime</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      <EditorialFinalCTA
+        eyebrow="Connect QuickBooks"
+        title="Five minutes from"
+        italic="OAuth to first finding."
+        body="Read-only Intuit OAuth, no card to start. Run your first scan on the books you already keep. Disconnect from either side at any time."
+        primaryCta={{ label: "Connect QuickBooks", href: "/register" }}
+        secondaryCta={{ label: "See all integrations →", href: "/integrations" }}
+      />
+    </>
   )
 }

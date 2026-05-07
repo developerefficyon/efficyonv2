@@ -1,15 +1,12 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { companySizeBenchmarks } from "@/lib/benchmark-data"
+import { ArrowLeft } from "lucide-react"
 import {
-  ArrowRight,
-  ArrowLeft,
-  Building2,
-  CheckCircle,
-  Shield,
-  Users,
-} from "lucide-react"
+  EditorialEyebrow,
+  EditorialFinalCTA,
+  GREEN,
+} from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
   title: "Average SaaS Spend by Company Size: 2026 Benchmarks",
@@ -51,372 +48,298 @@ export default function SaasSpendByCompanySizePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-12 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link
-              href="/benchmarks"
-              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+      {/* HERO */}
+      <section className="relative z-10 mx-auto max-w-[1240px] px-6 pb-20 pt-[160px] md:px-12 md:pb-24 md:pt-[180px]">
+        <Link
+          href="/benchmarks"
+          className="mb-10 inline-flex items-center gap-2 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          All benchmarks
+        </Link>
+
+        <div className="mb-10 flex items-center gap-3">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: GREEN }} />
+          <span className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em] text-white/55">
+            2026 · Industry data
+          </span>
+        </div>
+
+        <h1 className="max-w-[20ch] text-[clamp(40px,5.6vw,80px)] font-medium leading-[0.98] tracking-[-0.04em]">
+          SaaS spend{" "}
+          <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic" style={{ color: GREEN }}>
+            by company size.
+          </span>
+        </h1>
+        <p className="mt-8 max-w-[600px] text-[17px] font-light leading-[1.65] text-white/65">
+          How much should your company actually be spending on SaaS? Five company-size
+          tiers, monthly spend ranges, per-employee math, and the typical waste percentage
+          in each segment.
+        </p>
+      </section>
+
+      {/* QUICK STATS */}
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-16 md:px-12">
+        <dl className="grid grid-cols-2 gap-y-10 md:grid-cols-4">
+          <div>
+            <dt className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+              Monthly spend range
+            </dt>
+            <dd className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[40px] font-normal italic leading-none tracking-[-0.02em] text-white">
+              $1K–$200K+
+            </dd>
+          </div>
+          <div>
+            <dt className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+              Tools per company
+            </dt>
+            <dd className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[40px] font-normal italic leading-none tracking-[-0.02em] text-white">
+              15–200+
+            </dd>
+          </div>
+          <div>
+            <dt className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+              Typical waste
+            </dt>
+            <dd
+              className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[40px] font-normal italic leading-none tracking-[-0.02em]"
+              style={{ color: GREEN }}
             >
-              <ArrowLeft className="h-4 w-4" />
-              All Benchmarks
-            </Link>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-4">
-              <Building2 className="h-3.5 w-3.5" />
-              2026 Data
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Average SaaS Spend by Company Size: 2026 Benchmarks
-            </h1>
-            <p className="text-xl text-gray-300 max-w-3xl">
-              How much should your company be spending on SaaS? Use these
-              benchmarks to compare your software costs against companies of
-              similar size and identify whether you&apos;re overspending.
-            </p>
+              25–45%
+            </dd>
           </div>
-        </div>
+          <div>
+            <dt className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+              Per employee / month
+            </dt>
+            <dd
+              className="mt-3 font-[family-name:var(--font-instrument-serif)] text-[40px] font-normal italic leading-none tracking-[-0.02em]"
+              style={{ color: GREEN }}
+            >
+              $100–$350
+            </dd>
+          </div>
+        </dl>
       </section>
 
-      {/* Quick Stats */}
-      <section className="py-10 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">$1K-$200K+</div>
-              <div className="text-sm text-gray-400">Monthly spend range</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">15-200+</div>
-              <div className="text-sm text-gray-400">Tools per company</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-amber-400">25-45%</div>
-              <div className="text-sm text-gray-400">Typical waste</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">$100-$350</div>
-              <div className="text-sm text-gray-400">Per employee/month</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* MAIN BENCHMARK TABLE */}
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+        <EditorialEyebrow>The table</EditorialEyebrow>
+        <h2 className="mb-12 text-[clamp(32px,3.8vw,52px)] font-medium leading-[1.04] tracking-[-0.03em]">
+          Spend benchmarks{" "}
+          <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+            by tier.
+          </span>
+        </h2>
 
-      {/* Main Benchmark Table */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
-              SaaS Spend Benchmarks by Company Size
-            </h2>
-
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto rounded-xl border border-white/10">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.03]">
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Company Size
-                    </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Employees
-                    </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Monthly Spend
-                    </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Tool Count
-                    </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Per Employee/Mo
-                    </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">
-                      Waste %
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companySizeBenchmarks.map((benchmark, index) => (
-                    <tr
-                      key={benchmark.size}
-                      className={`border-b border-white/5 ${
-                        index % 2 === 0 ? "bg-white/[0.01]" : "bg-white/[0.03]"
-                      }`}
-                    >
-                      <td className="p-4">
-                        <div className="text-white font-semibold">
-                          {benchmark.size}
-                        </div>
-                      </td>
-                      <td className="p-4 text-gray-300">{benchmark.employees}</td>
-                      <td className="p-4 text-gray-300">{benchmark.monthlySpend}</td>
-                      <td className="p-4 text-gray-300">{benchmark.toolCount}</td>
-                      <td className="p-4 text-cyan-400 font-medium">
-                        {benchmark.perEmployeeMonthly}
-                      </td>
-                      <td className="p-4 text-amber-400 font-medium">
-                        {benchmark.wastePercentage}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-4">
-              {companySizeBenchmarks.map((benchmark) => (
-                <div
-                  key={benchmark.size}
-                  className="p-5 rounded-xl border border-white/10 bg-white/[0.02]"
-                >
-                  <div className="text-lg font-bold text-white mb-1">
-                    {benchmark.size}
-                  </div>
-                  <div className="text-sm text-gray-400 mb-4">
-                    {benchmark.employees} employees
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-gray-500">Monthly Spend</div>
-                      <div className="text-sm text-gray-300">
-                        {benchmark.monthlySpend}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Tools</div>
-                      <div className="text-sm text-gray-300">
-                        {benchmark.toolCount}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Per Employee</div>
-                      <div className="text-sm text-cyan-400 font-medium">
-                        {benchmark.perEmployeeMonthly}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Typical Waste</div>
-                      <div className="text-sm text-amber-400 font-medium">
-                        {benchmark.wastePercentage}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <table className="w-full" style={{ fontVariantNumeric: "tabular-nums" }}>
+            <thead>
+              <tr className="border-y border-white/[0.08] font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+                <th className="py-5 pr-6 text-left font-normal">Company size</th>
+                <th className="py-5 pr-6 text-left font-normal">Employees</th>
+                <th className="py-5 pr-6 text-left font-normal">Monthly spend</th>
+                <th className="py-5 pr-6 text-left font-normal">Tool count</th>
+                <th className="py-5 pr-6 text-left font-normal">Per employee</th>
+                <th className="py-5 text-left font-normal">Waste %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companySizeBenchmarks.map((b) => (
+                <tr key={b.size} className="border-b border-white/[0.08]">
+                  <td className="py-6 pr-6 align-top">
+                    <span className="text-[18px] font-medium tracking-[-0.01em] text-white">
+                      {b.size}
+                    </span>
+                  </td>
+                  <td className="py-6 pr-6 align-top font-[family-name:var(--font-geist-mono)] text-[14px] text-white/70">
+                    {b.employees}
+                  </td>
+                  <td className="py-6 pr-6 align-top font-[family-name:var(--font-geist-mono)] text-[14px] text-white/70">
+                    {b.monthlySpend}
+                  </td>
+                  <td className="py-6 pr-6 align-top font-[family-name:var(--font-geist-mono)] text-[14px] text-white/70">
+                    {b.toolCount}
+                  </td>
+                  <td className="py-6 pr-6 align-top font-[family-name:var(--font-geist-mono)] text-[14px]" style={{ color: GREEN }}>
+                    {b.perEmployeeMonthly}
+                  </td>
+                  <td className="py-6 align-top font-[family-name:var(--font-geist-mono)] text-[14px] text-white">
+                    {b.wastePercentage}
+                  </td>
+                </tr>
               ))}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
-      </section>
 
-      {/* Optimization Targets */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
-              Optimization Targets by Company Size
-            </h2>
-            <div className="space-y-4">
-              {companySizeBenchmarks.map((benchmark) => (
-                <div
-                  key={benchmark.size}
-                  className="p-5 rounded-xl border border-green-500/20 bg-green-500/[0.03] flex items-start gap-4"
-                >
-                  <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Users className="h-5 w-5 text-green-400" />
-                  </div>
-                  <div>
-                    <div className="text-white font-semibold mb-1">
-                      {benchmark.size} ({benchmark.employees} employees)
-                    </div>
-                    <p className="text-gray-300 text-sm">
-                      {benchmark.optimizationTarget}
-                    </p>
-                  </div>
+        {/* Mobile dl list */}
+        <div className="md:hidden divide-y divide-white/[0.08] border-y border-white/[0.08]">
+          {companySizeBenchmarks.map((b) => (
+            <div key={b.size} className="py-8" style={{ fontVariantNumeric: "tabular-nums" }}>
+              <p className="text-[20px] font-medium tracking-[-0.01em] text-white">{b.size}</p>
+              <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-[12px] text-white/45">
+                {b.employees} employees
+              </p>
+              <dl className="mt-5 grid grid-cols-2 gap-y-4 font-[family-name:var(--font-geist-mono)]">
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40">Monthly spend</dt>
+                  <dd className="mt-1 text-[14px] text-white/75">{b.monthlySpend}</dd>
                 </div>
-              ))}
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40">Tools</dt>
+                  <dd className="mt-1 text-[14px] text-white/75">{b.toolCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40">Per employee</dt>
+                  <dd className="mt-1 text-[14px]" style={{ color: GREEN }}>{b.perEmployeeMonthly}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40">Waste %</dt>
+                  <dd className="mt-1 text-[14px] text-white">{b.wastePercentage}</dd>
+                </div>
+              </dl>
             </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* Visual Spend Breakdown */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
-              Per-Employee Spend Visualization
-            </h2>
-            <div className="space-y-6">
-              {companySizeBenchmarks.map((benchmark) => {
-                const minSpend = parseInt(
-                  benchmark.perEmployeeMonthly.replace(/[^0-9]/g, "")
-                )
-                const maxSpend = parseInt(
-                  benchmark.perEmployeeMonthly
-                    .split("-")[1]
-                    ?.replace(/[^0-9]/g, "") || "350"
-                )
-                const avgSpend = (minSpend + maxSpend) / 2
-                const widthPercentage = Math.min((avgSpend / 350) * 100, 100)
+      {/* PER-EMPLOYEE VISUALIZATION */}
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+        <EditorialEyebrow>Visual scale</EditorialEyebrow>
+        <h2 className="mb-12 text-[clamp(32px,3.8vw,52px)] font-medium leading-[1.04] tracking-[-0.03em]">
+          Per-employee spend{" "}
+          <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+            at a glance.
+          </span>
+        </h2>
 
-                return (
-                  <div key={benchmark.size}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-white font-medium">
-                        {benchmark.size} ({benchmark.employees})
-                      </span>
-                      <span className="text-sm text-cyan-400">
-                        {benchmark.perEmployeeMonthly}
-                      </span>
-                    </div>
-                    <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
-                        style={{ width: `${widthPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
+        <div className="space-y-8">
+          {companySizeBenchmarks.map((b) => {
+            const minSpend = parseInt(b.perEmployeeMonthly.replace(/[^0-9]/g, ""))
+            const maxSpend = parseInt(
+              b.perEmployeeMonthly.split("-")[1]?.replace(/[^0-9]/g, "") || "350"
+            )
+            const avgSpend = (minSpend + maxSpend) / 2
+            const widthPercentage = Math.min((avgSpend / 350) * 100, 100)
+
+            return (
+              <div key={b.size}>
+                <div
+                  className="mb-3 flex items-baseline justify-between font-[family-name:var(--font-geist-mono)]"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  <span className="text-[13px] text-white/75">
+                    {b.size}{" "}
+                    <span className="text-[11px] text-white/40">· {b.employees}</span>
+                  </span>
+                  <span className="text-[13px]" style={{ color: GREEN }}>
+                    {b.perEmployeeMonthly}
+                  </span>
+                </div>
+                <div className="h-[2px] w-full bg-white/[0.08]">
+                  <div
+                    className="h-full transition-all duration-500"
+                    style={{ background: GREEN, width: `${widthPercentage}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <p className="mt-8 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
+          Scale: $0 – $350 per employee per month
+        </p>
+      </section>
+
+      {/* OPTIMIZATION TARGETS */}
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+        <EditorialEyebrow>By tier</EditorialEyebrow>
+        <h2 className="mb-12 text-[clamp(32px,3.8vw,52px)] font-medium leading-[1.04] tracking-[-0.03em]">
+          Where each tier{" "}
+          <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+            tends to leak.
+          </span>
+        </h2>
+        <div className="border-t border-white/[0.08]">
+          {companySizeBenchmarks.map((b, i) => (
+            <div
+              key={b.size}
+              className="grid grid-cols-1 items-baseline gap-6 border-b border-white/[0.08] py-10 md:grid-cols-[60px_1fr] md:gap-12"
+            >
+              <span className="font-[family-name:var(--font-geist-mono)] text-[12px] tabular-nums text-white/30">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <p className="text-[20px] font-medium tracking-[-0.01em] text-white md:text-[22px]">
+                  {b.size}{" "}
+                  <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/55">
+                    ({b.employees})
+                  </span>
+                </p>
+                <p className="mt-3 max-w-[68ch] text-[15px] leading-[1.7] text-white/60">
+                  {b.optimizationTarget}
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mt-6">
-              Scale: $0 &ndash; $350 per employee per month
+          ))}
+        </div>
+      </section>
+
+      {/* SEO content */}
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+        <div className="grid gap-12 md:grid-cols-2 md:items-start">
+          <div>
+            <EditorialEyebrow>Reading the benchmarks</EditorialEyebrow>
+            <h2 className="text-[clamp(32px,3.6vw,48px)] font-medium leading-[1.05] tracking-[-0.03em]">
+              The relationship{" "}
+              <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+                isn&apos;t linear.
+              </span>
+            </h2>
+          </div>
+          <div className="space-y-6 text-[15.5px] leading-[1.7] text-white/60">
+            <p>
+              SaaS spending scales with company size — but not proportionally.
+              The relationship is shaped by industry, growth stage, technical
+              complexity, and procurement maturity. Smaller companies tend to
+              spend more per employee because fixed-cost tools amortize over
+              fewer users; enterprises benefit from volume discounts but
+              accumulate sprawl that eats those savings back.
+            </p>
+            <p>
+              <strong className="text-white/85">Micro &amp; small (1–50):</strong>{" "}
+              Typically $1K–$15K/month across 15–60 tools. The primary waste
+              pattern is tool proliferation — teams adopt new tools quickly
+              without checking for overlap. Consolidation usually wins.
+            </p>
+            <p>
+              <strong className="text-white/85">Mid-market (51–500):</strong>{" "}
+              $15K–$200K/month across 60–200 tools. Waste percentage tends to
+              peak here at 30–40% — the company is large enough to have
+              accumulated sprawl, but procurement is rarely formalized yet.
+              License-tier mismatch is rampant. The highest percentage savings
+              tend to come from this segment.
+            </p>
+            <p>
+              <strong className="text-white/85">Enterprise (500+):</strong>{" "}
+              $200K+/month across 200+ tools. Procurement teams exist, but
+              shadow IT and legacy contracts persist. Absolute dollar savings
+              are largest here — even a 10% reduction on $200K/month is
+              $240K/year.
             </p>
           </div>
         </div>
       </section>
 
-      {/* SEO Content */}
-      <section className="py-16 border-b border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
-              Understanding SaaS Spend by Company Size
-            </h2>
-            <div className="prose prose-invert max-w-none space-y-5 text-gray-300">
-              <p>
-                SaaS spending scales with company size, but not always
-                proportionally. The relationship between headcount and software
-                costs is influenced by factors including industry, growth stage,
-                technical complexity, and procurement maturity. Understanding
-                where your company falls relative to benchmarks provides
-                critical context for budget planning and optimization decisions.
-              </p>
-
-              <h3 className="text-xl font-semibold text-white mt-8">
-                Micro and Small Companies (1-50 employees)
-              </h3>
-              <p>
-                Startups and small businesses typically spend $1,000 to $15,000
-                per month on SaaS, using between 15 and 60 tools. The per-employee
-                cost tends to be higher at this stage because fixed-cost tools
-                (like a CRM or accounting software) are amortized across fewer
-                users. The primary waste pattern for small companies is tool
-                proliferation: teams adopt new tools quickly without evaluating
-                overlap with existing subscriptions. At this stage, the most
-                effective optimization strategy is consolidation. Using tools
-                with broad feature sets (like Notion for docs and project
-                management, or HubSpot for CRM and marketing) reduces the
-                number of subscriptions without sacrificing capability.
-              </p>
-
-              <h3 className="text-xl font-semibold text-white mt-8">
-                Mid-Market Companies (51-500 employees)
-              </h3>
-              <p>
-                Mid-market companies represent the sweet spot where SaaS spending
-                becomes a material budget line item but procurement processes
-                are not yet fully mature. Monthly spend ranges from $15,000 to
-                $200,000 across 60 to 200 tools. The waste percentage tends to
-                peak in this segment at 30-40% because the company is large
-                enough to have accumulated significant tool sprawl but may not
-                yet have dedicated SaaS management or procurement teams.
-                License tier mismatch is particularly common here. Companies
-                often purchase Enterprise tiers for their entire organization
-                when Standard tiers would serve 80% of users. Implementing a
-                formal SaaS management process and deploying a platform like
-                Efficyon at this stage can yield the highest percentage savings.
-              </p>
-
-              <h3 className="text-xl font-semibold text-white mt-8">
-                Enterprise Companies (500+ employees)
-              </h3>
-              <p>
-                Enterprises spend $200,000 or more per month on SaaS across 200
-                or more tools. While they typically have procurement teams and
-                vendor management processes, the sheer scale of their software
-                portfolio creates persistent blind spots. Shadow IT &mdash;
-                where departments purchase tools without central approval &mdash;
-                is a major waste source at this scale. Enterprises also face
-                significant costs from maintaining legacy tools that overlap
-                with newer platform purchases. Enterprise optimization requires
-                a systematic approach: centralized procurement, regular license
-                audits, automated deprovisioning, and ongoing vendor
-                negotiations. The absolute dollar savings at this level are
-                enormous. Even a 10% reduction on $200,000 monthly spend
-                represents $240,000 in annual savings.
-              </p>
-
-              <h3 className="text-xl font-semibold text-white mt-8">
-                Key Takeaways
-              </h3>
-              <p>
-                Regardless of company size, 25-40% of SaaS spending is typically
-                wasted. The waste patterns differ by scale, but the opportunity
-                is consistent. For companies under 50 employees, consolidation
-                and free-tier optimization deliver the best results. For
-                mid-market companies, license tier optimization and formal
-                procurement processes are key. For enterprises, vendor
-                negotiation and shadow IT elimination offer the largest savings.
-                Efficyon helps companies at every stage by automating the
-                analysis process and delivering prioritized, actionable
-                recommendations backed by usage data.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              See How Your Spend Compares
-            </h2>
-            <p className="text-gray-300 mb-8">
-              Connect your tools to Efficyon and get a personalized benchmark
-              report showing exactly where you stand relative to companies your
-              size.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-black hover:bg-gray-100"
-                asChild
-              >
-                <Link href="/register">
-                  Start Free Analysis
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 mt-6">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-green-400" />
-                No credit card required
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-green-400" />
-                90-day ROI guarantee
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <EditorialFinalCTA
+        title="See where your stack"
+        italic="actually sits."
+        body="Connect your accounting system to Efficyon and get a personalized benchmark report — your spend against companies in your exact size and industry bracket. Read-only access. No credit card."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "View by industry →", href: "/benchmarks/saas-spend-by-industry" }}
+      />
     </>
   )
 }

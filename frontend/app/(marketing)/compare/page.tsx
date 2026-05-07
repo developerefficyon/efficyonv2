@@ -1,87 +1,71 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Navbar } from "@/components/ui/navbar"
 import {
-  ArrowRight,
-  BarChart3,
-  Shield,
-  Zap,
-  FileSpreadsheet,
-  Trophy,
-  Building2,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialCard,
+  EditorialFinalCTA,
+} from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
   title: "Compare SaaS Management Tools",
   description:
-    "See how Efficyon compares to other SaaS management and cost optimization tools. Honest, detailed comparisons to help you choose the right platform.",
+    "Honest comparisons of Efficyon against Zylo, Torii, Productiv, Cleanshelf, spreadsheets, and more. Structural differences, not fabricated benchmarks.",
   alternates: {
     canonical: "/compare",
   },
   openGraph: {
     title: "Compare SaaS Management Tools | Efficyon",
     description:
-      "See how Efficyon compares to other SaaS management and cost optimization tools. Honest, detailed comparisons to help you choose the right platform.",
+      "Honest comparisons of Efficyon against Zylo, Torii, Productiv, Cleanshelf, spreadsheets, and more.",
     url: "https://www.efficyon.com/compare",
   },
 }
 
-const comparisons = [
+const COMPARISONS = [
   {
     slug: "efficyon-vs-zylo",
-    competitor: "Zylo",
-    tagline: "Enterprise SaaS management vs AI-powered cost optimization",
-    description:
-      "Compare Efficyon and Zylo across pricing, features, and time to value. See why growing companies choose Efficyon for actionable cost savings.",
-    icon: Building2,
-    highlight: "Starts at $39/mo vs $50K+/year",
+    name: "Efficyon vs Zylo",
+    italic: "SMB-priced vs enterprise-only.",
+    body: "Zylo is the established enterprise SaaS management platform with deep discovery and benchmarking. Efficyon is the AI-driven cost layer priced for teams under 500.",
+    meta: "Enterprise vs SMB · pricing · scope",
   },
   {
     slug: "efficyon-vs-torii",
-    competitor: "Torii",
-    tagline: "IT workflow automation vs deep cost analysis",
-    description:
-      "Torii excels at IT workflows. Efficyon excels at finding savings. Compare both platforms to see which fits your priorities.",
-    icon: Zap,
-    highlight: "Deeper cost analysis with AI recommendations",
+    name: "Efficyon vs Torii",
+    italic: "Workflow automation vs cost intelligence.",
+    body: "Torii excels at IT lifecycle workflows — onboarding, offboarding, app requests. Efficyon focuses on the spend-vs-usage gap and actionable savings.",
+    meta: "IT operations vs cost optimization",
   },
   {
     slug: "efficyon-vs-cleanshelf",
-    competitor: "Cleanshelf",
-    tagline: "A modern alternative to an acquired platform",
-    description:
-      "Cleanshelf was acquired by Zylo and is no longer independently developed. See how Efficyon offers a modern, actively maintained alternative.",
-    icon: Shield,
-    highlight: "Actively developed with modern AI",
+    name: "Efficyon vs Cleanshelf",
+    italic: "An acquired product vs an active one.",
+    body: "Cleanshelf was acquired by Zylo and is no longer independently developed. For teams that valued its accessibility, Efficyon is a structurally similar, actively maintained alternative.",
+    meta: "Acquired · legacy · alternative",
   },
   {
     slug: "efficyon-vs-productiv",
-    competitor: "Productiv",
-    tagline: "SaaS intelligence vs actionable cost optimization",
-    description:
-      "Productiv focuses on engagement analytics. Efficyon focuses on saving you money. Compare both approaches side by side.",
-    icon: BarChart3,
-    highlight: "ROI guarantee with accessible pricing",
+    name: "Efficyon vs Productiv",
+    italic: "Engagement analytics vs cost recommendations.",
+    body: "Productiv measures feature-level adoption across enterprise SaaS. Efficyon measures the gap between what you pay and what you use, then tells you what to do.",
+    meta: "Adoption analytics vs cost intelligence",
   },
   {
     slug: "efficyon-vs-spreadsheets",
-    competitor: "Spreadsheets",
-    tagline: "Manual tracking vs automated optimization",
-    description:
-      "Still tracking SaaS in spreadsheets? See the true cost of manual management and how automation saves both time and money.",
-    icon: FileSpreadsheet,
-    highlight: "$39/mo vs $2,000+/mo in labor costs",
+    name: "Efficyon vs Spreadsheets",
+    italic: "The starting point most teams outgrow.",
+    body: "A spreadsheet works for ten subscriptions. At forty it becomes a part-time job — and it still has no usage data. Here is where the math stops working.",
+    meta: "Manual tracking vs automation",
   },
   {
     slug: "best-saas-cost-optimization-tools",
-    competitor: "Best Tools 2026",
-    tagline: "Complete guide to SaaS cost optimization platforms",
-    description:
-      "Our honest roundup of the best SaaS cost optimization tools in 2026, including pricing, features, and who each tool is best for.",
-    icon: Trophy,
-    highlight: "8 tools compared in detail",
+    name: "Best SaaS cost optimization tools",
+    italic: "the 2026 guide.",
+    body: "An opinionated roundup of Efficyon, Zylo, Torii, Productiv, Cleanshelf, Vendr, Cledara, and the spreadsheet status quo. Who each is for, and where the lines are drawn.",
+    meta: "Roundup · 8 approaches",
   },
-]
+] as const
 
 export default function ComparePage() {
   const jsonLd = {
@@ -89,115 +73,65 @@ export default function ComparePage() {
     "@type": "CollectionPage",
     name: "Compare SaaS Management Tools | Efficyon",
     description:
-      "See how Efficyon compares to other SaaS management and cost optimization tools.",
+      "Honest comparisons of Efficyon against other SaaS management and cost optimization tools.",
     url: "https://www.efficyon.com/compare",
     mainEntity: {
       "@type": "ItemList",
-      itemListElement: comparisons.map((c, i) => ({
+      itemListElement: COMPARISONS.map((c, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        name: `Efficyon vs ${c.competitor}`,
+        name: c.name,
         url: `https://www.efficyon.com/compare/${c.slug}`,
       })),
     },
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Navbar />
 
-      {/* Hero */}
-      <section className="pt-32 pb-16 bg-black">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            See How Efficyon Compares
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Honest, detailed comparisons to help you choose the right SaaS
-            management and cost optimization platform for your business. We
-            believe in transparency -- even when a competitor might be the
-            better fit.
-          </p>
+      <EditorialPageHero
+        eyebrow="Compare · Honest framing"
+        title="How Efficyon stacks up against"
+        italic="the obvious alternatives."
+        body="We are pre-launch. We do not have customer logos to wave around, and we are not going to pretend competitors are bad — they are not. These pages explain the structural differences so you can pick what fits."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The shortlist"
+          title="Six comparisons,"
+          italic="written without spin."
+          body="Each page focuses on what each tool actually does, who it is built for, and how the pricing model works. No fabricated win-rates."
+        />
+        <div className="border-t border-white/[0.08]">
+          {COMPARISONS.map((c, i) => (
+            <EditorialCard
+              key={c.slug}
+              href={`/compare/${c.slug}`}
+              index={i}
+              title={c.name}
+              italic={c.italic}
+              body={c.body}
+              meta={c.meta}
+            />
+          ))}
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Comparison Grid */}
-      <section className="py-16 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {comparisons.map((comparison) => {
-              const Icon = comparison.icon
-              return (
-                <Link
-                  key={comparison.slug}
-                  href={`/compare/${comparison.slug}`}
-                  className="group block"
-                >
-                  <div className="h-full border border-white/10 rounded-xl bg-black/50 p-8 transition-all duration-300 hover:border-cyan-500/30 hover:bg-white/[0.02]">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-12 w-12 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                        <Icon className="h-6 w-6 text-cyan-400" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          vs {comparison.competitor}
-                        </h2>
-                        <p className="text-sm text-gray-400">
-                          {comparison.tagline}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-                      {comparison.description}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full">
-                        {comparison.highlight}
-                      </span>
-                      <ArrowRight className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300" />
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Bottom CTA */}
-      <section className="py-24 bg-black border-t border-white/10">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Not sure which tool is right for you?
-          </h2>
-          <p className="text-gray-300 max-w-2xl mx-auto mb-8">
-            Our team can help you evaluate your SaaS management needs and
-            determine if Efficyon is the right fit. No pressure, just honest
-            guidance.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all duration-300"
-            >
-              Start Free Analysis
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-            <Link
-              href="/#contact"
-              className="inline-flex items-center justify-center px-8 py-3 text-sm font-medium border border-white/10 bg-white/5 text-gray-200 rounded-lg hover:border-white/20 hover:bg-white/10 hover:text-white transition-all duration-300"
-            >
-              Talk to Our Team
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
+      <EditorialFinalCTA
+        eyebrow="Not sure yet?"
+        title="Talk it through with"
+        italic="a human."
+        body="If your stack is unusual or you are deciding between two of the above, drop us a line. We will tell you when Efficyon is not the right fit — including which competitor probably is."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "Email us →", href: "mailto:info@efficyon.com" }}
+      />
+    </>
   )
 }

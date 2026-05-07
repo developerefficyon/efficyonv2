@@ -1,35 +1,23 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  ArrowRight,
-  CheckCircle,
-  Bell,
-  CalendarClock,
-  LayoutDashboard,
-  Building2,
-  TrendingUp,
-  Shield,
-  Eye,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialFinalCTA,
+  EditorialMonoLabel,
+} from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
   title: "Subscription Tracking That Never Misses a Renewal",
   description:
-    "Centralize every SaaS subscription in one dashboard. Track renewals, monitor cost trends, eliminate shadow IT, and get department-level breakdowns with Efficyon's subscription tracking.",
+    "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
   alternates: {
     canonical: "/features/subscription-tracking",
   },
   openGraph: {
     title: "Subscription Tracking That Never Misses a Renewal | Efficyon",
     description:
-      "Centralize every SaaS subscription in one dashboard. Track renewals, monitor cost trends, eliminate shadow IT, and get department-level breakdowns with Efficyon's subscription tracking.",
+      "Centralize every SaaS subscription. Track renewals, monitor cost trends, surface shadow IT, and get department-level breakdowns — built on accounting + identity data.",
     url: "https://www.efficyon.com/features/subscription-tracking",
     type: "website",
   },
@@ -65,7 +53,7 @@ export default function SubscriptionTrackingPage() {
           name: "How does Efficyon discover all our subscriptions?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Efficyon connects to your accounting systems, expense management tools, and identity providers to automatically discover every SaaS subscription across your organization. This catches shadow IT purchases, corporate card subscriptions, and departmental tools that are typically invisible to central IT.",
+            text: "Efficyon connects to your accounting system, expense management, and identity provider to automatically catalog every SaaS subscription — including shadow IT bought on corporate cards or expensed personally.",
           },
         },
         {
@@ -73,31 +61,23 @@ export default function SubscriptionTrackingPage() {
           name: "How far in advance do renewal alerts fire?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Renewal alerts are fully customizable. By default, Efficyon sends notifications at 90 days, 30 days, and 7 days before each renewal date. You can adjust these windows per subscription and route alerts to different team members based on ownership.",
+            text: "Default alerts fire at 90, 30, and 7 days before renewal. Windows are configurable per subscription, and alerts can be routed to different owners.",
           },
         },
         {
           "@type": "Question",
-          name: "Can I see subscription costs broken down by department?",
+          name: "Can I see costs broken down by department?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. Efficyon provides granular department-level and team-level cost breakdowns for every subscription. You can see exactly how much each department spends, which tools they use, and how that spending trends over time.",
+            text: "Yes — every subscription is mapped to a department or team based on identity data and explicit tagging. Drill-downs run by tool, owner, category, and time period.",
           },
         },
         {
           "@type": "Question",
-          name: "What happens when a new subscription is detected?",
+          name: "What happens when a new subscription appears?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "When Efficyon detects a new subscription, it automatically categorizes it, assigns it to the relevant department, checks for overlaps with existing tools, and notifies the designated administrator. This ensures no shadow IT purchase goes unnoticed.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "Does subscription tracking work with annual and multi-year contracts?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Absolutely. Efficyon tracks monthly, annual, and multi-year subscriptions equally well. For annual contracts, the platform amortizes costs monthly for accurate trend reporting and sends renewal alerts well in advance of contract end dates.",
+            text: "Efficyon classifies it, checks for overlap with existing tools, assigns a likely owner, and notifies the admin so shadow IT becomes a decision instead of a discovery.",
           },
         },
       ],
@@ -105,376 +85,168 @@ export default function SubscriptionTrackingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent" />
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-8">
-              <Bell className="h-4 w-4" />
-              Subscription Tracking
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Subscription Tracking That Never Misses a Renewal
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-              Every SaaS subscription your company pays for, visible in one place. Know exactly
-              what is coming up for renewal, who owns each tool, and where costs are trending
-              before surprises hit your P&amp;L.
+      <EditorialPageHero
+        eyebrow="Feature · Visibility"
+        title="Every subscription,"
+        italic="in one place."
+        body="Renewal dates. Owners. Cost per seat. Trend lines. Shadow IT, surfaced before it becomes structural. Built on the same accounting + identity feeds powering the rest of the platform."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See all features", href: "/features" }}
+      />
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The problem"
+          title="A maze of subscriptions,"
+          italic="and no map."
+          body="As companies grow, subscriptions multiply faster than oversight. Different teams, different cards, different renewal calendars — and finance never has the full picture."
+        />
+        <div className="grid gap-12 md:grid-cols-2">
+          <div>
+            <EditorialMonoLabel>Where the visibility breaks</EditorialMonoLabel>
+            <ul className="mt-6 space-y-5 text-[15.5px] leading-[1.7] text-white/65">
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>Subscriptions scatter across departments, cards, and expense reports with no single source of truth.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>Auto-renewals trigger surprise charges because nobody remembered the contract end date.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>IT can't tell you how many SaaS tools the company actually uses today, only what it has formally procured.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>Shadow IT bypasses procurement entirely — security risks and budget overruns surface only at quarter close.</span>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <EditorialMonoLabel>The compounding effect</EditorialMonoLabel>
+            <p className="mt-6 text-[16px] leading-[1.75] text-white/65">
+              The classic case: one person leaves, owns three subscriptions on a corporate card, and the renewals continue silently for two years. Multiplied across a 50-person org, that's a structural leak no spreadsheet will catch.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Book a Demo</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 mt-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>Automatic Discovery</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>Custom Renewal Alerts</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Lost in a Maze of Subscriptions
-              </h2>
-              <p className="text-gray-300 text-lg">
-                As companies grow, subscriptions multiply. Different teams buy different tools,
-                renewals sneak up unannounced, and finance loses track of what the company
-                actually pays for. Sound familiar?
-              </p>
-              <div className="space-y-4">
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  Subscriptions are scattered across departments, credit cards, and expense accounts with no single source of truth
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  Surprise auto-renewals trigger unexpected charges because nobody remembered the contract end date
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  No centralized inventory means IT cannot tell you how many SaaS tools the company actually uses today
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  Shadow IT purchases bypass procurement, creating security risks and budget overruns that surface only at quarter close
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                One Dashboard to Track Them All
-              </h2>
-              <p className="text-gray-300 text-lg">
-                Efficyon automatically discovers and catalogs every subscription, assigns
-                ownership, and keeps you ahead of every renewal date with smart alerts that
-                give your team time to negotiate or cancel.
-              </p>
-              <div className="space-y-4">
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Single dashboard that shows every subscription across your entire organization, updated automatically
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Customizable renewal alerts at 90, 30, and 7 days so you never get caught off guard by auto-renewals
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Cost trend analysis that reveals month-over-month and year-over-year spending changes per tool and per team
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Department-level breakdown so every manager sees their own spend and takes ownership of their tool stack
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Shadow IT detection that flags new, unrecognized subscriptions the moment they appear in your financial data
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How Subscription Tracking Works
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              From zero visibility to complete control in three steps. Efficyon does the heavy
-              lifting so your team can focus on decisions, not data entry.
+            <p className="mt-5 text-[16px] leading-[1.75] text-white/55">
+              The fix isn't a better spreadsheet — it's a feed.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-blue-500/20 mb-4">01</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Automatic Discovery</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Connect your accounting system, identity provider, and expense management
-                tools. Efficyon scans transaction records and SSO logs to build a complete
-                inventory of every SaaS subscription your organization pays for, including
-                those bought outside of official procurement channels.
-              </p>
-            </div>
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-blue-500/20 mb-4">02</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Organize and Assign</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Each subscription is automatically categorized by function, assigned to the
-                relevant department, and tagged with renewal dates, contract terms, and cost
-                history. Your team can add notes, set ownership, and configure alert
-                preferences per subscription.
-              </p>
-            </div>
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-blue-500/20 mb-4">03</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Monitor and Optimize</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Receive proactive renewal alerts, track cost trends, and get notified when new
-                subscriptions appear. Efficyon continuously monitors your stack and surfaces
-                opportunities to consolidate, downgrade, or cancel tools that are no longer
-                providing value.
-              </p>
-            </div>
-          </div>
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Key Benefits */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Why Teams Love Efficyon Subscription Tracking
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Purpose-built for businesses that have outgrown spreadsheets but do not want the
-              complexity of enterprise asset management tools.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <LayoutDashboard className="h-5 w-5 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Single Source of Truth</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Replace scattered spreadsheets and tribal knowledge with one authoritative
-                dashboard that updates automatically. Every stakeholder sees the same data,
-                eliminating discrepancies and confusion.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <CalendarClock className="h-5 w-5 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Never Miss a Renewal</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Configurable alerts at multiple intervals before each renewal give procurement
-                and finance teams enough runway to negotiate better terms, cancel unused tools,
-                or right-size before auto-renewal kicks in.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-cyan-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Cost Trend Analysis</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Visualize spending trends at the tool, department, and company level. Spot
-                cost creep early, identify seasonal patterns, and make data-driven budget
-                forecasts instead of guessing.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-green-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Department Visibility</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Give each department head a clear view of their team&apos;s SaaS stack and
-                costs. Drive accountability by making spend visible to the people who control
-                it and track departmental optimization over time.
-              </p>
-            </div>
-          </div>
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="How Efficyon does it"
+          title="Discover. Assign."
+          italic="Alert."
+          body="The tracking layer is plumbing — boring on purpose. It runs continuously and only interrupts you when something needs a decision."
+        />
+        <div className="grid gap-12 md:grid-cols-3">
+          <Step
+            num="01"
+            title="Discover automatically"
+            body="Pulled from accounting (vendors, recurring invoices), identity (active seats per tool), and expense data. Subscriptions surface whether they came through procurement or a personal card."
+          />
+          <Step
+            num="02"
+            title="Assign and tag"
+            body="Each tool gets a category, an owner, a department, a renewal date, and a contract term. You can override anything; the system learns your conventions."
+          />
+          <Step
+            num="03"
+            title="Alert before it bites"
+            body="Default 90/30/7-day renewal alerts. New, unrecognized subscriptions are flagged the moment they hit your accounting feed."
+          />
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Stats Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">100%</div>
-              <p className="text-white font-medium mb-1">Subscription Visibility</p>
-              <p className="text-gray-400 text-sm">
-                Full discovery of every subscription including shadow IT purchases hidden across departments
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-cyan-400 mb-2">Zero</div>
-              <p className="text-white font-medium mb-1">Surprise Renewals</p>
-              <p className="text-gray-400 text-sm">
-                Multi-stage alerts at 90, 30, and 7 days ensure your team is always prepared before a renewal hits
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-green-400 mb-2">5 Min</div>
-              <p className="text-white font-medium mb-1">Setup Time</p>
-              <p className="text-gray-400 text-sm">
-                Connect your accounts and Efficyon starts building your subscription inventory immediately
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What it surfaces"
+          title="Sample tracker view"
+          italic="from a 50-person org."
+          body="Illustrative — your numbers will differ. The shape of the problem rarely does."
+        />
+        <SampleSubscriptions
+          rows={[
+            { tool: "HubSpot Marketing Pro", owner: "Marketing", renews: "12 Mar 2026", monthly: "$1,800", flag: "Renewal · 30 days" },
+            { tool: "Notion Business", owner: "Operations", renews: "Mar 2027", monthly: "$640", flag: "—" },
+            { tool: "Asana Premium", owner: "Engineering", renews: "08 Feb 2026", monthly: "$420", flag: "Overlap with Monday.com" },
+            { tool: "Monday.com Standard", owner: "Marketing", renews: "Apr 2026", monthly: "$310", flag: "Overlap with Asana" },
+            { tool: "Loom Business", owner: "—", renews: "21 Feb 2026", monthly: "$140", flag: "Owner left · review" },
+            { tool: "Calendly Teams", owner: "Sales", renews: "May 2026", monthly: "$90", flag: "—" },
+          ]}
+        />
+      </EditorialSection>
 
-      {/* FAQ Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Subscription Tracking FAQ
-            </h2>
-            <p className="text-lg text-gray-300">
-              Everything you need to know about tracking subscriptions with Efficyon
-            </p>
-          </div>
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="item-1" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does Efficyon discover all our subscriptions?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Efficyon connects to your accounting systems, expense management tools, and
-                identity providers to automatically discover every SaaS subscription across your
-                organization. This catches shadow IT purchases, corporate card subscriptions, and
-                departmental tools that are typically invisible to central IT. The discovery
-                process runs continuously so new subscriptions are flagged as soon as they appear.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How far in advance do renewal alerts fire?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Renewal alerts are fully customizable. By default, Efficyon sends notifications at
-                90 days, 30 days, and 7 days before each renewal date. You can adjust these
-                windows per subscription and route alerts to different team members based on
-                ownership. For high-value contracts, many teams add a 180-day alert to allow time
-                for vendor negotiation.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                Can I see subscription costs broken down by department?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Yes. Efficyon provides granular department-level and team-level cost breakdowns for
-                every subscription. You can see exactly how much each department spends, which
-                tools they use, and how that spending trends over time. Department heads can be
-                given direct access to their own view for self-service cost management.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                What happens when a new subscription is detected?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                When Efficyon detects a new subscription, it automatically categorizes it, assigns
-                it to the relevant department, checks for overlaps with existing tools, and
-                notifies the designated administrator. This ensures no shadow IT purchase goes
-                unnoticed and gives your team the information needed to approve, consolidate,
-                or address the new tool immediately.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-5" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                Does subscription tracking work with annual and multi-year contracts?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Absolutely. Efficyon tracks monthly, annual, and multi-year subscriptions equally
-                well. For annual contracts, the platform amortizes costs monthly for accurate
-                trend reporting and sends renewal alerts well in advance of contract end dates so
-                your procurement team can negotiate from a position of strength.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
+      <EditorialFinalCTA
+        title="Stop discovering subscriptions"
+        italic="at the bank statement."
+        body="Connect your accounting system and identity provider. Your full subscription map appears in roughly an hour, then keeps itself current."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See pricing →", href: "/#pricing" }}
+      />
+    </>
+  )
+}
 
-      {/* CTA Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="relative rounded-2xl border border-white/10 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-green-500/10" />
-            <div className="relative z-10 px-8 py-16 md:px-16 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Take Control of Every Subscription
-              </h2>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-                Stop wondering what you are paying for. Efficyon builds your complete
-                subscription inventory in minutes and keeps it current automatically so your
-                team always has the full picture.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                  <Link href="/register">
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                  asChild
-                >
-                  <Link href="/#contact">Book a Demo</Link>
-                </Button>
-              </div>
-              <p className="mt-6 text-sm text-gray-400">
-                No credit card required &middot; 5-minute setup &middot; 90-day ROI guarantee
-              </p>
-            </div>
-          </div>
+function Step({ num, title, body }: { num: string; title: string; body: string }) {
+  return (
+    <div className="border-t border-white/[0.08] pt-8">
+      <span className="font-[family-name:var(--font-geist-mono)] text-[11px] tabular-nums tracking-[0.18em] text-white/35">
+        {num}
+      </span>
+      <h3 className="mt-4 text-[24px] font-medium tracking-[-0.02em]">{title}</h3>
+      <p className="mt-4 text-[15px] leading-[1.7] text-white/55">{body}</p>
+    </div>
+  )
+}
+
+function SampleSubscriptions({
+  rows,
+}: {
+  rows: { tool: string; owner: string; renews: string; monthly: string; flag: string }[]
+}) {
+  return (
+    <div className="border-t border-white/[0.08]">
+      <div className="hidden grid-cols-[1.4fr_1fr_1fr_120px_1.2fr] gap-6 border-b border-white/[0.08] py-4 md:grid">
+        <EditorialMonoLabel>Tool</EditorialMonoLabel>
+        <EditorialMonoLabel>Owner</EditorialMonoLabel>
+        <EditorialMonoLabel>Renews</EditorialMonoLabel>
+        <EditorialMonoLabel>Monthly</EditorialMonoLabel>
+        <EditorialMonoLabel>Flag</EditorialMonoLabel>
+      </div>
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-1 gap-2 border-b border-white/[0.08] py-5 md:grid-cols-[1.4fr_1fr_1fr_120px_1.2fr] md:gap-6 md:py-6"
+        >
+          <span className="text-[15.5px] text-white/85">{r.tool}</span>
+          <span className="text-[14px] text-white/55">{r.owner}</span>
+          <span className="font-[family-name:var(--font-geist-mono)] text-[12.5px] text-white/65">{r.renews}</span>
+          <span className="font-[family-name:var(--font-geist-mono)] text-[13px] tabular-nums text-white/85">{r.monthly}</span>
+          <span
+            className={
+              r.flag === "—"
+                ? "text-[14px] text-white/30"
+                : "font-[family-name:var(--font-instrument-serif)] text-[16px] italic text-white/85"
+            }
+            style={r.flag !== "—" ? { color: "var(--green)" } : undefined}
+          >
+            {r.flag}
+          </span>
         </div>
-      </section>
+      ))}
+      <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.16em] text-white/35">
+        Sample / illustrative · structure of a real tracker view
+      </p>
     </div>
   )
 }

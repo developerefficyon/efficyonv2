@@ -1,36 +1,24 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  ArrowRight,
-  CheckCircle,
-  TrendingDown,
-  BarChart3,
-  DollarSign,
-  Zap,
-  Brain,
-  Shield,
-  Target,
-  LineChart,
-} from "lucide-react"
+  EditorialPageHero,
+  EditorialSection,
+  EditorialSectionIntro,
+  EditorialFinalCTA,
+  EditorialEyebrow,
+  EditorialMonoLabel,
+} from "@/components/marketing/editorial"
 
 export const metadata: Metadata = {
   title: "SaaS Cost Optimization That Pays for Itself",
   description:
-    "Reduce SaaS spending by 25% or more with AI-driven cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations with a 90-day ROI guarantee.",
+    "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
   alternates: {
     canonical: "/features/saas-cost-optimization",
   },
   openGraph: {
     title: "SaaS Cost Optimization That Pays for Itself | Efficyon",
     description:
-      "Reduce SaaS spending by 25% or more with AI-driven cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations with a 90-day ROI guarantee.",
+      "AI-driven SaaS cost optimization. Efficyon analyzes usage, detects waste, and delivers actionable recommendations — modeled to reduce stack spend by 25% in a typical mid-size company.",
     url: "https://www.efficyon.com/features/saas-cost-optimization",
     type: "website",
   },
@@ -46,7 +34,7 @@ export default function SaaSCostOptimizationPage() {
       operatingSystem: "Web",
       url: "https://www.efficyon.com/features/saas-cost-optimization",
       description:
-        "AI-powered SaaS cost optimization platform that analyzes usage data, detects waste, and delivers actionable savings recommendations with a 90-day ROI guarantee.",
+        "AI-powered SaaS cost optimization platform that analyzes usage data, detects waste, and delivers actionable savings recommendations.",
       offers: {
         "@type": "AggregateOffer",
         lowPrice: "39",
@@ -55,7 +43,7 @@ export default function SaaSCostOptimizationPage() {
         offerCount: "3",
       },
       featureList:
-        "Automated cost tracking, AI recommendations, Usage-based insights, ROI guarantee, License optimization, Spend analytics",
+        "Automated cost tracking, AI recommendations, Usage-based insights, License optimization, Spend analytics",
     },
     {
       "@context": "https://schema.org",
@@ -63,10 +51,10 @@ export default function SaaSCostOptimizationPage() {
       mainEntity: [
         {
           "@type": "Question",
-          name: "How much can SaaS cost optimization save my company?",
+          name: "How much can SaaS cost optimization save?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "On average, companies using Efficyon reduce their SaaS spend by 25% within the first quarter. Savings come from eliminating unused licenses, consolidating overlapping tools, and rightsizing subscription tiers based on actual usage data.",
+            text: "Modeled savings for a typical mid-size SaaS-heavy stack land in the 20–30% range — driven by unused licenses, overlapping tools, and overprovisioned tiers. Actual savings depend on stack size and how long spend has gone unmanaged.",
           },
         },
         {
@@ -74,31 +62,23 @@ export default function SaaSCostOptimizationPage() {
           name: "How does Efficyon's AI-driven cost optimization work?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Efficyon connects to your accounting systems and SaaS tools to collect spend and usage data. Our AI engine then cross-references this data to identify waste patterns including unused licenses, duplicate subscriptions, and overprovisioned tiers. You receive prioritized recommendations ranked by potential savings.",
+            text: "Efficyon connects to your accounting system and SaaS tools, then cross-references spend against usage to identify unused licenses, duplicate subscriptions, and overprovisioned tiers. Each finding is ranked by potential savings.",
           },
         },
         {
           "@type": "Question",
-          name: "What is the 90-day ROI guarantee?",
+          name: "How long does it take to set up?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "We guarantee measurable return on investment within 90 days. If you don't see the projected savings within that period, we continue working with you at no additional cost until you do, or provide a full refund of your subscription fees.",
+            text: "Initial setup takes about 10 minutes. Connect one system and your first analysis runs immediately. Most teams receive their first actionable recommendations within two weeks as the engine builds a complete picture.",
           },
         },
         {
           "@type": "Question",
-          name: "How long does it take to set up SaaS cost optimization?",
+          name: "Does it require changes to our current tools?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Initial setup takes less than five minutes. Connect your accounting system and SaaS tools, and Efficyon begins analyzing immediately. Most companies receive their first actionable recommendations within two weeks.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "Does SaaS cost optimization require changes to our current tools?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "No. Efficyon uses read-only integrations to analyze your existing tools and spend data. There is no disruption to your current workflows. Recommendations are provided for your team to implement at their own pace.",
+            text: "No. Efficyon uses read-only integrations and never writes to your systems. Recommendations are surfaced in your dashboard for your team to act on at their own pace.",
           },
         },
       ],
@@ -106,373 +86,205 @@ export default function SaaSCostOptimizationPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-transparent" />
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-8">
-              <TrendingDown className="h-4 w-4" />
-              SaaS Cost Optimization
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              SaaS Cost Optimization That Pays for Itself
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-              Stop bleeding money on software you barely use. Efficyon&apos;s AI analyzes every
-              subscription, license, and tool across your organization to find savings that
-              compound month after month.
+      <EditorialPageHero
+        eyebrow="Feature · Cost optimization"
+        title="The headline act —"
+        italic="stop the leak."
+        body="Efficyon connects accounting data to the systems your team actually uses, models the gap between paid-for and used, and tells you what to cancel, downgrade, or renegotiate. One engine, monthly cadence, read-only access."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See all features", href: "/features" }}
+      />
+
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="The problem"
+          title="Spend grows faster"
+          italic="than the team using it."
+          body="The mid-size SaaS-heavy company adds tools faster than it retires them. Without a continuous cross-tool view, waste compounds: unused seats, mismatched tiers, shadow purchases, drift on renewal."
+        />
+        <div className="grid gap-12 md:grid-cols-2">
+          <div>
+            <EditorialMonoLabel>What goes wrong</EditorialMonoLabel>
+            <ul className="mt-6 space-y-5 text-[15.5px] leading-[1.7] text-white/65">
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>SaaS spend grows ~15–20% YoY while headcount grows at half that rate. The gap between paid-for and used widens every quarter.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>No centralized view of which tools are actually being used, by whom, and how often. Finance is flying blind.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>Spreadsheets are stale the moment they're compiled and consume dozens of hours per month to maintain.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="mt-[10px] h-1 w-1 flex-shrink-0 rounded-full bg-white/40" />
+                <span>Decentralized buying creates duplicate subscriptions nobody catches until the annual audit — if then.</span>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <EditorialMonoLabel>The structural problem</EditorialMonoLabel>
+            <p className="mt-6 text-[16px] leading-[1.75] text-white/65">
+              The cost-leak isn't a single line item. It's the gap between what you pay vendors and what your people actually use — a gap that only shows up when accounting data and product usage data sit in the same place. Most teams have neither, which is why a 20–30% structural waste figure appears in stack after stack.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                <Link href="/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                asChild
-              >
-                <Link href="/#contact">Book a Demo</Link>
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-400 mt-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>90-Day ROI Guarantee</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>No Credit Card Required</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Your SaaS Costs Are Growing Faster Than Your Business
-              </h2>
-              <p className="text-gray-300 text-lg">
-                The average company wastes 25-35% of its SaaS budget on underutilized subscriptions,
-                forgotten tools, and overprovisioned licenses. Without automated tracking, the
-                problem only gets worse as you scale.
-              </p>
-              <div className="space-y-4">
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  SaaS spending grows 15-20% year over year while headcount grows at half that rate, creating an ever-widening gap between what you pay and what you actually need
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  No centralized visibility into which tools are actually being used, by whom, and how frequently, leaving finance teams flying blind
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  Manual tracking in spreadsheets is error-prone, outdated by the time it is compiled, and consumes dozens of hours every month
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <span className="text-red-500 mt-1 flex-shrink-0">&#10007;</span>
-                  Shadow IT purchases and decentralized buying create duplicate subscriptions that nobody catches until the annual audit
-                </p>
-              </div>
-            </div>
-
-            {/* Solution */}
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Efficyon Finds the Savings Automatically
-              </h2>
-              <p className="text-gray-300 text-lg">
-                Connect your tools once and let Efficyon&apos;s AI continuously scan for
-                optimization opportunities. Every recommendation comes with a dollar figure
-                attached so you can prioritize by impact.
-              </p>
-              <div className="space-y-4">
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Automated cost tracking that pulls data from your accounting system and every connected SaaS tool in real time
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  AI-powered recommendations prioritized by savings potential so you tackle the highest-impact items first
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Usage-based insights that reveal exactly which licenses are active, underutilized, or completely idle
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Measurable ROI guaranteed within 90 days, with continuous monitoring that uncovers new savings every month
-                </p>
-                <p className="flex items-start gap-3 text-gray-300">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  Vendor benchmarking that compares your contract terms against aggregated market data to ensure you are getting the best deal
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How SaaS Cost Optimization Works
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Three simple steps from setup to savings. Most companies see their first
-              actionable recommendations within two weeks.
+            <p className="mt-5 text-[16px] leading-[1.75] text-white/55">
+              Efficyon is the layer that closes that gap, continuously.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-cyan-500/20 mb-4">01</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Connect Your Stack</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Link your accounting system, SaaS tools, and identity providers in under five
-                minutes. Efficyon uses secure, read-only API connections to pull in spend and
-                usage data without touching your workflows.
-              </p>
-            </div>
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-cyan-500/20 mb-4">02</div>
-              <h3 className="text-xl font-semibold text-white mb-3">AI Analyzes Everything</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Our AI engine cross-references your spend data against actual usage patterns.
-                It identifies unused licenses, overlapping tools, mismatched tiers, and
-                spending anomalies that manual reviews cannot catch.
-              </p>
-            </div>
-            <div className="relative rounded-xl border border-white/10 bg-white/[0.02] p-8">
-              <div className="text-5xl font-bold text-cyan-500/20 mb-4">03</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Implement and Save</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Receive prioritized recommendations with estimated dollar savings for each
-                action. Track implementation progress on your dashboard and watch your savings
-                compound month over month.
-              </p>
-            </div>
-          </div>
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Key Benefits */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Key Benefits of SaaS Cost Optimization
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Every feature is designed to deliver measurable savings with minimal effort from
-              your team.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-cyan-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Complete Visibility</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                See every subscription, license, and payment in a single dashboard. No more
-                hunting through invoices or chasing department heads for data. Efficyon gives
-                your finance team full control.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Brain className="h-5 w-5 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">AI-Powered Insights</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Machine learning algorithms continuously analyze your data to find savings
-                opportunities that human analysis misses. The system gets smarter over time as
-                it learns your organization.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Guaranteed Savings</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Our 90-day ROI guarantee means you have nothing to lose. If Efficyon does not
-                deliver measurable savings within the first quarter, we work for free until it
-                does or refund your subscription.
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Continuous Optimization</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                SaaS cost optimization is not a one-time project. Efficyon runs continuously,
-                catching new waste as it appears, alerting you to renewals, and keeping your
-                stack lean as your company grows.
-              </p>
-            </div>
-          </div>
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="How Efficyon does it"
+          title="Connect once."
+          italic="Watch the gap monthly."
+          body="Three steps from setup to recommendations. Most teams see actionable findings in two weeks."
+        />
+        <div className="grid gap-12 md:grid-cols-3">
+          <Step
+            num="01"
+            title="Connect your stack"
+            italic="read-only."
+            body="Link your accounting system (Fortnox, QuickBooks), identity (Microsoft 365, Google Workspace), and tools (HubSpot, Shopify, OpenAI, Anthropic). Setup is roughly 10 minutes. We never write back."
+          />
+          <Step
+            num="02"
+            title="The engine cross-references"
+            italic="spend × usage."
+            body="Rule-based and AI checks compare invoiced amounts against active seats, feature touch-points, and 90-day activity windows. Anomalies, duplicates, and mismatched tiers are flagged with explanations."
+          />
+          <Step
+            num="03"
+            title="Recommendations land"
+            italic="in your inbox."
+            body="Each finding ships with a modeled dollar value, a confidence score, and the action to take. You implement at your own pace; we track outcomes and refine the next month."
+          />
         </div>
-      </section>
+      </EditorialSection>
 
-      {/* Stats Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-cyan-400 mb-2">25%</div>
-              <p className="text-white font-medium mb-1">Average SaaS Savings</p>
-              <p className="text-gray-400 text-sm">
-                Reduction in total SaaS spend within the first 90 days of using Efficyon
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">2 Weeks</div>
-              <p className="text-white font-medium mb-1">Time to First Insights</p>
-              <p className="text-gray-400 text-sm">
-                From connecting your accounts to receiving your first actionable cost-saving recommendations
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center">
-              <div className="text-4xl md:text-5xl font-bold text-green-400 mb-2">90 Days</div>
-              <p className="text-white font-medium mb-1">ROI Guarantee</p>
-              <p className="text-gray-400 text-sm">
-                Measurable return on investment guaranteed or we continue working at no cost until you see results
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <EditorialSection>
+        <EditorialSectionIntro
+          eyebrow="What it surfaces"
+          title="Sample findings"
+          italic="from a typical scan."
+          body="Illustrative — based on the patterns we model in a typical 18-person SaaS-heavy stack. Your numbers will differ; the categories rarely do."
+        />
+        <SampleFindings
+          rows={[
+            {
+              category: "Unused licenses",
+              finding: "12 of 48 HubSpot Marketing Pro seats — no logins in 90 days",
+              modeledValue: "$5,400/yr",
+            },
+            {
+              category: "Tier mismatch",
+              finding: "Zoom Premium across the team — feature usage suggests Standard fits 70%",
+              modeledValue: "$2,800/yr",
+            },
+            {
+              category: "Tool overlap",
+              finding: "Asana + Monday.com both active — single project tool would consolidate",
+              modeledValue: "$3,600/yr",
+            },
+            {
+              category: "Price drift",
+              finding: "Vendor X raised seat price 18% YoY without contract notification",
+              modeledValue: "$1,900/yr",
+            },
+            {
+              category: "Departed employees",
+              finding: "5 ex-employees still hold paid SaaS seats across 3 tools",
+              modeledValue: "$2,200/yr",
+            },
+          ]}
+        />
+      </EditorialSection>
 
-      {/* FAQ Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              SaaS Cost Optimization FAQ
-            </h2>
-            <p className="text-lg text-gray-300">
-              Common questions about optimizing your SaaS spending with Efficyon
-            </p>
-          </div>
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="item-1" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How much can SaaS cost optimization save my company?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                On average, companies using Efficyon reduce their SaaS spend by 25% within the first
-                quarter. Savings come from eliminating unused licenses, consolidating overlapping
-                tools, and rightsizing subscription tiers based on actual usage data. The exact
-                amount depends on your current stack size and how long spend has gone unmanaged,
-                but even lean organizations typically find 15% or more in recoverable waste.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How does Efficyon&apos;s AI-driven cost optimization work?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Efficyon connects to your accounting systems and SaaS tools to collect spend and
-                usage data. Our AI engine then cross-references this data to identify waste
-                patterns including unused licenses, duplicate subscriptions, and overprovisioned
-                tiers. Each finding is ranked by savings potential and presented with a clear
-                action plan your team can follow immediately.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                What is the 90-day ROI guarantee?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                We guarantee measurable return on investment within 90 days. If you do not see the
-                projected savings within that period, we continue working with you at no
-                additional cost until you do, or provide a full refund of your subscription fees.
-                This guarantee applies to all plans, including Startup.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                How long does it take to set up SaaS cost optimization?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                Initial setup takes less than five minutes. Connect your accounting system and SaaS
-                tools through our secure API integrations, and Efficyon begins analyzing
-                immediately. Most companies receive their first actionable recommendations
-                within two weeks as the AI builds a complete picture of your spending patterns.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-5" className="border border-white/10 rounded-lg px-6 bg-black/50">
-              <AccordionTrigger className="text-white hover:no-underline">
-                Does SaaS cost optimization require changes to our current tools?
-              </AccordionTrigger>
-              <AccordionContent className="text-gray-300">
-                No. Efficyon uses read-only integrations to analyze your existing tools and spend
-                data. There is no disruption to your current workflows. Recommendations are
-                provided for your team to implement at their own pace. You decide which actions
-                to take and when, and Efficyon tracks your progress automatically.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
+      <EditorialFinalCTA
+        title="Connect one system."
+        italic="See the gap in 10 minutes."
+        body="No credit card. Read-only access. The first analysis is free — you keep whatever you find."
+        primaryCta={{ label: "Start free analysis", href: "/register" }}
+        secondaryCta={{ label: "See pricing →", href: "/#pricing" }}
+      />
+    </>
+  )
+}
 
-      {/* CTA Section */}
-      <section className="py-20 border-t border-white/10">
-        <div className="container mx-auto px-4">
-          <div className="relative rounded-2xl border border-white/10 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-            <div className="relative z-10 px-8 py-16 md:px-16 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Start Saving on SaaS Today
-              </h2>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-                Every day you wait is another day of unnecessary SaaS spending. Connect your
-                tools in five minutes and let Efficyon show you exactly where your money is
-                going and how to keep more of it.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                  <Link href="/register">
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                  asChild
-                >
-                  <Link href="/#contact">Book a Demo</Link>
-                </Button>
-              </div>
-              <p className="mt-6 text-sm text-gray-400">
-                No credit card required &middot; 5-minute setup &middot; 90-day ROI guarantee
-              </p>
-            </div>
-          </div>
+/* ─────────── helpers ─────────── */
+function Step({
+  num,
+  title,
+  italic,
+  body,
+}: {
+  num: string
+  title: string
+  italic?: string
+  body: string
+}) {
+  return (
+    <div className="border-t border-white/[0.08] pt-8">
+      <span className="font-[family-name:var(--font-geist-mono)] text-[11px] tabular-nums tracking-[0.18em] text-white/35">
+        {num}
+      </span>
+      <h3 className="mt-4 text-[24px] font-medium tracking-[-0.02em]">
+        {title}
+        {italic && (
+          <>
+            {" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/65">
+              {italic}
+            </span>
+          </>
+        )}
+      </h3>
+      <p className="mt-4 text-[15px] leading-[1.7] text-white/55">{body}</p>
+    </div>
+  )
+}
+
+function SampleFindings({
+  rows,
+}: {
+  rows: { category: string; finding: string; modeledValue: string }[]
+}) {
+  return (
+    <div className="border-t border-white/[0.08]">
+      <div className="hidden grid-cols-[200px_1fr_140px] gap-8 border-b border-white/[0.08] py-4 md:grid">
+        <EditorialMonoLabel>Category</EditorialMonoLabel>
+        <EditorialMonoLabel>Sample / illustrative finding</EditorialMonoLabel>
+        <EditorialMonoLabel>Modeled value</EditorialMonoLabel>
+      </div>
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-1 gap-3 border-b border-white/[0.08] py-6 md:grid-cols-[200px_1fr_140px] md:gap-8 md:py-7"
+        >
+          <span className="font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/45">
+            {r.category}
+          </span>
+          <span className="text-[15.5px] leading-[1.65] text-white/80">{r.finding}</span>
+          <span
+            className="font-[family-name:var(--font-instrument-serif)] text-[20px] italic"
+            style={{ color: "var(--green)" }}
+          >
+            {r.modeledValue}
+          </span>
         </div>
-      </section>
+      ))}
+      <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.16em] text-white/35">
+        Sample / illustrative · modeled on a typical 18-person SaaS-heavy stack
+      </p>
     </div>
   )
 }
