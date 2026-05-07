@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { ArrowUpRight, ArrowRight } from "lucide-react"
+import { EditorialFooter } from "@/components/marketing/editorial"
 
 /* ──────────────────────────────────────────────────────────────
    Efficyon — Editorial Homepage
@@ -48,7 +49,7 @@ export default function HomePage() {
       <Findings />
       <Pricing />
       <FinalCTA />
-      <Footer />
+      <EditorialFooter />
     </div>
   )
 }
@@ -976,90 +977,4 @@ function FinalCTA() {
   )
 }
 
-/* ─────────────────────────── FOOTER ─────────────────────────── */
-function Footer() {
-  return (
-    <footer className="relative z-10 border-t border-white/[0.08]">
-      <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-12">
-        <div>
-          <Link href="/" className="flex items-center gap-2.5 text-[16px] font-medium tracking-[-0.01em]">
-            <Image
-              src="/logo.png"
-              alt="Efficyon"
-              width={32}
-              height={32}
-              className="h-7 w-auto object-contain"
-            />
-            Efficyon
-          </Link>
-          <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-white/45">
-            Cost intelligence for SaaS-heavy teams. We watch the gap between what
-            you pay and what you actually use.
-          </p>
-          <p className="mt-6 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
-            Built in Gothenburg · EU-hosted
-          </p>
-        </div>
-
-        <FooterCol
-          title="Product"
-          items={[
-            ["Features", "/features"],
-            ["Integrations", "/integrations"],
-            ["Solutions", "/solutions"],
-            ["Pricing", "#pricing"],
-          ]}
-        />
-        <FooterCol
-          title="Resources"
-          items={[
-            ["Blog", "/blog"],
-            ["ROI Calculator", "/calculator/roi"],
-            ["SaaS Benchmarks", "/benchmarks"],
-            ["Compare", "/compare"],
-          ]}
-        />
-        <FooterCol
-          title="Company"
-          items={[
-            ["Login", "/login"],
-            ["Privacy", "/privacy"],
-            ["Terms", "/terms"],
-            ["Contact", "mailto:info@efficyon.com"],
-          ]}
-        />
-      </div>
-
-      <div className="mx-auto flex max-w-[1240px] flex-col items-start justify-between gap-3 border-t border-white/[0.08] px-6 py-6 text-[12px] text-white/40 md:flex-row md:items-center md:px-12">
-        <span className="font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.14em]">
-          © 2026 Efficyon AB
-        </span>
-        <span className="font-[family-name:var(--font-instrument-serif)] italic text-white/35">
-          The waste hides in the gap.
-        </span>
-      </div>
-    </footer>
-  )
-}
-
-function FooterCol({ title, items }: { title: string; items: [string, string][] }) {
-  return (
-    <div>
-      <p className="mb-5 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.2em] text-white/45">
-        {title}
-      </p>
-      <ul className="space-y-3">
-        {items.map(([label, href]) => (
-          <li key={label}>
-            <Link
-              href={href}
-              className="text-[13.5px] text-white/65 transition-colors hover:text-white"
-            >
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
+/* Footer comes from @/components/marketing/editorial — same as every other marketing page. */
