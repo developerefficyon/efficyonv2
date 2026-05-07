@@ -5,6 +5,7 @@ import {
   EditorialEyebrow,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { saasTools, getAllCategories } from "@/lib/saas-tools-data"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
@@ -133,6 +134,8 @@ export default function ToolsIndexPage() {
           </p>
         </div>
       </EditorialSection>
+
+      <RelatedLinks variant="tools" />
 
       <EditorialFinalCTA
         title="Ready to stop overpaying"

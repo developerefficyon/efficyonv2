@@ -10,6 +10,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl } from "@/lib/site"
 import {
   saasTools,
@@ -378,6 +379,8 @@ export default async function ToolAnalysisPage({
           </div>
         </EditorialSection>
       )}
+
+      <RelatedLinks variant="tools" />
 
       <EditorialFinalCTA
         title={`Analyze your ${tool.name} spend.`}
