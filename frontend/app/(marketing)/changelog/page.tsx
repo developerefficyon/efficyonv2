@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "Changelog — what we shipped, ordered most recent first",
@@ -113,25 +114,31 @@ function formatLongDate(iso: string): string {
 }
 
 export default function ChangelogPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Blog",
-    name: "Efficyon Changelog",
-    description: "Every integration, check, and feature we ship.",
-    url: absoluteUrl("/changelog"),
-    blogPost: RELEASES.map((r) => ({
-      "@type": "BlogPosting",
-      headline: r.title,
-      datePublished: r.date,
-      author: { "@type": "Organization", name: "Efficyon" },
-    })),
-  }
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      name: "Efficyon Changelog",
+      description: "Every integration, check, and feature we ship.",
+      url: absoluteUrl("/changelog"),
+      blogPost: RELEASES.map((r) => ({
+        "@type": "BlogPosting",
+        headline: r.title,
+        datePublished: r.date,
+        author: { "@type": "Organization", name: "Efficyon" },
+      })),
+    },
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "Changelog", path: "/changelog" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero

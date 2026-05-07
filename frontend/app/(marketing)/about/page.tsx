@@ -7,6 +7,7 @@ import {
   EditorialEyebrow,
 } from "@/components/marketing/editorial"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 
 export const metadata: Metadata = {
   title: "About — Built in Gothenburg, Sweden, for teams who like their numbers honest",
@@ -63,29 +64,35 @@ const STAGE = [
 ]
 
 export default function AboutPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "AboutPage",
-    name: "About Efficyon",
-    url: absoluteUrl("/about"),
-    description:
-      "Why we built Efficyon, what we believe, and how we work. Made in Gothenburg, Sweden.",
-    publisher: {
-      "@type": "Organization",
-      name: "Efficyon",
-      url: SITE_URL,
-      foundingLocation: {
-        "@type": "Place",
-        name: "Gothenburg, Sweden",
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      name: "About Efficyon",
+      url: absoluteUrl("/about"),
+      description:
+        "Why we built Efficyon, what we believe, and how we work. Made in Gothenburg, Sweden.",
+      publisher: {
+        "@type": "Organization",
+        name: "Efficyon",
+        url: SITE_URL,
+        foundingLocation: {
+          "@type": "Place",
+          name: "Gothenburg, Sweden",
+        },
       },
     },
-  }
+    breadcrumbListLd([
+      { name: "Home", path: "/" },
+      { name: "About", path: "/about" },
+    ]),
+  ]
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(ld) }}
       />
 
       <EditorialPageHero
