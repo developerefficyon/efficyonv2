@@ -5,13 +5,13 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateMetadata() {
   return pageMetadata({
-    title: "Torii Alternative - Efficyon vs Torii SaaS Management Compared",
+    title: `Efficyon vs Torii: ${CURRENT_YEAR} Comparison`,
     description:
       "Torii is a strong IT-workflow automation platform. Efficyon is an AI-driven cost intelligence layer. Different jobs, different prices.",
     path: "/compare/efficyon-vs-torii",

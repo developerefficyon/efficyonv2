@@ -6,13 +6,13 @@ import {
   EditorialMonoLabel,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateMetadata() {
   return pageMetadata({
-    title: "Spreadsheets vs SaaS Management Software - Why Manual Tracking Costs More",
+    title: `Spreadsheets vs SaaS Tools: ${CURRENT_YEAR} Cost Analysis`,
     description:
       "A spreadsheet works for ten subscriptions and breaks at forty. The math behind manual SaaS tracking — labor, gaps, missed savings — and where automation starts to pay for itself.",
     path: "/compare/efficyon-vs-spreadsheets",

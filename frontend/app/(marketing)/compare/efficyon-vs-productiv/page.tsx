@@ -5,13 +5,13 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateMetadata() {
   return pageMetadata({
-    title: "Productiv Alternative - Efficyon vs Productiv SaaS Intelligence Comparison",
+    title: `Efficyon vs Productiv: ${CURRENT_YEAR} Comparison`,
     description:
       "Productiv is a deep engagement-analytics platform for enterprises. Efficyon is an AI-driven cost intelligence layer for SMB and mid-market. Different jobs, different price points.",
     path: "/compare/efficyon-vs-productiv",

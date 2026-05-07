@@ -6,13 +6,13 @@ import {
   EditorialMonoLabel,
   IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateMetadata() {
   return pageMetadata({
-    title: "Zylo Alternative - Efficyon vs Zylo SaaS Management Comparison",
+    title: `Efficyon vs Zylo: ${CURRENT_YEAR} Comparison`,
     description:
       "Zylo is the established enterprise SaaS management platform. Efficyon is the AI-driven cost layer for SMB and mid-market. Different scopes, very different price points.",
     path: "/compare/efficyon-vs-zylo",

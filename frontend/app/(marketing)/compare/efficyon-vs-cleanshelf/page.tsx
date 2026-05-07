@@ -6,13 +6,13 @@ import {
   EditorialFinalCTA,
   EditorialMonoLabel,
 } from "@/components/marketing/editorial"
-import { absoluteUrl, SITE_URL } from "@/lib/site"
+import { absoluteUrl, CURRENT_YEAR, SITE_URL } from "@/lib/site"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
 import { pageMetadata } from "@/lib/seo/metadata"
 
 export async function generateMetadata() {
   return pageMetadata({
-    title: "Cleanshelf Alternative - Modern SaaS Cost Optimization | Efficyon",
+    title: `Efficyon vs Cleanshelf: ${CURRENT_YEAR} Comparison`,
     description:
       "Cleanshelf was acquired by Zylo and is no longer independently developed. Efficyon is a modern, actively maintained alternative for SaaS cost optimization, priced for SMB and mid-market.",
     path: "/compare/efficyon-vs-cleanshelf",
