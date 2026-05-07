@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { DM_Sans, Instrument_Serif } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
+import { CookieConsent } from "@/components/marketing/cookie-consent"
 import "./globals.css"
 
 const dmSans = DM_Sans({
@@ -72,6 +73,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <CookieConsent />
         <Analytics />
       </body>
     </html>

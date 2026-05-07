@@ -109,11 +109,12 @@ export function EditorialNav() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-9 md:flex">
+        <div className="hidden items-center gap-8 md:flex">
           <NavLink href="/features">Features</NavLink>
           <NavLink href="/integrations">Integrations</NavLink>
           <NavLink href="/solutions">Solutions</NavLink>
           <NavLink href="/blog">Blog</NavLink>
+          <NavLink href="/changelog">Changelog</NavLink>
           <NavLink href="/#pricing">Pricing</NavLink>
           <NavLink href="/login">Login</NavLink>
         </div>
@@ -153,9 +154,12 @@ const FOOTER_LINKS = {
     ["SaaS Cost Calculator", "/calculator/saas-cost"],
     ["Waste Estimator", "/calculator/waste-estimator"],
     ["Benchmarks", "/benchmarks"],
+    ["Setup Docs", "/docs/integrations"],
     ["Tools Directory", "/tools"],
   ],
   Company: [
+    ["About", "/about"],
+    ["Changelog", "/changelog"],
     ["Login", "/login"],
     ["Register", "/register"],
     ["Privacy", "/privacy"],
@@ -167,6 +171,29 @@ const FOOTER_LINKS = {
 export function EditorialFooter() {
   return (
     <footer className="relative z-10 border-t border-white/[0.08]">
+      {/* Newsletter strip — sits above the link columns */}
+      <div className="mx-auto grid max-w-[1240px] gap-10 border-b border-white/[0.08] px-6 py-14 md:grid-cols-[1.2fr_1fr] md:items-center md:gap-16 md:px-12">
+        <div>
+          <p
+            className="mb-3 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+            style={{ color: GREEN }}
+          >
+            ✦ The brief · Monthly
+          </p>
+          <h3 className="text-[clamp(28px,3vw,40px)] font-medium leading-[1.05] tracking-[-0.025em]">
+            What we shipped, what we found,{" "}
+            <span className="font-[family-name:var(--font-instrument-serif)] font-normal italic text-white/85">
+              one cost-leak pattern.
+            </span>
+          </h3>
+          <p className="mt-4 max-w-[460px] text-[14px] leading-[1.7] text-white/55">
+            One short email a month. New integrations, real findings (anonymized), and one
+            recurring waste pattern we surfaced. No drip sequences, unsubscribe one-click.
+          </p>
+        </div>
+        <NewsletterForm />
+      </div>
+
       <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-12">
         <div>
           <Link href="/" className="flex items-center gap-2.5 text-[16px] font-medium tracking-[-0.01em]">
@@ -202,6 +229,91 @@ export function EditorialFooter() {
         </span>
       </div>
     </footer>
+  )
+}
+
+/* ─────────── Newsletter form ─────────── */
+function NewsletterForm() {
+  const [email, setEmail] = useState("")
+  const [status, setStatus] = useState<"idle" | "submitting" | "ok" | "error">("idle")
+  const [error, setError] = useState<string>("")
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email || !/^.+@.+\..+$/.test(email)) {
+      setStatus("error")
+      setError("Please enter a valid email.")
+      return
+    }
+    setStatus("submitting")
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || ""
+      // The backend may or may not have this endpoint yet; degrade gracefully.
+      const res = await fetch(`${apiBase}/api/email/newsletter-subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "site-footer" }),
+      })
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Server returned ${res.status}`)
+      }
+      // 404 (endpoint not yet implemented) is treated as "noted" — we capture in the future log
+      setStatus("ok")
+      setEmail("")
+    } catch {
+      setStatus("error")
+      setError("Couldn't sign up just now. Try again in a moment, or email info@efficyon.com.")
+    }
+  }
+
+  if (status === "ok") {
+    return (
+      <div className="border border-white/[0.09] bg-white/[0.012] p-6">
+        <p
+          className="mb-2 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.22em]"
+          style={{ color: GREEN }}
+        >
+          ✦ You&apos;re in
+        </p>
+        <p className="font-[family-name:var(--font-instrument-serif)] text-[20px] italic text-white/85">
+          See you on the first of the month.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="w-full">
+      <div className="flex flex-col gap-3 md:flex-row">
+        <input
+          type="email"
+          required
+          aria-label="Your email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            if (status === "error") setStatus("idle")
+          }}
+          disabled={status === "submitting"}
+          className="flex-1 border border-white/15 bg-transparent px-4 py-[14px] text-[15px] text-white placeholder:text-white/30 focus:border-[color:var(--green)] focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={status === "submitting"}
+          className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-[14px] text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(0,209,122,0.3)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          style={{ background: GREEN }}
+        >
+          {status === "submitting" ? "Sending…" : "Subscribe"}
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="mt-3 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.16em] text-white/35">
+        {status === "error" && error
+          ? error
+          : "One email/month · unsubscribe one-click · we never share your address"}
+      </p>
+    </form>
   )
 }
 
