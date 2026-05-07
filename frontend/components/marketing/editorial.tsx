@@ -123,7 +123,7 @@ export function EditorialNav() {
           href="/register"
           className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/15 bg-white px-4 py-[7px] text-[13px] font-medium text-black transition-all hover:bg-[color:var(--green)] hover:text-black"
         >
-          Book a demo
+          Get started
           <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:rotate-45" />
         </Link>
       </div>
@@ -577,7 +577,7 @@ export function EditorialFinalCTA({
   title,
   italic,
   body,
-  primaryCta = { label: "Book a free demo", href: "/register" },
+  primaryCta = { label: "Start free analysis", href: "/register" },
   secondaryCta = { label: "Or start free →", href: "/register" },
 }: {
   eyebrow?: string

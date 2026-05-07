@@ -132,7 +132,7 @@ function NavBar() {
           href="/register"
           className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/15 bg-white px-4 py-[7px] text-[13px] font-medium text-black transition-all hover:bg-[color:var(--green)] hover:text-black"
         >
-          Book a demo
+          Get started
           <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:rotate-45" />
         </Link>
       </div>
@@ -181,7 +181,7 @@ function Hero() {
             className="group inline-flex items-center gap-2 rounded-full px-6 py-[14px] text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(0,209,122,0.35)]"
             style={{ background: "var(--green)" }}
           >
-            Book a free demo
+            Start free analysis
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <a
@@ -953,7 +953,7 @@ function FinalCTA() {
           className="group inline-flex items-center gap-2 rounded-full px-7 py-4 text-[14px] font-medium text-black transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(0,209,122,0.35)]"
           style={{ background: "var(--green)" }}
         >
-          Book a free demo
+          Start free analysis
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
