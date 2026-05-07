@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site"
 export interface BlogPost {
   slug: string
   title: string
@@ -62,7 +63,7 @@ export const blogPosts: BlogPost[] = [
 <li>Tools purchased by individual departments without centralized approval</li>
 <li>Legacy tools from previous projects or teams that were never decommissioned</li>
 </ul>
-<p>Most companies are shocked to discover they have 2&ndash;3x more active subscriptions than they realized. A platform like <a href="https://www.efficyon.com">Efficyon</a> automates this discovery by connecting to your accounting systems and identifying every software charge automatically.</p>
+<p>Most companies are shocked to discover they have 2&ndash;3x more active subscriptions than they realized. A platform like <a href="${SITE_URL}">Efficyon</a> automates this discovery by connecting to your accounting systems and identifying every software charge automatically.</p>
 
 <h3>Step 2: Analyze</h3>
 <p>Once you have a complete inventory, the next step is understanding how each tool is actually being used. Key questions to answer:</p>
@@ -72,7 +73,7 @@ export const blogPosts: BlogPost[] = [
 <li>Are there overlapping tools serving the same purpose across different teams?</li>
 <li>Are you on the right pricing tier for your actual usage level?</li>
 </ul>
-<p>This analysis requires comparing spend data with usage data&mdash;exactly the kind of cross-system visibility that <a href="https://www.efficyon.com/#services">Efficyon's AI engine</a> provides.</p>
+<p>This analysis requires comparing spend data with usage data&mdash;exactly the kind of cross-system visibility that <a href="${SITE_URL}/#services">Efficyon's AI engine</a> provides.</p>
 
 <h3>Step 3: Optimize</h3>
 <p>With clear data in hand, you can now make informed decisions about each subscription:</p>
@@ -127,7 +128,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Continuous monitoring:</strong> AI systems work 24/7, providing real-time alerts rather than periodic snapshots</li>
 <li><strong>Benchmarking:</strong> AI enables anonymous comparison of your spending against industry peers to identify where you are overpaying</li>
 </ul>
-<p>Try <a href="https://www.efficyon.com/#calculator">Efficyon's ROI calculator</a> to estimate what AI-powered optimization could save your business.</p>
+<p>Try <a href="${SITE_URL}/#calculator">Efficyon's ROI calculator</a> to estimate what AI-powered optimization could save your business.</p>
 
 <h2>Getting Started: Your SaaS Optimization Checklist</h2>
 <p>Ready to start optimizing? Here is a practical checklist to begin your journey:</p>
@@ -138,7 +139,7 @@ export const blogPosts: BlogPost[] = [
 <li>Document contract renewal dates for every subscription over $100/month</li>
 <li>Identify your top 10 most expensive SaaS tools and request usage reports from each vendor</li>
 <li>Calculate your current SaaS spend per employee and compare against <a href="/blog/average-saas-spend-per-employee-2026">industry benchmarks</a></li>
-<li>Set up an <a href="https://www.efficyon.com/register">Efficyon account</a> to automate the entire process and receive AI-powered recommendations</li>
+<li>Set up an <a href="${SITE_URL}/register">Efficyon account</a> to automate the entire process and receive AI-powered recommendations</li>
 </ul>
 <p>SaaS cost optimization is one of the highest-ROI activities any finance or operations team can undertake in 2026. The companies that treat it as an ongoing practice&mdash;rather than a one-time exercise&mdash;consistently outperform their peers in operational efficiency and profitability.</p>
 `,
@@ -178,7 +179,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Financial access:</strong> Credit card statements, bank statements, and accounts payable records for at least the past 12 months</li>
 <li><strong>IT access:</strong> Admin credentials for your identity provider (Okta, Azure AD, Google Workspace), SSO dashboard, and MDM platform</li>
 <li><strong>Stakeholder buy-in:</strong> Notify department heads that you will be reviewing software usage and may request information from their teams</li>
-<li><strong>A tracking spreadsheet or tool:</strong> You need a central place to document findings. A SaaS management platform like <a href="https://www.efficyon.com">Efficyon</a> can automate most of this, but a spreadsheet works for a first pass</li>
+<li><strong>A tracking spreadsheet or tool:</strong> You need a central place to document findings. A SaaS management platform like <a href="${SITE_URL}">Efficyon</a> can automate most of this, but a spreadsheet works for a first pass</li>
 </ul>
 
 <h2>The 8-Step Software Audit Process</h2>
@@ -265,7 +266,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Semi-annually:</strong> Stable companies with moderate tool adoption</li>
 <li><strong>Annually:</strong> Minimum recommended frequency for any company</li>
 </ul>
-<p>With an automated platform like <a href="https://www.efficyon.com">Efficyon</a>, the concept of periodic audits becomes less relevant because monitoring is continuous. The platform flags issues as they arise rather than waiting for a scheduled review.</p>
+<p>With an automated platform like <a href="${SITE_URL}">Efficyon</a>, the concept of periodic audits becomes less relevant because monitoring is continuous. The platform flags issues as they arise rather than waiting for a scheduled review.</p>
 
 <h2>Automating the Audit Process</h2>
 <p>Manual audits are effective but time-consuming. A single audit for a 200-person company can take 40&ndash;80 hours of focused work. Modern SaaS management platforms reduce this to a fraction of the effort by:</p>
@@ -275,7 +276,7 @@ export const blogPosts: BlogPost[] = [
 <li>Using AI to identify anomalies, duplicates, and optimization opportunities</li>
 <li>Generating actionable reports with specific savings recommendations</li>
 </ul>
-<p><a href="https://www.efficyon.com/register">Start your automated audit with Efficyon</a> and get your first optimization recommendations within days instead of weeks.</p>
+<p><a href="${SITE_URL}/register">Start your automated audit with Efficyon</a> and get your first optimization recommendations within days instead of weeks.</p>
 `,
   },
 
@@ -356,7 +357,7 @@ export const blogPosts: BlogPost[] = [
 <p>Combating SaaS sprawl requires a combination of visibility, governance, and ongoing discipline:</p>
 
 <h3>1. Get Complete Visibility</h3>
-<p>You cannot manage what you cannot see. The first step is creating a comprehensive inventory of every SaaS tool in your organization. <a href="https://www.efficyon.com">Efficyon</a> automates this by connecting to your financial systems and discovering every software charge, including those that might be hiding in expense reports or personal credit card reimbursements.</p>
+<p>You cannot manage what you cannot see. The first step is creating a comprehensive inventory of every SaaS tool in your organization. <a href="${SITE_URL}">Efficyon</a> automates this by connecting to your financial systems and discovering every software charge, including those that might be hiding in expense reports or personal credit card reimbursements.</p>
 
 <h3>2. Establish Governance</h3>
 <p>Create a <a href="/blog/build-software-procurement-policy">software procurement policy</a> that includes:</p>
@@ -381,7 +382,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Budget accountability:</strong> Assign software budget ownership to specific individuals who are accountable for optimizing spend in their area.</li>
 <li><strong>Automated onboarding/offboarding:</strong> Integrate your tool inventory with HR systems so that access is provisioned and revoked automatically as employees join and leave.</li>
 </ul>
-<p>SaaS sprawl is an inevitable challenge of modern business, but it is a solvable one. Companies that invest in visibility and governance consistently achieve 20&ndash;30% reductions in total SaaS spend while actually improving employee satisfaction with their tool stack. <a href="https://www.efficyon.com/#calculator">Calculate your potential savings</a> to see what sprawl might be costing your organization.</p>
+<p>SaaS sprawl is an inevitable challenge of modern business, but it is a solvable one. Companies that invest in visibility and governance consistently achieve 20&ndash;30% reductions in total SaaS spend while actually improving employee satisfaction with their tool stack. <a href="${SITE_URL}/#calculator">Calculate your potential savings</a> to see what sprawl might be costing your organization.</p>
 `,
   },
 
@@ -421,7 +422,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Rapid change:</strong> The software stack changes constantly as tools are added, upgraded, downgraded, and abandoned</li>
 <li><strong>No usage data in financial systems:</strong> Accounting systems track cost but cannot tell you whether a $500/month subscription is providing value</li>
 </ul>
-<p>This visibility gap is precisely what <a href="https://www.efficyon.com">Efficyon</a> solves, by connecting financial data with usage data to give finance leaders a complete picture of software ROI.</p>
+<p>This visibility gap is precisely what <a href="${SITE_URL}">Efficyon</a> solves, by connecting financial data with usage data to give finance leaders a complete picture of software ROI.</p>
 
 <h2>Building a SaaS Governance Framework</h2>
 <p>Effective software spend management requires a governance framework that balances control with agility. Too restrictive, and you slow down the business. Too permissive, and spend spirals. Here is a framework that works:</p>
@@ -512,7 +513,7 @@ export const blogPosts: BlogPost[] = [
 <h3>Consider Risk Reduction</h3>
 <p>Unmanaged SaaS creates compliance risk (data privacy, access control) and financial risk (surprise renewals, budget overruns). While harder to quantify, these risks represent real business exposure.</p>
 
-<p>Use <a href="https://www.efficyon.com/#calculator">Efficyon's ROI calculator</a> to generate a detailed, personalized business case based on your company's specific numbers. The typical customer sees <strong>5&ndash;10x ROI</strong> within the first 90 days, backed by our <a href="https://www.efficyon.com/#pricing">ROI guarantee</a>.</p>
+<p>Use <a href="${SITE_URL}/#calculator">Efficyon's ROI calculator</a> to generate a detailed, personalized business case based on your company's specific numbers. The typical customer sees <strong>5&ndash;10x ROI</strong> within the first 90 days, backed by our <a href="${SITE_URL}/#pricing">ROI guarantee</a>.</p>
 `,
   },
 
@@ -592,8 +593,8 @@ export const blogPosts: BlogPost[] = [
 <p>For more negotiation strategies, read our guide on <a href="/blog/negotiate-better-saas-contracts">how to negotiate better SaaS contracts</a>.</p>
 
 <h2>Automate the Process</h2>
-<p>Manually hunting for unused subscriptions works, but it is time-consuming and the results degrade quickly as new subscriptions are added. <a href="https://www.efficyon.com">Efficyon</a> continuously monitors your entire SaaS stack and automatically flags subscriptions with declining usage before they become fully unused, helping you act proactively rather than reactively.</p>
-<p><a href="https://www.efficyon.com/#calculator">Calculate your potential savings</a> from eliminating unused subscriptions today.</p>
+<p>Manually hunting for unused subscriptions works, but it is time-consuming and the results degrade quickly as new subscriptions are added. <a href="${SITE_URL}">Efficyon</a> continuously monitors your entire SaaS stack and automatically flags subscriptions with declining usage before they become fully unused, helping you act proactively rather than reactively.</p>
+<p><a href="${SITE_URL}/#calculator">Calculate your potential savings</a> from eliminating unused subscriptions today.</p>
 `,
   },
 
@@ -676,7 +677,7 @@ export const blogPosts: BlogPost[] = [
 <li>Annual contracts (convert to monthly equivalent)</li>
 <li>Usage-based charges (use 12-month average)</li>
 </ul>
-<p>A platform like <a href="https://www.efficyon.com">Efficyon</a> calculates this automatically by connecting to your financial systems, ensuring you capture every dollar of spend.</p>
+<p>A platform like <a href="${SITE_URL}">Efficyon</a> calculates this automatically by connecting to your financial systems, ensuring you capture every dollar of spend.</p>
 
 <h2>What Good Looks Like</h2>
 <p>Being below the benchmark does not automatically mean you are optimized&mdash;you might be underinvesting in tools that could boost productivity. Being above the benchmark does not automatically mean you are wasteful&mdash;your industry or business model may require more software.</p>
@@ -695,7 +696,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Medium-term (60&ndash;90 days):</strong> Achieve 20&ndash;25% reduction through consolidation and renegotiation</li>
 <li><strong>Ongoing optimization:</strong> Maintain spend growth at or below 5% annually through continuous monitoring</li>
 </ul>
-<p><a href="https://www.efficyon.com/#calculator">Use Efficyon's ROI calculator</a> to see specific savings targets based on your company's current spend.</p>
+<p><a href="${SITE_URL}/#calculator">Use Efficyon's ROI calculator</a> to see specific savings targets based on your company's current spend.</p>
 `,
   },
 
@@ -759,7 +760,7 @@ export const blogPosts: BlogPost[] = [
 
 <h3>9. Software Budget Overruns Are the Norm</h3>
 <p>If your software budget is exceeded quarter after quarter, you are not managing spend&mdash;you are just estimating it. Chronic overruns indicate that tools are being adopted faster than they are being tracked.</p>
-<p><strong>Fix it:</strong> Implement real-time spend tracking with <a href="https://www.efficyon.com">Efficyon</a> to catch overruns before they happen.</p>
+<p><strong>Fix it:</strong> Implement real-time spend tracking with <a href="${SITE_URL}">Efficyon</a> to catch overruns before they happen.</p>
 
 <h3>10. You Have Had Security Incidents from Unknown Tools</h3>
 <p>This is the most serious sign. If a data breach, phishing attack, or compliance violation has ever originated from a SaaS tool that IT did not know the company was using, you have a shadow IT problem that needs immediate attention.</p>
@@ -767,7 +768,7 @@ export const blogPosts: BlogPost[] = [
 
 <h2>What to Do If You Checked Multiple Boxes</h2>
 <p>If three or more of these signs apply to your organization, you have a significant sprawl problem&mdash;but you are not alone. Most growing companies experience this. The key is to take action before the problem compounds further.</p>
-<p>Start with <a href="/blog/complete-guide-saas-cost-optimization">our complete guide to SaaS cost optimization</a> for a structured approach, or <a href="https://www.efficyon.com/#calculator">calculate your potential savings</a> to understand the financial impact and build urgency for action.</p>
+<p>Start with <a href="/blog/complete-guide-saas-cost-optimization">our complete guide to SaaS cost optimization</a> for a structured approach, or <a href="${SITE_URL}/#calculator">calculate your potential savings</a> to understand the financial impact and build urgency for action.</p>
 `,
   },
 
@@ -878,7 +879,7 @@ export const blogPosts: BlogPost[] = [
 </ol>
 
 <h2>Try the Efficyon ROI Calculator</h2>
-<p>Calculating ROI for every tool in your stack manually is impractical. <a href="https://www.efficyon.com/#calculator">Efficyon's free ROI calculator</a> estimates your potential savings based on your company size, current SaaS spend, and industry benchmarks. It takes less than 60 seconds and gives you a data-backed starting point for your optimization journey.</p>
+<p>Calculating ROI for every tool in your stack manually is impractical. <a href="${SITE_URL}/#calculator">Efficyon's free ROI calculator</a> estimates your potential savings based on your company size, current SaaS spend, and industry benchmarks. It takes less than 60 seconds and gives you a data-backed starting point for your optimization journey.</p>
 `,
   },
 
@@ -949,7 +950,7 @@ export const blogPosts: BlogPost[] = [
 <p>Overcoming subscription fatigue requires deliberate structural changes that counteract these biases:</p>
 
 <h3>1. Make the Invisible Visible</h3>
-<p>Aggregate all SaaS spend into a single dashboard where total cost, utilization, and trends are visible to decision-makers. When a CFO can see that the company spends $1.2 million on SaaS with 30% utilization, the status quo bias weakens rapidly. <a href="https://www.efficyon.com">Efficyon</a> provides exactly this visibility.</p>
+<p>Aggregate all SaaS spend into a single dashboard where total cost, utilization, and trends are visible to decision-makers. When a CFO can see that the company spends $1.2 million on SaaS with 30% utilization, the status quo bias weakens rapidly. <a href="${SITE_URL}">Efficyon</a> provides exactly this visibility.</p>
 
 <h3>2. Default to Review, Not Renewal</h3>
 <p>Change the default. Instead of auto-renewing subscriptions, require a brief review 60 days before each renewal. This does not need to be onerous&mdash;a simple check of usage data and a confirmation to continue is sufficient. The act of making renewal an active decision rather than a passive default dramatically reduces waste.</p>
@@ -962,7 +963,7 @@ export const blogPosts: BlogPost[] = [
 
 <h3>5. Use Data to Overcome Emotion</h3>
 <p>When cancellation decisions trigger loss aversion, objective usage data can cut through the emotional resistance. "This tool had 2 active users out of 45 licenses last month" is a powerful counterargument to "but we might need it."</p>
-<p><a href="https://www.efficyon.com/#calculator">Calculate how much subscription fatigue is costing your company</a> and take the first step toward breaking the cycle.</p>
+<p><a href="${SITE_URL}/#calculator">Calculate how much subscription fatigue is costing your company</a> and take the first step toward breaking the cycle.</p>
 `,
   },
 
@@ -1057,7 +1058,7 @@ export const blogPosts: BlogPost[] = [
 <ul>
 <li><strong>Centralize purchasing channels:</strong> Use a limited number of corporate credit cards with defined spending authorities</li>
 <li><strong>Integrate with SSO:</strong> Require all tools to support SSO, giving IT automatic visibility into what is being used</li>
-<li><strong>Automate monitoring:</strong> Use a platform like <a href="https://www.efficyon.com">Efficyon</a> to automatically detect new software charges and flag unapproved purchases</li>
+<li><strong>Automate monitoring:</strong> Use a platform like <a href="${SITE_URL}">Efficyon</a> to automatically detect new software charges and flag unapproved purchases</li>
 <li><strong>Make the right path easy:</strong> Create a self-service portal where employees can request tools with minimal effort. If the approved path is easy, people will use it</li>
 </ul>
 
@@ -1164,7 +1165,7 @@ export const blogPosts: BlogPost[] = [
 
 <h2>The Hybrid Reality</h2>
 <p>In practice, most companies in 2026 run a hybrid environment. The key to managing costs in a hybrid model is having visibility into both sides. SaaS costs are often more visible (monthly invoices) but less managed. On-premise costs are often less visible (buried in infrastructure budgets) but more controlled.</p>
-<p>Regardless of your mix, tools like <a href="https://www.efficyon.com">Efficyon</a> help optimize the SaaS side of your spending by ensuring every subscription delivers value proportional to its cost. <a href="https://www.efficyon.com/#calculator">Calculate your potential SaaS savings</a> to see where optimization can have the biggest impact in your environment.</p>
+<p>Regardless of your mix, tools like <a href="${SITE_URL}">Efficyon</a> help optimize the SaaS side of your spending by ensuring every subscription delivers value proportional to its cost. <a href="${SITE_URL}/#calculator">Calculate your potential SaaS savings</a> to see where optimization can have the biggest impact in your environment.</p>
 `,
   },
 
@@ -1207,7 +1208,7 @@ export const blogPosts: BlogPost[] = [
 <h2>Leverage Points</h2>
 
 <h3>Usage Data</h3>
-<p>Your most powerful negotiation asset is objective usage data. If you are paying for 100 licenses but only 60 are active, you have a strong case for reducing your seat count or per-seat cost. This is one reason <a href="https://www.efficyon.com">Efficyon</a> is so valuable for negotiations&mdash;it gives you verifiable usage data to bring to the table.</p>
+<p>Your most powerful negotiation asset is objective usage data. If you are paying for 100 licenses but only 60 are active, you have a strong case for reducing your seat count or per-seat cost. This is one reason <a href="${SITE_URL}">Efficyon</a> is so valuable for negotiations&mdash;it gives you verifiable usage data to bring to the table.</p>
 
 <h3>Competitive Alternatives</h3>
 <p>Research alternative tools and their pricing before negotiating. Being able to say "Competitor X offers comparable functionality at 30% less" is effective, especially if you can demonstrate that you have actually evaluated the alternative.</p>
@@ -1252,7 +1253,7 @@ export const blogPosts: BlogPost[] = [
 <p><strong>For renewal:</strong> "We have been reviewing our software stack and evaluating alternatives as part of our annual optimization. We value the relationship and would like to continue, but we need the pricing to reflect our actual usage and current market rates. Can we discuss options?"</p>
 <p><strong>For competitive leverage:</strong> "We have evaluated [Competitor] and they are offering [specific pricing]. We prefer your product based on [specific reasons], but we need the pricing to be competitive. What can you offer?"</p>
 <p><strong>For usage-based adjustment:</strong> "Our usage data shows that we are actively using [X] of our [Y] licensed seats. We need to right-size our contract to match actual usage. Can we discuss adjusting our seat count and rate?"</p>
-<p>Every dollar saved through better contract negotiations goes directly to your bottom line. Combine negotiation strategy with usage-based insights from <a href="https://www.efficyon.com">Efficyon</a> to maximize your leverage and minimize your spend.</p>
+<p>Every dollar saved through better contract negotiations goes directly to your bottom line. Combine negotiation strategy with usage-based insights from <a href="${SITE_URL}">Efficyon</a> to maximize your leverage and minimize your spend.</p>
 `,
   },
 
@@ -1319,7 +1320,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>For each category with multiple tools, assess overlap:</strong> What percentage of functionality overlaps? Could one tool serve all users?</li>
 <li><strong>Check usage data:</strong> Which tool in each category has the highest adoption and satisfaction?</li>
 </ol>
-<p><a href="https://www.efficyon.com">Efficyon</a> automates this process by categorizing your tools, detecting overlaps, and recommending consolidation opportunities based on usage patterns across your organization.</p>
+<p><a href="${SITE_URL}">Efficyon</a> automates this process by categorizing your tools, detecting overlaps, and recommending consolidation opportunities based on usage patterns across your organization.</p>
 
 <h2>The Consolidation Framework</h2>
 <p>Once you have identified duplicates, follow this framework to consolidate effectively:</p>
@@ -1365,7 +1366,7 @@ export const blogPosts: BlogPost[] = [
 <li><strong>Listen to power users:</strong> The employees who use a tool most intensively will have the strongest opinions. Engage them early and incorporate their feedback into the migration plan.</li>
 <li><strong>Track savings:</strong> Document the actual savings from each consolidation to build momentum for future optimization efforts.</li>
 </ul>
-<p>Eliminating duplicate tools is one of the highest-impact optimization moves you can make. <a href="https://www.efficyon.com/#calculator">Calculate your consolidation savings</a> to see the potential impact on your budget.</p>
+<p>Eliminating duplicate tools is one of the highest-impact optimization moves you can make. <a href="${SITE_URL}/#calculator">Calculate your consolidation savings</a> to see the potential impact on your budget.</p>
 `,
   },
 
@@ -1498,7 +1499,7 @@ export const blogPosts: BlogPost[] = [
 <ul>
 <li><strong>Spreadsheet-based:</strong> Suitable for companies with fewer than 30 tools. Low cost but high maintenance and prone to going stale.</li>
 <li><strong>ITSM integration:</strong> Tools like ServiceNow can track software assets as part of broader IT service management. Moderate cost and effort.</li>
-<li><strong>Dedicated SaaS management platform:</strong> <a href="https://www.efficyon.com">Efficyon</a> automates the entire process&mdash;discovery, categorization, usage tracking, cost analysis, and renewal management. This is the most efficient approach for companies serious about ongoing optimization.</li>
+<li><strong>Dedicated SaaS management platform:</strong> <a href="${SITE_URL}">Efficyon</a> automates the entire process&mdash;discovery, categorization, usage tracking, cost analysis, and renewal management. This is the most efficient approach for companies serious about ongoing optimization.</li>
 </ul>
 <p>Your SaaS inventory is not just an administrative exercise. It is the foundation that enables <a href="/blog/complete-guide-saas-cost-optimization">cost optimization</a>, security management, and informed decision-making about your software stack. Start building yours today, and you will be surprised at what you find.</p>
 `,
