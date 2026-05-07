@@ -5,6 +5,7 @@ import {
   EditorialCard,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { blogPosts, getFeaturedPost } from "@/lib/blog-data"
 import { breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
@@ -105,6 +106,8 @@ export default function BlogPage() {
           ))}
         </div>
       </EditorialSection>
+
+      <RelatedLinks variant="blog" />
 
       <EditorialFinalCTA
         title="Reading is free."

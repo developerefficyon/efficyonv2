@@ -8,6 +8,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { RelatedLinks } from "@/components/marketing/related-links"
 import { absoluteUrl } from "@/lib/site"
 import { blogPosts, getBlogPost, getRelatedPosts } from "@/lib/blog-data"
 import { articleLd, breadcrumbListLd, jsonLdScript } from "@/lib/seo/jsonld"
@@ -205,6 +206,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </div>
         </EditorialSection>
       )}
+
+      <RelatedLinks variant="blog" />
 
       <EditorialFinalCTA
         title="Found a leak in your stack?"
