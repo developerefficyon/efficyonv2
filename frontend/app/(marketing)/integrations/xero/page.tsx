@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialEyebrow,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
@@ -156,6 +157,12 @@ export default function XeroIntegrationPage() {
         body="Xero runs the books for SMBs across the UK, Australia, and New Zealand — often across multiple currencies and entities at once. Connect it to Efficyon and your bills, contacts, and tracking categories become the input for cost-leak analysis without restructuring a thing."
         primaryCta={{ label: "Connect Xero", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/integration-xero"
+        label="Live scan · Xero · sample stack"
+        meta="1920 × 1080 · 30fps · 4 vendors · 30-person UK/AU sample"
       />
 
       <EditorialSection>

@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialEyebrow,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
@@ -156,6 +157,12 @@ export default function QuickBooksIntegrationPage() {
         body="QuickBooks Online runs the books for millions of US and Canadian SMBs. Connect it to Efficyon and your bills, vendor payments, and expense categories become the substrate for SaaS-cost analysis — real-time sync, read-only, no chart-of-accounts surgery required."
         primaryCta={{ label: "Connect QuickBooks", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/integration-quickbooks"
+        label="Live scan · QuickBooks · sample stack"
+        meta="1920 × 1080 · 30fps · 4 vendors · sample 22-person US stack"
       />
 
       <EditorialSection>

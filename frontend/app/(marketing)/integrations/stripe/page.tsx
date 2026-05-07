@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialEyebrow,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
@@ -156,6 +157,12 @@ export default function StripeIntegrationPage() {
         body="A lot of SaaS bills you through Stripe. Connect your Stripe account to Efficyon and every subscription, invoice, and billing event becomes the input for cost-leak analysis — anomalies, price drift, dead retries, all surfaced before the next renewal."
         primaryCta={{ label: "Connect Stripe", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/integration-stripe"
+        label="Live scan · Stripe · sample stack"
+        meta="1920 × 1080 · 30fps · 4 vendors · SaaS-on-Stripe sample"
       />
 
       <EditorialSection>

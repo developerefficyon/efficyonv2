@@ -5,6 +5,7 @@ import {
   EditorialSectionIntro,
   EditorialFinalCTA,
   EditorialEyebrow,
+  IntegrationVideoFrame,
 } from "@/components/marketing/editorial"
 
 export function generateMetadata(): Metadata {
@@ -156,6 +157,12 @@ export default function FortnoxIntegrationPage() {
         body="Fortnox runs the accounting for the bulk of Swedish SMBs. Connect it to Efficyon and the invoices, suppliers, and account codes already in your books become the input for cost-leak analysis — multi-currency, VAT-aware, read-only."
         primaryCta={{ label: "Connect Fortnox", href: "/register" }}
         secondaryCta={{ label: "See pricing", href: "/#pricing" }}
+      />
+
+      <IntegrationVideoFrame
+        src="/videos/integration-fortnox"
+        label="Live scan · Fortnox · sample stack"
+        meta="1920 × 1080 · 30fps · 4 vendors · sample 18-person Swedish stack"
       />
 
       <EditorialSection>

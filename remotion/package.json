@@ -9,6 +9,11 @@
     "render:hero": "remotion render src/index.ts HeroLoop ../frontend/public/videos/hero-loop.mp4",
     "render:hero-webm": "remotion render src/index.ts HeroLoop ../frontend/public/videos/hero-loop.webm --codec=vp9",
     "render:hero-square": "remotion render src/index.ts HeroLoopSquare ../frontend/public/videos/hero-loop-square.mp4",
+    "render:fortnox": "remotion render src/index.ts HeroLoopFortnox ../frontend/public/videos/integration-fortnox.mp4",
+    "render:quickbooks": "remotion render src/index.ts HeroLoopQuickBooks ../frontend/public/videos/integration-quickbooks.mp4",
+    "render:stripe": "remotion render src/index.ts HeroLoopStripe ../frontend/public/videos/integration-stripe.mp4",
+    "render:xero": "remotion render src/index.ts HeroLoopXero ../frontend/public/videos/integration-xero.mp4",
+    "render:all-integrations": "npm run render:fortnox && npm run render:quickbooks && npm run render:stripe && npm run render:xero",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

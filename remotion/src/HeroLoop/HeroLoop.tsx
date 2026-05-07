@@ -10,6 +10,7 @@ import {
 import { loadFont as loadDmSans } from "@remotion/google-fonts/DMSans";
 import { loadFont as loadInstrumentSerif } from "@remotion/google-fonts/InstrumentSerif";
 import { loadFont as loadJetBrainsMono } from "@remotion/google-fonts/JetBrainsMono";
+import { z } from "zod";
 
 const { fontFamily: DM_SANS } = loadDmSans("normal", {
   weights: ["400", "500"],
@@ -28,22 +29,38 @@ const GREEN = "#00D17A";
 const RED = "#FF6B5B";
 const BG = "#080809";
 
-interface Vendor {
-  name: string;
-  monthlyCost: number;
-  paidSeats: number;
-  activeSeats: number;
-  leakAnnual: number;
-}
+/* ─── Zod schema for parameterized compositions ─── */
+export const VendorSchema = z.object({
+  name: z.string(),
+  monthlyCost: z.number(),
+  paidSeats: z.number(),
+  activeSeats: z.number(),
+  leakAnnual: z.number(),
+});
 
-const VENDORS: Vendor[] = [
-  { name: "Microsoft 365", monthlyCost: 890, paidSeats: 28, activeSeats: 10, leakAnnual: 6200 },
-  { name: "HubSpot Pro", monthlyCost: 640, paidSeats: 8, activeSeats: 3, leakAnnual: 4300 },
-  { name: "Intercom", monthlyCost: 270, paidSeats: 6, activeSeats: 0, leakAnnual: 3250 },
-  { name: "Notion / Asana / Slack", monthlyCost: 225, paidSeats: 18, activeSeats: 14, leakAnnual: 2700 },
-];
+export const HeroLoopSchema = z.object({
+  brandLabel: z.string(),       // e.g. "Fortnox", "QuickBooks"
+  invoiceSource: z.string(),    // e.g. "Invoice · Fortnox"
+  usageSource: z.string(),      // e.g. "Usage · API + activity logs"
+  totalLabel: z.string(),       // e.g. "Annual leak · sample 18-person stack"
+  vendors: z.array(VendorSchema).min(1).max(6),
+});
 
-const TOTAL = VENDORS.reduce((s, v) => s + v.leakAnnual, 0);
+export type HeroLoopProps = z.infer<typeof HeroLoopSchema>;
+
+/* ─── Default props (the generic homepage version) ─── */
+export const defaultHeroLoopProps: HeroLoopProps = {
+  brandLabel: "Efficyon",
+  invoiceSource: "Invoice · Accounting feed",
+  usageSource: "Usage · API + activity logs",
+  totalLabel: "Annual leak · sample 18-person stack",
+  vendors: [
+    { name: "Microsoft 365", monthlyCost: 890, paidSeats: 28, activeSeats: 10, leakAnnual: 6200 },
+    { name: "HubSpot Pro", monthlyCost: 640, paidSeats: 8, activeSeats: 3, leakAnnual: 4300 },
+    { name: "Intercom", monthlyCost: 270, paidSeats: 6, activeSeats: 0, leakAnnual: 3250 },
+    { name: "Notion / Asana / Slack", monthlyCost: 225, paidSeats: 18, activeSeats: 14, leakAnnual: 2700 },
+  ],
+};
 
 // ─── timing (seconds) ──────────
 const T = {
@@ -55,41 +72,48 @@ const T = {
 const fmt = (n: number) =>
   "$" + Math.round(n).toLocaleString("en-US");
 
-export const HeroLoop: React.FC = () => {
+export const HeroLoop: React.FC<HeroLoopProps> = ({
+  brandLabel,
+  invoiceSource,
+  usageSource,
+  totalLabel,
+  vendors,
+}) => {
   const { fps, durationInFrames } = useVideoConfig();
 
   const introFrames = T.intro * fps;
   const vendorFrames = T.perVendor * fps;
   const totalFrames = T.totalBeat * fps;
 
-  // Per-vendor sequence start
   const vendorStart = (i: number) => introFrames + i * vendorFrames;
-  const totalStart = introFrames + VENDORS.length * vendorFrames;
+  const totalStart = introFrames + vendors.length * vendorFrames;
+  const totalLeak = vendors.reduce((s, v) => s + v.leakAnnual, 0);
 
   return (
     <AbsoluteFill style={{ background: BG, fontFamily: DM_SANS, color: "white" }}>
       <BackgroundLayer />
-      <TitleBar />
-      <ScanProgress
-        start={introFrames}
-        end={totalStart}
-      />
+      <TitleBar brandLabel={brandLabel} />
+      <ScanProgress start={introFrames} end={totalStart} />
 
       {/* Vendor reconciliation rows — only one shown at a time */}
-      {VENDORS.map((v, i) => (
+      {vendors.map((v, i) => (
         <Sequence
-          key={v.name}
+          key={v.name + i}
           from={vendorStart(i)}
           durationInFrames={vendorFrames + 4}
           layout="none"
         >
-          <ReconciliationCard vendor={v} index={i} />
+          <ReconciliationCard
+            vendor={v}
+            invoiceSource={invoiceSource}
+            usageSource={usageSource}
+          />
         </Sequence>
       ))}
 
       {/* Final total */}
       <Sequence from={totalStart} durationInFrames={totalFrames + 12} layout="none">
-        <TotalSummary />
+        <TotalSummary totalLeak={totalLeak} totalLabel={totalLabel} />
       </Sequence>
 
       {/* Outro fade for seamless loop */}
@@ -125,7 +149,7 @@ const BackgroundLayer: React.FC = () => {
 };
 
 // ───────────────────────────── TITLE BAR ─────────────────────────────
-const TitleBar: React.FC = () => {
+const TitleBar: React.FC<{ brandLabel: string }> = ({ brandLabel }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const seconds = Math.floor(frame / fps);
@@ -160,7 +184,7 @@ const TitleBar: React.FC = () => {
             opacity: dotPulse,
           }}
         />
-        <span>EFFICYON · Reconciliation engine · running</span>
+        <span>{brandLabel.toUpperCase()} × EFFICYON · Reconciliation · running</span>
       </div>
       <span style={{ fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.4)" }}>
         T+ 00:{String(seconds).padStart(2, "0")}.{String(ms).padStart(2, "0")}
@@ -201,7 +225,12 @@ const ScanProgress: React.FC<{ start: number; end: number }> = ({ start, end }) 
 };
 
 // ───────────────────────────── RECONCILIATION CARD ─────────────────────────────
-const ReconciliationCard: React.FC<{ vendor: Vendor; index: number }> = ({ vendor }) => {
+type Vendor = z.infer<typeof VendorSchema>;
+const ReconciliationCard: React.FC<{
+  vendor: Vendor;
+  invoiceSource: string;
+  usageSource: string;
+}> = ({ vendor, invoiceSource, usageSource }) => {
   const frame = useCurrentFrame(); // local to the Sequence
   const { fps } = useVideoConfig();
 
@@ -252,7 +281,7 @@ const ReconciliationCard: React.FC<{ vendor: Vendor; index: number }> = ({ vendo
         }}
       >
         {/* INVOICE side */}
-        <Side label="Invoice · Fortnox" align="right">
+        <Side label={invoiceSource} align="right">
           <div style={{ fontSize: 28, color: "rgba(255,255,255,0.5)" }}>{vendor.name}</div>
           <div
             style={{
@@ -278,7 +307,7 @@ const ReconciliationCard: React.FC<{ vendor: Vendor; index: number }> = ({ vendo
         <Connector progress={scanT} resultT={resultT} />
 
         {/* USAGE side */}
-        <Side label="Usage · API + activity logs" align="left">
+        <Side label={usageSource} align="left">
           <div style={{ fontSize: 28, color: "rgba(255,255,255,0.5)" }}>Last 90 days</div>
           <div
             style={{
@@ -460,12 +489,15 @@ const SeatGrid: React.FC<{ total: number; active: number; dim: boolean }> = ({ t
 };
 
 // ───────────────────────────── TOTAL SUMMARY ─────────────────────────────
-const TotalSummary: React.FC = () => {
+const TotalSummary: React.FC<{ totalLeak: number; totalLabel: string }> = ({
+  totalLeak,
+  totalLabel,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   const fadeIn = spring({ frame, fps, config: { damping: 22, stiffness: 90, mass: 0.7 } });
-  const counter = interpolate(frame, [0, 1.0 * fps], [0, TOTAL], {
+  const counter = interpolate(frame, [0, 1.0 * fps], [0, totalLeak], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.16, 1, 0.3, 1),
@@ -492,24 +524,21 @@ const TotalSummary: React.FC = () => {
           color: "rgba(255,255,255,0.5)",
         }}
       >
-        ✦ Reconciliation complete · 4 vendors
+        ✦ Reconciliation complete
       </div>
       <div
         style={{
-          fontSize: 60,
+          fontSize: 56,
           fontWeight: 500,
-          lineHeight: 1.0,
+          lineHeight: 1.05,
           letterSpacing: "-0.035em",
-          maxWidth: "16ch",
+          maxWidth: "20ch",
           color: "rgba(255,255,255,0.85)",
         }}
       >
-        Annual leak surfaced
         <span style={{ fontFamily: INSTRUMENT_SERIF, fontStyle: "italic", fontWeight: 400, color: GREEN }}>
-          {" "}
-          for one company
+          {totalLabel}
         </span>
-        :
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, fontVariantNumeric: "tabular-nums" }}>
         <span

@@ -507,6 +507,95 @@ export function EditorialFinalCTA({
   )
 }
 
+/* ─────────── Integration video frame ─────────── */
+export function IntegrationVideoFrame({
+  src,
+  label,
+  meta,
+}: {
+  src: string // path inside /public, with no extension — we serve both .mp4 and .webm if present
+  label: string // e.g. "Live scan · Fortnox"
+  meta?: string // bottom meta line, e.g. "1920×1080 · 30fps · 4 vendors · sample stack"
+}) {
+  const { ref, shown } = useReveal<HTMLDivElement>()
+  return (
+    <section className="relative z-10 mx-auto max-w-[1240px] border-t border-white/[0.08] px-6 py-24 md:px-12">
+      <div
+        ref={ref}
+        style={{
+          opacity: shown ? 1 : 0,
+          transform: shown ? "translateY(0)" : "translateY(20px)",
+        }}
+        className="transition-all duration-700 ease-out"
+      >
+        <div className="mb-4 flex items-center justify-between text-[11px] text-white/45 font-[family-name:var(--font-geist-mono)] uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-3">
+            <span
+              className="inline-block h-1.5 w-1.5 animate-pulse rounded-full"
+              style={{ background: GREEN }}
+            />
+            <span>// {label}</span>
+          </div>
+          <span className="hidden md:inline">↳ rendered with Remotion</span>
+        </div>
+
+        <div
+          className="relative overflow-hidden border border-white/[0.09]"
+          style={{
+            aspectRatio: "16 / 9",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,209,122,0.04) 100%), #0a0a0b",
+          }}
+        >
+          <CornerTicks />
+
+          {/* Empty-state fallback (visible until video resolves) */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="mb-3 font-[family-name:var(--font-geist-mono)] text-[10px] uppercase tracking-[0.3em] text-white/30">
+                ✦ Composition · {label}
+              </div>
+              <div className="font-[family-name:var(--font-instrument-serif)] text-[28px] italic text-white/30">
+                Scan ready.
+              </div>
+            </div>
+          </div>
+
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
+          >
+            <source src={`${src}.webm`} type="video/webm" />
+            <source src={`${src}.mp4`} type="video/mp4" />
+          </video>
+        </div>
+
+        {meta && (
+          <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.18em] text-white/35">
+            {meta}
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function CornerTicks() {
+  const tick = "absolute h-3 w-3 border-white/30"
+  return (
+    <>
+      <span className={`${tick} left-2 top-2 border-l border-t`} aria-hidden />
+      <span className={`${tick} right-2 top-2 border-r border-t`} aria-hidden />
+      <span className={`${tick} bottom-2 left-2 border-b border-l`} aria-hidden />
+      <span className={`${tick} bottom-2 right-2 border-b border-r`} aria-hidden />
+    </>
+  )
+}
+
 /* ─────────── Mono label ─────────── */
 export function EditorialMonoLabel({
   children,
