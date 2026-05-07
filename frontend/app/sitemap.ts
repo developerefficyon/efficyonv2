@@ -3,8 +3,9 @@ import { blogPosts as blogPostData } from "@/lib/blog-data"
 import { saasTools } from "@/lib/saas-tools-data"
 import { benchmarkPages } from "@/lib/benchmark-data"
 import { INTEGRATION_DOCS } from "@/lib/integration-docs"
+import { SITE_URL } from "@/lib/site"
 
-const baseUrl = "https://www.efficyon.com"
+const baseUrl = SITE_URL
 
 // Feature pages
 const features = [
