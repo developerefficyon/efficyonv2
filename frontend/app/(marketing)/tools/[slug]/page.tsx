@@ -11,6 +11,7 @@ import {
   EditorialFinalCTA,
   GREEN,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import {
   saasTools,
   getToolBySlug,
@@ -46,7 +47,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${tool.name} Cost Analysis & Optimization | Efficyon`,
       description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable tips to reduce spending.`,
-      url: `https://www.efficyon.com/tools/${tool.slug}`,
+      url: absoluteUrl(`/tools/${tool.slug}`),
       type: "website",
     },
   }
@@ -89,11 +90,11 @@ export default async function ToolAnalysisPage({
     "@type": "WebPage",
     name: `${tool.name} Cost Analysis & Optimization`,
     description: `Analyze and optimize your ${tool.name} costs. Discover common waste patterns, pricing insights, and actionable optimization tips.`,
-    url: `https://www.efficyon.com/tools/${tool.slug}`,
+    url: absoluteUrl(`/tools/${tool.slug}`),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
     about: {
       "@type": "SoftwareApplication",

@@ -6,6 +6,7 @@ import {
   EditorialEyebrow,
   EditorialFinalCTA,
 } from "@/components/marketing/editorial"
+import { absoluteUrl, SITE_URL } from "@/lib/site"
 import { saasTools, getAllCategories } from "@/lib/saas-tools-data"
 import { ToolsFilterList } from "./tools-filter-list"
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     title: "SaaS Tool Cost Analysis | Efficyon",
     description:
       "Cost analysis and optimization tips for 50+ popular SaaS tools. Discover how to reduce spending on Slack, Salesforce, AWS, Jira, and more.",
-    url: "https://www.efficyon.com/tools",
+    url: absoluteUrl("/tools"),
     type: "website",
   },
 }
@@ -40,11 +41,11 @@ export default function ToolsIndexPage() {
     name: "SaaS Tool Cost Analysis",
     description:
       "Cost analysis and optimization tips for 50+ popular SaaS tools.",
-    url: "https://www.efficyon.com/tools",
+    url: absoluteUrl("/tools"),
     publisher: {
       "@type": "Organization",
       name: "Efficyon",
-      url: "https://www.efficyon.com",
+      url: SITE_URL,
     },
   }
 
